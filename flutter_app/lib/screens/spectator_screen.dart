@@ -31,10 +31,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
 
-  Widget _buildRecoveryLoading({
-    required String title,
-    String? subtitle,
-  }) {
+  Widget _buildRecoveryLoading({required String title, String? subtitle}) {
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 320),
@@ -42,9 +39,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.14),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -77,6 +72,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       ),
     );
   }
+
   int _lastChatMessageCount = 0;
   int _readChatCount = 0;
 
@@ -118,56 +114,56 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       child: PopScope(
         canPop: false,
         child: Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8F4F6),
-              Color(0xFFF0E8F0),
-              Color(0xFFE8F0F8),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          bottom: !isLandscape,
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              if (session.isRestoring) {
-                return _buildRecoveryLoading(
-                  title: L10n.of(context).spectatorRecovering,
-                  subtitle: localizeRestorePhase(session, L10n.of(context)),
-                );
-              }
+          resizeToAvoidBottomInset: false,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFF8F4F6),
+                  Color(0xFFF0E8F0),
+                  Color(0xFFE8F0F8),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              bottom: !isLandscape,
+              child: Consumer<GameService>(
+                builder: (context, game, _) {
+                  if (session.isRestoring) {
+                    return _buildRecoveryLoading(
+                      title: L10n.of(context).spectatorRecovering,
+                      subtitle: localizeRestorePhase(session, L10n.of(context)),
+                    );
+                  }
 
-              final destination = game.currentDestination;
-              if (destination != AppDestination.spectator) {
-                if (!_isLeaving) {
-                  _isLeaving = true;
-                }
-                return _buildRecoveryLoading(
-                  title: L10n.of(context).spectatorTransitioning,
-                  subtitle: L10n.of(context).spectatorRecheckingState,
-                );
-              }
-              if (_isLeaving) {
-                _isLeaving = false;
-              }
+                  final destination = game.currentDestination;
+                  if (destination != AppDestination.spectator) {
+                    if (!_isLeaving) {
+                      _isLeaving = true;
+                    }
+                    return _buildRecoveryLoading(
+                      title: L10n.of(context).spectatorTransitioning,
+                      subtitle: L10n.of(context).spectatorRecheckingState,
+                    );
+                  }
+                  if (_isLeaving) {
+                    _isLeaving = false;
+                  }
 
-              final state = game.spectatorGameState;
-              if (!game.hasSpectatorGameState || state == null) {
-                return _buildWaitingRoomView(context, game, isLandscape);
-              }
+                  final state = game.spectatorGameState;
+                  if (!game.hasSpectatorGameState || state == null) {
+                    return _buildWaitingRoomView(context, game, isLandscape);
+                  }
 
-              return _buildSpectatorView(context, game, state, isLandscape);
-            },
+                  return _buildSpectatorView(context, game, state, isLandscape);
+                },
+              ),
+            ),
           ),
         ),
       ),
-    ),
-    ),
     );
   }
 
@@ -195,11 +191,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 children: [
                   IconButton(
                     onPressed: () => _leaveRoom(game),
-                    icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Color(0xFF6A5A52),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8E0F8),
                       borderRadius: BorderRadius.circular(12),
@@ -207,7 +209,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.visibility, size: 14, color: Color(0xFF4A4080)),
+                        const Icon(
+                          Icons.visibility,
+                          size: 14,
+                          color: Color(0xFF4A4080),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           L10n.of(context).spectatorWatching,
@@ -254,7 +260,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (game.currentGameType == 'tichu' && game.roomRandomSeating)
+                        if (game.currentGameType == 'tichu' &&
+                            game.roomRandomSeating)
                           // Random-seating Tichu: flat SK-style list, no team
                           // framing (teams are randomized at game start).
                           Wrap(
@@ -346,17 +353,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildWaitingTeamLabel({
-    required String label,
-    required Color color,
-  }) {
+  Widget _buildWaitingTeamLabel({required String label, required Color color}) {
     return Text(
       label,
-      style: TextStyle(
-        color: color,
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-      ),
+      style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold),
     );
   }
 
@@ -466,8 +466,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           color: isEmpty
               ? const Color(0xFFD8CFCB)
               : isReady
-                  ? const Color(0xFF9ED6A5)
-                  : const Color(0xFFE0D8D4),
+              ? const Color(0xFF9ED6A5)
+              : const Color(0xFFE0D8D4),
           width: isReady ? 2 : 1,
         ),
       ),
@@ -480,11 +480,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           // an anonymous icon above their own face. One avatar, in the slot the
           // silhouette had.
           if (isEmpty)
-            const Icon(
-              Icons.person_add,
-              color: Color(0xFF9AA7B0),
-              size: 28,
-            )
+            const Icon(Icons.person_add, color: Color(0xFF9AA7B0), size: 28)
           else
             _seatAvatar(game, player),
           const SizedBox(height: 6),
@@ -549,11 +545,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
           ),
         if (!isEmpty && player.isHost)
-          const Positioned(
-            left: -3,
-            top: -7,
-            child: HostCrown(size: 22),
-          ),
+          const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
       ],
     );
 
@@ -570,8 +562,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
 
     return GestureDetector(
-      onTap: () =>
-          _showPlayerProfileDialog(name, game, isBot: player.isBot),
+      onTap: () => _showPlayerProfileDialog(name, game, isBot: player.isBot),
       child: stacked,
     );
   }
@@ -642,8 +633,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         if (_chatOpen) _buildChatPanel(game),
 
         // Bug #10: Game end overlay for spectators
-        if (phase == 'game_end')
-          _buildGameEndOverlay(game, totalScores),
+        if (phase == 'game_end') _buildGameEndOverlay(game, totalScores),
       ],
     );
   }
@@ -671,7 +661,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.info_outline, size: 16, color: Color(0xFFC62828)),
+              const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Color(0xFFC62828),
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -763,12 +757,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         final sideWidth = cramped
             ? 72.0
             : (constraints.maxHeight > 620 ? 104.0 : 86.0);
-        final playerSlotHeight = (constraints.maxHeight *
-                (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
-            .clamp(cramped ? 48.0 : 56.0, constraints.maxHeight > 620 ? 108.0 : 92.0);
-        final trickSlotHeight = (constraints.maxHeight *
-                (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
-            .clamp(cramped ? 76.0 : 88.0, constraints.maxHeight > 620 ? 180.0 : 132.0);
+        final playerSlotHeight =
+            (constraints.maxHeight * (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
+                .clamp(
+                  cramped ? 48.0 : 56.0,
+                  constraints.maxHeight > 620 ? 108.0 : 92.0,
+                );
+        final trickSlotHeight =
+            (constraints.maxHeight * (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
+                .clamp(
+                  cramped ? 76.0 : 88.0,
+                  constraints.maxHeight > 620 ? 180.0 : 132.0,
+                );
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -895,7 +895,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final teamA = scores['teamA'] ?? 0;
     final teamB = scores['teamB'] ?? 0;
     final l10n = L10n.of(context);
-    final winnerText = teamA > teamB ? l10n.spectatorTeamWin('A') : teamB > teamA ? l10n.spectatorTeamWin('B') : l10n.spectatorDraw;
+    final winnerText = teamA > teamB
+        ? l10n.spectatorTeamWin('A')
+        : teamB > teamA
+        ? l10n.spectatorTeamWin('B')
+        : l10n.spectatorDraw;
 
     return Container(
       color: Colors.black54,
@@ -961,9 +965,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       ),
       decoration: const BoxDecoration(
         color: Color(0xFFFDFBFA),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFEDE4E0)),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
       ),
       child: isLandscape
           ? Row(
@@ -971,7 +973,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                  constraints: const BoxConstraints.tightFor(
+                    width: 32,
+                    height: 32,
+                  ),
                   onPressed: () => _leaveRoom(game),
                   icon: const Icon(
                     Icons.arrow_back,
@@ -981,7 +986,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8E0F8),
                     borderRadius: BorderRadius.circular(10),
@@ -989,7 +997,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.visibility, size: 12, color: Color(0xFF4A4080)),
+                      const Icon(
+                        Icons.visibility,
+                        size: 12,
+                        color: Color(0xFF4A4080),
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         L10n.of(context).spectatorWatching,
@@ -1053,7 +1065,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   children: [
                     IconButton(
                       onPressed: () => _leaveRoom(game),
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF6A5A52),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     // The room name was nowhere in this bar, while four icon
@@ -1117,8 +1132,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'R$round | ${_getPhaseText(phase)}',
-                      style:
-                          const TextStyle(color: Color(0xFF8A7E78), fontSize: 12),
+                      style: const TextStyle(
+                        color: Color(0xFF8A7E78),
+                        fontSize: 12,
+                      ),
                     ),
                     // What score the game is played to. Players see it in their
                     // own top bar; spectators had no way to know.
@@ -1261,8 +1278,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final slotBg = team == 'A'
         ? const Color(0xFFE9F2FB)
         : team == 'B'
-            ? const Color(0xFFFBECEF)
-            : Colors.white.withValues(alpha: 0.98);
+        ? const Color(0xFFFBECEF)
+        : Colors.white.withValues(alpha: 0.98);
 
     final isBot = player['isBot'] == true;
     // Spectating a game had no way into a profile at all — so no way to block or
@@ -1273,30 +1290,31 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       child: Container(
-      margin: EdgeInsets.all(compact ? 2 : 4),
-      padding: EdgeInsets.all(compact ? 6 : 8),
-      decoration: BoxDecoration(
-        color: slotBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isCurrentTurn ? const Color(0xFFF3C97A) : const Color(0xFFE6DDD8),
-          width: isCurrentTurn ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        margin: EdgeInsets.all(compact ? 2 : 4),
+        padding: EdgeInsets.all(compact ? 6 : 8),
+        decoration: BoxDecoration(
+          color: slotBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCurrentTurn
+                ? const Color(0xFFF3C97A)
+                : const Color(0xFFE6DDD8),
+            width: isCurrentTurn ? 2 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Own row rather than inline before the name. The side slots are only
-          // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
-          // nickname any room — too small to make out a face.
-          if (player['photoUrl'] != null || isBot)
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Own row rather than inline before the name. The side slots are only
+            // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
+            // nickname any room — too small to make out a face.
             Padding(
               padding: EdgeInsets.only(bottom: compact ? 2 : 3),
               child: ProfileAvatar(
@@ -1309,150 +1327,153 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         name: name,
                         showBadge: true,
                       )
-                    : SizedBox(
-                        width: (compact ? 44 : 56).toDouble(),
-                        height: (compact ? 44 : 56).toDouble(),
-                      ),
+                    : DefaultAvatar(size: (compact ? 44 : 56).toDouble()),
               ),
             ),
-          // Player name and status
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (!connected)
-                const Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
-                ),
-              // Team letter, the same badge the player screen puts before a
-              // nickname. The slot's background tint alone was too quiet to map
-              // a name to the "A:" / "B:" score chips at a glance.
-              if (team == 'A' || team == 'B')
-                Padding(
-                  padding: EdgeInsets.only(right: compact ? 3 : 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: team == 'A'
-                          ? const Color(0xFFE3F0FF)
-                          : const Color(0xFFFFE8EC),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: team == 'A'
-                            ? const Color(0xFF4A90D9)
-                            : const Color(0xFFD24B4B),
-                        width: 0.7,
+            // Player name and status
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (!connected)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
+                  ),
+                // Team letter, the same badge the player screen puts before a
+                // nickname. The slot's background tint alone was too quiet to map
+                // a name to the "A:" / "B:" score chips at a glance.
+                if (team == 'A' || team == 'B')
+                  Padding(
+                    padding: EdgeInsets.only(right: compact ? 3 : 4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
                       ),
-                    ),
-                    child: Text(
-                      team,
-                      style: TextStyle(
-                        fontSize: compact ? 8 : 9,
-                        fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
                         color: team == 'A'
-                            ? const Color(0xFF4A90D9)
-                            : const Color(0xFFD24B4B),
+                            ? const Color(0xFFE3F0FF)
+                            : const Color(0xFFFFE8EC),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: team == 'A'
+                              ? const Color(0xFF4A90D9)
+                              : const Color(0xFFD24B4B),
+                          width: 0.7,
+                        ),
+                      ),
+                      child: Text(
+                        team,
+                        style: TextStyle(
+                          fontSize: compact ? 8 : 9,
+                          fontWeight: FontWeight.bold,
+                          color: team == 'A'
+                              ? const Color(0xFF4A90D9)
+                              : const Color(0xFFD24B4B),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              Flexible(
-                child: Text(
-                  name,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: connected ? const Color(0xFF4E3A34) : Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: compact ? 11 : 12,
+                Flexible(
+                  child: Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: connected ? const Color(0xFF4E3A34) : Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: compact ? 11 : 12,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          // Badges on their own line. Sharing the name's row meant every badge
-          // stole width from it — a finish rank (#1) was enough to ellipsize a
-          // perfectly short nickname in the ~79dp side slots.
-          if (hasLargeTichu || hasSmallTichu || (hasFinished && finishPosition > 0))
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // "LT"/"T" at 8pt read as noise — a Tichu call is the most
-                  // consequential thing a spectator can notice about a hand.
-                  // Same wording and colours as the player screen's badge
-                  // ("라지"/"스몰", red/blue), just sized for the slot.
-                  if (hasLargeTichu)
-                    _tichuCallBadge(
-                      L10n.of(context).gameBadgeLarge,
-                      const Color(0xFFFF4444),
-                      const Color(0xFFCC0000),
-                    )
-                  else if (hasSmallTichu)
-                    _tichuCallBadge(
-                      L10n.of(context).gameBadgeSmall,
-                      const Color(0xFF2979FF),
-                      const Color(0xFF1565C0),
-                    ),
-                  if (hasFinished && finishPosition > 0) ...[
-                    if (hasLargeTichu || hasSmallTichu)
-                      const SizedBox(width: 4),
-                    Text(
-                      '#$finishPosition',
-                      style: const TextStyle(
-                        color: Color(0xFF6BBE7A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+              ],
+            ),
+            // Badges on their own line. Sharing the name's row meant every badge
+            // stole width from it — a finish rank (#1) was enough to ellipsize a
+            // perfectly short nickname in the ~79dp side slots.
+            if (hasLargeTichu ||
+                hasSmallTichu ||
+                (hasFinished && finishPosition > 0))
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // "LT"/"T" at 8pt read as noise — a Tichu call is the most
+                    // consequential thing a spectator can notice about a hand.
+                    // Same wording and colours as the player screen's badge
+                    // ("라지"/"스몰", red/blue), just sized for the slot.
+                    if (hasLargeTichu)
+                      _tichuCallBadge(
+                        L10n.of(context).gameBadgeLarge,
+                        const Color(0xFFFF4444),
+                        const Color(0xFFCC0000),
+                      )
+                    else if (hasSmallTichu)
+                      _tichuCallBadge(
+                        L10n.of(context).gameBadgeSmall,
+                        const Color(0xFF2979FF),
+                        const Color(0xFF1565C0),
                       ),
-                    ),
+                    if (hasFinished && finishPosition > 0) ...[
+                      if (hasLargeTichu || hasSmallTichu)
+                        const SizedBox(width: 4),
+                      Text(
+                        '#$finishPosition',
+                        style: const TextStyle(
+                          color: Color(0xFF6BBE7A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-          const SizedBox(height: 4),
-          // Cards or request button
-          if (hasFinished && cardCount == 0)
-            Padding(
-              padding: EdgeInsets.all(compact ? 6 : 8),
-              child: Text(
-                L10n.of(context).spectatorFinished,
-                style: TextStyle(
-                  color: const Color(0xFF9A8E8A),
-                  fontSize: compact ? 9 : 10,
                 ),
               ),
-            )
-          else if (canSeeCards && cards.isNotEmpty)
-            // Only the card strip gives way when the slot runs out of height.
-            // Moving the avatar onto its own row cost ~28dp, and a 13-card
-            // vertical strip in a side slot overflowed the bottom by that much.
-            // Scaling the whole seat instead would shrink the avatar and name
-            // back down, which is what this change was for.
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.topCenter,
-                child: vertical
-                    ? _buildRotatedCards(cards, isLeft: isLeft, compact: compact)
-                    : _buildHorizontalCards(cards, compact: compact),
+            const SizedBox(height: 4),
+            // Cards or request button
+            if (hasFinished && cardCount == 0)
+              Padding(
+                padding: EdgeInsets.all(compact ? 6 : 8),
+                child: Text(
+                  L10n.of(context).spectatorFinished,
+                  style: TextStyle(
+                    color: const Color(0xFF9A8E8A),
+                    fontSize: compact ? 9 : 10,
+                  ),
+                ),
+              )
+            else if (canSeeCards && cards.isNotEmpty)
+              // Only the card strip gives way when the slot runs out of height.
+              // Moving the avatar onto its own row cost ~28dp, and a 13-card
+              // vertical strip in a side slot overflowed the bottom by that much.
+              // Scaling the whole seat instead would shrink the avatar and name
+              // back down, which is what this change was for.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topCenter,
+                  child: vertical
+                      ? _buildRotatedCards(
+                          cards,
+                          isLeft: isLeft,
+                          compact: compact,
+                        )
+                      : _buildHorizontalCards(cards, compact: compact),
+                ),
+              )
+            else
+              _buildCardRequestArea(
+                game,
+                playerId,
+                cardCount,
+                isPending,
+                vertical,
+                compact: compact,
               ),
-            )
-          else
-            _buildCardRequestArea(
-              game,
-              playerId,
-              cardCount,
-              isPending,
-              vertical,
-              compact: compact,
-            ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -1684,6 +1705,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  /// The colour the game being spectated wears in the lobby and on its own
+  /// board.
+  Color _spectatorAccentColor(String? gameType) {
+    switch (gameType) {
+      case 'love_letter':
+        return const Color(0xFFE91E63);
+      case 'mighty':
+        return const Color(0xFF1565C0);
+      case 'skull_king':
+        return const Color(0xFF21455F);
+      default:
+        return const Color(0xFF64B5F6);
+    }
+  }
+
   Widget _buildChatPanel(GameService game) {
     if (game.chatMessages.length != _lastChatMessageCount) {
       _lastChatMessageCount = game.chatMessages.length;
@@ -1692,9 +1728,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       _readChatCount = game.chatMessages.length;
       _scrollChatToBottom();
     }
+    // One spectator screen serves all four games, so its chat has to take the
+    // colour of the game being watched instead of Tichu's blue.
+    final accent = _spectatorAccentColor(game.currentGameType);
     return DraggableChatPanel(
-      accentColor: const Color(0xFF64B5F6),
-      sendIconColor: const Color(0xFF77B8E8),
+      accentColor: accent,
+      sendIconColor: accent,
       title: L10n.of(context).spectatorChat,
       hintText: L10n.of(context).spectatorMessageHint,
       controller: _chatController,
@@ -1724,11 +1763,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       message: message,
       isMe: isMe,
       game: context.read<GameService>(),
+      mineColor: _spectatorAccentColor(
+        context.read<GameService>().currentGameType,
+      ),
       onTap: sender.isEmpty
           ? null
           : () => _showPlayerProfileDialog(sender, context.read<GameService>()),
     );
   }
+
   void _scrollChatToBottom() {
     // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1801,10 +1844,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   fontSize: compact ? 12 : 14,
                 ),
               ),
-              if (hasCall) ...[
-                SizedBox(height: compact ? 4 : 6),
-                callBadge(),
-              ],
+              if (hasCall) ...[SizedBox(height: compact ? 4 : 6), callBadge()],
             ],
           ),
         ),
@@ -1831,8 +1871,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
     final isBlue = lastTeam != 'B';
     final bgColor = isBlue ? const Color(0xFFE3F0FF) : const Color(0xFFFFE8EC);
-    final borderColor = isBlue ? const Color(0xFFB3D4F7) : const Color(0xFFF5C0C8);
-    final nameColor = isBlue ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A);
+    final borderColor = isBlue
+        ? const Color(0xFFB3D4F7)
+        : const Color(0xFFF5C0C8);
+    final nameColor = isBlue
+        ? const Color(0xFF4A90D9)
+        : const Color(0xFFD94A5A);
 
     return Center(
       child: Container(
@@ -1848,13 +1892,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (hasCall) ...[
-              callBadge(),
-              SizedBox(height: compact ? 4 : 6),
-            ],
+            if (hasCall) ...[callBadge(), SizedBox(height: compact ? 4 : 6)],
             Text(
               L10n.of(context).spectatorPlayedCards(
-                playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName,
+                playerName.length > 8
+                    ? '${playerName.substring(0, 8)}..'
+                    : playerName,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1890,12 +1933,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final double minOverlap = compact ? 10 : 20;
     final double maxOverlap = compact ? 18 : 30;
 
-    final isPhoenixSingleTrick = combo == 'single'
-        && cards.length == 1
-        && cards[0].toString() == 'special_phoenix'
-        && comboValue > 1;
-    final String? phoenixBeatLabel =
-        isPhoenixSingleTrick ? _phoenixBeatLabel(comboValue) : null;
+    final isPhoenixSingleTrick =
+        combo == 'single' &&
+        cards.length == 1 &&
+        cards[0].toString() == 'special_phoenix' &&
+        comboValue > 1;
+    final String? phoenixBeatLabel = isPhoenixSingleTrick
+        ? _phoenixBeatLabel(comboValue)
+        : null;
 
     Widget playingCard(String cardId) {
       final card = PlayingCard(
@@ -1950,7 +1995,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
         if (neededOverlap >= minOverlap || forceSingleRow) {
           final overlap =
-              (forceSingleRow ? neededOverlap : neededOverlap.clamp(minOverlap, maxOverlap))
+              (forceSingleRow
+                      ? neededOverlap
+                      : neededOverlap.clamp(minOverlap, maxOverlap))
                   .clamp(compact ? 7.0 : minOverlap, maxOverlap);
           final totalWidth = cardW + overlap * (cards.length - 1);
           return Center(
@@ -1982,7 +2029,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
         Widget buildRow(List rowCards) {
           final overlap = rowCards.length > 1
-              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(minOverlap, maxOverlap)
+              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(
+                  minOverlap,
+                  maxOverlap,
+                )
               : 0.0;
           final totalWidth = cardW + overlap * (rowCards.length - 1);
           return SizedBox(
@@ -2008,11 +2058,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            buildRow(row1),
-            const SizedBox(height: 4),
-            buildRow(row2),
-          ],
+          children: [buildRow(row1), const SizedBox(height: 4), buildRow(row2)],
         );
       },
     );
@@ -2042,6 +2088,4 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       isBot: isBot,
     );
   }
-
 }
-

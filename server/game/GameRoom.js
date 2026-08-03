@@ -72,11 +72,15 @@ class GameRoom {
     this.chatHistory = [];
   }
 
-  addChatMessage(sender, senderId, message) {
+  // photoUrl is the sender's avatar as it was when they spoke, kept so that
+  // replayed history can show it too — the sender may be a spectator, or long
+  // gone from the room, and then no roster can supply it.
+  addChatMessage(sender, senderId, message, photoUrl = null) {
     const msg = {
       sender,
       senderId,
       message,
+      photoUrl: photoUrl || null,
       timestamp: Date.now(),
     };
     this.chatHistory.push(msg);

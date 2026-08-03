@@ -192,11 +192,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _buildLLEventLog(
-                                llState,
-                                gs,
-                                L10n.of(context),
-                              ),
+                              _buildLLEventLog(llState, gs, L10n.of(context)),
                               _buildBottomArea(context, gs, llState),
                             ],
                           ),
@@ -460,7 +456,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
   /// silhouette, with the level as a corner badge. The level used to be drawn
   /// AS the avatar for photo-less players, which put a number where every other
   /// screen puts a face — and the bot tag went missing with it.
-  Widget _buildWaitingSlotAvatar(GameService game, {
+  Widget _buildWaitingSlotAvatar(
+    GameService game, {
     required String name,
     required String? photoUrl,
     required bool isBot,
@@ -482,7 +479,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.person, size: 22, color: Color(0xFF9C8B84)),
+              child: const Icon(
+                Icons.person,
+                size: 22,
+                color: Color(0xFF9C8B84),
+              ),
             ),
     );
     if (isBot || level == null) return avatar;
@@ -642,10 +643,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             const Positioned(
               left: -2,
               top: -6,
-              child: Text(
-                '👑',
-                style: TextStyle(fontSize: 18, height: 1.0),
-              ),
+              child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
             ),
         ],
       ),
@@ -754,8 +752,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
               children: [
                 Flexible(
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0EBE8),
                       borderRadius: BorderRadius.circular(8),
@@ -774,7 +774,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0EBE8),
                     borderRadius: BorderRadius.circular(8),
@@ -782,7 +785,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
+                      const Icon(
+                        Icons.style,
+                        color: Color(0xFF8A7A72),
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${state.drawPileCount}',
@@ -1604,8 +1611,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
       // The tap belongs to card view, so — as in the Skull King spectator
       // seats — profiles ride on long-press. Without it a spectator had no way
       // to block or report anyone.
-      onLongPress: () =>
-          _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
+      onLongPress: () => _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
       onTap: () {
         if (isApproved) {
           setState(() {
@@ -1716,27 +1722,26 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       // change as the Skull King seats: inline it had to stay
                       // at 13-16px to leave the name any width, which is too
                       // small to make out a face.
-                      if (player.photoUrl != null || player.isBot)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: spacing),
-                          child: ProfileAvatar(
-                            photoUrl:
-                                _gameService?.resolvePhotoUrl(player.photoUrl),
-                            size: avatarDiameter,
-                            blocked: _gameService?.blockedUsers
-                                    .contains(player.name) ??
-                                false,
-                            fallback: player.isBot
-                                ? BotAvatar(
-                                    size: avatarDiameter,
-                                    name: player.name,
-                                  )
-                                : SizedBox(
-                                    width: avatarDiameter,
-                                    height: avatarDiameter,
-                                  ),
+                      Padding(
+                        padding: EdgeInsets.only(bottom: spacing),
+                        child: ProfileAvatar(
+                          photoUrl: _gameService?.resolvePhotoUrl(
+                            player.photoUrl,
                           ),
+                          size: avatarDiameter,
+                          blocked:
+                              _gameService?.blockedUsers.contains(
+                                player.name,
+                              ) ??
+                              false,
+                          fallback: player.isBot
+                              ? BotAvatar(
+                                  size: avatarDiameter,
+                                  name: player.name,
+                                )
+                              : DefaultAvatar(size: avatarDiameter),
                         ),
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
@@ -1928,7 +1933,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final previewLeft = seat.left - (previewWidth - seat.width) / 2;
     final gap = seat.compact ? -10.0 : -14.0;
     final top = seat.top + seat.height + gap;
-    return Rect.fromLTWH(previewLeft, top, previewWidth, seat.discardCardHeight);
+    return Rect.fromLTWH(
+      previewLeft,
+      top,
+      previewWidth,
+      seat.discardCardHeight,
+    );
   }
 
   void _showDiscardPileDialog(
@@ -2680,9 +2690,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         style: TextStyle(
           color: const Color(0xFF5A4038),
           fontSize: 16,
-          fontWeight: lastRound.isShared
-              ? FontWeight.w800
-              : FontWeight.normal,
+          fontWeight: lastRound.isShared ? FontWeight.w800 : FontWeight.normal,
         ),
       ),
       if (lastRound.setAside != null || lastRound.faceUpCards.isNotEmpty) ...[
@@ -2803,11 +2811,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 const SizedBox(width: 44, height: 62),
               if (discards.isNotEmpty) ...[
                 const SizedBox(width: 8),
-                Container(
-                  width: 1,
-                  height: 48,
-                  color: const Color(0xFFE0D8D4),
-                ),
+                Container(width: 1, height: 48, color: const Color(0xFFE0D8D4)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SingleChildScrollView(
@@ -2970,66 +2974,63 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 ),
               if (lastRound != null)
-                ..._buildRoundDetailsContent(
-                  context,
-                  state,
-                  lastRound,
-                  l10n,
-                ),
+                ..._buildRoundDetailsContent(context, state, lastRound, l10n),
               const SizedBox(height: 16),
-            ...sorted.asMap().entries.map((entry) {
-              final i = entry.key;
-              final p = entry.value;
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 2),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: i == 0
-                      ? const Color(0xFFFFF8E1)
-                      : const Color(0xFFF0EBE8),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '#${i + 1} ',
-                      style: TextStyle(
-                        color: i == 0 ? Colors.amber : const Color(0xFF8A7A72),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 80,
-                      child: Text(
-                        p.name,
-                        style: const TextStyle(
-                          color: Color(0xFF5A4038),
+              ...sorted.asMap().entries.map((entry) {
+                final i = entry.key;
+                final p = entry.value;
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: i == 0
+                        ? const Color(0xFFFFF8E1)
+                        : const Color(0xFFF0EBE8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '#${i + 1} ',
+                        style: TextStyle(
+                          color: i == 0
+                              ? Colors.amber
+                              : const Color(0xFF8A7A72),
                           fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    ...List.generate(
-                      state.targetTokens,
-                      (j) => Padding(
-                        padding: const EdgeInsets.only(right: 2),
-                        child: Icon(
-                          Icons.favorite,
-                          color: j < p.tokens
-                              ? const Color(0xFFE91E63)
-                              : const Color(0xFFE0D8D4),
-                          size: 14,
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          p.name,
+                          style: const TextStyle(
+                            color: Color(0xFF5A4038),
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+                      ...List.generate(
+                        state.targetTokens,
+                        (j) => Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: Icon(
+                            Icons.favorite,
+                            color: j < p.tokens
+                                ? const Color(0xFFE91E63)
+                                : const Color(0xFFE0D8D4),
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
               const SizedBox(height: 16),
               if (_gameEndCountdown > 0)
                 Text(
@@ -3634,11 +3635,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
       message: message,
       isMe: isMe,
       game: _gameService!,
+      // Love Letter's pink, like the panel around it — the shared bubble
+      // defaults to Tichu blue.
+      mineColor: const Color(0xFFE91E63),
       onTap: sender.isEmpty
           ? null
           : () => _showPlayerProfileDialog(sender, _gameService!),
     );
   }
+
   void _scrollChatToBottom() {
     // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3740,11 +3745,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // Rolling event-log content (no Positioned). Spectators stack this directly
   // above their hand overlay so it is never hidden behind it.
-  Widget _buildLLEventLog(
-    LLGameStateData state,
-    GameService gs,
-    L10n l10n,
-  ) {
+  Widget _buildLLEventLog(LLGameStateData state, GameService gs, L10n l10n) {
     if (state.round != _llCenterLogRound) {
       _llCenterLog.clear();
       _llCenterLogHashes.clear();
@@ -3972,7 +3973,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
           g.llGameState == null || g.llGameState!.phase == 'game_end',
     );
   }
-
 }
 
 class _EffectStatusSegment {

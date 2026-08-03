@@ -25,7 +25,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   // Responsive scale factor (updated every build)
-  double _s = 1.0;  // scale factor based on screen width
+  double _s = 1.0; // scale factor based on screen width
   int _maxNameLen = 4;
 
   final Set<String> _selectedCards = {};
@@ -104,9 +104,7 @@ class _GameScreenState extends State<GameScreen> {
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.14),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -150,7 +148,8 @@ class _GameScreenState extends State<GameScreen> {
 
   void _updateCountdown() {
     if (!mounted) return;
-    final state = _gameService?.gameState ?? context.read<GameService>().gameState;
+    final state =
+        _gameService?.gameState ?? context.read<GameService>().gameState;
     if (state == null || state.turnDeadline == null) {
       if (_remainingSeconds != 0) {
         setState(() => _remainingSeconds = 0);
@@ -210,10 +209,22 @@ class _GameScreenState extends State<GameScreen> {
       final suits = cards.map((c) => c.split('_')[0]).toSet();
       if (suits.length != 1) return false;
       const rankValues = {
-        '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
-        '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
+        '2': 2,
+        '3': 3,
+        '4': 4,
+        '5': 5,
+        '6': 6,
+        '7': 7,
+        '8': 8,
+        '9': 9,
+        '10': 10,
+        'J': 11,
+        'Q': 12,
+        'K': 13,
+        'A': 14,
       };
-      final values = cards.map((c) => rankValues[c.split('_')[1]] ?? 0).toList()..sort();
+      final values = cards.map((c) => rankValues[c.split('_')[1]] ?? 0).toList()
+        ..sort();
       for (int i = 1; i < values.length; i++) {
         if (values[i] != values[i - 1] + 1) return false;
       }
@@ -231,7 +242,9 @@ class _GameScreenState extends State<GameScreen> {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
           title: Row(
@@ -255,7 +268,10 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF7F1EC),
                     borderRadius: BorderRadius.circular(14),
@@ -382,155 +398,165 @@ class _GameScreenState extends State<GameScreen> {
       child: PopScope(
         canPop: false,
         child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: themeColors,
+          resizeToAvoidBottomInset: false,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: themeColors,
+              ),
             ),
-          ),
-          child: SafeArea(
-            bottom: !isLandscape,
+            child: SafeArea(
+              bottom: !isLandscape,
               child: Consumer<GameService>(
-              builder: (context, game, _) {
-                if (session.isRestoring || _waitingForRoomRecovery) {
-                  final l10n = L10n.of(context);
-                  return _buildRecoveryLoading(
-                    title: session.isRestoring ? l10n.gameRestoringGame : l10n.gameCheckingState,
-                    subtitle: session.isRestoring
-                        ? localizeRestorePhase(session, l10n)
-                        : l10n.gameRecheckingRoomState,
-                  );
-                }
-
-                final state = game.gameState;
-                if (state == null) {
-                  if (game.hasRoom) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        _recoverRoomState();
-                      }
-                    });
+                builder: (context, game, _) {
+                  if (session.isRestoring || _waitingForRoomRecovery) {
+                    final l10n = L10n.of(context);
                     return _buildRecoveryLoading(
-                      title: L10n.of(context).gameReloadingRoom,
-                      subtitle: L10n.of(context).gameWaitForRestore,
+                      title: session.isRestoring
+                          ? l10n.gameRestoringGame
+                          : l10n.gameCheckingState,
+                      subtitle: session.isRestoring
+                          ? localizeRestorePhase(session, l10n)
+                          : l10n.gameRecheckingRoomState,
                     );
                   }
 
-                  return _buildRecoveryLoading(
-                    title: L10n.of(context).gamePreparingScreen,
-                    subtitle: L10n.of(context).gameAdjustingScreen,
-                  );
-                }
+                  final state = game.gameState;
+                  if (state == null) {
+                    if (game.hasRoom) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          _recoverRoomState();
+                        }
+                      });
+                      return _buildRecoveryLoading(
+                        title: L10n.of(context).gameReloadingRoom,
+                        subtitle: L10n.of(context).gameWaitForRestore,
+                      );
+                    }
 
-                final destination = game.currentDestination;
-                if (destination != AppDestination.game) {
-                  return _buildRecoveryLoading(
-                    title: L10n.of(context).gameTransitioningScreen,
-                    subtitle: L10n.of(context).gameRecheckingDestination,
-                  );
-                }
+                    return _buildRecoveryLoading(
+                      title: L10n.of(context).gamePreparingScreen,
+                      subtitle: L10n.of(context).gameAdjustingScreen,
+                    );
+                  }
 
-                _waitingForRoomRecovery = false;
+                  final destination = game.currentDestination;
+                  if (destination != AppDestination.game) {
+                    return _buildRecoveryLoading(
+                      title: L10n.of(context).gameTransitioningScreen,
+                      subtitle: L10n.of(context).gameRecheckingDestination,
+                    );
+                  }
 
-              // Bug #1: Clear exchange assignments when phase leaves card_exchange
-              if (state.phase != 'card_exchange') {
-                if (_exchangeAssignments.isNotEmpty || _exchangeSubmitted) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    setState(() {
-                      _exchangeAssignments.clear();
-                      _selectedCards.clear();
-                      _exchangeSubmitted = false;
+                  _waitingForRoomRecovery = false;
+
+                  // Bug #1: Clear exchange assignments when phase leaves card_exchange
+                  if (state.phase != 'card_exchange') {
+                    if (_exchangeAssignments.isNotEmpty || _exchangeSubmitted) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          _exchangeAssignments.clear();
+                          _selectedCards.clear();
+                          _exchangeSubmitted = false;
+                        });
+                      });
+                    }
+                  }
+
+                  // Track phase transitions for exchange summary
+                  if (state.phase == 'card_exchange' && !state.exchangeDone) {
+                    _exchangeSummaryShown = false;
+                  }
+                  // Only show exchange summary on card_exchange → playing transition
+                  if (_prevPhase == 'card_exchange' &&
+                      state.phase != 'card_exchange') {
+                    _maybeShowExchangeSummary(state);
+                  }
+                  // Delay round end dialog so players can see the last card played
+                  if (_prevPhase != 'round_end' &&
+                      _prevPhase != 'game_end' &&
+                      (state.phase == 'round_end' ||
+                          state.phase == 'game_end')) {
+                    _roundEndReady = false;
+                    Future.delayed(const Duration(seconds: 1), () {
+                      if (mounted) setState(() => _roundEndReady = true);
                     });
-                  });
-                }
-              }
+                  } else if (state.phase != 'round_end' &&
+                      state.phase != 'game_end') {
+                    _roundEndReady = false;
+                  }
+                  _prevPhase = state.phase;
 
-              // Track phase transitions for exchange summary
-              if (state.phase == 'card_exchange' && !state.exchangeDone) {
-                _exchangeSummaryShown = false;
-              }
-              // Only show exchange summary on card_exchange → playing transition
-              if (_prevPhase == 'card_exchange' && state.phase != 'card_exchange') {
-                _maybeShowExchangeSummary(state);
-              }
-              // Delay round end dialog so players can see the last card played
-              if (_prevPhase != 'round_end' && _prevPhase != 'game_end' &&
-                  (state.phase == 'round_end' || state.phase == 'game_end')) {
-                _roundEndReady = false;
-                Future.delayed(const Duration(seconds: 1), () {
-                  if (mounted) setState(() => _roundEndReady = true);
-                });
-              } else if (state.phase != 'round_end' && state.phase != 'game_end') {
-                _roundEndReady = false;
-              }
-              _prevPhase = state.phase;
+                  return Stack(
+                    children: [
+                      if (_tichuOverlayColor(state) != null)
+                        Positioned.fill(
+                          child: Container(color: _tichuOverlayColor(state)),
+                        ),
+                      isLandscape
+                          ? _buildLandscapeGameLayout(state, game)
+                          : _buildPortraitGameLayout(state, game),
 
-              return Stack(
-                children: [
-                  if (_tichuOverlayColor(state) != null)
-                    Positioned.fill(
-                      child: Container(
-                        color: _tichuOverlayColor(state),
-                      ),
-                    ),
-                  isLandscape
-                      ? _buildLandscapeGameLayout(state, game)
-                      : _buildPortraitGameLayout(state, game),
+                      // Dialogs/Panels
+                      if (state.phase == 'large_tichu_phase' &&
+                          !state.largeTichuResponded)
+                        _buildLargeTichuDialog(game),
 
-                  // Dialogs/Panels
-                  if (state.phase == 'large_tichu_phase' &&
-                      !state.largeTichuResponded)
-                    _buildLargeTichuDialog(game),
+                      if (state.dragonPending) _buildDragonDialog(state, game),
 
+                      if (state.needsToCallRank && !_birdCallDialogOpen)
+                        _buildCallRankDialog(game),
 
-                  if (state.dragonPending) _buildDragonDialog(state, game),
+                      if (_roundEndReady &&
+                          (state.phase == 'round_end' ||
+                              state.phase == 'game_end'))
+                        _buildRoundEndDialog(state, game),
 
-                  if (state.needsToCallRank && !_birdCallDialogOpen) _buildCallRankDialog(game),
+                      // Timeout banner
+                      if (game.timeoutPlayerName != null)
+                        _buildTimeoutBanner(game.timeoutPlayerName!),
 
-                  if (_roundEndReady && (state.phase == 'round_end' || state.phase == 'game_end'))
-                    _buildRoundEndDialog(state, game),
+                      // Desertion banner
+                      if (game.desertedPlayerName != null)
+                        _buildDesertionBanner(
+                          game.desertedPlayerName!,
+                          game.desertedReason ?? 'leave',
+                        ),
 
-                  // Timeout banner
-                  if (game.timeoutPlayerName != null)
-                    _buildTimeoutBanner(game.timeoutPlayerName!),
+                      // Error message banner
+                      if (game.errorMessage != null)
+                        _buildErrorBanner(game.errorMessage!),
 
-                  // Desertion banner
-                  if (game.desertedPlayerName != null)
-                    _buildDesertionBanner(game.desertedPlayerName!, game.desertedReason ?? 'leave'),
+                      // Spectator card view requests
+                      if (game.hasIncomingCardViewRequests)
+                        _buildCardViewRequestPopup(game),
 
-                  // Error message banner
-                  if (game.errorMessage != null)
-                    _buildErrorBanner(game.errorMessage!),
+                      // Viewers panel popup
+                      if (_viewersOpen)
+                        _buildViewersPanel(
+                          game,
+                          topOffset: _moreOpen ? 150 : 66,
+                        ),
 
-                  // Spectator card view requests
-                  if (game.hasIncomingCardViewRequests)
-                    _buildCardViewRequestPopup(game),
+                      // Sound panel
+                      if (_soundPanelOpen) _buildSoundPanel(game),
 
-                  // Viewers panel popup
-                  if (_viewersOpen)
-                    _buildViewersPanel(game, topOffset: _moreOpen ? 150 : 66),
+                      // More menu
+                      if (_moreOpen) _buildMoreMenu(game),
 
-                  // Sound panel
-                  if (_soundPanelOpen)
-                    _buildSoundPanel(game),
-
-                  // More menu
-                  if (_moreOpen)
-                    _buildMoreMenu(game),
-
-                  // Chat panel
-                  if (_chatOpen) _buildChatPanel(game),
-                ],
-              );
-              },
+                      // Chat panel
+                      if (_chatOpen) _buildChatPanel(game),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -612,11 +638,7 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ),
         if (timerBadge != null)
-          Positioned(
-            top: 48,
-            left: 12,
-            child: timerBadge,
-          ),
+          Positioned(top: 48, left: 12, child: timerBadge),
         // Trick-play log overlay (LL-style) — what was played in the
         // current trick. Clears between tricks. Sits below the timer.
         //
@@ -648,9 +670,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Column(
                     children: [
                       _buildPartnerArea(state, game),
-                      Expanded(
-                        child: _buildMiddleArea(state, game),
-                      ),
+                      Expanded(child: _buildMiddleArea(state, game)),
                     ],
                   ),
                 ),
@@ -661,11 +681,14 @@ class _GameScreenState extends State<GameScreen> {
                     builder: (context, constraints) {
                       return SingleChildScrollView(
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              if (state.phase == 'card_exchange' && !state.exchangeDone)
+                              if (state.phase == 'card_exchange' &&
+                                  !state.exchangeDone)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: _buildExchangeInline(state, game),
@@ -701,9 +724,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _canShowSmallTichu(GameStateData state) {
     return state.canDeclareSmallTichu &&
         state.phase != 'card_exchange' &&
-        !state.players.any(
-          (p) => p.position == 'self' && p.hasLargeTichu,
-        );
+        !state.players.any((p) => p.position == 'self' && p.hasLargeTichu);
   }
 
   Widget _buildMenuButton(GameService game) {
@@ -721,19 +742,15 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.logout,
-          color: Color(0xFFE53935),
-          size: 20,
-        ),
+        child: const Icon(Icons.logout, color: Color(0xFFE53935), size: 20),
       ),
     );
   }
 
   Widget _buildChatButton(GameService game) {
-    final totalMessages = game.chatMessages.where((m) =>
-      !game.isBlocked(m['sender'] as String? ?? '')
-    ).length;
+    final totalMessages = game.chatMessages
+        .where((m) => !game.isBlocked(m['sender'] as String? ?? ''))
+        .length;
 
     // Initialize on first build so existing messages don't show as unread
     if (_lastSeenMessageCount < 0) {
@@ -980,15 +997,23 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildChatBubble(String sender, String message, bool isMe, GameService game) {
+  Widget _buildChatBubble(
+    String sender,
+    String message,
+    bool isMe,
+    GameService game,
+  ) {
     return ChatBubble(
       sender: sender,
       message: message,
       isMe: isMe,
       game: game,
-      onTap: sender.isEmpty ? null : () => _showPlayerProfileDialog(sender, game),
+      onTap: sender.isEmpty
+          ? null
+          : () => _showPlayerProfileDialog(sender, game),
     );
   }
+
   void _scrollChatToBottom() {
     // ListView is reverse:true so offset 0 == bottom (newest). Used to
     // snap the user back when a new message arrives while they were
@@ -1007,7 +1032,11 @@ class _GameScreenState extends State<GameScreen> {
     _scrollChatToBottom();
   }
 
-  void _showPlayerProfileDialog(String nickname, GameService game, {bool isBot = false}) {
+  void _showPlayerProfileDialog(
+    String nickname,
+    GameService game, {
+    bool isBot = false,
+  }) {
     showPlayerProfileDialog(
       context,
       nickname,
@@ -1017,7 +1046,8 @@ class _GameScreenState extends State<GameScreen> {
       isBot: isBot,
       // Out of the way when the round ends, so the result screen isn't hidden
       // behind it.
-      dismissWhen: (g) => g.gameState == null || g.gameState!.phase == 'game_end',
+      dismissWhen: (g) =>
+          g.gameState == null || g.gameState!.phase == 'game_end',
     );
   }
 
@@ -1174,7 +1204,8 @@ class _GameScreenState extends State<GameScreen> {
     if (request == null) {
       return const SizedBox.shrink();
     }
-    final spectatorNickname = request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
+    final spectatorNickname =
+        request['spectatorNickname'] ?? L10n.of(context).gameSpectator;
     final spectatorId = request['spectatorId'] ?? '';
 
     return Positioned(
@@ -1218,7 +1249,8 @@ class _GameScreenState extends State<GameScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => game.respondCardViewRequest(spectatorId, false),
+                    onPressed: () =>
+                        game.respondCardViewRequest(spectatorId, false),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFFCC6666),
                       side: const BorderSide(color: Color(0xFFCC6666)),
@@ -1230,7 +1262,8 @@ class _GameScreenState extends State<GameScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => game.respondCardViewRequest(spectatorId, true),
+                    onPressed: () =>
+                        game.respondCardViewRequest(spectatorId, true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6A9BD1),
                       foregroundColor: Colors.white,
@@ -1406,7 +1439,10 @@ class _GameScreenState extends State<GameScreen> {
                   itemBuilder: (context, index) {
                     final nickname = spectators[index]['nickname'] ?? '';
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F1F1),
                         borderRadius: BorderRadius.circular(12),
@@ -1414,7 +1450,11 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, size: 16, color: Color(0xFF6A5A52)),
+                          const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Color(0xFF6A5A52),
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1467,7 +1507,11 @@ class _GameScreenState extends State<GameScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.visibility, size: 16, color: Color(0xFF5A4038)),
+                const Icon(
+                  Icons.visibility,
+                  size: 16,
+                  color: Color(0xFF5A4038),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1481,7 +1525,11 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
-                  child: const Icon(Icons.close, size: 18, color: Color(0xFF999999)),
+                  child: const Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Color(0xFF999999),
+                  ),
                 ),
               ],
             ),
@@ -1499,7 +1547,11 @@ class _GameScreenState extends State<GameScreen> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      const Icon(Icons.person, size: 16, color: Color(0xFF888888)),
+                      const Icon(
+                        Icons.person,
+                        size: 16,
+                        color: Color(0xFF888888),
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -1516,7 +1568,11 @@ class _GameScreenState extends State<GameScreen> {
                             color: const Color(0xFFFFEBEE),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.close, size: 14, color: Color(0xFFE53935)),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Color(0xFFE53935),
+                          ),
                         ),
                       ),
                     ],
@@ -1549,7 +1605,9 @@ class _GameScreenState extends State<GameScreen> {
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: 0.12) : Colors.transparent,
+            color: selected
+                ? color.withValues(alpha: 0.12)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected ? color : const Color(0xFFE6DCE8),
@@ -1574,8 +1632,7 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
               ),
-              if (selected)
-                Icon(Icons.check, size: 14, color: color),
+              if (selected) Icon(Icons.check, size: 14, color: color),
             ],
           ),
         ),
@@ -1629,12 +1686,20 @@ class _GameScreenState extends State<GameScreen> {
       child: Column(
         children: [
           GestureDetector(
-            onTap: partner != null ? () => _showPlayerProfileDialog(partner.name, game, isBot: partner.id.startsWith('bot_')) : null,
+            onTap: partner != null
+                ? () => _showPlayerProfileDialog(
+                    partner.name,
+                    game,
+                    isBot: partner.id.startsWith('bot_'),
+                  )
+                : null,
             child: _buildTurnName(
               name: partner?.name ?? L10n.of(context).gamePartner,
               isTurn: isPartnerTurn,
               badge: _tichuBadgeForPlayer(partner),
-              exchangeDone: state.phase == 'card_exchange' && (partner?.hasExchanged ?? false),
+              exchangeDone:
+                  state.phase == 'card_exchange' &&
+                  (partner?.hasExchanged ?? false),
               connected: partner?.connected ?? true,
               timeoutCount: partner?.timeoutCount ?? 0,
               teamLabel: _teamForPosition(state, 'partner'),
@@ -1650,10 +1715,7 @@ class _GameScreenState extends State<GameScreen> {
           const SizedBox(height: 3),
           Text(
             _getPlayerInfo(partner),
-            style: TextStyle(
-              fontSize: 11 * _s,
-              color: const Color(0xFF8A7A72),
-            ),
+            style: TextStyle(fontSize: 11 * _s, color: const Color(0xFF8A7A72)),
           ),
           const SizedBox(height: 6),
           // Card backs
@@ -1671,7 +1733,10 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildMiddleArea(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
-    final right = _firstWhereOrNull(state.players, (p) => p.position == 'right');
+    final right = _firstWhereOrNull(
+      state.players,
+      (p) => p.position == 'right',
+    );
     final isLeftTurn = left?.id == state.currentPlayer;
     final isRightTurn = right?.id == state.currentPlayer;
 
@@ -1684,13 +1749,21 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: left != null ? () => _showPlayerProfileDialog(left.name, game, isBot: left.id.startsWith('bot_')) : null,
+                onTap: left != null
+                    ? () => _showPlayerProfileDialog(
+                        left.name,
+                        game,
+                        isBot: left.id.startsWith('bot_'),
+                      )
+                    : null,
                 child: _buildTurnName(
                   name: left?.name ?? L10n.of(context).gameLeftPlayer,
                   isTurn: isLeftTurn,
                   fontSize: 11,
                   badge: _tichuBadgeForPlayer(left),
-                  exchangeDone: state.phase == 'card_exchange' && (left?.hasExchanged ?? false),
+                  exchangeDone:
+                      state.phase == 'card_exchange' &&
+                      (left?.hasExchanged ?? false),
                   connected: left?.connected ?? true,
                   timeoutCount: left?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'left'),
@@ -1704,7 +1777,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
               Text(
                 _getPlayerInfo(left),
-                style: TextStyle(fontSize: 9 * _s, color: const Color(0xFF8A7A72)),
+                style: TextStyle(
+                  fontSize: 9 * _s,
+                  color: const Color(0xFF8A7A72),
+                ),
               ),
               const SizedBox(height: 4),
               _buildOverlappedHandVertical(
@@ -1719,9 +1795,7 @@ class _GameScreenState extends State<GameScreen> {
         ),
 
         // Center area
-        Expanded(
-          child: _buildCenterArea(state, game),
-        ),
+        Expanded(child: _buildCenterArea(state, game)),
 
         // Right player
         SizedBox(
@@ -1730,13 +1804,21 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: right != null ? () => _showPlayerProfileDialog(right.name, game, isBot: right.id.startsWith('bot_')) : null,
+                onTap: right != null
+                    ? () => _showPlayerProfileDialog(
+                        right.name,
+                        game,
+                        isBot: right.id.startsWith('bot_'),
+                      )
+                    : null,
                 child: _buildTurnName(
                   name: right?.name ?? L10n.of(context).gameRightPlayer,
                   isTurn: isRightTurn,
                   fontSize: 11,
                   badge: _tichuBadgeForPlayer(right),
-                  exchangeDone: state.phase == 'card_exchange' && (right?.hasExchanged ?? false),
+                  exchangeDone:
+                      state.phase == 'card_exchange' &&
+                      (right?.hasExchanged ?? false),
                   connected: right?.connected ?? true,
                   timeoutCount: right?.timeoutCount ?? 0,
                   teamLabel: _teamForPosition(state, 'right'),
@@ -1750,7 +1832,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
               Text(
                 _getPlayerInfo(right),
-                style: TextStyle(fontSize: 9 * _s, color: const Color(0xFF8A7A72)),
+                style: TextStyle(
+                  fontSize: 9 * _s,
+                  color: const Color(0xFF8A7A72),
+                ),
               ),
               const SizedBox(height: 4),
               _buildOverlappedHandVertical(
@@ -1795,14 +1880,19 @@ class _GameScreenState extends State<GameScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    state.isMyTurn ? L10n.of(context).gameMyTurn : L10n.of(context).gamePlayerTurn(_getCurrentPlayerName(state)),
+                    state.isMyTurn
+                        ? L10n.of(context).gameMyTurn
+                        : L10n.of(
+                            context,
+                          ).gamePlayerTurn(_getCurrentPlayerName(state)),
                     style: TextStyle(
                       fontSize: 11,
                       color: state.isMyTurn
                           ? const Color(0xFFE6A800)
                           : const Color(0xFF8A7A72),
-                      fontWeight:
-                          state.isMyTurn ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: state.isMyTurn
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -1813,19 +1903,22 @@ class _GameScreenState extends State<GameScreen> {
             if (state.callRank != null && state.callRank!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0x33FF4444),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFF4444), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFFFF4444),
+                    width: 1.5,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      '🐦',
-                      style: TextStyle(fontSize: 14),
-                    ),
+                    const Text('🐦', style: TextStyle(fontSize: 14)),
                     const SizedBox(width: 4),
                     Text(
                       L10n.of(context).gameCall(state.callRank!),
@@ -1850,9 +1943,9 @@ class _GameScreenState extends State<GameScreen> {
             // Latest trick only
             if (state.currentTrick.isNotEmpty)
               _buildLatestTrick(state)
-            else if (state.lastTrick.isNotEmpty && (state.phase == 'round_end' || state.phase == 'game_end'))
+            else if (state.lastTrick.isNotEmpty &&
+                (state.phase == 'round_end' || state.phase == 'game_end'))
               _buildLatestTrick(state, useLastTrick: true),
-
           ],
         ),
       ),
@@ -1868,7 +1961,9 @@ class _GameScreenState extends State<GameScreen> {
         : currentPlayerName;
     final turnLabel = state.isMyTurn
         ? l10n.gameMyTurnShort
-        : (isLandscape ? l10n.gamePlayerTurnShort(compactPlayerName) : l10n.gamePlayerWaiting(currentPlayerName));
+        : (isLandscape
+              ? l10n.gamePlayerTurnShort(compactPlayerName)
+              : l10n.gamePlayerWaiting(currentPlayerName));
     final timerFontSize = isLandscape ? 11.5 * _s : 13 * _s;
     final timerIconSize = isLandscape ? 12.5 * _s : 14 * _s;
     final timerPadding = isLandscape
@@ -1949,7 +2044,12 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            Flexible(child: Align(alignment: Alignment.center, child: _buildScoreBar(state))),
+            Flexible(
+              child: Align(
+                alignment: Alignment.center,
+                child: _buildScoreBar(state),
+              ),
+            ),
             const SizedBox(width: 10),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -2006,10 +2106,11 @@ class _GameScreenState extends State<GameScreen> {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: compact
-            ? EdgeInsets.zero
-            : EdgeInsets.only(bottom: 2 * _s),
-        padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
+        margin: compact ? EdgeInsets.zero : EdgeInsets.only(bottom: 2 * _s),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontal,
+          vertical: vertical,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFFF8F4F0),
           borderRadius: BorderRadius.circular(8 * _s),
@@ -2018,17 +2119,61 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('A', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
-            Text(':$aces', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            Text(
+              'A',
+              style: TextStyle(
+                fontSize: textFont,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF5A4038),
+              ),
+            ),
+            Text(
+              ':$aces',
+              style: TextStyle(
+                fontSize: textFont,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF8A7A6A),
+              ),
+            ),
             SizedBox(width: spacing),
-            Text('K', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF5A4038))),
-            Text(':$kings', style: TextStyle(fontSize: textFont, fontWeight: FontWeight.bold, color: const Color(0xFF8A7A6A))),
+            Text(
+              'K',
+              style: TextStyle(
+                fontSize: textFont,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF5A4038),
+              ),
+            ),
+            Text(
+              ':$kings',
+              style: TextStyle(
+                fontSize: textFont,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF8A7A6A),
+              ),
+            ),
             SizedBox(width: spacing),
             Text('\u{1F409}', style: TextStyle(fontSize: iconFont)),
-            Text(dragon ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: dragon ? const Color(0xFF4A90D9) : const Color(0xFFCCC0B8))),
+            Text(
+              dragon ? '\u25CB' : '\u2715',
+              style: TextStyle(
+                fontSize: 12 * _s,
+                color: dragon
+                    ? const Color(0xFF4A90D9)
+                    : const Color(0xFFCCC0B8),
+              ),
+            ),
             SizedBox(width: compact ? 4 * _s : 6 * _s),
             Text('\u{1F426}', style: TextStyle(fontSize: iconFont)),
-            Text(phoenix ? '\u25CB' : '\u2715', style: TextStyle(fontSize: 12 * _s, color: phoenix ? const Color(0xFFD4A030) : const Color(0xFFCCC0B8))),
+            Text(
+              phoenix ? '\u25CB' : '\u2715',
+              style: TextStyle(
+                fontSize: 12 * _s,
+                color: phoenix
+                    ? const Color(0xFFD4A030)
+                    : const Color(0xFFCCC0B8),
+              ),
+            ),
           ],
         ),
       ),
@@ -2137,12 +2282,13 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Text(
             playerName.isNotEmpty
-                ? L10n.of(context).gameDogPlayedBy(playerName.length > 8 ? '${playerName.substring(0, 8)}..' : playerName)
+                ? L10n.of(context).gameDogPlayedBy(
+                    playerName.length > 8
+                        ? '${playerName.substring(0, 8)}..'
+                        : playerName,
+                  )
                 : L10n.of(context).gameDogPlayed,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF8A7A72),
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -2163,8 +2309,11 @@ class _GameScreenState extends State<GameScreen> {
     if (trick.isEmpty) return const SizedBox.shrink();
     final lastPlay = trick.last;
     // Bug #9: Determine team color from player position
-    final isMyTeam = state.players.any((p) =>
-      (p.position == 'self' || p.position == 'partner') && p.id == lastPlay.playerId);
+    final isMyTeam = state.players.any(
+      (p) =>
+          (p.position == 'self' || p.position == 'partner') &&
+          p.id == lastPlay.playerId,
+    );
     final trickBgColor = isMyTeam
         ? const Color(0xFFE3F0FF) // blue tint for my team
         : const Color(0xFFFFE8EC); // pink tint for opponent
@@ -2190,7 +2339,9 @@ class _GameScreenState extends State<GameScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: isMyTeam ? const Color(0xFF4A90D9) : const Color(0xFFD94A5A),
+                    color: isMyTeam
+                        ? const Color(0xFF4A90D9)
+                        : const Color(0xFFD94A5A),
                   ),
                 ),
                 TextSpan(
@@ -2224,11 +2375,12 @@ class _GameScreenState extends State<GameScreen> {
 
     // Phoenix-as-single → overlay a chip on the card showing what rank
     // it beat (e.g. "↑Q"), so the table can read the play at a glance.
-    final isPhoenixSingleTrick = lastPlay != null
-        && lastPlay.combo == 'single'
-        && cards.length == 1
-        && cards[0] == 'special_phoenix'
-        && lastPlay.comboValue > 1;
+    final isPhoenixSingleTrick =
+        lastPlay != null &&
+        lastPlay.combo == 'single' &&
+        cards.length == 1 &&
+        cards[0] == 'special_phoenix' &&
+        lastPlay.comboValue > 1;
     final phoenixBeatLabel = isPhoenixSingleTrick
         ? _phoenixBeatLabel(lastPlay.comboValue)
         : null;
@@ -2297,10 +2449,7 @@ class _GameScreenState extends State<GameScreen> {
                 clipBehavior: Clip.none,
                 children: [
                   for (int i = 0; i < cards.length; i++)
-                    Positioned(
-                      left: i * overlap,
-                      child: playingCard(cards[i]),
-                    ),
+                    Positioned(left: i * overlap, child: playingCard(cards[i])),
                 ],
               ),
             ),
@@ -2314,7 +2463,10 @@ class _GameScreenState extends State<GameScreen> {
 
         Widget buildRow(List<String> rowCards) {
           final overlap = rowCards.length > 1
-              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(minOverlap, maxOverlap)
+              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(
+                  minOverlap,
+                  maxOverlap,
+                )
               : 0.0;
           final totalWidth = cardW + overlap * (rowCards.length - 1);
           return SizedBox(
@@ -2335,11 +2487,7 @@ class _GameScreenState extends State<GameScreen> {
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            buildRow(row1),
-            const SizedBox(height: 4),
-            buildRow(row2),
-          ],
+          children: [buildRow(row1), const SizedBox(height: 4), buildRow(row2)],
         );
       },
     );
@@ -2364,7 +2512,9 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ],
         border: isMyTurn
-            ? const Border(top: BorderSide(color: Color(0xFFFFCA28), width: 2.5))
+            ? const Border(
+                top: BorderSide(color: Color(0xFFFFCA28), width: 2.5),
+              )
             : null,
       ),
       child: Column(
@@ -2407,8 +2557,10 @@ class _GameScreenState extends State<GameScreen> {
               if (isMyTurn) ...[
                 SizedBox(width: 6 * _s),
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 3 * _s),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 8 * _s,
+                    vertical: 3 * _s,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF2B3),
                     borderRadius: BorderRadius.circular(12),
@@ -2433,7 +2585,10 @@ class _GameScreenState extends State<GameScreen> {
                 GestureDetector(
                   onTap: () => game.resetTimeout(),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF3E0),
                       borderRadius: BorderRadius.circular(12),
@@ -2469,7 +2624,9 @@ class _GameScreenState extends State<GameScreen> {
 
           // My hand - two rows (split in half)
           Padding(
-            padding: EdgeInsets.symmetric(vertical: state.myCards.length >= 13 ? 6 : 10),
+            padding: EdgeInsets.symmetric(
+              vertical: state.myCards.length >= 13 ? 6 : 10,
+            ),
             child: _buildHandRows(state),
           ),
           const SizedBox(height: 8),
@@ -2479,10 +2636,12 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: (state.phase == 'playing' &&
+                onPressed:
+                    (state.phase == 'playing' &&
                         _selectedCards.isNotEmpty &&
                         !state.dragonPending &&
-                        (state.isMyTurn || _isBombCombo(_selectedCards.toList())))
+                        (state.isMyTurn ||
+                            _isBombCombo(_selectedCards.toList())))
                     ? _playCards
                     : null,
                 style: ElevatedButton.styleFrom(
@@ -2502,7 +2661,8 @@ class _GameScreenState extends State<GameScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: (state.phase == 'playing' &&
+                onPressed:
+                    (state.phase == 'playing' &&
                         state.isMyTurn &&
                         state.currentTrick.isNotEmpty)
                     ? _passTurn
@@ -2561,7 +2721,10 @@ class _GameScreenState extends State<GameScreen> {
               onPressed: () => game.declareLargeTichu(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFD700),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
               child: Text(L10n.of(context).gameDeclare),
             ),
@@ -2569,7 +2732,10 @@ class _GameScreenState extends State<GameScreen> {
             OutlinedButton(
               onPressed: () => game.passLargeTichu(),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
               child: Text(L10n.of(context).gamePass),
             ),
@@ -2596,7 +2762,9 @@ class _GameScreenState extends State<GameScreen> {
       // Bird-only call suffix: append "- 콜N" only on the play that
       // actually produced the wish (the play containing special_bird).
       final isBirdPlay = play.cards.contains('special_bird');
-      _trickPlayLog.add(_formatPlayLine(play, isBirdPlay ? state.callRank : null));
+      _trickPlayLog.add(
+        _formatPlayLine(play, isBirdPlay ? state.callRank : null),
+      );
       _trickPlayLogKeys.add(key);
       _trickPlayLogIsMine.add(_isMyTeamPlay(state, play.playerId));
       while (_trickPlayLog.length > 4) {
@@ -2761,10 +2929,18 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildExchangeDialog(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
-    final partner = _firstWhereOrNull(state.players, (p) => p.position == 'partner');
-    final right = _firstWhereOrNull(state.players, (p) => p.position == 'right');
+    final partner = _firstWhereOrNull(
+      state.players,
+      (p) => p.position == 'partner',
+    );
+    final right = _firstWhereOrNull(
+      state.players,
+      (p) => p.position == 'right',
+    );
 
-    final selectedCard = _selectedCards.isNotEmpty ? _selectedCards.first : null;
+    final selectedCard = _selectedCards.isNotEmpty
+        ? _selectedCards.first
+        : null;
     final assignedCount = _exchangeAssignments.length;
 
     return Container(
@@ -2789,8 +2965,13 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               Flexible(
                 child: Text(
-                  selectedCard != null ? L10n.of(context).gameSelectRecipient : L10n.of(context).gameSelectExchangeCard(assignedCount),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  selectedCard != null
+                      ? L10n.of(context).gameSelectRecipient
+                      : L10n.of(context).gameSelectExchangeCard(assignedCount),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -2810,7 +2991,10 @@ class _GameScreenState extends State<GameScreen> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: Text(L10n.of(context).gameReset, style: const TextStyle(fontSize: 12)),
+                    child: Text(
+                      L10n.of(context).gameReset,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
                 ),
               ],
@@ -2839,11 +3023,17 @@ class _GameScreenState extends State<GameScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFC7E6D0),
                     foregroundColor: const Color(0xFF3A5A40),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 0,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: Text(L10n.of(context).gameExchangeComplete, style: const TextStyle(fontSize: 12)),
+                  child: Text(
+                    L10n.of(context).gameExchangeComplete,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
               ),
             ],
@@ -2854,9 +3044,21 @@ class _GameScreenState extends State<GameScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildExchangeButton('left', left?.name ?? L10n.of(context).gameLeftPlayer, selectedCard),
-              _buildExchangeButton('partner', partner?.name ?? L10n.of(context).gamePartner, selectedCard),
-              _buildExchangeButton('right', right?.name ?? L10n.of(context).gameRightPlayer, selectedCard),
+              _buildExchangeButton(
+                'left',
+                left?.name ?? L10n.of(context).gameLeftPlayer,
+                selectedCard,
+              ),
+              _buildExchangeButton(
+                'partner',
+                partner?.name ?? L10n.of(context).gamePartner,
+                selectedCard,
+              ),
+              _buildExchangeButton(
+                'right',
+                right?.name ?? L10n.of(context).gameRightPlayer,
+                selectedCard,
+              ),
             ],
           ),
         ],
@@ -2868,10 +3070,17 @@ class _GameScreenState extends State<GameScreen> {
     return _buildExchangeDialog(state, game);
   }
 
-  Widget _buildExchangeButton(String position, String name, String? selectedCard) {
+  Widget _buildExchangeButton(
+    String position,
+    String name,
+    String? selectedCard,
+  ) {
     final assignedCard = _exchangeAssignments[position];
     final isAssigned = assignedCard != null;
-    final canAssign = selectedCard != null && !isAssigned && !_exchangeAssignments.containsValue(selectedCard);
+    final canAssign =
+        selectedCard != null &&
+        !isAssigned &&
+        !_exchangeAssignments.containsValue(selectedCard);
 
     return GestureDetector(
       onTap: canAssign
@@ -2882,23 +3091,25 @@ class _GameScreenState extends State<GameScreen> {
               });
             }
           : isAssigned
-              ? () {
-                  setState(() {
-                    _exchangeAssignments.remove(position);
-                  });
-                }
-              : null,
+          ? () {
+              setState(() {
+                _exchangeAssignments.remove(position);
+              });
+            }
+          : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isAssigned
               ? const Color(0xFFC7E6D0)
               : canAssign
-                  ? const Color(0xFFE8F4FF)
-                  : const Color(0xFFF0F0F0),
+              ? const Color(0xFFE8F4FF)
+              : const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: canAssign ? const Color(0xFF4D99FF) : const Color(0xFFDDD0CC),
+            color: canAssign
+                ? const Color(0xFF4D99FF)
+                : const Color(0xFFDDD0CC),
             width: canAssign ? 2 : 1,
           ),
         ),
@@ -2911,14 +3122,20 @@ class _GameScreenState extends State<GameScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isAssigned ? const Color(0xFF3A5A40) : const Color(0xFF5A4038),
+                  color: isAssigned
+                      ? const Color(0xFF3A5A40)
+                      : const Color(0xFF5A4038),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isAssigned) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.check_circle, size: 14, color: Color(0xFF3A5A40)),
+              const Icon(
+                Icons.check_circle,
+                size: 14,
+                color: Color(0xFF3A5A40),
+              ),
             ],
           ],
         ),
@@ -2928,7 +3145,10 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildDragonDialog(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
-    final right = _firstWhereOrNull(state.players, (p) => p.position == 'right');
+    final right = _firstWhereOrNull(
+      state.players,
+      (p) => p.position == 'right',
+    );
     final leftName = left?.name ?? L10n.of(context).gameLeftPlayer;
     final rightName = right?.name ?? L10n.of(context).gameRightPlayer;
     return _buildDialog(
@@ -2990,7 +3210,21 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildCallRankDialog(GameService game) {
-    final ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    final ranks = [
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      'J',
+      'Q',
+      'K',
+      'A',
+    ];
     return _buildDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -3019,9 +3253,7 @@ class _GameScreenState extends State<GameScreen> {
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () => game.callRank('none'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(120, 40),
-            ),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(120, 40)),
             child: Text(L10n.of(context).gameNoCall),
           ),
         ],
@@ -3040,7 +3272,9 @@ class _GameScreenState extends State<GameScreen> {
       final myTeam = state.myTeam;
       final myScore = myTeam == 'A' ? teamA : teamB;
       final enemyScore = myTeam == 'A' ? teamB : teamA;
-      title = myScore > enemyScore ? l10n.gameMyTeamWin : (myScore < enemyScore ? l10n.gameEnemyTeamWin : l10n.gameDraw);
+      title = myScore > enemyScore
+          ? l10n.gameMyTeamWin
+          : (myScore < enemyScore ? l10n.gameEnemyTeamWin : l10n.gameDraw);
     }
 
     // C8: Only request profile once to prevent rebuild loop
@@ -3060,31 +3294,60 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           if (state.lastRoundScores.isNotEmpty) ...[
             Text.rich(
-              TextSpan(children: [
-                TextSpan(text: l10n.gameThisRound),
-                TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamA'] : state.lastRoundScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
-                const TextSpan(text: ' : '),
-                TextSpan(text: '${state.myTeam == 'A' ? state.lastRoundScores['teamB'] : state.lastRoundScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
-              ]),
+              TextSpan(
+                children: [
+                  TextSpan(text: l10n.gameThisRound),
+                  TextSpan(
+                    text:
+                        '${state.myTeam == 'A' ? state.lastRoundScores['teamA'] : state.lastRoundScores['teamB']}',
+                    style: const TextStyle(
+                      color: Color(0xFF4A90D9),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const TextSpan(text: ' : '),
+                  TextSpan(
+                    text:
+                        '${state.myTeam == 'A' ? state.lastRoundScores['teamB'] : state.lastRoundScores['teamA']}',
+                    style: const TextStyle(
+                      color: Color(0xFFD24B4B),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               style: const TextStyle(fontSize: 14),
             ),
           ],
           const SizedBox(height: 8),
           Text.rich(
-            TextSpan(children: [
-              TextSpan(text: l10n.gameTotalScore),
-              TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamA'] : state.totalScores['teamB']}', style: const TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.bold)),
-              const TextSpan(text: ' : '),
-              TextSpan(text: '${state.myTeam == 'A' ? state.totalScores['teamB'] : state.totalScores['teamA']}', style: const TextStyle(color: Color(0xFFD24B4B), fontWeight: FontWeight.bold)),
-            ]),
+            TextSpan(
+              children: [
+                TextSpan(text: l10n.gameTotalScore),
+                TextSpan(
+                  text:
+                      '${state.myTeam == 'A' ? state.totalScores['teamA'] : state.totalScores['teamB']}',
+                  style: const TextStyle(
+                    color: Color(0xFF4A90D9),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const TextSpan(text: ' : '),
+                TextSpan(
+                  text:
+                      '${state.myTeam == 'A' ? state.totalScores['teamB'] : state.totalScores['teamA']}',
+                  style: const TextStyle(
+                    color: Color(0xFFD24B4B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           if (isGameEnd && game.isRankedRoom) ...[
@@ -3152,13 +3415,29 @@ class _GameScreenState extends State<GameScreen> {
     final l10n = L10n.of(context);
     switch (tier) {
       case _RankTier.diamond:
-        return _rankPill(l10n.gameRankDiamond, const Color(0xFF69B7FF), Icons.diamond_outlined);
+        return _rankPill(
+          l10n.gameRankDiamond,
+          const Color(0xFF69B7FF),
+          Icons.diamond_outlined,
+        );
       case _RankTier.gold:
-        return _rankPill(l10n.gameRankGold, const Color(0xFFFFD54F), Icons.emoji_events);
+        return _rankPill(
+          l10n.gameRankGold,
+          const Color(0xFFFFD54F),
+          Icons.emoji_events,
+        );
       case _RankTier.silver:
-        return _rankPill(l10n.gameRankSilver, const Color(0xFFB0BEC5), Icons.emoji_events);
+        return _rankPill(
+          l10n.gameRankSilver,
+          const Color(0xFFB0BEC5),
+          Icons.emoji_events,
+        );
       case _RankTier.bronze:
-        return _rankPill(l10n.gameRankBronze, const Color(0xFFC58B6B), Icons.emoji_events);
+        return _rankPill(
+          l10n.gameRankBronze,
+          const Color(0xFFC58B6B),
+          Icons.emoji_events,
+        );
     }
   }
 
@@ -3176,7 +3455,11 @@ class _GameScreenState extends State<GameScreen> {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -3202,7 +3485,8 @@ class _GameScreenState extends State<GameScreen> {
 
   String _getPlayerInfo(Player? player) {
     if (player == null) return '';
-    if (player.hasFinished) return L10n.of(context).gameFinishPosition(player.finishPosition);
+    if (player.hasFinished)
+      return L10n.of(context).gameFinishPosition(player.finishPosition);
 
     return L10n.of(context).gameCardCount(player.cardCount);
   }
@@ -3271,8 +3555,10 @@ class _GameScreenState extends State<GameScreen> {
                 right: -2,
                 bottom: -2,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(10),
@@ -3427,7 +3713,9 @@ class _GameScreenState extends State<GameScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  item.name.length > 4 ? '${item.name.substring(0, 4)}…' : item.name,
+                  item.name.length > 4
+                      ? '${item.name.substring(0, 4)}…'
+                      : item.name,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF8A7A72),
@@ -3469,7 +3757,9 @@ class _GameScreenState extends State<GameScreen> {
     bool avatarBeside = false,
   }) {
     final maxLen = _maxNameLen;
-    final displayName = name.length > maxLen ? '${name.substring(0, maxLen)}..' : name;
+    final displayName = name.length > maxLen
+        ? '${name.substring(0, maxLen)}..'
+        : name;
     final s = _s;
     // Only built when there is something to show, so photo-less, non-bot
     // players keep the exact original nameplate layout.
@@ -3479,7 +3769,9 @@ class _GameScreenState extends State<GameScreen> {
             size: avatarSize * s,
             fallback: isBot
                 ? BotAvatar(size: avatarSize * s, name: name)
-                : SizedBox(width: avatarSize * s, height: avatarSize * s),
+                // Reached while the photo loads, or if it's blocked/expired —
+                // a blank circle there reads as a broken image.
+                : DefaultAvatar(size: avatarSize * s),
           )
         : null;
     final plate = Column(
@@ -3491,12 +3783,12 @@ class _GameScreenState extends State<GameScreen> {
         // free — so there it can be half again as big without costing the board
         // a single pixel.
         if (avatar != null && !avatarBeside)
-          Padding(padding: EdgeInsets.only(bottom: 3 * s), child: avatar),
-        if (badge != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: badge,
+            padding: EdgeInsets.only(bottom: 3 * s),
+            child: avatar,
           ),
+        if (badge != null)
+          Padding(padding: const EdgeInsets.only(bottom: 2), child: badge),
         if (timeoutCount > 0)
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -3523,9 +3815,7 @@ class _GameScreenState extends State<GameScreen> {
           decoration: BoxDecoration(
             color: isTurn ? const Color(0xFFFFF2B3) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            border: isTurn
-                ? Border.all(color: const Color(0xFFE6C86A))
-                : null,
+            border: isTurn ? Border.all(color: const Color(0xFFE6C86A)) : null,
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: 120 * s),
@@ -3535,7 +3825,10 @@ class _GameScreenState extends State<GameScreen> {
                 if (teamLabel != null)
                   Container(
                     margin: EdgeInsets.only(right: 4 * s),
-                    padding: EdgeInsets.symmetric(horizontal: 3 * s, vertical: 1),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 3 * s,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: isMyTeam
                           ? const Color(0xFFE3F0FF)
@@ -3671,7 +3964,8 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildHandRows(GameStateData state) {
     List<String> cards = state.myCards;
-    final isExchangePhase = state.phase == 'card_exchange' && !state.exchangeDone;
+    final isExchangePhase =
+        state.phase == 'card_exchange' && !state.exchangeDone;
 
     // Bug #5: Hide submitted exchange cards from hand display
     if (_exchangeSubmitted && state.exchangeDone && _exchangeGiven.isNotEmpty) {
@@ -3680,9 +3974,15 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     // 교환 단계에서 이미 할당된 카드는 선택 불가
-    bool isCardAssigned(String cardId) => _exchangeAssignments.containsValue(cardId);
+    bool isCardAssigned(String cardId) =>
+        _exchangeAssignments.containsValue(cardId);
 
-    Widget buildCardWidget(String cardId, double cardWidth, double cardHeight, double padding) {
+    Widget buildCardWidget(
+      String cardId,
+      double cardWidth,
+      double cardHeight,
+      double padding,
+    ) {
       final assigned = isCardAssigned(cardId);
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: padding),
@@ -3693,7 +3993,9 @@ class _GameScreenState extends State<GameScreen> {
             width: cardWidth,
             height: cardHeight,
             isSelected: _selectedCards.contains(cardId),
-            onTap: assigned ? null : () => _toggleCard(cardId, singleSelect: isExchangePhase),
+            onTap: assigned
+                ? null
+                : () => _toggleCard(cardId, singleSelect: isExchangePhase),
           ),
         ),
       );
@@ -3703,14 +4005,18 @@ class _GameScreenState extends State<GameScreen> {
       builder: (context, constraints) {
         const horizontalMargin = 16.0;
         final availableWidth = constraints.maxWidth - (horizontalMargin * 2);
-        final perRow = cards.length <= 6 ? cards.length : (cards.length / 2).ceil();
+        final perRow = cards.length <= 6
+            ? cards.length
+            : (cards.length / 2).ceil();
         final dense = cards.length >= 13;
         final cardPadding = dense ? 2.0 : 3.0;
         final totalPadding = perRow * cardPadding * 2;
         final maxWidth = dense ? 46.0 : 50.0;
         final minWidth = dense ? 34.0 : 38.0;
-        final cardWidth =
-            ((availableWidth - totalPadding) / perRow).clamp(minWidth, maxWidth);
+        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
+          minWidth,
+          maxWidth,
+        );
         final cardHeight = (cardWidth * (dense ? 1.35 : 1.4)).clamp(
           dense ? 48.0 : 53.0,
           dense ? 64.0 : 70.0,
@@ -3718,7 +4024,10 @@ class _GameScreenState extends State<GameScreen> {
 
         List<Widget> rowWidgets(List<String> row) {
           return row
-              .map((cardId) => buildCardWidget(cardId, cardWidth, cardHeight, cardPadding))
+              .map(
+                (cardId) =>
+                    buildCardWidget(cardId, cardWidth, cardHeight, cardPadding),
+              )
               .toList();
         }
 
@@ -3824,4 +4133,3 @@ class _AutoDismissDialogState extends State<_AutoDismissDialog> {
     );
   }
 }
-

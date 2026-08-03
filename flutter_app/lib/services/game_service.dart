@@ -198,15 +198,21 @@ class GameService extends ChangeNotifier {
   /// active server host. Used by avatar widgets.
   String? resolvePhotoUrl(String? url) => _network.resolveMediaUrl(url);
 
+  /// Photo that arrived with a chat line, by sender nickname.
+  final Map<String, String> _chatPhotos = {};
+
   /// Resolved avatar for whoever sent a chat line, or null.
   ///
-  /// Chat payloads carry a nickname and nothing else, so the photo has to come
-  /// from whichever roster we are currently holding — the room state in a
-  /// waiting room, the game state once play starts. Returns an absolute URL,
-  /// already filtered: the server omits photos of people this viewer blocked
-  /// or reported, so anything found here is safe to show.
+  /// The line itself carries the sender's photo, which is the only source that
+  /// covers spectators and people who have since left the room; the rosters we
+  /// hold are the fallback for lines that predate that (chat history replayed
+  /// on join). Returns an absolute URL, already filtered: the server omits
+  /// photos of people this viewer blocked or reported, so anything found here
+  /// is safe to show.
   String? chatPhotoUrlFor(String nickname) {
     if (nickname == playerName) return resolvePhotoUrl(myPhotoUrl);
+    final fromLine = _chatPhotos[nickname];
+    if (fromLine != null) return resolvePhotoUrl(fromLine);
     for (final p in roomPlayers) {
       if (p != null && p.name == nickname && p.photoUrl != null) {
         return resolvePhotoUrl(p.photoUrl);
@@ -1415,6 +1421,18 @@ class GameService extends ChangeNotifier {
 
       // Chat
       case 'chat_message':
+        // The server sends the sender's photo with the line (already filtered
+        // for this viewer). Remember it by nickname: a spectator, or anyone who
+        // has left, is in no roster we could look them up in.
+        final chatSender = (data['sender'] ?? '') as String;
+        final chatPhoto = data['photoUrl'] as String?;
+        if (chatSender.isNotEmpty) {
+          if (chatPhoto != null) {
+            _chatPhotos[chatSender] = chatPhoto;
+          } else {
+            _chatPhotos.remove(chatSender);
+          }
+        }
         final msg = {
           'sender': data['sender'] ?? '',
           'senderId': data['senderId'] ?? '',
@@ -1447,6 +1465,11 @@ class GameService extends ChangeNotifier {
 
       case 'chat_history':
         final messages = data['messages'] as List? ?? [];
+        for (final m in messages) {
+          final s = (m['sender'] ?? '') as String;
+          final photo = m['photoUrl'] as String?;
+          if (s.isNotEmpty && photo != null) _chatPhotos[s] = photo;
+        }
         chatMessages = messages
             .map(
               (m) => {
@@ -2641,6 +2664,7 @@ class GameService extends ChangeNotifier {
   void _forgetPreviousAccount(String nickname) {
     if (playerName.isEmpty || playerName == nickname) return;
     _profiles.clear();
+    _chatPhotos.clear();
     goldHistory = [];
     inventoryItems = [];
     inventoryLoading = false;
@@ -2688,6 +2712,7 @@ class GameService extends ChangeNotifier {
     AnalyticsService.instance.setUserId(null);
     playerId = '';
     playerName = '';
+    _chatPhotos.clear();
     equippedTheme = null;
     equippedTitle = null;
     equippedTitleName = null;
@@ -3716,6 +3741,7 @@ class GameService extends ChangeNotifier {
 
   void clearChatMessages() {
     chatMessages.clear();
+    _chatPhotos.clear();
     notifyListeners();
   }
 

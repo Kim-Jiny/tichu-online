@@ -487,7 +487,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// silhouette, with the level as a corner badge. The level used to be drawn
   /// AS the avatar for photo-less players, which put a number where every other
   /// screen puts a face — and the bot tag went missing with it.
-  Widget _buildWaitingSlotAvatar(GameService game, {
+  Widget _buildWaitingSlotAvatar(
+    GameService game, {
     required String name,
     required String? photoUrl,
     required bool isBot,
@@ -509,7 +510,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.person, size: 22, color: Color(0xFF9C8B84)),
+              child: const Icon(
+                Icons.person,
+                size: 22,
+                color: Color(0xFF9C8B84),
+              ),
             ),
     );
     if (isBot || level == null) return avatar;
@@ -665,10 +670,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             const Positioned(
               left: -2,
               top: -6,
-              child: Text(
-                '👑',
-                style: TextStyle(fontSize: 18, height: 1.0),
-              ),
+              child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
             ),
         ],
       ),
@@ -1147,7 +1149,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
-          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          final boardScale = math
+              .min(width / 360.0, height / 400.0)
+              .clamp(0.78, 1.45);
           final seatWidth = seatWidthBase * boardScale;
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
@@ -1260,6 +1264,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: _buildPlayedCardBadge(
                       trickPlay,
                       highlighted: isTrickWinner,
+                      size: playedCardHeight,
                     ),
                   );
                 }(),
@@ -1766,7 +1771,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
-          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          final boardScale = math
+              .min(width / 360.0, height / 400.0)
+              .clamp(0.78, 1.45);
           final seatWidth = seatWidthBase * boardScale;
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
@@ -1887,6 +1894,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: _buildPlayedCardBadge(
                       trickPlay,
                       highlighted: isTrickWinner,
+                      size: playedCardHeight,
                     ),
                   );
                 }(),
@@ -1898,6 +1906,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   child: _buildPlayedCardBadge(
                     selfTrickPlay,
                     highlighted: isSelfTrickWinner,
+                    size: playedCardHeight,
                   ),
                 ),
             ],
@@ -2056,8 +2065,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final avatar = (seatHeight * 0.56).clamp(30.0, 84.0).toDouble();
     return (
       avatar: avatar,
-      photoCentre:
-          verticalPadding + labelPadding + timeoutHeight + avatar / 2,
+      photoCentre: verticalPadding + labelPadding + timeoutHeight + avatar / 2,
     );
   }
 
@@ -2078,8 +2086,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       // with no way to open a profile at all — so no way to block or report
       // someone whose nickname or photo is the problem. Long-press is the only
       // free gesture here; the tap has to stay on card view.
-      onLongPress: () =>
-          _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
+      onLongPress: () => _showPlayerProfileDialog(p.name, game, isBot: p.isBot),
       onTap: () {
         if (isApproved) {
           setState(() {
@@ -2173,25 +2180,24 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         child: Opacity(
                           opacity: p.connected ? 1.0 : 0.45,
                           child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (p.timeoutCount > 0)
-                              SizedBox(
-                                height: timeoutHeight,
-                                child: Text(
-                                  '⏱ ${p.timeoutCount}/3',
-                                  style: TextStyle(
-                                    color: const Color(0xFFE65100),
-                                    fontSize: compact ? 8.5 : 10,
-                                    fontWeight: FontWeight.w800,
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              if (p.timeoutCount > 0)
+                                SizedBox(
+                                  height: timeoutHeight,
+                                  child: Text(
+                                    '⏱ ${p.timeoutCount}/3',
+                                    style: TextStyle(
+                                      color: const Color(0xFFE65100),
+                                      fontSize: compact ? 8.5 : 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            // Own row, like the player seat: inline beside the
-                            // name it had to stay at 14-18px to leave the name
-                            // any width, which is too small to make out a face.
-                            if (p.photoUrl != null || p.isBot)
+                              // Own row, like the player seat: inline beside the
+                              // name it had to stay at 14-18px to leave the name
+                              // any width, which is too small to make out a face.
                               Padding(
                                 padding: EdgeInsets.only(bottom: spacing),
                                 child: ProfileAvatar(
@@ -2199,109 +2205,113 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   size: avatarSize,
                                   blocked: game.blockedUsers.contains(p.name),
                                   fallback: p.isBot
-                                      ? BotAvatar(size: avatarSize, name: p.name)
-                                      : SizedBox(
-                                          width: avatarSize,
-                                          height: avatarSize,
-                                        ),
+                                      ? BotAvatar(
+                                          size: avatarSize,
+                                          name: p.name,
+                                        )
+                                      : DefaultAvatar(size: avatarSize),
                                 ),
                               ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (!p.connected)
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                      right: compact ? 2 : 3,
-                                    ),
-                                    child: Icon(
-                                      Icons.wifi_off,
-                                      size: offlineIconSize,
-                                      color: const Color(0xFFE53935),
-                                    ),
-                                  ),
-                                Flexible(
-                                  child: Text(
-                                    p.name,
-                                    style: TextStyle(
-                                      color: p.connected
-                                          ? const Color(0xFF5A4038)
-                                          : const Color(0xFFE53935),
-                                      fontSize: nameFontSize,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing),
-                            Text(
-                              '${p.totalScore}',
-                              style: TextStyle(
-                                color: const Color(0xFF5A4038),
-                                fontSize: scoreFontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(
-                              height: bidHeight,
-                              child: p.hasBid && p.bid != null
-                                  ? Container(
-                                      margin: EdgeInsets.only(
-                                        top: bidTopMargin,
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: bidHorizontalPadding,
-                                        vertical: compact ? 0 : 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: p.tricks == p.bid
-                                            ? const Color(0xFFE8F5E9)
-                                            : p.tricks > p.bid!
-                                            ? const Color(0xFFFFF3E0)
-                                            : const Color(0xFFF5F5F5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${p.tricks}/${p.bid}',
-                                        style: TextStyle(
-                                          color: p.tricks == p.bid
-                                              ? const Color(0xFF4CAF50)
-                                              : p.tricks > p.bid!
-                                              ? const Color(0xFFE65100)
-                                              : const Color(0xFF8A7A72),
-                                          fontSize: bidFontSize,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                  : p.hasBid && p.bid == null
-                                  ? Container(
-                                      margin: EdgeInsets.only(
-                                        top: bidTopMargin,
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: bidHorizontalPadding,
-                                        vertical: compact ? 0 : 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF0EBF8),
-                                        borderRadius: BorderRadius.circular(8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (!p.connected)
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        right: compact ? 2 : 3,
                                       ),
                                       child: Icon(
-                                        Icons.check,
-                                        size: compact ? 10 : 12,
-                                        color: const Color(0xFF7A6A95),
+                                        Icons.wifi_off,
+                                        size: offlineIconSize,
+                                        color: const Color(0xFFE53935),
                                       ),
-                                    )
-                                  : null,
-                            ),
-                          ],
-                        ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      p.name,
+                                      style: TextStyle(
+                                        color: p.connected
+                                            ? const Color(0xFF5A4038)
+                                            : const Color(0xFFE53935),
+                                        fontSize: nameFontSize,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: spacing),
+                              Text(
+                                '${p.totalScore}',
+                                style: TextStyle(
+                                  color: const Color(0xFF5A4038),
+                                  fontSize: scoreFontSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(
+                                height: bidHeight,
+                                child: p.hasBid && p.bid != null
+                                    ? Container(
+                                        margin: EdgeInsets.only(
+                                          top: bidTopMargin,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: bidHorizontalPadding,
+                                          vertical: compact ? 0 : 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: p.tricks == p.bid
+                                              ? const Color(0xFFE8F5E9)
+                                              : p.tricks > p.bid!
+                                              ? const Color(0xFFFFF3E0)
+                                              : const Color(0xFFF5F5F5),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '${p.tricks}/${p.bid}',
+                                          style: TextStyle(
+                                            color: p.tricks == p.bid
+                                                ? const Color(0xFF4CAF50)
+                                                : p.tricks > p.bid!
+                                                ? const Color(0xFFE65100)
+                                                : const Color(0xFF8A7A72),
+                                            fontSize: bidFontSize,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      )
+                                    : p.hasBid && p.bid == null
+                                    ? Container(
+                                        margin: EdgeInsets.only(
+                                          top: bidTopMargin,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: bidHorizontalPadding,
+                                          vertical: compact ? 0 : 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF0EBF8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.check,
+                                          size: compact ? 10 : 12,
+                                          color: const Color(0xFF7A6A95),
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -2424,43 +2434,40 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     color: labelTint,
                     borderRadius: BorderRadius.circular(isSelf ? 16 : 14),
                     border: isCurrentTurn
-                        ? Border.all(
-                            color: const Color(0xFFE6C86A),
-                            width: 1.5,
-                          )
+                        ? Border.all(color: const Color(0xFFE6C86A), width: 1.5)
                         : null,
                   ),
                   child: SizedBox(
                     width: contentWidth,
                     child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Only when there is a count to show. Reserving the
-                      // row unconditionally cost 16dp of the label's height,
-                      // and since the whole label is scaled down to fit the
-                      // seat box, that 16dp was being taken out of the
-                      // avatar — raising avatarDiameter just tightened the
-                      // scale factor by the same amount.
-                      if (p.timeoutCount > 0)
-                        SizedBox(
-                          height: timeoutHeight,
-                          child: Text(
-                            '⏱ ${p.timeoutCount}/3',
-                            style: TextStyle(
-                              color: const Color(0xFFE65100),
-                              fontSize: compact ? 8.5 : 10,
-                              fontWeight: FontWeight.w800,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Only when there is a count to show. Reserving the
+                        // row unconditionally cost 16dp of the label's height,
+                        // and since the whole label is scaled down to fit the
+                        // seat box, that 16dp was being taken out of the
+                        // avatar — raising avatarDiameter just tightened the
+                        // scale factor by the same amount.
+                        if (p.timeoutCount > 0)
+                          SizedBox(
+                            height: timeoutHeight,
+                            child: Text(
+                              '⏱ ${p.timeoutCount}/3',
+                              style: TextStyle(
+                                color: const Color(0xFFE65100),
+                                fontSize: compact ? 8.5 : 10,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ),
-                      // Own row rather than inline before the name: inline it
-                      // had to stay at 14-16px to leave the name any width at
-                      // all, which is too small to recognise a face. Drawn for
-                      // every seat, photo or not — otherwise photo-less seats
-                      // render shorter and the played card, which is placed
-                      // from the photo's centre, lands somewhere else on them.
-                      Padding(
+                        // Own row rather than inline before the name: inline it
+                        // had to stay at 14-16px to leave the name any width at
+                        // all, which is too small to recognise a face. Drawn for
+                        // every seat, photo or not — otherwise photo-less seats
+                        // render shorter and the played card, which is placed
+                        // from the photo's centre, lands somewhere else on them.
+                        Padding(
                           padding: EdgeInsets.only(bottom: spacing),
                           child: ProfileAvatar(
                             photoUrl: game.resolvePhotoUrl(p.photoUrl),
@@ -2468,104 +2475,103 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             blocked: game.blockedUsers.contains(p.name),
                             fallback: p.isBot
                                 ? BotAvatar(size: avatarDiameter, name: p.name)
-                                : SizedBox(
-                                    width: avatarDiameter,
-                                    height: avatarDiameter,
-                                  ),
+                                : DefaultAvatar(size: avatarDiameter),
                           ),
                         ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (!p.connected)
-                            Padding(
-                              padding: EdgeInsets.only(right: compact ? 2 : 3),
-                              child: Icon(
-                                Icons.wifi_off,
-                                size: offlineIconSize,
-                                color: const Color(0xFFE53935),
-                              ),
-                            ),
-                          Flexible(
-                            child: Text(
-                              p.name,
-                              style: TextStyle(
-                                color: p.connected
-                                    ? const Color(0xFF5A4038)
-                                    : const Color(0xFFE53935),
-                                fontSize: nameFontSize,
-                                fontWeight: isSelf
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing),
-                      Text(
-                        '${p.totalScore}',
-                        style: TextStyle(
-                          color: const Color(0xFF5A4038),
-                          fontSize: scoreFontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(
-                        height: bidHeight,
-                        child: p.hasBid && p.bid != null
-                            ? Container(
-                                margin: EdgeInsets.only(top: bidTopMargin),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: bidHorizontalPadding,
-                                  vertical: compact ? 0 : 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: p.tricks == p.bid
-                                      ? const Color(0xFFE8F5E9)
-                                      : p.tricks > p.bid!
-                                      ? const Color(0xFFFFF3E0)
-                                      : const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${p.tricks}/${p.bid}',
-                                  style: TextStyle(
-                                    color: p.tricks == p.bid
-                                        ? const Color(0xFF4CAF50)
-                                        : p.tricks > p.bid!
-                                        ? const Color(0xFFE65100)
-                                        : const Color(0xFF8A7A72),
-                                    fontSize: bidFontSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            : p.hasBid && p.bid == null
-                            ? Container(
-                                margin: EdgeInsets.only(top: bidTopMargin),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: bidHorizontalPadding,
-                                  vertical: compact ? 0 : 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF0EBF8),
-                                  borderRadius: BorderRadius.circular(8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!p.connected)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  right: compact ? 2 : 3,
                                 ),
                                 child: Icon(
-                                  Icons.check,
-                                  size: compact ? 10 : 12,
-                                  color: const Color(0xFF7A6A95),
+                                  Icons.wifi_off,
+                                  size: offlineIconSize,
+                                  color: const Color(0xFFE53935),
                                 ),
-                              )
-                            : null,
-                      ),
-                    ],
-                  ),
+                              ),
+                            Flexible(
+                              child: Text(
+                                p.name,
+                                style: TextStyle(
+                                  color: p.connected
+                                      ? const Color(0xFF5A4038)
+                                      : const Color(0xFFE53935),
+                                  fontSize: nameFontSize,
+                                  fontWeight: isSelf
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: spacing),
+                        Text(
+                          '${p.totalScore}',
+                          style: TextStyle(
+                            color: const Color(0xFF5A4038),
+                            fontSize: scoreFontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(
+                          height: bidHeight,
+                          child: p.hasBid && p.bid != null
+                              ? Container(
+                                  margin: EdgeInsets.only(top: bidTopMargin),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: bidHorizontalPadding,
+                                    vertical: compact ? 0 : 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: p.tricks == p.bid
+                                        ? const Color(0xFFE8F5E9)
+                                        : p.tricks > p.bid!
+                                        ? const Color(0xFFFFF3E0)
+                                        : const Color(0xFFF5F5F5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${p.tricks}/${p.bid}',
+                                    style: TextStyle(
+                                      color: p.tricks == p.bid
+                                          ? const Color(0xFF4CAF50)
+                                          : p.tricks > p.bid!
+                                          ? const Color(0xFFE65100)
+                                          : const Color(0xFF8A7A72),
+                                      fontSize: bidFontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              : p.hasBid && p.bid == null
+                              ? Container(
+                                  margin: EdgeInsets.only(top: bidTopMargin),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: bidHorizontalPadding,
+                                    vertical: compact ? 0 : 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0EBF8),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.check,
+                                    size: compact ? 10 : 12,
+                                    color: const Color(0xFF7A6A95),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2576,7 +2582,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
-  Widget _buildPlayedCardBadge(SKTrickPlay play, {required bool highlighted}) {
+  /// [size] is the card's height, and must be the same value the board used to
+  /// place it. It used to be hardcoded at 72 while the board positioned the
+  /// card from `72 * boardScale`, so on any screen where boardScale wasn't
+  /// exactly 1 the card landed off the photo's centre — right of it in game
+  /// (scale > 1), left of it while spectating (scale < 1).
+  Widget _buildPlayedCardBadge(
+    SKTrickPlay play, {
+    required bool highlighted,
+    double size = 72,
+  }) {
     final isTigressChoice =
         play.tigressChoice == 'pirate' || play.tigressChoice == 'escape';
     final displayCardId = play.tigressChoice == 'pirate'
@@ -2584,7 +2599,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
         : play.tigressChoice == 'escape'
         ? 'sk_escape'
         : play.cardId;
-    final card = _buildCard(displayCardId, size: 72, highlighted: highlighted);
+    final card = _buildCard(
+      displayCardId,
+      size: size,
+      highlighted: highlighted,
+    );
     if (!isTigressChoice) return card;
     // Overlay a small check-mark badge in the top-left corner so players can
     // tell that this pirate/escape is actually a Tigress that was played as
@@ -2810,7 +2829,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     return DraggableChatPanel(
       accentColor: const Color(0xFF21455F),
-      sendIconColor: const Color(0xFF64B5F6),
+      // Skull King's own navy, not Tichu's blue — this panel sits on the SK
+      // board and the send icon was the one thing on it wearing another game's
+      // colour.
+      sendIconColor: const Color(0xFF21455F),
       title: L10n.of(context).skGameChat,
       hintText: L10n.of(context).skGameMessageHint,
       controller: _chatController,
@@ -3036,10 +3058,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
       message: message,
       isMe: isMe,
       game: game,
-      onTap: sender.isEmpty ? null : () => _showPlayerProfileDialog(sender, game),
+      onTap: sender.isEmpty
+          ? null
+          : () => _showPlayerProfileDialog(sender, game),
       mineColor: const Color(0xFF21455F),
     );
   }
+
   void _showScoreHistoryDialog(SKGameStateData state) {
     final cumulativeScores = <String, int>{
       for (final p in state.players) p.id: 0,
@@ -3138,7 +3163,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       decoration: const BoxDecoration(
                         color: Color(0xFFFFF1EA),
                         border: Border(
-                          bottom: BorderSide(color: Color(0xFFF0D9CB), width: 1),
+                          bottom: BorderSide(
+                            color: Color(0xFFF0D9CB),
+                            width: 1,
+                          ),
                         ),
                       ),
                       children: [
@@ -3636,11 +3664,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: _buildSelfStatusRow(
-              selfPlayer,
-              game,
-              compact: isLandscape,
-            ),
+            child: _buildSelfStatusRow(selfPlayer, game, compact: isLandscape),
           ),
           Text(
             L10n.of(context).skGameBidPrompt,
@@ -3762,11 +3786,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
-            child: _buildSelfStatusRow(
-              selfPlayer,
-              game,
-              compact: isLandscape,
-            ),
+            child: _buildSelfStatusRow(selfPlayer, game, compact: isLandscape),
           ),
           // Play button above cards
           if (state.isMyTurn && selectedCard != null && isSelectedLegal)
@@ -4327,10 +4347,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     final rankColor = rank == 1
                         ? const Color(0xFFD4A24A)
                         : rank == 2
-                            ? const Color(0xFF9A9A9A)
-                            : rank == 3
-                                ? const Color(0xFFB07A4A)
-                                : const Color(0xFFA89A92);
+                        ? const Color(0xFF9A9A9A)
+                        : rank == 3
+                        ? const Color(0xFFB07A4A)
+                        : const Color(0xFFA89A92);
                     return Container(
                       padding: EdgeInsets.symmetric(
                         vertical: isLandscape ? 3 : 4,

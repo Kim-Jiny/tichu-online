@@ -230,7 +230,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     if (_dismissedSettingKey == '${ev.round}-${ev.playerId}') {
                       return const SizedBox.shrink();
                     }
-                    return _buildSettingRevealOverlay(ev, trumpSuit: s!.trumpSuit);
+                    return _buildSettingRevealOverlay(
+                      ev,
+                      trumpSuit: s!.trumpSuit,
+                    );
                   },
                 ),
               ],
@@ -243,311 +246,289 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
   Widget _buildMainContent() {
     return Consumer<GameService>(
-                builder: (context, game, _) {
-                  final state = game.mightyGameState;
-                  if (state == null) {
-                    if (game.isSpectator &&
-                        game.hasRoom &&
-                        !game.hasActiveGame) {
-                      return _buildSpectatorWaiting(game);
-                    }
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  // Clear stale pseudo-spectator state when the local player
-                  // stops being killed (i.e. next round started and they
-                  // rejoined the table). Server-side permissions are already
-                  // wiped by pruneCardViewPermissions.
-                  {
-                    final myId = game.playerId;
-                    final isSelfExcluded =
-                        myId.isNotEmpty && state.excludedPlayers.contains(myId);
-                    if (_wasSelfExcluded && !isSelfExcluded) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() {
-                          game.approvedCardViews.clear();
-                          game.pendingCardViewRequests.clear();
-                          _viewingPlayerId = null;
-                          _cardViewRequestTimer?.cancel();
-                        });
-                      });
-                    }
-                    if (_wasSelfExcluded != isSelfExcluded) {
-                      _wasSelfExcluded = isSelfExcluded;
-                    }
-                  }
-                  // Clear any pre-selection at trick boundaries: the lead suit
-                  // changes every trick, so whatever the user queued up before
-                  // may no longer be legal on the new trick.
-                  if (_lastTrickCount != state.tricks.length) {
-                    if (_lastTrickCount != -1 && _selectedCard != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() => _selectedCard = null);
-                      });
-                    }
-                    _lastTrickCount = state.tricks.length;
-                  }
-                  // Trump change during kitty_exchange may change which card is
-                  // mighty. If the new mighty isn't in declarer's hand, reset
-                  // the friend pick to mighty-friend so the host doesn't have
-                  // to re-pick manually.
-                  if (state.phase == 'kitty_exchange') {
-                    final currentMighty = state.mightyCard;
-                    if (_lastKittyMightyCard != null &&
-                        _lastKittyMightyCard != currentMighty &&
-                        currentMighty != null &&
-                        !state.myCards.contains(currentMighty)) {
-                      final parts = currentMighty
-                          .replaceFirst('mighty_', '')
-                          .split('_');
-                      final newSuit = parts.isNotEmpty ? parts[0] : 'spade';
-                      final newRank = parts.length > 1 ? parts[1] : 'A';
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() {
-                          _friendMode = 'card';
-                          _friendSuit = newSuit;
-                          _friendRank = newRank;
-                          _friendCardSelection = currentMighty;
-                        });
-                      });
-                    }
-                    _lastKittyMightyCard = currentMighty;
-                  } else if (_lastKittyMightyCard != null) {
-                    _lastKittyMightyCard = null;
-                  }
-                  // Clear stale state on phase change
-                  if (_lastPhase != state.phase) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      _syncGameEndCountdown(state.phase);
-                      setState(() {
-                        _lastPhase = state.phase;
-                        _selectedCard = null;
-                        _jokerSuitChoice = null;
-                        _jokerCallChoice = true;
-                        if (state.phase == 'bidding') {
-                          _bidPoints = state.mode == '6p' ? 14 : 13;
-                          _bidSuit = 'spade';
-                          _discardSelection.clear();
-                          _friendCardSelection = '';
-                          _friendMode = '';
-                          _friendSuit = 'spade';
-                          _friendRank = 'A';
-                          _selectedTrumpSuit = null;
-                          _lastKnownTrumpSuit = null;
-                        }
-                        if (state.phase == 'kitty_exchange') {
-                          _discardSelection.clear();
-                          _selectedTrumpSuit = null;
-                          _lastKnownTrumpSuit = null;
-                          // Smart default, in priority order:
-                          //   1. Hand holds BOTH mighty AND joker → first-trick
-                          //      friend (strong hand, the first-trick winner
-                          //      makes a great partner).
-                          //   2. Missing mighty → call mighty as friend card.
-                          //   3. Suited bid, missing trump-A → call trump A.
-                          //   4. Missing joker → joker-call friend.
-                          //   5. Otherwise → leave unset so host picks
-                          //      explicitly (confirm button stays disabled).
-                          final myCards = state.myCards;
-                          final mightyCard = state.mightyCard;
-                          final trump = state.trumpSuit ?? 'spade';
-                          final isNT = trump == 'no_trump';
-                          final hasMighty =
-                              mightyCard != null &&
-                              myCards.contains(mightyCard);
-                          final hasJoker = myCards.contains('mighty_joker');
-                          final trumpAce = isNT ? null : 'mighty_${trump}_A';
-                          final hasTrumpAce =
-                              trumpAce != null && myCards.contains(trumpAce);
+      builder: (context, game, _) {
+        final state = game.mightyGameState;
+        if (state == null) {
+          if (game.isSpectator && game.hasRoom && !game.hasActiveGame) {
+            return _buildSpectatorWaiting(game);
+          }
+          return const Center(child: CircularProgressIndicator());
+        }
+        // Clear stale pseudo-spectator state when the local player
+        // stops being killed (i.e. next round started and they
+        // rejoined the table). Server-side permissions are already
+        // wiped by pruneCardViewPermissions.
+        {
+          final myId = game.playerId;
+          final isSelfExcluded =
+              myId.isNotEmpty && state.excludedPlayers.contains(myId);
+          if (_wasSelfExcluded && !isSelfExcluded) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() {
+                game.approvedCardViews.clear();
+                game.pendingCardViewRequests.clear();
+                _viewingPlayerId = null;
+                _cardViewRequestTimer?.cancel();
+              });
+            });
+          }
+          if (_wasSelfExcluded != isSelfExcluded) {
+            _wasSelfExcluded = isSelfExcluded;
+          }
+        }
+        // Clear any pre-selection at trick boundaries: the lead suit
+        // changes every trick, so whatever the user queued up before
+        // may no longer be legal on the new trick.
+        if (_lastTrickCount != state.tricks.length) {
+          if (_lastTrickCount != -1 && _selectedCard != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() => _selectedCard = null);
+            });
+          }
+          _lastTrickCount = state.tricks.length;
+        }
+        // Trump change during kitty_exchange may change which card is
+        // mighty. If the new mighty isn't in declarer's hand, reset
+        // the friend pick to mighty-friend so the host doesn't have
+        // to re-pick manually.
+        if (state.phase == 'kitty_exchange') {
+          final currentMighty = state.mightyCard;
+          if (_lastKittyMightyCard != null &&
+              _lastKittyMightyCard != currentMighty &&
+              currentMighty != null &&
+              !state.myCards.contains(currentMighty)) {
+            final parts = currentMighty.replaceFirst('mighty_', '').split('_');
+            final newSuit = parts.isNotEmpty ? parts[0] : 'spade';
+            final newRank = parts.length > 1 ? parts[1] : 'A';
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() {
+                _friendMode = 'card';
+                _friendSuit = newSuit;
+                _friendRank = newRank;
+                _friendCardSelection = currentMighty;
+              });
+            });
+          }
+          _lastKittyMightyCard = currentMighty;
+        } else if (_lastKittyMightyCard != null) {
+          _lastKittyMightyCard = null;
+        }
+        // Clear stale state on phase change
+        if (_lastPhase != state.phase) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _syncGameEndCountdown(state.phase);
+            setState(() {
+              _lastPhase = state.phase;
+              _selectedCard = null;
+              _jokerSuitChoice = null;
+              _jokerCallChoice = true;
+              if (state.phase == 'bidding') {
+                _bidPoints = state.mode == '6p' ? 14 : 13;
+                _bidSuit = 'spade';
+                _discardSelection.clear();
+                _friendCardSelection = '';
+                _friendMode = '';
+                _friendSuit = 'spade';
+                _friendRank = 'A';
+                _selectedTrumpSuit = null;
+                _lastKnownTrumpSuit = null;
+              }
+              if (state.phase == 'kitty_exchange') {
+                _discardSelection.clear();
+                _selectedTrumpSuit = null;
+                _lastKnownTrumpSuit = null;
+                // Smart default, in priority order:
+                //   1. Hand holds BOTH mighty AND joker → first-trick
+                //      friend (strong hand, the first-trick winner
+                //      makes a great partner).
+                //   2. Missing mighty → call mighty as friend card.
+                //   3. Suited bid, missing trump-A → call trump A.
+                //   4. Missing joker → joker-call friend.
+                //   5. Otherwise → leave unset so host picks
+                //      explicitly (confirm button stays disabled).
+                final myCards = state.myCards;
+                final mightyCard = state.mightyCard;
+                final trump = state.trumpSuit ?? 'spade';
+                final isNT = trump == 'no_trump';
+                final hasMighty =
+                    mightyCard != null && myCards.contains(mightyCard);
+                final hasJoker = myCards.contains('mighty_joker');
+                final trumpAce = isNT ? null : 'mighty_${trump}_A';
+                final hasTrumpAce =
+                    trumpAce != null && myCards.contains(trumpAce);
 
-                          if (hasMighty && hasJoker) {
-                            _friendMode = 'first_trick';
-                            _friendCardSelection = 'first_trick';
-                          } else if (mightyCard != null && !hasMighty) {
-                            final parts = mightyCard
-                                .replaceFirst('mighty_', '')
-                                .split('_');
-                            _friendMode = 'card';
-                            _friendSuit = parts.isNotEmpty ? parts[0] : 'spade';
-                            _friendRank = parts.length > 1 ? parts[1] : 'A';
-                            _friendCardSelection =
-                                'mighty_${_friendSuit}_$_friendRank';
-                          } else if (trumpAce != null && !hasTrumpAce) {
-                            _friendMode = 'card';
-                            _friendSuit = trump;
-                            _friendRank = 'A';
-                            _friendCardSelection = trumpAce;
-                          } else if (!hasJoker) {
-                            _friendMode = 'joker';
-                            _friendCardSelection = 'mighty_joker';
-                          } else {
-                            _friendMode = '';
-                            _friendCardSelection = '';
-                          }
-                        }
-                      });
-                    });
-                  }
+                if (hasMighty && hasJoker) {
+                  _friendMode = 'first_trick';
+                  _friendCardSelection = 'first_trick';
+                } else if (mightyCard != null && !hasMighty) {
+                  final parts = mightyCard
+                      .replaceFirst('mighty_', '')
+                      .split('_');
+                  _friendMode = 'card';
+                  _friendSuit = parts.isNotEmpty ? parts[0] : 'spade';
+                  _friendRank = parts.length > 1 ? parts[1] : 'A';
+                  _friendCardSelection = 'mighty_${_friendSuit}_$_friendRank';
+                } else if (trumpAce != null && !hasTrumpAce) {
+                  _friendMode = 'card';
+                  _friendSuit = trump;
+                  _friendRank = 'A';
+                  _friendCardSelection = trumpAce;
+                } else if (!hasJoker) {
+                  _friendMode = 'joker';
+                  _friendCardSelection = 'mighty_joker';
+                } else {
+                  _friendMode = '';
+                  _friendCardSelection = '';
+                }
+              }
+            });
+          });
+        }
 
-                  // Clear selected card if it's no longer in hand
-                  if (_selectedCard != null &&
-                      !state.myCards.contains(_selectedCard)) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _selectedCard = null);
-                    });
-                  }
+        // Clear selected card if it's no longer in hand
+        if (_selectedCard != null && !state.myCards.contains(_selectedCard)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _selectedCard = null);
+          });
+        }
 
-                  // Kill-reveal auto-dismiss: when a fresh (non-dismissed) kill
-                  // event appears, schedule a 4-second auto-close so the
-                  // overlay doesn't block the game indefinitely if nobody
-                  // taps it. Keyed by round+targetCard so replaying the same
-                  // event in a later round re-arms the timer.
-                  if (state.lastKillEvent != null) {
-                    final killKey =
-                        '${state.round}-${state.lastKillEvent!.targetCardId}';
-                    final isActive = _dismissedKillKey != killKey;
-                    if (isActive && _killAutoDismissKey != killKey) {
-                      _killAutoDismissKey = killKey;
-                      _killAutoDismissTimer?.cancel();
-                      _killAutoDismissTimer = Timer(
-                        const Duration(seconds: 4),
-                        () {
-                          if (!mounted) return;
-                          setState(() => _dismissedKillKey = killKey);
-                        },
-                      );
-                    } else if (!isActive && _killAutoDismissKey == killKey) {
-                      _killAutoDismissTimer?.cancel();
-                    }
-                  }
+        // Kill-reveal auto-dismiss: when a fresh (non-dismissed) kill
+        // event appears, schedule a 4-second auto-close so the
+        // overlay doesn't block the game indefinitely if nobody
+        // taps it. Keyed by round+targetCard so replaying the same
+        // event in a later round re-arms the timer.
+        if (state.lastKillEvent != null) {
+          final killKey = '${state.round}-${state.lastKillEvent!.targetCardId}';
+          final isActive = _dismissedKillKey != killKey;
+          if (isActive && _killAutoDismissKey != killKey) {
+            _killAutoDismissKey = killKey;
+            _killAutoDismissTimer?.cancel();
+            _killAutoDismissTimer = Timer(const Duration(seconds: 4), () {
+              if (!mounted) return;
+              setState(() => _dismissedKillKey = killKey);
+            });
+          } else if (!isActive && _killAutoDismissKey == killKey) {
+            _killAutoDismissTimer?.cancel();
+          }
+        }
 
-                  // Deal-miss reveal auto-dismiss (same 5s pattern as kill so the
-                  // full-screen overlay never blocks the table indefinitely).
-                  if (state.lastDealMissEvent != null) {
-                    final dmKey =
-                        '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}';
-                    final isActive = _dismissedDealMissKey != dmKey;
-                    if (isActive && _dealMissAutoDismissKey != dmKey) {
-                      _dealMissAutoDismissKey = dmKey;
-                      _dealMissAutoDismissTimer?.cancel();
-                      _dealMissAutoDismissTimer = Timer(
-                        const Duration(seconds: 5),
-                        () {
-                          if (!mounted) return;
-                          setState(() => _dismissedDealMissKey = dmKey);
-                        },
-                      );
-                    } else if (!isActive && _dealMissAutoDismissKey == dmKey) {
-                      _dealMissAutoDismissTimer?.cancel();
-                    }
-                  }
+        // Deal-miss reveal auto-dismiss (same 5s pattern as kill so the
+        // full-screen overlay never blocks the table indefinitely).
+        if (state.lastDealMissEvent != null) {
+          final dmKey =
+              '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}';
+          final isActive = _dismissedDealMissKey != dmKey;
+          if (isActive && _dealMissAutoDismissKey != dmKey) {
+            _dealMissAutoDismissKey = dmKey;
+            _dealMissAutoDismissTimer?.cancel();
+            _dealMissAutoDismissTimer = Timer(const Duration(seconds: 5), () {
+              if (!mounted) return;
+              setState(() => _dismissedDealMissKey = dmKey);
+            });
+          } else if (!isActive && _dealMissAutoDismissKey == dmKey) {
+            _dealMissAutoDismissTimer?.cancel();
+          }
+        }
 
-                  // Setting reveal auto-dismiss (same pattern).
-                  if (state.lastSettingEvent != null) {
-                    final stKey =
-                        '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}';
-                    final isActive = _dismissedSettingKey != stKey;
-                    if (isActive && _settingAutoDismissKey != stKey) {
-                      _settingAutoDismissKey = stKey;
-                      _settingAutoDismissTimer?.cancel();
-                      _settingAutoDismissTimer = Timer(
-                        const Duration(seconds: 5),
-                        () {
-                          if (!mounted) return;
-                          setState(() => _dismissedSettingKey = stKey);
-                        },
-                      );
-                    } else if (!isActive && _settingAutoDismissKey == stKey) {
-                      _settingAutoDismissTimer?.cancel();
-                    }
-                  }
+        // Setting reveal auto-dismiss (same pattern).
+        if (state.lastSettingEvent != null) {
+          final stKey =
+              '${state.lastSettingEvent!.round}-${state.lastSettingEvent!.playerId}';
+          final isActive = _dismissedSettingKey != stKey;
+          if (isActive && _settingAutoDismissKey != stKey) {
+            _settingAutoDismissKey = stKey;
+            _settingAutoDismissTimer?.cancel();
+            _settingAutoDismissTimer = Timer(const Duration(seconds: 5), () {
+              if (!mounted) return;
+              setState(() => _dismissedSettingKey = stKey);
+            });
+          } else if (!isActive && _settingAutoDismissKey == stKey) {
+            _settingAutoDismissTimer?.cancel();
+          }
+        }
 
-                  // Kitty-phase contract-change detection: flash a banner when
-                  // the declarer changes trump or raises the bid so the other
-                  // players notice the contract shift.
-                  if (state.phase == 'kitty_exchange' &&
-                      state.declarer != null) {
-                    final currTrump = state.trumpSuit;
-                    final currBid = (state.currentBid['points'] as num?)
-                        ?.toInt();
-                    if (_kittyContractTrump != null &&
-                        _kittyContractBid != null) {
-                      final trumpChanged =
-                          currTrump != null && currTrump != _kittyContractTrump;
-                      final bidRaised =
-                          currBid != null && currBid > _kittyContractBid!;
-                      if (trumpChanged || bidRaised) {
-                        final info = _ContractChangeInfo(
-                          oldTrump: trumpChanged ? _kittyContractTrump : null,
-                          newTrump: trumpChanged ? currTrump : null,
-                          oldBid: bidRaised ? _kittyContractBid : null,
-                          newBid: bidRaised ? currBid : null,
-                        );
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!mounted) return;
-                          setState(() => _contractChangeBanner = info);
-                          _contractChangeTimer?.cancel();
-                          _contractChangeTimer = Timer(
-                            const Duration(milliseconds: 2600),
-                            () {
-                              if (!mounted) return;
-                              setState(() => _contractChangeBanner = null);
-                            },
-                          );
-                        });
-                      }
-                    }
-                    _kittyContractTrump = currTrump;
-                    _kittyContractBid = currBid;
-                  } else {
-                    if (_kittyContractTrump != null ||
-                        _kittyContractBid != null) {
-                      _kittyContractTrump = null;
-                      _kittyContractBid = null;
-                    }
-                  }
-
-                  return Stack(
-                    children: [
-                      Column(
-                        children: [
-                          _buildTopBar(state, game),
-                          Expanded(child: _buildActiveBoardStage(state, game)),
-                        ],
-                      ),
-                      if (_moreOpen) _buildMoreMenu(game),
-                      if (_viewersOpen) _buildViewersPanel(game),
-                      if (_soundPanelOpen) _buildSoundPanel(game),
-                      if (_chatOpen) _buildChatPanel(game),
-                      if (game.hasIncomingCardViewRequests)
-                        _buildCardViewRequestPopup(game),
-                      if (game.timeoutPlayerName != null)
-                        _buildTimeoutBanner(game.timeoutPlayerName!),
-                      if (game.errorMessage != null)
-                        _buildErrorBanner(game.errorMessage!),
-                      if (state.lastDealMissEvent != null &&
-                          _dismissedDealMissKey !=
-                              '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}')
-                        _buildDealMissRevealOverlay(state.lastDealMissEvent!),
-                      // The declarer chose the kill target, so they don't need
-                      // the reveal popup — only show it to everyone else.
-                      if (state.lastKillEvent != null &&
-                          game.playerId != state.declarer &&
-                          _dismissedKillKey !=
-                              '${state.round}-${state.lastKillEvent!.targetCardId}')
-                        _buildKillRevealOverlay(state, state.lastKillEvent!),
-                      // NOTE: the setting-reveal overlay is rendered at the top
-                      // of the body Stack (above the round-result overlay) so it
-                      // isn't hidden behind the round result.
-                      if (_contractChangeBanner != null)
-                        _buildContractChangeBanner(_contractChangeBanner!),
-                    ],
-                  );
-                },
+        // Kitty-phase contract-change detection: flash a banner when
+        // the declarer changes trump or raises the bid so the other
+        // players notice the contract shift.
+        if (state.phase == 'kitty_exchange' && state.declarer != null) {
+          final currTrump = state.trumpSuit;
+          final currBid = (state.currentBid['points'] as num?)?.toInt();
+          if (_kittyContractTrump != null && _kittyContractBid != null) {
+            final trumpChanged =
+                currTrump != null && currTrump != _kittyContractTrump;
+            final bidRaised = currBid != null && currBid > _kittyContractBid!;
+            if (trumpChanged || bidRaised) {
+              final info = _ContractChangeInfo(
+                oldTrump: trumpChanged ? _kittyContractTrump : null,
+                newTrump: trumpChanged ? currTrump : null,
+                oldBid: bidRaised ? _kittyContractBid : null,
+                newBid: bidRaised ? currBid : null,
               );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() => _contractChangeBanner = info);
+                _contractChangeTimer?.cancel();
+                _contractChangeTimer = Timer(
+                  const Duration(milliseconds: 2600),
+                  () {
+                    if (!mounted) return;
+                    setState(() => _contractChangeBanner = null);
+                  },
+                );
+              });
+            }
+          }
+          _kittyContractTrump = currTrump;
+          _kittyContractBid = currBid;
+        } else {
+          if (_kittyContractTrump != null || _kittyContractBid != null) {
+            _kittyContractTrump = null;
+            _kittyContractBid = null;
+          }
+        }
+
+        return Stack(
+          children: [
+            Column(
+              children: [
+                _buildTopBar(state, game),
+                Expanded(child: _buildActiveBoardStage(state, game)),
+              ],
+            ),
+            if (_moreOpen) _buildMoreMenu(game),
+            if (_viewersOpen) _buildViewersPanel(game),
+            if (_soundPanelOpen) _buildSoundPanel(game),
+            if (_chatOpen) _buildChatPanel(game),
+            if (game.hasIncomingCardViewRequests)
+              _buildCardViewRequestPopup(game),
+            if (game.timeoutPlayerName != null)
+              _buildTimeoutBanner(game.timeoutPlayerName!),
+            if (game.errorMessage != null)
+              _buildErrorBanner(game.errorMessage!),
+            if (state.lastDealMissEvent != null &&
+                _dismissedDealMissKey !=
+                    '${state.lastDealMissEvent!.round}-${state.lastDealMissEvent!.playerId}')
+              _buildDealMissRevealOverlay(state.lastDealMissEvent!),
+            // The declarer chose the kill target, so they don't need
+            // the reveal popup — only show it to everyone else.
+            if (state.lastKillEvent != null &&
+                game.playerId != state.declarer &&
+                _dismissedKillKey !=
+                    '${state.round}-${state.lastKillEvent!.targetCardId}')
+              _buildKillRevealOverlay(state, state.lastKillEvent!),
+            // NOTE: the setting-reveal overlay is rendered at the top
+            // of the body Stack (above the round-result overlay) so it
+            // isn't hidden behind the round result.
+            if (_contractChangeBanner != null)
+              _buildContractChangeBanner(_contractChangeBanner!),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildEndPhaseOverlay(BuildContext context, GameService game) {
@@ -567,9 +548,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // Result UI inside its own SafeArea so the content stays readable.
         SafeArea(
           child: Align(
-            alignment: isRoundEnd
-                ? Alignment.bottomCenter
-                : Alignment.center,
+            alignment: isRoundEnd ? Alignment.bottomCenter : Alignment.center,
             child: SingleChildScrollView(
               padding: isRoundEnd
                   ? const EdgeInsets.fromLTRB(12, 20, 12, 20)
@@ -595,126 +574,133 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
           child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => game.leaveRoom(),
-                  icon: const Icon(Icons.arrow_back, color: Color(0xFF5A4038)),
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    l10n.spectatorWatching,
-                    style: const TextStyle(
-                      color: Color(0xFF2E7D32),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    game.currentRoomName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF5A4038),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                _buildTopActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  active: _chatOpen,
-                  badgeCount: _chatOpen
-                      ? 0
-                      : (game.chatMessages.length - _readChatCount).clamp(
-                          0,
-                          99,
-                        ),
-                  onTap: () {
-                    setState(() {
-                      _chatOpen = !_chatOpen;
-                      if (_chatOpen) _readChatCount = game.chatMessages.length;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          // Slot grid
-          Expanded(
-            child: Center(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 760),
-                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.94),
-                  borderRadius: BorderRadius.circular(22),
+                  color: Colors.white.withValues(alpha: 0.90),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: const Color(0xFFE0D8D4)),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final wide = constraints.maxWidth > 620;
-                          return GridView.builder(
-                            padding: const EdgeInsets.only(top: 6),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: wide ? 2 : 1,
-                                  mainAxisSpacing: 10,
-                                  crossAxisSpacing: 12,
-                                  childAspectRatio: wide ? 4.8 : 4.4,
-                                ),
-                            itemCount: slots.length,
-                            itemBuilder: (context, index) {
-                              return _buildWaitingSlot(
-                                game,
-                                slots[index],
-                                index,
-                              );
-                            },
-                          );
-                        },
+                    IconButton(
+                      onPressed: () => game.leaveRoom(),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Color(0xFF5A4038),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      l10n.spectatorWaitingForGame,
-                      style: const TextStyle(
-                        color: Color(0xFF8A8A8A),
-                        fontSize: 13,
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
                       ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        l10n.spectatorWatching,
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        game.currentRoomName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF5A4038),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    _buildTopActionButton(
+                      icon: Icons.chat_bubble_outline,
+                      active: _chatOpen,
+                      badgeCount: _chatOpen
+                          ? 0
+                          : (game.chatMessages.length - _readChatCount).clamp(
+                              0,
+                              99,
+                            ),
+                      onTap: () {
+                        setState(() {
+                          _chatOpen = !_chatOpen;
+                          if (_chatOpen)
+                            _readChatCount = game.chatMessages.length;
+                        });
+                      },
                     ),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
+              // Slot grid
+              Expanded(
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFFE0D8D4)),
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final wide = constraints.maxWidth > 620;
+                              return GridView.builder(
+                                padding: const EdgeInsets.only(top: 6),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: wide ? 2 : 1,
+                                      mainAxisSpacing: 10,
+                                      crossAxisSpacing: 12,
+                                      childAspectRatio: wide ? 4.8 : 4.4,
+                                    ),
+                                itemCount: slots.length,
+                                itemBuilder: (context, index) {
+                                  return _buildWaitingSlot(
+                                    game,
+                                    slots[index],
+                                    index,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          l10n.spectatorWaitingForGame,
+                          style: const TextStyle(
+                            color: Color(0xFF8A8A8A),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
         if (_chatOpen) _buildChatPanel(game),
       ],
@@ -889,10 +875,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             const Positioned(
               left: -2,
               top: -6,
-              child: Text(
-                '👑',
-                style: TextStyle(fontSize: 18, height: 1.0),
-              ),
+              child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
             ),
         ],
       ),
@@ -993,8 +976,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // read as part of the score rather than as a goal. It lives in the
           // score-history popup, spelled out.
           child: Row(
-                children: [
-                  Container(
+            children: [
+              Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 5,
@@ -1011,9 +994,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     const SizedBox(width: 5),
                     Text(
                       state.phase == 'round_end'
-                          ? L10n.of(
-                              context,
-                            ).mtRoundOnly(state.round.toString())
+                          ? L10n.of(context).mtRoundOnly(state.round.toString())
                           : L10n.of(context).mtRoundPhase(
                               state.round.toString(),
                               _phaseLabel(state.phase),
@@ -1027,18 +1008,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ],
                 ),
               ),
-                  const Spacer(),
-                  // Shown from round 1 on: the popup itself says when there is
-                  // nothing to show, rather than the button appearing later and
-                  // moving everything beside it.
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: _buildTopActionButton(
-                      icon: Icons.history,
-                      active: false,
-                      onTap: () => _showScoreHistoryDialog(state, game),
-                    ),
-                  ),
+              const Spacer(),
+              // Shown from round 1 on: the popup itself says when there is
+              // nothing to show, rather than the button appearing later and
+              // moving everything beside it.
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: _buildTopActionButton(
+                  icon: Icons.history,
+                  active: false,
+                  onTap: () => _showScoreHistoryDialog(state, game),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
@@ -1080,7 +1061,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   });
                 },
               ),
-                ],
+            ],
           ),
         ),
         if (showContractInfo) _buildContractInfoBar(state, game),
@@ -1456,8 +1437,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         }
       }
     }
-    final hasFriendInfo =
-        friendCardSuit != null || friendSpecialText != null;
+    final hasFriendInfo = friendCardSuit != null || friendSpecialText != null;
     // Plain-text version used only for width estimation below.
     final friendEstimateText = friendCardSuit != null
         ? '$friendCardRank$friendSuffixText'
@@ -1478,8 +1458,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     }
     if (hasBid) {
       // SuitIcon(11) + gap(3) + "{points}공약" (Korean) ~ 4 glyphs after points
-      final bidPointsText =
-          L10n.of(context).mtContractWithPoints(bidPoints.toInt());
+      final bidPointsText = L10n.of(
+        context,
+      ).mtContractWithPoints(bidPoints.toInt());
       centerEstimate +=
           14 + estimateTextWidth(bidPointsText, 12) + 12; // padding
     }
@@ -1492,9 +1473,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     final dealMissFullWidth = state.dealMissPool > 0
         ? estimateTextWidth(
-                L10n.of(
-                  context,
-                ).mtDealMissPool(state.dealMissPool.toString()),
+                L10n.of(context).mtDealMissPool(state.dealMissPool.toString()),
                 10,
               ) +
               16
@@ -1509,8 +1488,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final centerRight = (width + centerEstimate) / 2;
           final dealMissLeftIfFull = width - dealMissFullWidth;
           final useCompactDealMiss =
-              state.dealMissPool > 0 &&
-              centerRight > dealMissLeftIfFull - 6;
+              state.dealMissPool > 0 && centerRight > dealMissLeftIfFull - 6;
 
           final centerContent = Row(
             mainAxisSize: MainAxisSize.min,
@@ -1632,10 +1610,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   child: _buildTrumpCounterLabel(state),
                 ),
               if (dealMissChip != null)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: dealMissChip,
-                ),
+                Align(alignment: Alignment.centerRight, child: dealMissChip),
             ],
           );
         },
@@ -1866,7 +1841,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // one phone. Reference is a 360×420 board (a 6.1" portrait); a bigger
           // device gets proportionally bigger seats and cards instead of the
           // same ones marooned in empty space.
-          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          final boardScale = math
+              .min(width / 360.0, height / 400.0)
+              .clamp(0.78, 1.45);
           // Two seat columns plus a gap have to fit across, and two rows have
           // to fit inside the ring — on a narrow or short board the seat gives
           // way rather than the seats sliding into each other.
@@ -2077,8 +2054,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final sideOffsetDeg = seatRadiusY <= 0
               ? 25.0
               : (math.asin(
-                      (((seatHeight + 8) / (2 * seatRadiusY)).clamp(0.42, 0.80))
-                          .toDouble(),
+                      (((seatHeight + 8) / (2 * seatRadiusY)).clamp(
+                        0.42,
+                        0.80,
+                      )).toDouble(),
                     ) *
                     180 /
                     math.pi);
@@ -2431,232 +2410,230 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.topCenter,
                           child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOut,
-                            // Half of what it was: with a 56px photo the old
-                            // padding read as a frame around the seat rather
-                            // than as the seat itself.
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 3 : 4,
-                              vertical: compact ? 2 : 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: labelTint,
-                              borderRadius: BorderRadius.circular(14),
-                              border:
-                                  isCurrentTurn ||
-                                      isDeclarer ||
-                                      isPartner ||
-                                      highlighted
-                                  ? Border.all(
-                                      color: isCurrentTurn
-                                          ? const Color(0xFFE6C86A)
-                                          : isDeclarer
-                                          ? const Color(0xFFFF8A00)
-                                          : isPartner
-                                          ? const Color(0xFF4CAF50)
-                                          : const Color(0xFF64B5F6),
-                                      width: (isDeclarer || isPartner) ? 3.5 : 1.5,
-                                    )
-                                  : null,
-                            ),
-                            child: SizedBox(
-                              width: contentWidth,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    height: roleLabelHeight,
-                                    child: Center(child: roleLabel),
-                                  ),
-                                  // Own row rather than inline before the
-                                  // name (same as SK/LL), and rendered for
-                                  // EVERY seat — photo-less seats get the
-                                  // default silhouette. Not cosmetic: the
-                                  // label scales down to fit the seat box, so
-                                  // when only some seats had an avatar their
-                                  // labels shrank (smaller name and all) while
-                                  // avatar-less seats rendered full size — the
-                                  // seats came out visibly different sizes.
-                                  Padding(
-                                    padding: EdgeInsets.only(bottom: spacing),
-                                    child: ProfileAvatar(
-                                      photoUrl: game.resolvePhotoUrl(
-                                        player.photoUrl,
+                            clipBehavior: Clip.none,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOut,
+                                // Half of what it was: with a 56px photo the old
+                                // padding read as a frame around the seat rather
+                                // than as the seat itself.
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 3 : 4,
+                                  vertical: compact ? 2 : 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: labelTint,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border:
+                                      isCurrentTurn ||
+                                          isDeclarer ||
+                                          isPartner ||
+                                          highlighted
+                                      ? Border.all(
+                                          color: isCurrentTurn
+                                              ? const Color(0xFFE6C86A)
+                                              : isDeclarer
+                                              ? const Color(0xFFFF8A00)
+                                              : isPartner
+                                              ? const Color(0xFF4CAF50)
+                                              : const Color(0xFF64B5F6),
+                                          width: (isDeclarer || isPartner)
+                                              ? 3.5
+                                              : 1.5,
+                                        )
+                                      : null,
+                                ),
+                                child: SizedBox(
+                                  width: contentWidth,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: roleLabelHeight,
+                                        child: Center(child: roleLabel),
                                       ),
-                                      size: avatarDiameter,
-                                      blocked: game.blockedUsers
-                                          .contains(player.name),
-                                      fallback: player.isBot
-                                          ? BotAvatar(
-                                              size: avatarDiameter,
-                                              name: player.name,
-                                            )
-                                          : Container(
-                                              width: avatarDiameter,
-                                              height: avatarDiameter,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xFFF0E7E3),
-                                                shape: BoxShape.circle,
+                                      // Own row rather than inline before the
+                                      // name (same as SK/LL), and rendered for
+                                      // EVERY seat — photo-less seats get the
+                                      // default silhouette. Not cosmetic: the
+                                      // label scales down to fit the seat box, so
+                                      // when only some seats had an avatar their
+                                      // labels shrank (smaller name and all) while
+                                      // avatar-less seats rendered full size — the
+                                      // seats came out visibly different sizes.
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                          bottom: spacing,
+                                        ),
+                                        child: ProfileAvatar(
+                                          photoUrl: game.resolvePhotoUrl(
+                                            player.photoUrl,
+                                          ),
+                                          size: avatarDiameter,
+                                          blocked: game.blockedUsers.contains(
+                                            player.name,
+                                          ),
+                                          fallback: player.isBot
+                                              ? BotAvatar(
+                                                  size: avatarDiameter,
+                                                  name: player.name,
+                                                )
+                                              : DefaultAvatar(
+                                                  size: avatarDiameter,
+                                                ),
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (!player.connected)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                right: compact ? 2 : 3,
                                               ),
                                               child: Icon(
-                                                Icons.person,
-                                                size: compact ? 15 : 17,
-                                                color:
-                                                    const Color(0xFF9C8B84),
+                                                Icons.wifi_off,
+                                                size: offlineIconSize,
+                                                color: const Color(0xFFE53935),
                                               ),
                                             ),
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (!player.connected)
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            right: compact ? 2 : 3,
+                                          Flexible(
+                                            child: Text(
+                                              player.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: player.connected
+                                                    ? const Color(0xFF5A4038)
+                                                    : const Color(0xFFE53935),
+                                                fontSize: nameFontSize,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
                                           ),
-                                          child: Icon(
-                                            Icons.wifi_off,
-                                            size: offlineIconSize,
-                                            color: const Color(0xFFE53935),
-                                          ),
-                                        ),
-                                      Flexible(
-                                        child: Text(
-                                          player.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: player.connected
-                                                ? const Color(0xFF5A4038)
-                                                : const Color(0xFFE53935),
-                                            fontSize: nameFontSize,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: spacing),
+                                      Text(
+                                        '${state.scores[player.id] ?? 0}',
+                                        style: TextStyle(
+                                          color: const Color(0xFF5A4038),
+                                          fontSize: scoreFontSize,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
+                                      // Only when there is a count: the always-
+                                      // reserved row pushed the label over the seat
+                                      // box, and the FittedBox paid for it by
+                                      // scaling the avatar down.
+                                      if (player.timeoutCount > 0) ...[
+                                        SizedBox(height: spacing),
+                                        SizedBox(
+                                          height: timeoutHeight,
+                                          child: Text(
+                                            '⏱ ${player.timeoutCount}/3',
+                                            style: TextStyle(
+                                              fontSize: metaFontSize,
+                                              fontWeight: FontWeight.w800,
+                                              color: const Color(0xFFE65100),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
-                                  SizedBox(height: spacing),
-                                  Text(
-                                    '${state.scores[player.id] ?? 0}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF5A4038),
-                                      fontSize: scoreFontSize,
-                                      fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (canRequestCardView)
+                                Positioned(
+                                  right: -4,
+                                  top: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isApproved
+                                            ? const Color(0xFF64B5F6)
+                                            : const Color(0xFFE0D8D4),
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      isPending
+                                          ? Icons.schedule
+                                          : isApproved
+                                          ? Icons.visibility
+                                          : Icons.visibility_outlined,
+                                      size: 12,
+                                      color: isPending
+                                          ? const Color(0xFFFFB74D)
+                                          : isApproved
+                                          ? const Color(0xFF64B5F6)
+                                          : const Color(
+                                              0xFF8A7A72,
+                                            ).withValues(alpha: 0.6),
                                     ),
                                   ),
-                                  // Only when there is a count: the always-
-                                  // reserved row pushed the label over the seat
-                                  // box, and the FittedBox paid for it by
-                                  // scaling the avatar down.
-                                  if (player.timeoutCount > 0) ...[
-                                    SizedBox(height: spacing),
-                                    SizedBox(
-                                      height: timeoutHeight,
-                                      child: Text(
-                                        '⏱ ${player.timeoutCount}/3',
-                                        style: TextStyle(
-                                          fontSize: metaFontSize,
-                                          fontWeight: FontWeight.w800,
-                                          color: const Color(0xFFE65100),
+                                ),
+                              // Captured-points badge (top-left), mirroring the
+                              // card-view eye on the top-right. Only shown for
+                              // opposition players who have actually captured at
+                              // least one point card.
+                              if (hasPointCards && player.pointCount > 0)
+                                Positioned(
+                                  left: -6,
+                                  top: -6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(11),
+                                      border: Border.all(
+                                        color: const Color(0xFFE53935),
+                                        width: 1.2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.12,
+                                          ),
+                                          blurRadius: 3,
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.style,
+                                          size: 10,
+                                          color: Color(0xFFE53935),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          '${player.pointCount}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFFE53935),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          if (canRequestCardView)
-                            Positioned(
-                              right: -4,
-                              top: -4,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isApproved
-                                        ? const Color(0xFF64B5F6)
-                                        : const Color(0xFFE0D8D4),
-                                  ),
-                                ),
-                                child: Icon(
-                                  isPending
-                                      ? Icons.schedule
-                                      : isApproved
-                                      ? Icons.visibility
-                                      : Icons.visibility_outlined,
-                                  size: 12,
-                                  color: isPending
-                                      ? const Color(0xFFFFB74D)
-                                      : isApproved
-                                      ? const Color(0xFF64B5F6)
-                                      : const Color(
-                                          0xFF8A7A72,
-                                        ).withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ),
-                          // Captured-points badge (top-left), mirroring the
-                          // card-view eye on the top-right. Only shown for
-                          // opposition players who have actually captured at
-                          // least one point card.
-                          if (hasPointCards && player.pointCount > 0)
-                            Positioned(
-                              left: -6,
-                              top: -6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(11),
-                                  border: Border.all(
-                                    color: const Color(0xFFE53935),
-                                    width: 1.2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.12),
-                                      blurRadius: 3,
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.style,
-                                      size: 10,
-                                      color: Color(0xFFE53935),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${player.pointCount}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFFE53935),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
                         ),
                         if (hasPointCards)
                           Positioned(
@@ -3300,8 +3277,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (state.currentTrick.isEmpty) {
       // During the kitty exchange spectators see the status here in the centre;
       // players (incl. non-declarers) see it above their own hand instead.
-      final isKittyWait =
-          state.phase == 'kitty_exchange' && game.isSpectator;
+      final isKittyWait = state.phase == 'kitty_exchange' && game.isSpectator;
       return Center(
         child: Container(
           width: 200,
@@ -3418,11 +3394,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ],
                     )
                   else
-                    const Icon(
-                      Icons.style,
-                      size: 20,
-                      color: Color(0xFF8A7A72),
-                    ),
+                    const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
                   // Turn timer
                   if (_remainingSeconds > 0)
                     Padding(
@@ -3578,11 +3550,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           if (parts.isNotEmpty) TextSpan(text: parts[0]),
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
-            child: SuitIcon(
-              suit: suit,
-              size: 13,
-              color: _bidAccentColor(suit),
-            ),
+            child: SuitIcon(suit: suit, size: 13, color: _bidAccentColor(suit)),
           ),
           if (parts.length > 1) TextSpan(text: parts[1]),
         ],
@@ -3727,9 +3695,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
         child: Align(
           alignment: Alignment.bottomCenter,
-          child: SingleChildScrollView(
-            child: _buildKittyUI(game, state),
-          ),
+          child: SingleChildScrollView(child: _buildKittyUI(game, state)),
         ),
       ),
     );
@@ -4136,71 +4102,71 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
                 child: SingleChildScrollView(
                   child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFFB8C00,
-                              ).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.tune,
-                              size: 18,
-                              color: Color(0xFFE65100),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              L10n.of(dialogCtx).mtChangeContract,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF5A4038),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 16, 10, 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFFB8C00,
+                                ).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.tune,
+                                size: 18,
+                                color: Color(0xFFE65100),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: closeDialog,
-                            icon: const Icon(Icons.close, size: 22),
-                            color: const Color(0xFF8A7A72),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                L10n.of(dialogCtx).mtChangeContract,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF5A4038),
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1, color: Color(0xFFEFE5DD)),
-                    // Body. StatefulBuilder gives the popup its own rebuild
-                    // channel so suit-chip taps (which update the screen-level
-                    // _selectedTrumpSuit field) refresh the dialog too — the
-                    // dialog lives in a separate Overlay route and wouldn't
-                    // otherwise rebuild when the screen's setState fires.
-                    StatefulBuilder(
-                      builder: (_, setDialogState) => Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                        child: _buildTrumpChangePanel(
-                          s,
-                          g,
-                          onApplied: closeDialog,
-                          dialogSetState: setDialogState,
+                            IconButton(
+                              onPressed: closeDialog,
+                              icon: const Icon(Icons.close, size: 22),
+                              color: const Color(0xFF8A7A72),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 36,
+                                minHeight: 36,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const Divider(height: 1, color: Color(0xFFEFE5DD)),
+                      // Body. StatefulBuilder gives the popup its own rebuild
+                      // channel so suit-chip taps (which update the screen-level
+                      // _selectedTrumpSuit field) refresh the dialog too — the
+                      // dialog lives in a separate Overlay route and wouldn't
+                      // otherwise rebuild when the screen's setState fires.
+                      StatefulBuilder(
+                        builder: (_, setDialogState) => Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                          child: _buildTrumpChangePanel(
+                            s,
+                            g,
+                            onApplied: closeDialog,
+                            dialogSetState: setDialogState,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -4725,7 +4691,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: _buildMyRoleBadge(state, game) ?? _buildMyPointCardStrip(state),
+                          child:
+                              _buildMyRoleBadge(state, game) ??
+                              _buildMyPointCardStrip(state),
                         ),
                       ),
                     ),
@@ -4870,7 +4838,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: _buildMyRoleBadge(state, game) ?? _buildMyPointCardStrip(state),
+                        child:
+                            _buildMyRoleBadge(state, game) ??
+                            _buildMyPointCardStrip(state),
                       ),
                     ),
                   ),
@@ -5106,8 +5076,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ),
                           const SizedBox(width: 5),
                           SuitIcon(
-                            suit:
-                                state.currentBid['suit']?.toString() ?? '',
+                            suit: state.currentBid['suit']?.toString() ?? '',
                             size: 13,
                             color: _bidAccentColor(
                               state.currentBid['suit']?.toString(),
@@ -5309,11 +5278,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 children: [
                   Text(L10n.of(context).mtBidPoints(_bidPoints)),
                   const SizedBox(width: 5),
-                  SuitIcon(
-                    suit: _bidSuit,
-                    size: 14,
-                    color: Colors.white,
-                  ),
+                  SuitIcon(suit: _bidSuit, size: 14, color: Colors.white),
                 ],
               ),
             ),
@@ -5833,7 +5798,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     L10n.of(context).llRound,
                     textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF9A8E8A),
+                    ),
                   ),
                 ),
                 SizedBox(
@@ -5842,7 +5810,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     L10n.of(context).mtTotal,
                     textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF9A8E8A),
+                    ),
                   ),
                 ),
               ],
@@ -6750,10 +6721,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           card = Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: _bidAccentColor(trumpSuit),
-                width: 2.5,
-              ),
+              border: Border.all(color: _bidAccentColor(trumpSuit), width: 2.5),
             ),
             child: card,
           );
@@ -7324,275 +7292,287 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               )
             : SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                Widget cell(
-                  String text, {
-                  TextAlign align = TextAlign.center,
-                  FontWeight fontWeight = FontWeight.w600,
-                  Color color = const Color(0xFF5A4038),
-                  double fontSize = 12,
-                  EdgeInsets padding = const EdgeInsets.symmetric(
-                    horizontal: 3,
-                    vertical: 9,
-                  ),
-                }) {
-                  return Padding(
-                    padding: padding,
-                    child: Text(
-                      text,
-                      textAlign: align,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: fontWeight,
-                        color: color,
-                      ),
-                    ),
-                  );
-                }
-
-                // Bid cell renders the trump as a SuitIcon (Android-safe)
-                // alongside the bid value + success/fail mark.
-                Widget bidCell({
-                  required String? trumpSuit,
-                  required String label,
-                  Color color = const Color(0xFF233142),
-                  bool dealMiss = false,
-                }) {
-                  if (dealMiss || trumpSuit == null) {
-                    return cell(
-                      label,
-                      align: TextAlign.left,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    );
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 3,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SuitIcon(
-                          suit: trumpSuit,
-                          size: 12,
-                          color: _bidAccentColor(trumpSuit),
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      Widget cell(
+                        String text, {
+                        TextAlign align = TextAlign.center,
+                        FontWeight fontWeight = FontWeight.w600,
+                        Color color = const Color(0xFF5A4038),
+                        double fontSize = 12,
+                        EdgeInsets padding = const EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 9,
                         ),
-                        const SizedBox(width: 3),
-                        Flexible(
+                      }) {
+                        return Padding(
+                          padding: padding,
                           child: Text(
-                            label,
+                            text,
+                            textAlign: align,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
+                              fontSize: fontSize,
+                              fontWeight: fontWeight,
                               color: color,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return Table(
-                  columnWidths: {
-                    0: const FlexColumnWidth(0.6),
-                    1: const FlexColumnWidth(1.5),
-                    for (int i = 0; i < state.players.length; i++)
-                      i + 2: const FlexColumnWidth(1),
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEAF2FF),
-                        border: Border(
-                          bottom: BorderSide(color: Color(0xFFC9DCF7), width: 1),
-                        ),
-                      ),
-                      children: [
-                        cell(
-                          'R',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          color: const Color(0xFF295EA8),
-                        ),
-                        cell(
-                          L10n.of(context).mtBidShort,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          color: const Color(0xFF295EA8),
-                        ),
-                        ...state.players.map(
-                          (p) => cell(
-                            p.name.length > 4 ? p.name.substring(0, 4) : p.name,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                            color: p.position == 'self'
-                                ? const Color(0xFF355D89)
-                                : const Color(0xFF295EA8),
-                          ),
-                        ),
-                      ],
-                    ),
-                    ...state.scoreHistory.asMap().entries.map((mapEntry) {
-                      final rowIndex = mapEntry.key;
-                      final entry = mapEntry.value;
-                      final trump =
-                          suitSymbol[entry.trumpSuit] ?? entry.trumpSuit ?? '?';
-                      for (final p in state.players) {
-                        cumulativeScores[p.id] =
-                            (cumulativeScores[p.id] ?? 0) +
-                            (entry.scores[p.id] ?? 0);
+                        );
                       }
-                      final dealMissLabel = L10n.of(context).mtDealMiss;
-                      // For NT contracts, fall back to "NT" inline (no suit
-                      // glyph). Other contracts render the suit via SuitIcon.
-                      final trumpKey = entry.trumpSuit;
-                      final showSuitIcon =
-                          trumpKey != null && trumpKey != 'no_trump';
-                      final bidLabel = entry.dealMiss
-                          ? dealMissLabel
-                          : showSuitIcon
-                          ? '${entry.bid}${entry.success ? '✓' : '✗'}'
-                          : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
-                      // Colour the bid cell by outcome so a scan of the column
-                      // reads success (green) / fail (red) / deal-miss (amber).
-                      final bidColor = entry.dealMiss
-                          ? const Color(0xFFB56A1D)
-                          : entry.success
-                          ? const Color(0xFF2E9E5B)
-                          : const Color(0xFFD04A5B);
-                      return TableRow(
-                        decoration: BoxDecoration(
-                          color: rowIndex.isOdd
-                              ? const Color(0xFFF4F8FD)
-                              : null,
-                        ),
-                        children: [
-                          cell(
-                            '${entry.round}',
+
+                      // Bid cell renders the trump as a SuitIcon (Android-safe)
+                      // alongside the bid value + success/fail mark.
+                      Widget bidCell({
+                        required String? trumpSuit,
+                        required String label,
+                        Color color = const Color(0xFF233142),
+                        bool dealMiss = false,
+                      }) {
+                        if (dealMiss || trumpSuit == null) {
+                          return cell(
+                            label,
+                            align: TextAlign.left,
                             fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            color: const Color(0xFF8A92A0),
+                            color: color,
+                          );
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 3,
+                            vertical: 8,
                           ),
-                          bidCell(
-                            trumpSuit: showSuitIcon ? trumpKey : null,
-                            label: bidLabel,
-                            color: bidColor,
-                            dealMiss: entry.dealMiss,
-                          ),
-                          ...state.players.map((p) {
-                            final diff = entry.scores[p.id] ?? 0;
-                            // For the declarer on a successful round, split
-                            // off the deal-miss pool bonus so the user can
-                            // tell the round's "raw" score from the leftover
-                            // pool payout — explains the (48 + 5) = 53 case.
-                            final isDeclarer = p.id == entry.declarer;
-                            final bonus = isDeclarer && entry.success
-                                ? entry.dealMissBonus
-                                : 0;
-                            final base = diff - bonus;
-                            final scoreColor = diff < 0
-                                ? const Color(0xFFD04A5B)
-                                : const Color(0xFF233142);
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 6,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SuitIcon(
+                                suit: trumpSuit,
+                                size: 12,
+                                color: _bidAccentColor(trumpSuit),
                               ),
-                              child: bonus > 0
-                                  ? Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '$base',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: p.position == 'self'
-                                                ? FontWeight.w800
-                                                : FontWeight.w600,
-                                            color: scoreColor,
-                                            height: 1.1,
-                                          ),
-                                        ),
-                                        Text(
-                                          '+$bonus',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFFB56A1D),
-                                            height: 1.1,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Text(
-                                      '$diff',
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: p.position == 'self'
-                                            ? FontWeight.w800
-                                            : FontWeight.w600,
-                                        color: scoreColor,
-                                        height: 1.2,
-                                      ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return Table(
+                        columnWidths: {
+                          0: const FlexColumnWidth(0.6),
+                          1: const FlexColumnWidth(1.5),
+                          for (int i = 0; i < state.players.length; i++)
+                            i + 2: const FlexColumnWidth(1),
+                        },
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEAF2FF),
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Color(0xFFC9DCF7),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            children: [
+                              cell(
+                                'R',
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                color: const Color(0xFF295EA8),
+                              ),
+                              cell(
+                                L10n.of(context).mtBidShort,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                color: const Color(0xFF295EA8),
+                              ),
+                              ...state.players.map(
+                                (p) => cell(
+                                  p.name.length > 4
+                                      ? p.name.substring(0, 4)
+                                      : p.name,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: p.position == 'self'
+                                      ? const Color(0xFF355D89)
+                                      : const Color(0xFF295EA8),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ...state.scoreHistory.asMap().entries.map((mapEntry) {
+                            final rowIndex = mapEntry.key;
+                            final entry = mapEntry.value;
+                            final trump =
+                                suitSymbol[entry.trumpSuit] ??
+                                entry.trumpSuit ??
+                                '?';
+                            for (final p in state.players) {
+                              cumulativeScores[p.id] =
+                                  (cumulativeScores[p.id] ?? 0) +
+                                  (entry.scores[p.id] ?? 0);
+                            }
+                            final dealMissLabel = L10n.of(context).mtDealMiss;
+                            // For NT contracts, fall back to "NT" inline (no suit
+                            // glyph). Other contracts render the suit via SuitIcon.
+                            final trumpKey = entry.trumpSuit;
+                            final showSuitIcon =
+                                trumpKey != null && trumpKey != 'no_trump';
+                            final bidLabel = entry.dealMiss
+                                ? dealMissLabel
+                                : showSuitIcon
+                                ? '${entry.bid}${entry.success ? '✓' : '✗'}'
+                                : '$trump${entry.bid}${entry.success ? '✓' : '✗'}';
+                            // Colour the bid cell by outcome so a scan of the column
+                            // reads success (green) / fail (red) / deal-miss (amber).
+                            final bidColor = entry.dealMiss
+                                ? const Color(0xFFB56A1D)
+                                : entry.success
+                                ? const Color(0xFF2E9E5B)
+                                : const Color(0xFFD04A5B);
+                            return TableRow(
+                              decoration: BoxDecoration(
+                                color: rowIndex.isOdd
+                                    ? const Color(0xFFF4F8FD)
+                                    : null,
+                              ),
+                              children: [
+                                cell(
+                                  '${entry.round}',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  color: const Color(0xFF8A92A0),
+                                ),
+                                bidCell(
+                                  trumpSuit: showSuitIcon ? trumpKey : null,
+                                  label: bidLabel,
+                                  color: bidColor,
+                                  dealMiss: entry.dealMiss,
+                                ),
+                                ...state.players.map((p) {
+                                  final diff = entry.scores[p.id] ?? 0;
+                                  // For the declarer on a successful round, split
+                                  // off the deal-miss pool bonus so the user can
+                                  // tell the round's "raw" score from the leftover
+                                  // pool payout — explains the (48 + 5) = 53 case.
+                                  final isDeclarer = p.id == entry.declarer;
+                                  final bonus = isDeclarer && entry.success
+                                      ? entry.dealMissBonus
+                                      : 0;
+                                  final base = diff - bonus;
+                                  final scoreColor = diff < 0
+                                      ? const Color(0xFFD04A5B)
+                                      : const Color(0xFF233142);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 6,
                                     ),
+                                    child: bonus > 0
+                                        ? Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '$base',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight:
+                                                      p.position == 'self'
+                                                      ? FontWeight.w800
+                                                      : FontWeight.w600,
+                                                  color: scoreColor,
+                                                  height: 1.1,
+                                                ),
+                                              ),
+                                              Text(
+                                                '+$bonus',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Color(0xFFB56A1D),
+                                                  height: 1.1,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Text(
+                                            '$diff',
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: p.position == 'self'
+                                                  ? FontWeight.w800
+                                                  : FontWeight.w600,
+                                              color: scoreColor,
+                                              height: 1.2,
+                                            ),
+                                          ),
+                                  );
+                                }),
+                              ],
                             );
                           }),
+                          TableRow(
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEAF2FF),
+                              border: Border(
+                                top: BorderSide(
+                                  color: Color(0xFFC9DCF7),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            children: [
+                              cell('', fontWeight: FontWeight.w800),
+                              cell(
+                                L10n.of(context).mtTotal,
+                                align: TextAlign.left,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                color: const Color(0xFF233142),
+                              ),
+                              ...state.players.map((p) {
+                                final total = cumulativeScores[p.id] ?? 0;
+                                return cell(
+                                  '$total',
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                  color: total < 0
+                                      ? const Color(0xFFD04A5B)
+                                      : const Color(0xFF233142),
+                                );
+                              }),
+                            ],
+                          ),
                         ],
                       );
-                    }),
-                    TableRow(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEAF2FF),
-                        border: Border(
-                          top: BorderSide(color: Color(0xFFC9DCF7), width: 1.5),
-                        ),
-                      ),
-                      children: [
-                        cell('', fontWeight: FontWeight.w800),
-                        cell(
-                          L10n.of(context).mtTotal,
-                          align: TextAlign.left,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          color: const Color(0xFF233142),
-                        ),
-                        ...state.players.map((p) {
-                          final total = cumulativeScores[p.id] ?? 0;
-                          return cell(
-                            '$total',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            color: total < 0
-                                ? const Color(0xFFD04A5B)
-                                : const Color(0xFF233142),
-                          );
-                        }),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
+                    },
+                  ),
+                ),
+              ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -7622,7 +7602,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       placeholderForeground: const Color(0xFF2E7D32),
     );
   }
-
 }
 
 class _ContractChangeInfo {

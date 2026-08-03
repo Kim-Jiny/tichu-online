@@ -3272,6 +3272,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return chat;
   }
 
+  /// The colour that game wears everywhere else — the filter chip, the row
+  /// strip, the badge. The waiting-room chat was painted Tichu blue whatever
+  /// game the room was, so a Skull King room had a bright blue send button
+  /// sitting on its navy screen.
+  Color _gameAccentColor(String? gameType) {
+    switch (gameType) {
+      case 'love_letter':
+        return const Color(0xFFE91E63);
+      case 'mighty':
+        return const Color(0xFF5C6BC0);
+      case 'skull_king':
+        return const Color(0xFF21455F);
+      default:
+        return const Color(0xFF64B5F6);
+    }
+  }
+
   Widget _buildRoomChat(GameService game) {
     if (game.chatMessages.length != _lastChatMessageCount) {
       _lastChatMessageCount = game.chatMessages.length;
@@ -3368,7 +3385,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF64B5F6),
+                      color: _gameAccentColor(game.currentGameType),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -3406,6 +3423,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       senderFontSize: 10,
       messageFontSize: 13,
       bubbleRadius: 12,
+      mineColor: _gameAccentColor(game.currentGameType),
       theirsColor: Colors.white,
       theirsBorder: Border.all(color: const Color(0xFFE0D8D4)),
     );

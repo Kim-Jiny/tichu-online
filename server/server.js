@@ -7120,10 +7120,16 @@ function titleReported(ws, nickname, titleName) {
  */
 /** Room chat as this viewer should see it: muted senders dropped. */
 function visibleChatHistory(ws, room) {
-  const history = room.getChatHistory() || [];
-  if (!ws?.mutedChat?.get(room.id)?.size) return history;
-  const muted = ws.mutedChat.get(room.id);
-  return history.filter((m) => !muted.has(m.sender ?? m.nickname));
+  let history = room.getChatHistory() || [];
+  if (ws?.mutedChat?.get(room.id)?.size) {
+    const muted = ws.mutedChat.get(room.id);
+    history = history.filter((m) => !muted.has(m.sender ?? m.nickname));
+  }
+  // Each line carries the sender's avatar; blocked and reported ones drop out
+  // for this viewer exactly as they do on a seat.
+  return history.map((m) => (m.photoUrl
+    ? { ...m, photoUrl: visiblePhoto(ws, m.sender ?? m.nickname, m.photoUrl) }
+    : m));
 }
 
 function chatMutedFor(ws, roomId, sender) {
@@ -7402,7 +7408,7 @@ async function handleChatMessage(ws, data) {
   }
 
   // 방에 메시지 저장
-  room.addChatMessage(ws.nickname, ws.playerId, message);
+  room.addChatMessage(ws.nickname, ws.playerId, message, ws.photoUrl || null);
 
   const chatData = {
     type: 'chat_message',
@@ -7433,12 +7439,20 @@ async function handleChatMessage(ws, data) {
     ws._blockedByCache = { set: blockedSet, at: nowTs };
   }
 
-  // Broadcast to all players in the room
+  // The sender's avatar travels with the line. The client used to look the
+  // nickname up in whatever roster was loaded, which works for the people at
+  // the table and for nobody else — a spectator's messages, and messages from
+  // someone who has since left, drew the default silhouette. Filtered per
+  // viewer like every other photo, so a blocked or reported sender still
+  // loses theirs.
+  const senderPhoto = ws.photoUrl || null;
   const deliver = (target) => {
     if (!target || blockedSet.has(target.nickname)) return;
     // Reported for abuse/spam by this viewer, in this room.
     if (chatMutedFor(target, room.id, ws.nickname)) return;
-    sendTo(target, chatData);
+    sendTo(target, senderPhoto
+      ? { ...chatData, photoUrl: visiblePhoto(target, ws.nickname, senderPhoto) }
+      : chatData);
   };
   room.getPlayerIds().forEach((playerId) => deliver(findWsByPlayerId(playerId)));
   room.getSpectatorIds().forEach((specId) => deliver(findWsByPlayerId(specId)));

@@ -490,6 +490,36 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// AS the avatar for photo-less players, which put a number where every other
   /// screen puts a face — and the bot tag went missing with it.
 
+
+  /// A board seat's chat bubble: overhangs above the seat so the photo and the
+  /// played card on it stay visible.
+  Widget? _boardChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      top: -30,
+      left: -30,
+      right: -30,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: SeatChatBubble(
+            text: text,
+            fontSize: 11,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Wraps a board seat so a chat bubble can hang above it.
+  Widget _withSeatBubble(String nickname, Widget seat) {
+    final bubble = _boardChatBubble(nickname);
+    if (bubble == null) return seat;
+    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
+  }
+
   /// The last thing each player said, over their waiting-room seat.
   late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
     if (mounted) setState(() {});
@@ -1158,6 +1188,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
+    _seatChat.consume(game);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
@@ -1249,7 +1280,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     top: seatTop,
                     width: seatWidth,
                     height: seatHeight,
-                    child: _buildSpectatorSeat(state, game, p),
+                    child: _withSeatBubble(
+                      p.name,
+                      _buildSpectatorSeat(state, game, p),
+                    ),
                   );
                 }(),
               ],
@@ -1776,6 +1810,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // ── Scoreboard ──
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
+    _seatChat.consume(game);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
@@ -1891,7 +1926,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     top: seatTop,
                     width: seatWidth,
                     height: seatHeight,
-                    child: _buildPlayerSeat(state, game, p, isSelf: false),
+                    child: _withSeatBubble(
+                      p.name,
+                      _buildPlayerSeat(state, game, p, isSelf: false),
+                    ),
                   );
                 }(),
               ],

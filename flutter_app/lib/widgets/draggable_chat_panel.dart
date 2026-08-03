@@ -93,6 +93,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   static const double _minHeight = 160;
   static const double _maxHeight = 480;
   static const double _margin = 8;
+  /// Bottom clearance while the keyboard is up.
+  static const double _keyboardGap = 22;
   static const double _topGap = 42;
 
   // null until either the user has interacted or saved geometry is loaded;
@@ -224,8 +226,11 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     final keyboard = _keyboardInset(context, media);
 
     final maxW = (screenW - _margin * 2).clamp(_minWidth, _maxWidth);
+    // Clear of the keyboard by more than the usual margin: at 8dp the send
+    // button sat right on the keyboard's edge and read as half-covered.
+    final bottomGap = keyboard > 0 ? _keyboardGap : _margin;
     // Space between the top gap and the keyboard (or screen bottom).
-    final available = screenH - (topInset + _topGap) - _margin - keyboard;
+    final available = screenH - (topInset + _topGap) - bottomGap - keyboard;
     final maxH = available.clamp(_minHeight, _maxHeight);
 
     final width = (_width ?? maxW).clamp(_minWidth, maxW);
@@ -240,7 +245,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     final maxLeft = (screenW - width - _margin).clamp(_margin, double.infinity);
     final minTop = topInset + _margin;
     final maxTop =
-        (screenH - keyboard - height - _margin).clamp(minTop, double.infinity);
+        (screenH - keyboard - height - bottomGap).clamp(minTop, double.infinity);
 
     final left = (_left ?? defaultLeft).clamp(minLeft, maxLeft);
     final top = (_top ?? defaultTop).clamp(minTop, maxTop);

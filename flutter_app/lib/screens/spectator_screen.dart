@@ -451,6 +451,34 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+
+  /// A board seat's chat bubble: overhangs above the seat so the cards and the
+  /// photo stay visible.
+  Widget? _boardChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      top: -26,
+      left: -20,
+      right: -20,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: SeatChatBubble(
+            text: text,
+            fontSize: 11,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _wrapWithBubble(Widget? bubble, Widget seat) {
+    if (bubble == null) return seat;
+    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
+  }
+
   /// What [nickname] just said, or null once it has timed out.
   Widget? _seatChatBubble(String nickname) {
     final text = _seatChat.textFor(nickname);
@@ -601,6 +629,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     Map<String, dynamic> state,
     bool isLandscape,
   ) {
+    _seatChat.consume(game);
     final players = (state['players'] as List?) ?? [];
     final currentTrick = (state['currentTrick'] as List?) ?? [];
     final phase = state['phase'] ?? '';
@@ -1314,10 +1343,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // report someone whose nickname or photo is the problem. The tap belongs to
     // the card-view button inside, so the seat takes a long-press, and the name
     // row below takes a tap of its own since nothing else wants it.
+    final bubble = _boardChatBubble(name);
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
-      child: Container(
+      child: _wrapWithBubble(bubble, Container(
         margin: EdgeInsets.all(compact ? 2 : 4),
         padding: EdgeInsets.all(compact ? 6 : 8),
         decoration: BoxDecoration(
@@ -1502,7 +1532,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
           ],
         ),
-      ),
+      )),
     );
   }
 

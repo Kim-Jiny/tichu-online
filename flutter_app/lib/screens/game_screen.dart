@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/seat_chat_bubble.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -24,6 +25,11 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  /// The last thing each player said, shown briefly over their seat.
+  late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
+    if (mounted) setState(() {});
+  });
+
   // Responsive scale factor (updated every build)
   double _s = 1.0; // scale factor based on screen width
   int _maxNameLen = 4;
@@ -140,6 +146,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    _seatChat.dispose();
     _chatController.dispose();
     _chatScrollController.dispose();
     _countdownTimer?.cancel();
@@ -1675,6 +1682,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildPartnerArea(GameStateData state, GameService game) {
+    _seatChat.consume(game);
     final partner = _firstWhereOrNull(
       state.players,
       (p) => p.position == 'partner',
@@ -3889,15 +3897,37 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ],
     );
-    if (avatar == null || !avatarBeside) return plate;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        avatar,
-        SizedBox(width: 6 * s),
-        plate,
-      ],
+    final seat = (avatar == null || !avatarBeside)
+        ? plate
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [avatar, SizedBox(width: 6 * s), plate],
+          );
+    final bubble = _boardChatBubble(name);
+    if (bubble == null) return seat;
+    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
+  }
+
+  /// A seat's chat bubble: overhangs above the nameplate so nothing on the
+  /// table is covered.
+  Widget? _boardChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      top: -28,
+      left: -30,
+      right: -30,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: SeatChatBubble(
+            text: text,
+            fontSize: 11,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 

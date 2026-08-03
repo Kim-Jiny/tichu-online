@@ -710,6 +710,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
 
+
+  /// A board seat's chat bubble: overhangs above the seat so the photo and the
+  /// played card on it stay visible.
+  Widget? _boardChatBubble(String nickname) {
+    final text = _seatChat.textFor(nickname);
+    if (text == null) return null;
+    return Positioned(
+      top: -30,
+      left: -30,
+      right: -30,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: SeatChatBubble(
+            text: text,
+            fontSize: 11,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// The last thing each player said, over their waiting-room seat.
   late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
     if (mounted) setState(() {});
@@ -1834,6 +1857,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   Widget _buildTableBoard(MightyGameStateData state, GameService game) {
+    _seatChat.consume(game);
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
     final myId = game.playerId;
@@ -2434,6 +2458,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             return Stack(
               clipBehavior: Clip.none,
               children: [
+                // Chat over the seat, for a couple of seconds.
+                ?_boardChatBubble(player.name),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   padding: EdgeInsets.symmetric(

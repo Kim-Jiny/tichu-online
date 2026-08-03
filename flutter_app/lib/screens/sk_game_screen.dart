@@ -1141,7 +1141,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // avatar at the same time.
     // Sized in the LayoutBuilder below — see boardScale.
     const seatWidthBase = 98.0;
-    const seatHeightBase = 118.0;
+    // Taller than the player board's seat: a spectator seat also carries a
+    // score and a bid chip under the photo, so at 118 the photo was the row
+    // that gave way.
+    const seatHeightBase = 128.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1156,9 +1159,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
           final playedCardW = playedCardHeight * 0.7;
-          final seatMetrics = _skSeatMetrics(seatWidth, seatHeight);
-          final playedCardTopOffset =
-              seatMetrics.photoCentre - playedCardHeight / 2;
           final playerCount = state.players.length;
           final centerX = width / 2;
           final centerY = isLandscape ? height * 0.39 : height * 0.41;
@@ -1246,7 +1246,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       seatHeight / 2 -
                       seatLift;
                   final cardLeft = seatLeft + (seatWidth - playedCardW) / 2;
-                  final cardTop = seatTop + playedCardTopOffset;
+                  // Per seat: a stacked-timeout row pushes that seat's photo
+                  // down, so a board-wide offset put the card off the photo on
+                  // exactly the seats that had one.
+                  final cardTop =
+                      seatTop +
+                      _skSeatMetrics(
+                        seatWidth,
+                        seatHeight,
+                        hasTimeoutRow: p.timeoutCount > 0,
+                        spectator: true,
+                      ).photoCentre -
+                      playedCardHeight / 2;
                   final trickPlay = state.currentTrick
                       .cast<SKTrickPlay?>()
                       .firstWhere(
@@ -1778,9 +1789,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
           final playedCardW = playedCardHeight * 0.7;
-          final seatMetrics = _skSeatMetrics(seatWidth, seatHeight);
-          final playedCardTopOffset =
-              seatMetrics.photoCentre - playedCardHeight / 2;
           final opponentCount = opponents.length;
           final centerX = width / 2;
           final centerY = isLandscape ? height * 0.42 : height * 0.46;
@@ -1876,7 +1884,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       seatHeight / 2 -
                       seatLift;
                   final cardLeft = seatLeft + (seatWidth - playedCardW) / 2;
-                  final cardTop = seatTop + playedCardTopOffset;
+                  final cardTop =
+                      seatTop +
+                      _skSeatMetrics(
+                        seatWidth,
+                        seatHeight,
+                        hasTimeoutRow: p.timeoutCount > 0,
+                      ).photoCentre -
+                      playedCardHeight / 2;
                   final trickPlay = state.currentTrick
                       .cast<SKTrickPlay?>()
                       .firstWhere(
@@ -2057,7 +2072,42 @@ class _SKGameScreenState extends State<SKGameScreen> {
     double seatWidth,
     double seatHeight, {
     bool hasTimeoutRow = false,
+    bool spectator = false,
   }) {
+    if (spectator) {
+      // A spectator seat carries a name, a score and a bid chip under the
+      // photo, and the whole label is inside a scaleDown FittedBox — so a photo
+      // asked for as a fraction of the box just made the label scale down and
+      // the photo came out ~40dp whatever fraction was used. Here it takes the
+      // height the other rows leave, which is what makes it land near the 60dp
+      // the Mighty spectator seats show.
+      final compact = seatHeight <= 72 || seatWidth <= 90;
+      final verticalPadding = compact ? 4.0 : 6.0;
+      final labelPadding = compact ? 3.0 : 4.0;
+      final timeoutHeight = hasTimeoutRow ? (compact ? 12.0 : 16.0) : 0.0;
+      final nameRow = (compact ? 10.0 : 11.0) * 1.4;
+      final spacing = compact ? 1.0 : 2.0;
+      // Score and bid chip share one row.
+      final scoreRow = math.max(
+        (compact ? 13.0 : 15.0) * 1.4,
+        compact ? 14.0 : 18.0,
+      );
+      final avatar =
+          (seatHeight -
+                  verticalPadding * 2 -
+                  labelPadding * 2 -
+                  timeoutHeight -
+                  nameRow -
+                  spacing * 2 -
+                  scoreRow)
+              .clamp(30.0, 84.0)
+              .toDouble();
+      return (
+        avatar: avatar,
+        photoCentre:
+            verticalPadding + labelPadding + timeoutHeight + avatar / 2,
+      );
+    }
     final compact = seatHeight <= 70 || seatWidth <= 96;
     final verticalPadding = compact ? 4.0 : 8.0;
     final labelPadding = compact ? 2.0 : 3.0;
@@ -2114,22 +2164,35 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final verticalPadding = compact ? 4.0 : 6.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
+          final labelPadding = compact ? 3.0 : 4.0;
           // Sized against the name it sits beside; the seat is inside a
           // FittedBox, so this scales down with everything else on a tight
           // board rather than pushing the name out.
-          // Same rule as the player seats: sized from the seat box, roughly
-          // double what it was. The spectator board had been left behind.
-          final avatarSize = (constraints.maxHeight * 0.5).clamp(26.0, 76.0);
+          // Same source as the board's card placement, and the same rule the
+          // player seats use — this used to be its own `maxHeight * 0.5`, which
+          // both disagreed with where the board put the played card and came
+          // out ~40dp once the FittedBox scaled the label down.
+          final avatarSize = _skSeatMetrics(
+            constraints.maxWidth,
+            constraints.maxHeight,
+            hasTimeoutRow: p.timeoutCount > 0,
+            spectator: true,
+          ).avatar;
           final nameFontSize = compact ? 10.0 : 11.0;
           final scoreFontSize = compact ? 13.0 : 15.0;
           final bidHeight = compact ? 14.0 : 18.0;
           final bidFontSize = compact ? 10.0 : 11.0;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
-          final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
+          // Hugs the photo, like the player seat — a fixed 70% of the box left
+          // empty tint either side of it and squeezed the photo when the box
+          // was narrow.
           final contentWidth = math.max(
-            24.0,
-            (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+            avatarSize + 6,
+            math.min(
+              (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+              avatarSize + 20,
+            ),
           );
 
           final labelTint = isViewing
@@ -2157,8 +2220,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   children: [
                     Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 6 : 8,
-                        vertical: compact ? 4 : 5,
+                        horizontal: compact ? 4 : 5,
+                        vertical: labelPadding,
                       ),
                       decoration: BoxDecoration(
                         color: labelTint,
@@ -2245,6 +2308,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ],
                               ),
                               SizedBox(height: spacing),
+                              // Score and bid chip on one row. The chip used to
+                              // sit on its own row below the score, and that
+                              // row came straight out of the photo's height.
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                               Text(
                                 '${p.totalScore}',
                                 style: TextStyle(
@@ -2258,7 +2328,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 child: p.hasBid && p.bid != null
                                     ? Container(
                                         margin: EdgeInsets.only(
-                                          top: bidTopMargin,
+                                          left: compact ? 3 : 4,
                                         ),
                                         padding: EdgeInsets.symmetric(
                                           horizontal: bidHorizontalPadding,
@@ -2290,7 +2360,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     : p.hasBid && p.bid == null
                                     ? Container(
                                         margin: EdgeInsets.only(
-                                          top: bidTopMargin,
+                                          left: compact ? 3 : 4,
                                         ),
                                         padding: EdgeInsets.symmetric(
                                           horizontal: bidHorizontalPadding,
@@ -2309,6 +2379,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                         ),
                                       )
                                     : null,
+                              ),
+                                ],
                               ),
                             ],
                           ),

@@ -191,6 +191,18 @@ async function main() {
     check(missing.issues.includes('not_granted'), 'a missing payout is flagged');
     check(holed.summary.issueCount === 1, 'and it is counted');
 
+    // ── 같은 달 시즌은 하나뿐 ──────────────────────────────────────────
+    // 롤오버는 부팅과 시간별 타이머 양쪽에서 불리고, 배포 교체 순간에는
+    // 인스턴스가 둘일 수 있다. 이름이 같은 시즌이 두 번 만들어지면 관리
+    // 화면에 "진행 중"이 여러 개 뜬다 — 실제로 2026-08 이 5개가 됐었다.
+    const dupA = await db.createSeason('2099-12', new Date(), new Date(Date.now() + 86400000));
+    const dupB = await db.createSeason('2099-12', new Date(), new Date(Date.now() + 86400000));
+    check(!!dupA && !!dupB && dupA.id === dupB.id,
+      '같은 이름으로 다시 만들면 기존 시즌을 돌려준다');
+    check((await raw.query(
+      `SELECT COUNT(*)::int n FROM tc_seasons WHERE name = '2099-12'`)).rows[0].n === 1,
+      '행은 하나만 남는다');
+
     console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
   } catch (e) {
     console.log(`\nFAIL: ${e.message}\n${e.stack}`);

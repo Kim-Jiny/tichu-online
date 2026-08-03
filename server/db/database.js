@@ -1159,6 +1159,42 @@ async function initDatabase() {
       ON tc_season_rankings (season_id, game_type, rank)
     `);
 
+    // 같은 달 시즌이 여러 개 생기던 것 정리 + 재발 방지.
+    //
+    // createSeason 은 평범한 INSERT 였고 tc_seasons 에는 유니크 제약이 없었다.
+    // ensureSeasonCycle 은 프로세스 안에서만 잠기므로(_seasonCycleRunning),
+    // 부팅과 시간별 타이머가 겹치거나 인스턴스가 둘이면(블루/그린 교체 순간)
+    // 같은 이름의 'active' 시즌이 그대로 여러 줄 쌓인다. 실제로 2026-08 이
+    // 같은 분에 5개 생겼다.
+    //
+    // 정리 규칙: 이름이 같은 것들 중 데이터(랭킹·지급·전용 보상 설정)를 가진
+    // 것을 남기고, 아무것도 안 달린 나머지만 지운다. 데이터가 붙은 게 여럿이면
+    // 지우지 않고 가장 오래된 것만 남겨 닫는다 — 지워서 될 일이 아니다.
+    await client.query(`
+      WITH ranked AS (
+        SELECT s.id, s.name,
+               (SELECT COUNT(*) FROM tc_season_rankings k WHERE k.season_id = s.id)
+             + (SELECT COUNT(*) FROM tc_season_rewards w WHERE w.season_id = s.id)
+             + (SELECT COUNT(*) FROM tc_season_reward_config c WHERE c.season_id = s.id) AS refs,
+               ROW_NUMBER() OVER (PARTITION BY s.name ORDER BY s.id) AS rn
+        FROM tc_seasons s
+      )
+      DELETE FROM tc_seasons t
+      USING ranked r
+      WHERE t.id = r.id AND r.rn > 1 AND r.refs = 0
+    `);
+    await client.query(`
+      WITH dup AS (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY id) AS rn
+        FROM tc_seasons WHERE status = 'active'
+      )
+      UPDATE tc_seasons SET status = 'closed'
+      FROM dup WHERE tc_seasons.id = dup.id AND dup.rn > 1
+    `);
+    await client.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS tc_seasons_name_idx ON tc_seasons (name)`,
+    );
+
     // Notices table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_notices (
@@ -3868,13 +3904,22 @@ async function getActiveSeason() {
 async function createSeason(name, startAt, endAt) {
   const client = await pool.connect();
   try {
+    // ON CONFLICT: 같은 이름의 시즌은 하나뿐이다. 롤오버가 겹쳐 돌아도
+    // (부팅 + 시간별 타이머, 또는 인스턴스 두 개) 두 번째부터는 조용히
+    // 기존 시즌을 돌려받는다.
     const result = await client.query(
       `INSERT INTO tc_seasons (name, start_at, end_at, status)
        VALUES ($1, $2, $3, 'active')
+       ON CONFLICT (name) DO NOTHING
        RETURNING id, name, start_at, end_at, status`,
       [name, startAt, endAt]
     );
-    return result.rows[0];
+    if (result.rows[0]) return result.rows[0];
+    const existing = await client.query(
+      `SELECT id, name, start_at, end_at, status FROM tc_seasons WHERE name = $1`,
+      [name],
+    );
+    return existing.rows[0] || null;
   } catch (err) {
     console.error('Create season error:', err);
     return null;

@@ -157,6 +157,36 @@ function isStraightFlushBomb(cardIds) {
   return true;
 }
 
+
+/**
+ * 아직 아무도 안 낸 카드 중 value 보다 높은 게 몇 장 남았는지.
+ *
+ * 내 손패 + 이미 걷힌 트릭 + 지금 트릭에 깔린 카드를 전체 덱에서 빼면 남는다.
+ * 전부 사람도 눈으로 볼 수 있는 정보다(남의 손패는 보지 않는다).
+ */
+function countOutstandingAbove(game, botId, value) {
+  if (!game || !game.hands) return null;
+  const seen = new Set(game.hands[botId] || []);
+  for (const pile of Object.values(game.trickPiles || {})) {
+    for (const c of pile) seen.add(c);
+  }
+  for (const play of (game.currentTrick || [])) {
+    for (const c of (play.cards || [])) seen.add(c);
+  }
+  for (const c of (game.pendingTrickCards || [])) seen.add(c);
+
+  let n = 0;
+  for (const suit of ['spade', 'heart', 'diamond', 'club']) {
+    for (const rank of ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']) {
+      const id = `${suit}_${rank}`;
+      if (seen.has(id)) continue;
+      if (getCardValue(id) > value) n++;
+    }
+  }
+  if (!seen.has('special_dragon')) n++;   // 용은 봉황 위에 언제나 올라온다
+  return n;
+}
+
 function decomposeHand(cards) {
   const normalCards = cards.filter(c => !c.startsWith('special_'));
   const specialCards = cards.filter(c => c.startsWith('special_'));
@@ -924,7 +954,7 @@ function canChainOut(combo, cards) {
   return true;
 }
 
-function leadTrick(state, cards, normalCards, combos) {
+function leadTrick(state, cards, normalCards, combos, intel) {
   const partner = getPartner(state);
   const opponents = getOpponents(state);
   const plans = decomposeHand(cards);
@@ -1126,7 +1156,7 @@ function leadTrick(state, cards, normalCards, combos) {
 
 // ========== FOLLOW TRICK STRATEGY ==========
 
-function followTrick(state, cards, normalCards, combos) {
+function followTrick(state, cards, normalCards, combos, intel) {
   const trick = state.currentTrick || [];
   const lastPlay = trick[trick.length - 1];
   const comboType = lastPlay.combo;
@@ -1206,7 +1236,7 @@ function followTrick(state, cards, normalCards, combos) {
 
   // === OPPONENT PLAYED ===
   if (comboType === 'single') {
-    return handleFollowSingle(state, cards, normalCards, combos, lastValue, trickPts, minOppCards);
+    return handleFollowSingle(state, cards, normalCards, combos, lastValue, trickPts, minOppCards, intel);
   }
 
   if (comboType === 'pair') {
@@ -1236,7 +1266,7 @@ function followTrick(state, cards, normalCards, combos) {
   return { type: 'pass' };
 }
 
-function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickPts, minOppCards) {
+function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickPts, minOppCards, intel) {
   const phoenixCombos = findCombosWithPhoenix(cards);
 
   // Find all normal cards that can beat
@@ -1303,21 +1333,42 @@ function handleFollowSingle(state, cards, normalCards, combos, lastValue, trickP
     return { type: 'play_cards', cards: [beaters[0]] };
   }
 
-  // Phoenix as single: conservative usage. Phoenix beats by +0.5 so on a
-  // low single (e.g. 4) it lands at 4.5 and is easily reclaimed by the
-  // next 5+. Reserve it for one of:
-  //   - True endgame (cards ≤ 2): must commit to finish
-  //   - High-card territory (lastValue ≥ 13): hard to beat back (only A/Dragon)
-  //   - Mid-high single (lastValue ≥ 10) with a real reason (valuable trick,
-  //     opp about to finish, or hand running low)
+  // 봉황 단독: "선을 잡을 수 있을 때만" 쓴다.
+  //
+  // 봉황은 낸 순간 (직전 값 + 0.5)이 된다. 10 위에 내면 10.5라서 아직 안 나온
+  // J·Q·K·A 아무 장에나 바로 잡힌다 — 선도 못 잡고 -25점짜리 카드만 버리는
+  // 자리다. 예전에는 lastValue >= 10 이면 냈는데, 그게 바로 그 자리였다.
+  //
+  // 그래서 임계값 대신 남은 상위 카드를 센다. 내 손패·걷힌 트릭·지금 트릭에서
+  // 안 보인 카드가 곧 남들 손에 있는 카드고, 그중 몇 장이 이 봉황을 넘을 수
+  // 있는지가 판단 기준이다. 사람도 세는 정보다.
   if (cards.includes('special_phoenix') && lastValue < 14.5) {
-    const shouldUsePhoenix = (
+    const resultValue = lastValue + 0.5;
+    const beatersOut = intel && intel.game
+      ? countOutstandingAbove(intel.game, intel.botId, resultValue)
+      : null;
+    // 셀 수 없으면(시뮬 등 game 미전달) 예전처럼 A 근처에서만 쓴다.
+    const holdsLead = beatersOut === null ? lastValue >= 13 : beatersOut <= 2;
+    // A/B 측정용 좌석 게이트(마이티 solver 와 같은 방식). 켜지면 예전 규칙을
+    // 그대로 쓴다 — 같은 딜에서 두 규칙을 맞붙이려고 남겨 둔다.
+    const legacyGate = typeof global.__tichuPhoenixLegacy === 'function'
+      && global.__tichuPhoenixLegacy(intel && intel.botId);
+    const shouldUsePhoenix = legacyGate ? (
       cards.length <= 2
       || lastValue >= 13
       || (lastValue >= 10 && (
         cards.length <= 4 || trickPts >= 15 || minOppCards <= 2
       ))
-    );
+    ) : (() => {
+      // 선을 못 지키면 그냥 -25를 상대에게 얹어 주는 셈이라, 강제 상황이
+      // 아니면 내지 않는다.
+      if (cards.length <= 2) return true;      // 끝내야 하는 자리
+      if (!holdsLead) return false;
+      // 선을 지킨다고 다 이득은 아니다. 이 트릭을 우리가 가져가면 봉황의
+      // -25도 같이 먹으므로, 트릭 점수가 그걸 덮거나 선 자체가 값어치를
+      // 할 때(곧 털 수 있다 / 상대가 곧 나간다)만 낸다.
+      return trickPts >= 25 || cards.length <= 5 || minOppCards <= 2;
+    })();
     if (shouldUsePhoenix) {
       return { type: 'play_cards', cards: ['special_phoenix'] };
     }
@@ -1806,7 +1857,7 @@ function buildWinrateCandidates(game, botId, state = game.getStateForPlayer(botI
   }
 
   let legalActions = filterLegalActions(game, botId, rawActions);
-  const heuristicAction = autoPlay(state, cards);
+  const heuristicAction = autoPlay(state, cards, { game, botId });
 
   // A3: never bomb partner's trick. Heuristic's shouldBomb returns null
   // when partner played last, but winrate's candidate list still carries
@@ -2188,7 +2239,7 @@ function chooseBestWinrateAction(game, botId, candidates, state = game.getStateF
 
   const handSize = (state.myCards || []).length;
   const heuristicStart = diagOn ? process.hrtime.bigint() : 0n;
-  const heuristicAction = autoPlay(state, state.myCards || []);
+  const heuristicAction = autoPlay(state, state.myCards || [], { game, botId });
   if (diagOn) heuristicMs = Number(process.hrtime.bigint() - heuristicStart) / 1e6;
   const heuristicKey = getActionKey(heuristicAction);
   const { samples, timeBudgetMs } = getWinrateSearchBudget(game, state, candidates.length);
@@ -2326,6 +2377,9 @@ function decideHeuristicBotAction(game, botId) {
   const state = game.getStateForPlayer(botId);
   const phase = state.phase;
   const myCards = state.myCards || [];
+  // 카드 카운팅에 쓰는 통로. state 에는 걷힌 트릭이 안 실려 있어서(공개
+  // 정보인데도) game 을 그대로 내려보낸다.
+  const intel = { game, botId };
 
   switch (phase) {
     case 'large_tichu_phase':
@@ -2375,7 +2429,7 @@ function decideHeuristicBotAction(game, botId) {
           }
           return null;
         }
-        return autoPlay(state, myCards);
+        return autoPlay(state, myCards, intel);
       }
       break;
   }
@@ -2383,7 +2437,7 @@ function decideHeuristicBotAction(game, botId) {
   return null;
 }
 
-function autoPlay(state, cards) {
+function autoPlay(state, cards, intel) {
   const trick = state.currentTrick || [];
   const callRank = state.callRank;
 
@@ -2423,11 +2477,11 @@ function autoPlay(state, cards) {
 
   // Leading a trick
   if (trick.length === 0) {
-    return leadTrick(state, cards, normalCards, combos);
+    return leadTrick(state, cards, normalCards, combos, intel);
   }
 
   // Following a trick
-  const followResult = followTrick(state, cards, normalCards, combos);
+  const followResult = followTrick(state, cards, normalCards, combos, intel);
 
   // If call obligation is active, verify our play is valid
   if (callRank && trick.length > 0) {

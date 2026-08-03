@@ -227,6 +227,61 @@ check('fix3: friend preserves joker on locked trick',
   }
 })();
 
+// ── Fix 7: 주공도 버릴 때 자기 무늬 최상위는 남긴다 ──
+// 유저 리포트: 기루다 하트, 주공이 ♣6 과 ♣A 를 들고 있는데 프렌드가 이긴
+// 트릭에 ♣A 를 실어 버린다. 1점 얹자고 나중에 확실히 가져올 트릭을 버리는 셈.
+// 넘길 수 있는 카드였다면 실어 줘도 되지만 A 는 못 넘긴다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = () => position({
+    declarer: 'p0', partner: 'p2', friendRevealed: true, trumpSuit: 'heart',
+    friendCard: 'mighty_diamond_A', tricksLen: 3, currentPlayer: 'p0',
+    currentTrick: [
+      { pid: 'p1', cardId: 'mighty_diamond_5' },
+      { pid: 'p2', cardId: 'mighty_diamond_A' }, // 프렌드가 그 무늬 최상위로 확보
+      { pid: 'p3', cardId: 'mighty_diamond_3' },
+      { pid: 'p4', cardId: 'mighty_diamond_4' },
+    ],
+    hands: {
+      p0: c('club_6 club_A spade_4 heart_2'), // 주공 — 다이아 없음
+      p1: c('spade_A spade_K club_9 heart_6'),
+      p2: c('club_K club_Q spade_9 heart_7'),
+      p3: c('club_J club_10 spade_8 heart_8'),
+      p4: c('club_8 club_7 spade_7 heart_9'),
+    },
+  });
+  check('fix7(heuristic): 주공이 아군 트릭에 ♣A 를 안 버린다',
+    (MightyBot.decideMightyBotAction(build(), 'p0', 'heuristic') || {}).cardId,
+    got => got !== 'mighty_club_A');
+})();
+
+// ── Fix 7b: 야당도 같은 기준 ──
+// 야당 아군(p3)이 ♦A 로 확보한 트릭. 뒤에 정부팀이 안 남았으니 그냥 버리는
+// 자리인데, ♣A 를 실어 주면 나중에 자기가 가져올 트릭을 버리는 셈이다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = () => position({
+    declarer: 'p0', partner: 'p1', friendRevealed: true, trumpSuit: 'heart',
+    friendCard: 'mighty_diamond_A', tricksLen: 3, currentPlayer: 'p2',
+    currentTrick: [
+      { pid: 'p3', cardId: 'mighty_diamond_A' },
+      { pid: 'p4', cardId: 'mighty_diamond_2' },
+      { pid: 'p0', cardId: 'mighty_diamond_7' },
+      { pid: 'p1', cardId: 'mighty_diamond_8' },
+    ],
+    hands: {
+      p0: c('spade_A spade_K club_9 heart_6'),
+      p1: c('club_K club_Q spade_9 heart_7'),
+      p2: c('club_6 club_A spade_4 heart_2'), // 야당 — 다이아 없음
+      p3: c('club_J club_10 spade_8 heart_8'),
+      p4: c('club_8 club_7 spade_7 heart_9'),
+    },
+  });
+  check('fix7b(heuristic): 야당이 아군 트릭에 ♣A 를 안 버린다',
+    (MightyBot.decideMightyBotAction(build(), 'p2', 'heuristic') || {}).cardId,
+    got => got !== 'mighty_club_A');
+})();
+
 // ── Endgame solver: legal + deterministic on real seeded endgames ──
 // Plays seeded games to their first solvable position and checks the solver
 // returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0

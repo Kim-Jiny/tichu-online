@@ -1672,10 +1672,17 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
   const trickPoints = getTrickPointCount(game);
   const isLastPlayer = game.currentTrick.length === (game.activePlayerCount || game.playerCount) - 1;
   const isNT = !game.trumpSuit || game.trumpSuit === 'no_trump';
-  // Friend bots preserve their effective tops while dumping; declarer keeps
-  // the original behaviour (free to dump anything since they're collecting
-  // points, not lead opportunities).
-  const dumpSafe = isFriend ? pickSafeDumpKeepingTops : pickSafeDump;
+  // 버릴 때 자기 무늬 실질 최상위는 남긴다 — 주공도 프렌드와 같다.
+  //
+  // 예전엔 "주공은 점수를 모으는 쪽이니 아무거나 버려도 된다"고 프렌드만
+  // 최상위를 지켰는데, 그러면 기루다가 하트일 때 ♣6·♣A 를 들고 아군이 이긴
+  // 트릭에 ♣A 를 실어 버린다. 1점을 지금 얹자고 나중에 확실히 가져올 트릭을
+  // 버리는 셈이다 — 그 트릭에서 점수를 실으면 되고 선까지 잡는다.
+  // 넘길 수 있는 카드(예: 위에 A 가 남아 있는 K)는 최상위가 아니라 그대로
+  // 실어 준다. 못 넘기는 카드만 아낀다.
+  const legacyTopDump = typeof global.__mightyTopDumpLegacy === 'function'
+    && global.__mightyTopDumpLegacy(botId);
+  const dumpSafe = (isFriend || !legacyTopDump) ? pickSafeDumpKeepingTops : pickSafeDump;
 
   // ─── Friend responding to declarer's lead ───
   if (isFriend && declarerLed) {
@@ -1869,6 +1876,13 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
 }
 
 function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, winnerOnOurTeam, mightyCard) {
+  // 정부팀과 같은 기준: 버릴 때 자기 무늬 실질 최상위는 남긴다. 아군이 이겼다고
+  // 믿는 트릭에 못 넘기는 A 를 실어 주면 1점 얹자고 나중에 확실히 가져올
+  // 트릭을 버리는 셈이다. 야당은 프렌드 공개 전까지 주공 말고는 전부 우리편으로
+  // 보기 때문에, 숨은 프렌드에게 A 를 그냥 넘겨주는 경우까지 섞인다.
+  const legacyTopDump = typeof global.__mightyOppTopDumpLegacy === 'function'
+    && global.__mightyOppTopDumpLegacy(botId);
+  const dumpSafe = legacyTopDump ? pickSafeDump : pickSafeDumpKeepingTops;
   const govBehind = hasGovernmentBehind(game, botId);
   const trickPoints = getTrickPointCount(game);
   const isLastPlayer = game.currentTrick.length === (game.activePlayerCount || game.playerCount) - 1;
@@ -1938,7 +1952,7 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
   // ─── Our team (opposition ally) is winning ───
   // NEVER trump-steal an ally's already-winning trick. Dump safely.
   if (!govBehind) {
-    return pickSafeDump(legalCards, game);
+    return dumpSafe(legalCards, game);
   }
 
   const winnerCard = getWinnerCardId(game);
@@ -1946,7 +1960,7 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
     _isEffectiveTopOfSuit(winnerCard, game);
 
   if (isSecure) {
-    return pickSafeDump(legalCards, game);
+    return dumpSafe(legalCards, game);
   }
 
   // Ally not secure — reinforce on valuable tricks OR when safe-discard would
@@ -1962,7 +1976,7 @@ function oppositionFollow(game, botId, legalCards, winningCards, currentWinner, 
       const winnerInfo = getCardInfo(winnerCard);
       if (winnerInfo.suit === game.trumpSuit &&
           RANK_ORDER[winnerInfo.rank] >= RANK_ORDER['J']) {
-        return pickSafeDump(legalCards, game);
+        return dumpSafe(legalCards, game);
       }
     }
     if (trickPoints >= 2 || isLastPlayer || isNT) {

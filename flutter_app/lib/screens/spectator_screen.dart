@@ -392,7 +392,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// get a plain default-avatar silhouette; the level still shows, as a small
   /// corner chip, the way the bot marker does.
   Widget _seatAvatar(GameService game, Player player) {
-    const size = 34.0;
+    const size = 42.0;
     final avatar = ProfileAvatar(
       photoUrl: game.resolvePhotoUrl(player.photoUrl),
       size: size,
@@ -414,7 +414,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               alignment: Alignment.center,
               child: const Icon(
                 Icons.person,
-                size: 21,
+                size: 25,
                 color: Color(0xFF9C8B84),
               ),
             ),

@@ -495,7 +495,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     required int? level,
     String? botSpeed,
   }) {
-    const size = 36.0;
+    const size = 44.0;
     final avatar = ProfileAvatar(
       photoUrl: game.resolvePhotoUrl(photoUrl),
       size: size,
@@ -512,7 +512,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               alignment: Alignment.center,
               child: const Icon(
                 Icons.person,
-                size: 22,
+                size: 26,
                 color: Color(0xFF9C8B84),
               ),
             ),

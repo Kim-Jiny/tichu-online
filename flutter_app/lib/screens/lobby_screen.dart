@@ -3835,8 +3835,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   : Colors.white.withValues(alpha: 0.72);
               return Container(
                 width: double.infinity,
-                // 60, not 56: the avatar grew to 38dp with a corner level chip.
-                height: 60,
+                // Grows with the avatar: 46dp photo + the corner level chip.
+                height: 68,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: bannerGradient == null ? fallbackColor : null,
@@ -3901,7 +3901,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // tall with no vertical padding.
                 final resolved = game.resolvePhotoUrl(player.photoUrl);
                 final hidden = game.blockedUsers.contains(player.name);
-                const avatarSize = 38.0;
+                const avatarSize = 46.0;
                 final avatar = ProfileAvatar(
                   photoUrl: resolved,
                   size: avatarSize,
@@ -3916,7 +3916,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     alignment: Alignment.center,
                     child: const Icon(
                       Icons.person,
-                      size: 23,
+                      size: 27,
                       color: Color(0xFF9C8B84),
                     ),
                   ),
@@ -3966,7 +3966,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // no width at all, and it rendered as nothing — so you could
                 // not tell 봇 1 from 봇 2.
                 child: BotAvatar(
-                  size: 36,
+                  size: 44,
                   name: player.name,
                   showBadge: true,
                   speed: player.botSpeed,

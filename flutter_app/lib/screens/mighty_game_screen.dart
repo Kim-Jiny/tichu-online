@@ -710,7 +710,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// Avatar for a waiting-room seat: photo, bot art, or the default
   /// silhouette, with the level as a corner badge.
   Widget _buildWaitingSlotAvatar(GameService game, Player player) {
-    const size = 36.0;
+    const size = 44.0;
     final avatar = ProfileAvatar(
       photoUrl: game.resolvePhotoUrl(player.photoUrl),
       size: size,
@@ -732,7 +732,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               alignment: Alignment.center,
               child: const Icon(
                 Icons.person,
-                size: 22,
+                size: 26,
                 color: Color(0xFF9C8B84),
               ),
             ),

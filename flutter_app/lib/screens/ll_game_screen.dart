@@ -464,7 +464,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     required int? level,
     String? botSpeed,
   }) {
-    const size = 36.0;
+    const size = 44.0;
     final avatar = ProfileAvatar(
       photoUrl: game.resolvePhotoUrl(photoUrl),
       size: size,
@@ -481,7 +481,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               alignment: Alignment.center,
               child: const Icon(
                 Icons.person,
-                size: 22,
+                size: 26,
                 color: Color(0xFF9C8B84),
               ),
             ),

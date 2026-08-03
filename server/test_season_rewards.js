@@ -147,6 +147,50 @@ async function main() {
     check(await goldOf('일등') === 9999, 'the new default applies');
     check(await goldOf('이등') === 0, 'and a rank that no longer exists pays nothing');
 
+    // ── 보상 감사(대시보드) ───────────────────────────────────────────
+    // The console's payout view compares three things that live apart —
+    // ranking snapshot, configured tier, actual payout — so its rules are
+    // worth pinning: what counts as a problem, and what merely looks like one.
+    await clearPayouts();
+    await db.saveSeasonRewardConfig(null, [
+      { game_type: 'tichu', rank: 1, gold: 1000, banner_key: 'banner_season_gold', banner_days: 30 },
+      { game_type: 'tichu', rank: 2, gold: 500, banner_key: 'banner_season_silver', banner_days: 30 },
+      { game_type: 'tichu', rank: 3, gold: 200, banner_key: 'banner_season_bronze', banner_days: 30 },
+    ]);
+    const s5 = await openSeason('T5');
+    await db.grantSeasonRewards(s5);
+    const audit = await db.getSeasonRewardAudit(s5);
+    check(!!audit, 'the audit reads back');
+    const tichu = audit.games.find((g) => g.gameType === 'tichu');
+    check(tichu.rows.length === 3, 'one row per configured tier');
+    check(tichu.rows[0].nickname === '일등' && tichu.rows[0].granted?.gold === 1000,
+      'the row carries who was paid and how much');
+    check(tichu.rows.every((r) => r.issues.length === 0), 'a clean payout flags nothing');
+    check(audit.summary.issueCount === 0, 'and the headline count is zero');
+    check(audit.unmatched.length === 0, 'every payout row is attributed to a game');
+
+    // A tier nobody qualified for is reported, but is not a problem to fix:
+    // a young season has fewer ranked players than configured ranks.
+    await clearPayouts();
+    await db.saveSeasonRewardConfig(null, [
+      { game_type: 'tichu', rank: 1, gold: 1000, banner_key: 'banner_season_gold', banner_days: 30 },
+      { game_type: 'tichu', rank: 9, gold: 100, banner_key: null, banner_days: 30 },
+    ]);
+    const s6 = await openSeason('T6');
+    await db.grantSeasonRewards(s6);
+    const sparse = await db.getSeasonRewardAudit(s6);
+    const empty = sparse.games.find((g) => g.gameType === 'tichu').rows.find((r) => r.rank === 9);
+    check(empty.issues.includes('no_recipient'), 'an empty rank is reported');
+    check(sparse.summary.issueCount === 0, '…but does not count as something to fix');
+
+    // The one that does need eyes: a payout row that is missing while the
+    // winner is still around.
+    await raw.query(`DELETE FROM tc_season_rewards WHERE season_id = $1 AND rank = 1`, [s6]);
+    const holed = await db.getSeasonRewardAudit(s6);
+    const missing = holed.games.find((g) => g.gameType === 'tichu').rows.find((r) => r.rank === 1);
+    check(missing.issues.includes('not_granted'), 'a missing payout is flagged');
+    check(holed.summary.issueCount === 1, 'and it is counted');
+
     console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
   } catch (e) {
     console.log(`\nFAIL: ${e.message}\n${e.stack}`);

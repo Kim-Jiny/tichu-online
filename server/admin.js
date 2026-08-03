@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -4298,6 +4298,112 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // ── 시즌 ─────────────────────────────────────────────────────────────
   const SEASON_GAME_LABELS = { tichu: '티츄', skull_king: '스컬킹', mighty: '마이티' };
 
+  // 지급이 "실패"하는 일은 없다 — grantSeasonRewards는 한 트랜잭션이라 전부
+  // 들어가거나 전부 안 들어간다. 이 표가 잡으려는 건 성공했는데 결과가 이상한
+  // 쪽이다: 랭커가 모자라 조용히 건너뛴 순위, 카탈로그에 없는 배너 키,
+  // 지급 후 사라진 계정.
+  const SEASON_ISSUE_LABEL = {
+    no_recipient: '랭커 없음',
+    not_granted: '미지급',
+    gold_mismatch: '설정과 다른 골드',
+    unknown_banner: '카탈로그에 없는 배너',
+    banner_missing: '배너 아이템 없음',
+    account_gone: '계정 삭제됨',
+  };
+
+  function seasonRewardAudit(audit) {
+    // 랭커 부족·계정 삭제는 조치할 게 아니라 사실 전달이라 회색, 나머지는 빨강.
+    const badge = (key) => {
+      const info = key === 'no_recipient' || key === 'account_gone';
+      const bg = info ? '#f1f1f1' : '#fdecea';
+      const fg = info ? '#777' : '#c0392b';
+      const bd = info ? '#e0e0e0' : '#f5c6c2';
+      return `<span style="display:inline-block;background:${bg};color:${fg};
+        border:1px solid ${bd};border-radius:999px;padding:1px 8px;font-size:11px;
+        font-weight:700;margin-right:4px">${escapeHtml(SEASON_ISSUE_LABEL[key] || key)}</span>`;
+    };
+    const ok = '<span style="color:#2e8b57;font-weight:700">정상</span>';
+
+    const gameCard = (g) => {
+      if (g.rows.length === 0) return '';
+      const body = g.rows.map((r) => {
+        const expected = `${formatNumber(r.expected.gold)}G`
+          + (r.expected.bannerKey
+            ? ` + <span style="font-family:monospace;font-size:11px">${escapeHtml(r.expected.bannerKey)}</span> ${r.expected.bannerDays}일`
+            : '');
+        const grantedCell = r.granted
+          ? `${formatNumber(r.granted.gold)}G`
+            + (r.granted.bannerKey
+              ? ` + <span style="font-family:monospace;font-size:11px">${escapeHtml(r.granted.bannerKey)}</span>`
+              : '')
+          : '<span style="color:#c0392b;font-weight:700">없음</span>';
+        const bannerState = !r.granted?.bannerKey
+          ? '-'
+          : r.bannerItem
+            ? `${r.bannerItem.isActive ? '착용 중' : '보유'} · ${formatDate(r.bannerItem.expiresAt)}까지`
+            : r.bannerLapsed
+              ? '<span style="color:#888">기간 만료</span>'
+              : '<span style="color:#c0392b">아이템 없음</span>';
+        return `<tr>
+          <td style="font-weight:700">${r.rank}위</td>
+          <td>${r.nickname
+            ? `<a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname)}</a>`
+            : '<span style="color:#999">해당 순위 없음</span>'}</td>
+          <td style="font-size:12px;color:#666">${r.rating == null ? '-' : `${formatNumber(r.rating)} · ${r.wins}승 / ${r.totalGames}판`}</td>
+          <td style="font-size:12px">${expected}</td>
+          <td style="font-size:12px">${grantedCell}</td>
+          <td style="font-size:12px">${bannerState}</td>
+          <td style="font-size:12px">${r.issues.length === 0 ? ok : r.issues.map(badge).join('')}</td>
+        </tr>`;
+      }).join('');
+      return `<div class="card">
+        <h3>${SEASON_GAME_LABELS[g.gameType] || g.gameType}
+          <span style="font-size:12px;color:#888;font-weight:400">· 랭킹 스냅샷 ${formatNumber(g.rankedCount)}명</span></h3>
+        <div class="table-wrap"><table>
+          <tr><th>순위</th><th>닉네임</th><th>시즌 성적</th><th>설정된 보상</th><th>실제 지급</th><th>배너 상태</th><th>점검</th></tr>
+          ${body}
+        </table></div>
+      </div>`;
+    };
+
+    const unmatchedHtml = audit.unmatched.length === 0 ? '' : `<div class="card">
+      <h3 style="color:#c0392b">어느 게임 것인지 판별 못 한 지급 기록</h3>
+      <div style="color:#888;font-size:12px;margin-bottom:8px">
+        지급 기록에는 게임 종류가 저장되지 않아, 배너 키와 닉네임으로 역추적합니다.
+        보상 설정을 지급 후에 바꿨다면 여기에 남을 수 있습니다.
+      </div>
+      <div class="table-wrap"><table>
+        <tr><th>순위</th><th>닉네임</th><th>골드</th><th>배너</th><th>지급 시각</th></tr>
+        ${audit.unmatched.map((u) => `<tr>
+          <td>${u.rank}위</td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}">${escapeHtml(u.nickname)}</a></td>
+          <td style="color:#d07a16;font-weight:600">${formatNumber(u.gold)}</td>
+          <td style="font-family:monospace;font-size:12px">${escapeHtml(u.bannerKey || '-')}</td>
+          <td style="font-size:12px">${formatDate(u.createdAt)}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>`;
+
+    const s = audit.summary;
+    return `
+      ${summaryStrip([
+        { label: '지급 골드 합계', value: formatNumber(s.totalGold), valueColor: '#d07a16' },
+        { label: '수령자', value: formatNumber(s.recipients) },
+        { label: '지급 기록', value: formatNumber(s.grantedRows) },
+        {
+          label: '점검 필요',
+          value: formatNumber(s.issueCount),
+          valueColor: s.issueCount > 0 ? '#c0392b' : '#2e8b57',
+        },
+      ])}
+      ${s.issueCount === 0
+        ? '<div class="card" style="border-left:4px solid #2e8b57">설정된 보상과 실제 지급이 모두 일치합니다.</div>'
+        : '<div class="card" style="border-left:4px solid #c0392b">아래 <b>점검</b> 칸에 표시된 항목은 지급이 실패한 게 아니라, 지급은 됐는데 결과가 설정과 다른 경우입니다. 필요하면 유저 상세에서 골드·아이템을 직접 조정하세요.</div>'}
+      ${audit.games.map(gameCard).join('')}
+      ${unmatchedHtml}
+    `;
+  }
+
   function seasonRewardEditor(action, rows, { title, note, canReset, resetAction }) {
     const byGame = SEASON_GAME_TYPES.map((gt) => ({
       gameType: gt,
@@ -4424,21 +4530,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const cfg = await getSeasonRewardConfig(seasonId);
     const granted = await getSeasonRewardsGranted(seasonId);
+    const audit = granted.length > 0 ? await getSeasonRewardAudit(seasonId) : null;
     const closed = season.status !== 'active';
 
-    const grantedHtml = granted.length === 0 ? '' : `<div class="card">
-      <h3>실제 지급 내역</h3>
-      <div class="table-wrap"><table>
-        <tr><th>순위</th><th>닉네임</th><th>골드</th><th>배너</th><th>지급 시각</th></tr>
-        ${granted.map((g) => `<tr>
-          <td>${g.rank}위</td>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(g.nickname)}">${escapeHtml(g.nickname)}</a></td>
-          <td style="color:#d07a16;font-weight:600">${formatNumber(g.gold_reward || 0)}</td>
-          <td style="font-family:monospace;font-size:12px">${escapeHtml(g.banner_key || '-')}</td>
-          <td style="font-size:12px">${formatDate(g.created_at)}</td>
-        </tr>`).join('')}
-      </table></div>
-    </div>`;
+    const grantedHtml = audit ? seasonRewardAudit(audit) : '';
 
     const content = `
       ${pageHeader(`시즌 보상: ${escapeHtml(season.name)}`,

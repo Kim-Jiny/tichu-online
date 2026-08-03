@@ -4078,6 +4078,227 @@ async function clearSeasonRewardConfig(seasonId) {
   }
 }
 
+/**
+ * Everything needed to answer "did this season pay out what it should have?"
+ * in one read: the ranking snapshot, the tiers that were configured, what was
+ * actually written to tc_season_rewards, and whether the banner item really
+ * landed on the account.
+ *
+ * The grant itself is one transaction, so there is no such thing as a
+ * half-paid season — what this is for is the failures that succeed quietly:
+ * a rank nobody qualified for (the loop just skips it), a banner_key that is
+ * not in the catalog (the item row is written anyway and shows as nothing),
+ * or a winner whose account is gone since.
+ *
+ * tc_season_rewards has no game_type column, so a row is attributed by its
+ * banner_key first (they are game-specific) and by nickname+gold second.
+ * Anything still unattributable comes back in `unmatched` rather than being
+ * guessed at.
+ */
+async function getSeasonRewardAudit(seasonId) {
+  const client = await pool.connect();
+  try {
+    const seasonRes = await client.query(
+      `SELECT id, name, status, start_at, end_at FROM tc_seasons WHERE id = $1`,
+      [seasonId],
+    );
+    if (seasonRes.rows.length === 0) return null;
+    const season = seasonRes.rows[0];
+
+    const own = await client.query(
+      `SELECT game_type, rank, gold, banner_key, banner_days
+       FROM tc_season_reward_config WHERE season_id = $1 ORDER BY game_type, rank`,
+      [seasonId],
+    );
+    const configCustom = own.rows.length > 0;
+    const configRows = configCustom ? own.rows : (await client.query(
+      `SELECT game_type, rank, gold, banner_key, banner_days
+       FROM tc_season_reward_config WHERE season_id IS NULL ORDER BY game_type, rank`,
+    )).rows;
+
+    const rankRes = await client.query(
+      `SELECT game_type, rank, nickname, rating, wins, losses, total_games
+       FROM tc_season_rankings WHERE season_id = $1 ORDER BY game_type, rank`,
+      [seasonId],
+    );
+    const grantedRes = await client.query(
+      `SELECT nickname, rank, gold_reward, banner_key, created_at
+       FROM tc_season_rewards WHERE season_id = $1 ORDER BY rank, created_at`,
+      [seasonId],
+    );
+
+    const nicknames = [...new Set([
+      ...rankRes.rows.map((r) => r.nickname),
+      ...grantedRes.rows.map((r) => r.nickname),
+    ])];
+    const bannerKeys = [...new Set([
+      ...configRows.map((r) => r.banner_key),
+      ...grantedRes.rows.map((r) => r.banner_key),
+    ].filter(Boolean))];
+
+    const liveRes = nicknames.length === 0 ? { rows: [] } : await client.query(
+      `SELECT nickname FROM tc_users WHERE nickname = ANY($1) AND is_deleted IS NOT TRUE`,
+      [nicknames],
+    );
+    const live = new Set(liveRes.rows.map((r) => r.nickname));
+
+    const catalogRes = bannerKeys.length === 0 ? { rows: [] } : await client.query(
+      `SELECT item_key FROM tc_shop_items WHERE item_key = ANY($1)`,
+      [bannerKeys],
+    );
+    const catalog = new Set(catalogRes.rows.map((r) => r.item_key));
+
+    // The banner the grant handed out, if it is still on the account. Season
+    // items are inserted with source 'season', so this does not confuse a
+    // banner the player simply bought.
+    const itemsRes = (nicknames.length === 0 || bannerKeys.length === 0)
+      ? { rows: [] }
+      : await client.query(
+        `SELECT nickname, item_key, expires_at, is_active
+         FROM tc_user_items
+         WHERE source = 'season' AND nickname = ANY($1) AND item_key = ANY($2)`,
+        [nicknames, bannerKeys],
+      );
+    const itemAt = new Map(
+      itemsRes.rows.map((r) => [`${r.nickname}\u0000${r.item_key}`, r]),
+    );
+
+    const bannerGame = new Map();
+    for (const c of configRows) {
+      if (c.banner_key) bannerGame.set(c.banner_key, c.game_type);
+    }
+    const rankedAt = new Map(
+      rankRes.rows.map((r) => [`${r.game_type}\u0000${r.rank}`, r]),
+    );
+
+    const used = new Set();
+    const claim = (gameType, rank, cfg) => {
+      const snapshot = rankedAt.get(`${gameType}\u0000${rank}`);
+      for (let i = 0; i < grantedRes.rows.length; i++) {
+        if (used.has(i)) continue;
+        const g = grantedRes.rows[i];
+        if (g.rank !== rank) continue;
+        const byBanner = g.banner_key && bannerGame.get(g.banner_key) === gameType;
+        const byNickname = snapshot
+          && g.nickname === snapshot.nickname
+          && Number(g.gold_reward || 0) === Number(cfg.gold || 0);
+        if (byBanner || byNickname) { used.add(i); return g; }
+      }
+      return null;
+    };
+
+    let totalGold = 0;
+    let issueCount = 0;
+    const games = SEASON_GAME_TYPES.map((gameType) => {
+      const tiers = configRows
+        .filter((c) => c.game_type === gameType)
+        .sort((a, b) => a.rank - b.rank);
+      const rows = tiers.map((cfg) => {
+        const snapshot = rankedAt.get(`${gameType}\u0000${cfg.rank}`) || null;
+        const granted = claim(gameType, cfg.rank, cfg);
+        const nickname = granted?.nickname || snapshot?.nickname || null;
+        const item = granted?.banner_key && nickname
+          ? itemAt.get(`${nickname}\u0000${granted.banner_key}`) || null
+          : null;
+        const issues = [];
+        const gone = nickname != null && !live.has(nickname);
+        if (!snapshot) issues.push('no_recipient');
+        // A deleted account takes its reward rows with it (deleteUser wipes
+        // tc_season_rewards), so a missing row there is the deletion, not a
+        // grant that never happened.
+        else if (!granted && !gone) issues.push('not_granted');
+        if (granted && Number(granted.gold_reward || 0) !== Number(cfg.gold || 0)) {
+          issues.push('gold_mismatch');
+        }
+        if (granted?.banner_key && !catalog.has(granted.banner_key)) {
+          issues.push('unknown_banner');
+        }
+        // Expired items are deleted outright (cleanupExpiredItems), so a
+        // missing row is only suspicious while the banner should still be
+        // running. Duration comes from the current config — the grant does not
+        // record its own, so a later edit shifts this estimate.
+        const bannerDue = granted?.created_at && cfg.banner_days
+          ? new Date(new Date(granted.created_at).getTime()
+            + Number(cfg.banner_days) * 86400000)
+          : null;
+        const bannerLapsed = bannerDue != null && bannerDue <= new Date();
+        if (granted?.banner_key && !item && !bannerLapsed) {
+          issues.push('banner_missing');
+        }
+        if (gone) issues.push('account_gone');
+        if (granted) totalGold += Number(granted.gold_reward || 0);
+        // "Nobody qualified for this rank" is information, not something to
+        // act on — a young season legitimately has fewer ranked players than
+        // configured tiers, and counting it as a problem would paint the
+        // whole page red on day one.
+        // Neither an empty rank nor a since-deleted account is something an
+        // operator can act on; they are shown but not counted, so the number
+        // means "look at this".
+        issueCount += issues.filter(
+          (i) => i !== 'no_recipient' && i !== 'account_gone',
+        ).length;
+        return {
+          rank: cfg.rank,
+          nickname,
+          rating: snapshot ? Number(snapshot.rating || 0) : null,
+          wins: snapshot ? Number(snapshot.wins || 0) : null,
+          losses: snapshot ? Number(snapshot.losses || 0) : null,
+          totalGames: snapshot ? Number(snapshot.total_games || 0) : null,
+          expected: {
+            gold: Number(cfg.gold || 0),
+            bannerKey: cfg.banner_key || null,
+            bannerDays: Number(cfg.banner_days || 0),
+          },
+          granted: granted
+            ? {
+              gold: Number(granted.gold_reward || 0),
+              bannerKey: granted.banner_key || null,
+              createdAt: granted.created_at,
+            }
+            : null,
+          bannerItem: item
+            ? { expiresAt: item.expires_at, isActive: item.is_active === true }
+            : null,
+          bannerLapsed,
+          issues,
+        };
+      });
+      const rankedCount = rankRes.rows.filter((r) => r.game_type === gameType).length;
+      return { gameType, rankedCount, rows };
+    });
+
+    const unmatched = grantedRes.rows
+      .filter((_, i) => !used.has(i))
+      .map((g) => ({
+        nickname: g.nickname,
+        rank: g.rank,
+        gold: Number(g.gold_reward || 0),
+        bannerKey: g.banner_key || null,
+        createdAt: g.created_at,
+      }));
+    issueCount += unmatched.length;
+    for (const u of unmatched) totalGold += u.gold;
+
+    return {
+      season,
+      configCustom,
+      games,
+      unmatched,
+      summary: {
+        totalGold,
+        recipients: new Set(grantedRes.rows.map((r) => r.nickname)).size,
+        grantedRows: grantedRes.rows.length,
+        issueCount,
+      },
+    };
+  } catch (err) {
+    console.error('Get season reward audit error:', err);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
 /** What a closed season actually paid out, for the read-only view. */
 async function getSeasonRewardsGranted(seasonId) {
   const client = await pool.connect();
@@ -8586,6 +8807,7 @@ module.exports = {
   saveSeasonRewardConfig,
   clearSeasonRewardConfig,
   getSeasonRewardsGranted,
+  getSeasonRewardAudit,
   SEASON_GAME_TYPES,
   submitInquiry,
   getUserInquiries,

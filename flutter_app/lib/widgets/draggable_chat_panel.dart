@@ -200,13 +200,28 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
 
   void _dismissKeyboard() => FocusScope.of(context).unfocus();
 
+  /// How much of the screen the keyboard covers, in logical pixels.
+  ///
+  /// Not just MediaQuery: every board sits in a Scaffold with
+  /// `resizeToAvoidBottomInset: false` (so the table doesn't jump when the
+  /// keyboard opens), and that Scaffold strips the bottom inset from its
+  /// body's MediaQuery. The panel therefore saw 0 and happily sat underneath
+  /// the keyboard. The window itself still knows, so ask it too.
+  double _keyboardInset(BuildContext context, MediaQueryData media) {
+    final fromMedia = media.viewInsets.bottom;
+    final view = View.of(context);
+    final ratio = view.devicePixelRatio == 0 ? 1.0 : view.devicePixelRatio;
+    final fromView = view.viewInsets.bottom / ratio;
+    return fromMedia > fromView ? fromMedia : fromView;
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final screenW = media.size.width;
     final screenH = media.size.height;
     final topInset = media.padding.top;
-    final keyboard = media.viewInsets.bottom;
+    final keyboard = _keyboardInset(context, media);
 
     final maxW = (screenW - _margin * 2).clamp(_minWidth, _maxWidth);
     // Space between the top gap and the keyboard (or screen bottom).
@@ -352,7 +367,10 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
             .clamp(_margin, double.infinity);
         final minTop = media.padding.top + _margin;
         final maxTop =
-            (media.size.height - media.viewInsets.bottom - height - _margin)
+            (media.size.height -
+                    _keyboardInset(context, media) -
+                    height -
+                    _margin)
                 .clamp(minTop, double.infinity);
         final curLeft = _left ?? (media.size.width - width - _margin);
         final curTop = _top ?? (media.padding.top + _topGap);

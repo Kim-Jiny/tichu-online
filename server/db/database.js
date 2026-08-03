@@ -709,12 +709,27 @@ async function runMigrations() {
 
     // Seed the default reward tiers — the exact table that used to be written
     // into grantSeasonRewards, so an untouched install grants what it always
-    // did. Only inserted when the default set is empty: an operator who edits
-    // these must not have them reset on the next boot.
+    // did.
+    //
+    // 딱 한 번만 넣는다. "비어 있으면 넣는다" 였을 때는, 보상을 주지 않기로
+    // 하고 기본값을 비워둔 운영자의 선택이 다음 부팅에 조용히 되살아났다.
+    // 되돌리고 싶으면 관리 화면에서 다시 채우면 된다.
+    const seededFlag = await client.query(
+      `SELECT value FROM tc_config WHERE key = 'season_reward_defaults_seeded'`,
+    );
     const cfgCount = await client.query(
       'SELECT COUNT(*) FROM tc_season_reward_config WHERE season_id IS NULL',
     );
-    if (parseInt(cfgCount.rows[0].count, 10) === 0) {
+    const alreadySeeded = seededFlag.rows.length > 0;
+    if (!alreadySeeded && parseInt(cfgCount.rows[0].count, 10) > 0) {
+      // 이 표시가 생기기 전부터 돌던 설치. 기본값은 이미 들어 있으니 넣지 말고
+      // 표시만 남긴다 — 안 그러면 나중에 운영자가 비웠을 때 딱 한 번 되살아난다.
+      await client.query(
+        `INSERT INTO tc_config (key, value, updated_at) VALUES ('season_reward_defaults_seeded', '1', NOW())
+         ON CONFLICT (key) DO NOTHING`,
+      );
+    }
+    if (!alreadySeeded && parseInt(cfgCount.rows[0].count, 10) === 0) {
       await client.query(`
         INSERT INTO tc_season_reward_config (season_id, game_type, rank, gold, banner_key, banner_days)
         VALUES
@@ -728,6 +743,10 @@ async function runMigrations() {
           (NULL, 'mighty', 2, 500, 'banner_mighty_season_silver', 30),
           (NULL, 'mighty', 3, 200, 'banner_mighty_season_bronze', 30)
       `);
+      await client.query(
+        `INSERT INTO tc_config (key, value, updated_at) VALUES ('season_reward_defaults_seeded', '1', NOW())
+         ON CONFLICT (key) DO NOTHING`,
+      );
     }
 
     // Seed shop items (safe upsert)
@@ -4446,14 +4465,13 @@ async function grantSeasonRewards(seasonId) {
        FROM tc_season_reward_config WHERE season_id IS NULL
        ORDER BY game_type, rank`,
     )).rows;
-    // 설정이 통째로 비어 있으면 아무에게도 주지 않은 채 시즌만 닫힌다.
-    // 조용한 0원 지급은 실패보다 나쁘다 — 되돌리려면 이미 초기화된 시즌
-    // 성적을 복원해야 한다. 여기서 멈추면 시즌은 열린 채로 남고 다음 시도에
-    // 다시 걸린다.
+    // 티어가 하나도 없으면 아무에게도 주지 않고 시즌만 닫는다. 이걸 실패로
+    // 막아둔 적이 있었는데, 그러면 "이번 시즌은 보상 없이 넘어간다"는 운영
+    // 판단을 시스템이 거부하게 된다. 설정이 빠진 게 사고라면 그건 마이그레이션
+    // 단계에서 잡을 일이다(테이블이 없으면 여기서 예외가 나고 롤백된다).
+    // 대신 조용히 지나가지는 않게 기록은 남긴다.
     if (cfgRows.length === 0) {
-      await client.query('ROLLBACK');
-      console.error('[season] 보상 티어가 비어 있어 지급을 중단했습니다. season_id =', seasonId);
-      return { success: false, messageKey: 'db_season_reward_failed' };
+      console.warn('[season] 보상 티어가 없어 지급 없이 시즌을 닫습니다. season_id =', seasonId);
     }
     const tiersFor = (gameType) => cfgRows
       .filter((r) => r.game_type === gameType)

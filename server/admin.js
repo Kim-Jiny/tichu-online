@@ -134,10 +134,10 @@ function layout(title, content, activePage = '') {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 :root {
-  --bg: #f4f1ea;
-  --surface: rgba(255,255,255,0.92);
+  --bg: #f6f5f2;
+  --surface: #ffffff;
   --surface-strong: #ffffff;
-  --line: rgba(32, 28, 22, 0.08);
+  --line: #e4e1da;
   --text: #1f2328;
   --muted: #6c727f;
   --brand: #0f6c5c;
@@ -145,14 +145,11 @@ html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
   --accent: #d88c38;
   --danger: #c0563f;
   --warning: #c67b2b;
-  --shadow: 0 18px 40px rgba(34, 29, 21, 0.08);
+  --shadow: none;
 }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at top right, rgba(216,140,56,0.12), transparent 28%),
-    radial-gradient(circle at top left, rgba(15,108,92,0.12), transparent 30%),
-    linear-gradient(180deg, #f7f4ee 0%, #f1ede6 100%);
+  background: var(--bg);
   color: var(--text);
   display: flex;
   min-height: 100vh;
@@ -190,41 +187,42 @@ body {
 .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; min-width: 0; }
 .stat-card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  padding: 2px 0 2px 16px;
 }
-.stat-card::after {
-  content: "";
-  position: absolute;
-  inset: auto -20px -28px auto;
-  width: 88px;
-  height: 88px;
-  border-radius: 999px;
-  background: rgba(15,108,92,0.06);
-}
-.stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
-.stat-card .value { font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+.stats-grid > .stat-card:first-child { border-left: none; padding-left: 0; }
+.stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0; text-transform: none; }
+.stat-card .value { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
 .stat-card .value.purple { color: #5f62d6; }
 .stat-card .value.green { color: #2e8b57; }
 .stat-card .value.orange { color: var(--warning); }
 .stat-card .value.red { color: var(--danger); }
+/* 상자를 겹치지 않는다: 카드 테두리·그림자·둥근 모서리를 걷어내고, 구획은
+   여백과 얇은 구분선으로만 나눈다. 페이지마다 카드가 카드를 품고 있어서
+   중요한 숫자와 배경 장식이 같은 무게로 보이던 문제. */
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9));
-  border-radius: 20px;
-  padding: 22px;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  margin-bottom: 20px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  padding: 20px 0 4px;
+  box-shadow: none;
+  margin-bottom: 8px;
   min-width: 0;
   width: 100%;
   max-width: 100%;
 }
-.card h3 { font-size: 18px; margin-bottom: 16px; color: var(--text); letter-spacing: -0.01em; }
+.card h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .hero-card {
   background: linear-gradient(135deg, #17352f 0%, #1d4a41 60%, #24584d 100%);
   color: #fff;
@@ -243,25 +241,78 @@ body {
 .hero-meta .item .k { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-meta .item .v { font-size: 22px; font-weight: 800; }
 .summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; min-width: 0; }
-.summary-item { background: rgba(255,255,255,0.72); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
-.summary-item .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.summary-item { background: transparent; border: none; border-left: 1px solid var(--line); border-radius: 0; padding: 2px 0 2px 16px; }
+.summary-strip > .summary-item:first-child { border-left: none; padding-left: 0; }
+.summary-item .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: none; letter-spacing: 0; }
 .summary-item .v { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
 .summary-item .meta { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.section-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.section-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; text-transform: none; letter-spacing: 0; font-weight: 700; }
+
+/* ── 대시보드 ─────────────────────────────────────────────────────────
+   숫자만 크게 늘어놓으면 무엇이 이상한지 알 수 없다. 모든 수치는 비교
+   대상(어제, 7일 평균)을 데리고 다니고, 손댈 것이 있는 항목만 색을 쓴다. */
+.dash-section { padding: 26px 0; border-top: 1px solid var(--line); }
+.dash-section:first-of-type { border-top: none; padding-top: 8px; }
+.dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.dash-head h2 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.dash-head .hint { font-size: 12px; color: var(--muted); }
+.dash-head a { font-size: 12px; color: var(--brand); text-decoration: none; font-weight: 600; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; min-width: 0; }
+.kpi { min-width: 0; }
+.kpi { padding: 2px 18px; border-left: 1px solid var(--line); }
+.kpi:first-child { border-left: none; padding-left: 0; }
+.kpi .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.kpi .v { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.kpi .v .unit { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.kpi .d { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.kpi .d .up { color: #2e7d54; font-weight: 700; }
+.kpi .d .down { color: #b4553f; font-weight: 700; }
+.kpi .d .flat { color: var(--muted); font-weight: 700; }
+
+/* 처리 대기: 0건이면 한 줄로 조용히, 있으면 눈에 띄게. */
+.todo-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.todo { display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 14px; border: 1px solid #e7c9bf; background: #fdf3f0; border-radius: 8px; text-decoration: none; }
+.todo .n { font-size: 20px; font-weight: 800; color: #b4553f; letter-spacing: -0.02em; }
+.todo .t { font-size: 13px; color: #7a4436; font-weight: 600; }
+.todo-clear { font-size: 13px; color: var(--muted); }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0 28px; min-width: 0; }
+.facts > div { min-width: 0; }
+.fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f1efe9; }
+.fact .k { font-size: 13px; color: var(--muted); }
+.fact .v { font-size: 14px; font-weight: 700; }
+.fact .v.warn { color: #b4553f; }
+
+.cell-ellipsis { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spark { display: flex; align-items: flex-end; gap: 4px; height: 92px; min-width: 0; }
+.spark .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.spark .stack { width: 100%; max-width: 34px; display: flex; flex-direction: column-reverse; border-radius: 3px; overflow: hidden; }
+.spark .n { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.spark .x { font-size: 10px; color: #a9a49a; }
+.spark .col.today .n { color: var(--text); font-weight: 700; }
+.spark .col.today .x { color: var(--text); font-weight: 700; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.legend .zero { opacity: 0.4; }
+/* minmax(0,1fr): 그냥 1fr 이면 칸이 표의 최소 너비까지 늘어나 페이지 전체가
+   가로로 넘친다(모바일에서 오른쪽이 잘리던 원인). */
+.dash-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.dash-cols > * { min-width: 0; }
+@media (max-width: 1100px) { .dash-cols { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
 .kpi-note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 .metric-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px dashed rgba(32,28,22,0.08); }
 .metric-inline:last-child { border-bottom: none; padding-bottom: 0; }
 .metric-inline .name { font-size: 13px; color: var(--muted); }
 .metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid rgba(32,28,22,0.06); border-radius: 16px; background: rgba(255,255,255,0.68); scrollbar-width: thin; max-width: 100%; width: 100%; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); scrollbar-width: thin; max-width: 100%; width: 100%; }
 table { width: 100%; max-width: 100%; border-collapse: separate; border-spacing: 0; }
-th { text-align: left; padding: 12px 14px; background: #f6f3ec; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid #e6dfd2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; z-index: 1; }
-th:first-child { border-top-left-radius: 14px; }
-th:last-child { border-top-right-radius: 14px; }
-td { padding: 12px 14px; border-bottom: 1px solid #f0ebe2; font-size: 14px; vertical-align: top; }
-tr:nth-child(even) td { background: rgba(255,255,255,0.35); }
-tr:hover td { background: rgba(15,108,92,0.06); }
+th { text-align: left; padding: 10px 14px; background: #faf9f6; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; text-transform: none; letter-spacing: 0; position: sticky; top: 0; z-index: 1; }
+td { padding: 10px 14px; border-bottom: 1px solid #f1efe9; font-size: 14px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f7f9f8; }
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .badge-pending { background: #fff3e0; color: #e65100; }
 .badge-resolved { background: #e8f5e9; color: #2e7d32; }
@@ -432,8 +483,8 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   .page-header { flex-direction: column; }
   .page-title { font-size: 24px; }
   .page-subtitle { font-size: 13px; }
-  .header-actions { width: 100%; }
-  .header-actions .btn { width: 100%; text-align: center; }
+  .header-actions { width: 100%; display: flex; gap: 8px; }
+  .header-actions .btn { flex: 1 1 0; min-width: 0; text-align: center; }
   .hero-card .headline { font-size: 24px; }
   .hero-card { padding: 18px; border-radius: 18px; }
   .hero-card .sub { font-size: 13px; }
@@ -491,8 +542,28 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   }
   .btn { padding: 11px 14px; }
 }
+/* 대시보드 모바일: 지표는 두 칸까지만, 구분선은 세로선 대신 가로선으로. */
+@media (max-width: 768px) {
+  .dash-section { padding: 20px 0; }
+  .dash-head h2 { font-size: 14px; }
+  .dash-head .hint { font-size: 11px; line-height: 1.5; }
+  .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+  .kpi { border-left: none; padding: 0; }
+  .kpi .v { font-size: 24px; }
+  .kpi .d { font-size: 11px; }
+  .facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .todo { padding: 9px 12px; }
+  .spark { height: 84px; }
+  .spark .n { font-size: 10px; }
+  .spark .x { font-size: 9px; }
+  .cell-ellipsis { max-width: 150px; }
+}
+
 @media (max-width: 480px) {
   .sidebar { width: 88vw; }
+  .kpi-row { gap: 12px 10px; }
+  .kpi .v { font-size: 21px; }
+  .cell-ellipsis { max-width: 116px; }
   .main { padding: 12px; padding-top: 60px; width: 100vw; max-width: 100vw; }
   .page-title { font-size: 22px; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -964,8 +1035,9 @@ function renderAdminCardChip(cardId) {
   return `<code style="${style}padding:2px 6px;border-radius:4px;font-size:11px;margin:1px;display:inline-block;">${escapeHtml(label)}</code>`;
 }
 
-function renderAdminRecentMatchesTable(matches) {
+function renderAdminRecentMatchesTable(matches, { compact = false } = {}) {
   if (!matches || matches.length === 0) return '<div class="empty">최근 매치 없음</div>';
+  if (compact) return renderAdminRecentMatchesCompact(matches);
   return `<div class="table-wrap"><table>
     <tr><th>ID</th><th>게임</th><th>결과</th><th>점수/플레이어</th><th>유형</th><th>종료</th><th>날짜</th></tr>
     ${matches.map(m => {
@@ -1038,6 +1110,51 @@ function dashboardActivityLink(period, game, label, active) {
   return `<a class="preset-link ${active ? 'active' : ''}" href="${href}" data-activity-filter="1" data-api-href="${apiHref}">${label}</a>`;
 }
 
+/**
+ * 대시보드용 축약 매치 표.
+ *
+ * 전체 표를 반 폭 칸에 그대로 넣으면 플레이어 목록과 이탈자 닉네임이 세로로
+ * 뭉개져 읽을 수 없다. 여기서는 한 줄로 자르고 전체 내용은 title 로 남긴다.
+ */
+function renderAdminRecentMatchesCompact(matches) {
+  const line = (m) => {
+    if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty') {
+      return m.player_a1 || '-';
+    }
+    return `${m.team_a_score}:${m.team_b_score} · ${m.player_a1}, ${m.player_a2} vs ${m.player_b1}, ${m.player_b2}`;
+  };
+  return `<div class="table-wrap"><table>
+    <tr><th>게임</th><th>내용</th><th>종료</th><th>시각</th></tr>
+    ${matches.slice(0, 10).map((m) => {
+      const reason = m.end_reason || 'normal';
+      const end = reason === 'leave'
+        ? `<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>`
+        : reason === 'timeout'
+          ? `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>`
+          : '<span style="color:#9a958c">정상</span>';
+      const who = m.deserter_nickname ? ` ${escapeHtml(m.deserter_nickname)}` : '';
+      const text = line(m);
+      return `<tr>
+        <td>${gameTypeBadge(m.game_type)}</td>
+        <td class="cell-ellipsis" title="${escapeHtml(text)}" style="font-size:12px">${escapeHtml(text)}</td>
+        <td class="cell-ellipsis" style="max-width:110px;font-size:12px" title="${escapeHtml((reason === 'normal' ? '정상' : reason) + who)}">${end}${who ? `<span style="color:#a8867d;font-size:11px">${who}</span>` : ''}</td>
+        <td style="font-size:12px;color:#9a958c;white-space:nowrap">${formatTimeShort(m.created_at)}</td>
+      </tr>`;
+    }).join('')}
+  </table></div>`;
+}
+
+/** 오늘이면 시:분, 그 전이면 월/일. 대시보드 표는 날짜 전체가 필요 없다. */
+function formatTimeShort(d) {
+  if (!d) return '-';
+  const p = kstParts(new Date(d));
+  if (!p) return '-';
+  const today = kstParts(new Date());
+  return (p.year === today.year && p.month === today.month && p.day === today.day)
+    ? `${p.hour}:${p.minute}`
+    : `${Number(p.month)}/${Number(p.day)}`;
+}
+
 function renderDashboardActivityTopContent(topPlayers, period = 'week', game = 'all') {
   const meta = dashboardActivityMeta(period, game);
   const activityFilter = ['today', 'week', 'month'].map(p => {
@@ -1090,16 +1207,12 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
     : '<div class="empty">아직 플레이어 없음</div>';
 
   return `
-    <div class="table-meta">
-      <div>
-        <h3>플레이량 Top 10</h3>
-        <div class="muted" style="font-size:12px">${meta.periodLabel.range} · ${meta.gameLabel.label} 기준 참여 횟수로 정렬합니다.</div>
-      </div>
-      <div>
-        <div class="preset-bar" style="margin-top:0">${activityFilter}</div>
-        <div class="preset-bar" style="margin-top:8px">${gameActivityFilter}</div>
-      </div>
+    <div class="dash-head">
+      <h2>플레이량 Top 10</h2>
+      <span class="hint">${meta.periodLabel.range} · ${meta.gameLabel.label}</span>
     </div>
+    <div class="preset-bar" style="margin-top:0;margin-bottom:6px">${activityFilter}</div>
+    <div class="preset-bar" style="margin-top:0;margin-bottom:12px">${gameActivityFilter}</div>
     ${table}
   `;
 }
@@ -1761,13 +1874,51 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const avgSpectatorsPerRoom = activeRooms > 0 ? totalSpectators / activeRooms : 0;
     const issueLoad = stats.totalUsers > 0 ? ((stats.pendingInquiries + stats.pendingReports) / stats.totalUsers) * 100 : 0;
 
-    const matchesTable = renderAdminRecentMatchesTable(stats.recentMatches);
+    const matchesTable = renderAdminRecentMatchesTable(stats.recentMatches, { compact: true });
 
     const topPlayersContent = renderDashboardActivityTopContent(
       stats.topPlayers,
       stats.topPlayersPeriod || activityPeriod,
       stats.topPlayersGame || activityGame
     );
+
+    // 지금 누가 붙어 있는지. /tc-backstage/online 의 'connected' 규칙과 같은
+    // 것을 대시보드에서도 바로 보여준다 — 방 목록만 있고 사람이 없으면
+    // "지금 서버가 어떤 상태인지"의 절반만 보이는 셈이라 다시 넣었다.
+    const onlineUsers = [];
+    if (wss) {
+      wss.clients.forEach((c) => {
+        if (!c.nickname) return;
+        const room = c.roomId ? allRooms.find((r) => r.id === c.roomId) : null;
+        onlineUsers.push({
+          nickname: c.nickname,
+          roomName: room ? room.name : null,
+          roomId: c.roomId || null,
+          where: room ? (room.gameInProgress ? '게임 중' : '대기 중') : '로비',
+        });
+      });
+    }
+    onlineUsers.sort((a, b) => (a.where === b.where
+      ? a.nickname.localeCompare(b.nickname)
+      : (a.where === '게임 중' ? -1 : b.where === '게임 중' ? 1 : a.where.localeCompare(b.where))));
+    const onlineTable = onlineUsers.length === 0
+      ? '<div class="todo-clear">접속 중인 유저가 없습니다.</div>'
+      : `<div class="table-wrap"><table>
+          <tr><th>닉네임</th><th>위치</th><th>상태</th></tr>
+          ${onlineUsers.slice(0, 20).map((u) => `<tr>
+            <td class="cell-ellipsis" style="max-width:150px"><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}">${escapeHtml(u.nickname)}</a></td>
+            <td class="cell-ellipsis" style="max-width:170px;font-size:13px">${u.roomName
+              ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}">${escapeHtml(u.roomName)}</a>`
+              : '<span style="color:#9a958c">로비</span>'}</td>
+            <td style="font-size:12px;white-space:nowrap">${u.where === '게임 중'
+              ? '<span class="badge badge-resolved">게임 중</span>'
+              : u.where === '대기 중'
+                ? '<span class="badge badge-pending">대기 중</span>'
+                : '<span style="color:#9a958c">로비</span>'}</td>
+          </tr>`).join('')}
+        </table></div>${onlineUsers.length > 20
+          ? `<div class="hint" style="margin-top:8px;font-size:12px;color:#9a958c">외 ${onlineUsers.length - 20}명</div>`
+          : ''}`;
 
     // Active rooms table
     let roomsTable = '';
@@ -1790,130 +1941,181 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       roomsTable = '<div class="empty">활성 방 없음</div>';
     }
 
+    // 어제 대비, 7일 평균 대비를 같이 붙인다: 숫자 하나만으로는 44가 많은
+    // 건지 적은 건지 알 수 없고, 대시보드는 그걸 판단하러 오는 화면이다.
+    const gamesToday = chartGames[6];
+    const gamesYesterday = chartGames[5];
+    const gamesAvg7 = chartGames.reduce((a, b) => a + b, 0) / 7;
+    const signupsToday = chartSignups[6];
+    const signupsYesterday = chartSignups[5];
+    const delta = (now, before, unit = '') => {
+      if (before === 0 && now === 0) return '<span class="flat">어제와 같음</span>';
+      if (before === 0) return `<span class="up">+${formatNumber(now)}${unit}</span> 어제 0`;
+      const diff = now - before;
+      const pct = Math.round((diff / before) * 100);
+      if (diff === 0) return '<span class="flat">어제와 같음</span>';
+      const cls = diff > 0 ? 'up' : 'down';
+      const sign = diff > 0 ? '+' : '';
+      return `<span class="${cls}">${sign}${formatNumber(diff)}${unit}</span> 어제 대비 ${sign}${pct}%`;
+    };
+    const kpi = (k, v, unit, d) => `<div class="kpi">
+      <div class="k">${k}</div>
+      <div class="v">${v}${unit ? `<span class="unit">${unit}</span>` : ''}</div>
+      ${d ? `<div class="d">${d}</div>` : ''}
+    </div>`;
+    const fact = (k, v, warn) => `<div class="fact"><span class="k">${k}</span><span class="v${warn ? ' warn' : ''}">${v}</span></div>`;
+
+    // 처리 대기: 없으면 한 줄로 지나가고, 있을 때만 자리를 차지한다.
+    const todos = [
+      { n: stats.pendingReports, t: '미처리 신고', href: '/tc-backstage/reports' },
+      { n: stats.pendingInquiries, t: '미처리 문의', href: '/tc-backstage/inquiries' },
+      { n: stats.todayRefundCount || 0, t: '오늘 환불', href: '/tc-backstage/refunds' },
+    ].filter((t) => t.n > 0);
+    const todoHtml = todos.length === 0
+      ? '<div class="todo-clear">처리할 항목이 없습니다.</div>'
+      : `<div class="todo-row">${todos.map((t) => `<a class="todo" href="${t.href}">
+          <span class="n">${formatNumber(t.n)}</span><span class="t">${t.t}</span>
+        </a>`).join('')}</div>`;
+
+    // 7일 막대. 게임은 종류별로 쌓고, 그날 값이 0인 종류는 범례에서 흐리게
+    // 둬서 "안 쓰는 모드"와 "오늘만 없는 모드"를 구분할 수 있게 한다.
+    const GAME_SERIES = [
+      { key: 'tichu', label: '티츄', color: '#4f6bd8', vals: chartTichu },
+      { key: 'sk', label: '스컬킹', color: '#21455f', vals: chartSK },
+      { key: 'll', label: '러브레터', color: '#d9527e', vals: chartLL },
+      { key: 'mighty', label: '마이티', color: '#7a6bd0', vals: chartMighty },
+    ];
+    const spark = (labels, columns, max) => `<div class="spark">
+      ${columns.map((col, i) => `<div class="col${i === columns.length - 1 ? ' today' : ''}">
+        <span class="n">${col.total}</span>
+        <div class="stack" style="height:${Math.max(col.total / max * 62, col.total > 0 ? 3 : 1)}px">
+          ${col.parts.map((p) => p.v > 0
+            ? `<div style="height:${(p.v / col.total) * 100}%;background:${p.color}" title="${p.label} ${p.v}"></div>`
+            : '').join('')}
+        </div>
+        <span class="x">${labels[i]}</span>
+      </div>`).join('')}
+    </div>`;
+    const gameCols = chartLabels.map((_, i) => ({
+      total: chartGames[i],
+      parts: GAME_SERIES.map((g) => ({ v: g.vals[i], color: g.color, label: g.label })),
+    }));
+    const signupCols = chartLabels.map((_, i) => ({
+      total: chartSignups[i],
+      parts: [{ v: chartSignups[i], color: '#2e7d54', label: '가입' }],
+    }));
+
     const content = `
       ${pageHeader(
         '대시보드',
-        '실시간 운영 상태와 최근 7일 흐름을 한 화면에서 확인할 수 있도록 재구성했습니다. 급한 이슈, 활성도, 경제 지표를 먼저 보고 상세 표로 내려가는 구조입니다.',
+        `${serverStartedAtText} 기동 · 지금 ${connectedUsers}명 접속 · 활성 방 ${activeRooms}개`,
         `
-          <a href="/tc-backstage/inquiries" class="btn btn-secondary">문의 확인</a>
-          <a href="/tc-backstage/reports" class="btn btn-secondary">신고 확인</a>
+          <a href="/tc-backstage/stats" class="btn btn-secondary">통계</a>
           <a href="/tc-backstage/users" class="btn btn-primary">유저 관리</a>
         `
       )}
 
-      <div class="hero-card">
-        <div class="eyebrow">Operations Snapshot</div>
-        <div class="headline">지금은 ${connectedUsers}명이 접속 중이고, ${stats.todayGames}개의 게임이 오늘 생성되었습니다.</div>
-        <div class="sub">운영 우선순위는 미처리 문의 ${stats.pendingInquiries}건, 신고 ${stats.pendingReports}건, 그리고 최근 30일 기준 문제 유저 ${uniqueReported30d}명입니다.</div>
-        <div class="hero-meta">
-          <div class="item"><div class="k">서버 시작</div><div class="v" style="font-size:18px">${serverStartedAtText}</div></div>
-          <div class="item"><div class="k">활성 방</div><div class="v">${activeRooms}</div></div>
-          <div class="item"><div class="k">신규 가입</div><div class="v">+${stats.newUsersToday}</div></div>
-          <div class="item"><div class="k">랭크 비중</div><div class="v">${formatPercent(rankedShareToday)}</div></div>
+      <div class="dash-section">
+        <div class="dash-head"><h2>처리 대기</h2></div>
+        ${todoHtml}
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-head">
+          <h2>오늘</h2>
+          <span class="hint">KST 기준 · 어제 하루 전체와 비교</span>
+        </div>
+        <div class="kpi-row">
+          ${kpi('게임', formatNumber(gamesToday), '판', delta(gamesToday, gamesYesterday, '판')
+            + ` · 7일 평균 ${gamesAvg7.toFixed(1)}판`)}
+          ${kpi('신규 가입', formatNumber(signupsToday), '명', delta(signupsToday, signupsYesterday, '명'))}
+          ${kpi('랭크 비중', formatPercent(rankedShareToday), '',
+            `${formatNumber(stats.rankedMatchesToday)}판 / 오늘 ${formatNumber(stats.todayGames)}판`)}
+          ${kpi('순매출', `₩${formatNumber(stats.todayNetRevenue || 0)}`, '',
+            `결제 ${formatNumber(stats.todayPaidCount || 0)}건 · 환불 ${formatNumber(stats.todayRefundCount || 0)}건`)}
+          ${kpi('24시간 활성', formatNumber(stats.activeUsers24h), '명',
+            `전체 ${formatNumber(stats.totalUsers)}명의 ${formatPercent(activeRatio24h)}`)}
         </div>
       </div>
 
-      ${summaryStrip([
-        { label: '24시간 활성률', value: formatPercent(activeRatio24h), meta: `${formatNumber(stats.activeUsers24h)} / ${formatNumber(stats.totalUsers)} 유저` },
-        { label: '대기 이슈 밀도', value: formatPercent(issueLoad, 1), meta: `문의 ${formatNumber(stats.pendingInquiries)}건 · 신고 ${formatNumber(stats.pendingReports)}건`, valueColor: issueLoad > 5 ? '#c0563f' : '#1f2328' },
-        { label: '관전 집중도', value: formatPercent(avgSpectatorsPerRoom * 100 / 4, 0), meta: `방당 평균 ${avgSpectatorsPerRoom.toFixed(1)}명 관전` },
-        { label: '광고 참여자', value: formatNumber(adTodayUsers), meta: `오늘 ${formatNumber(adTodayClaims)}회 시청` }
-      ])}
-
-      <div class="section-label">실시간 서버 상태</div>
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
-        <a href="/tc-backstage/online?filter=connected" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">접속 중</div><div class="value purple">${formatNumber(connectedUsers)}</div><div class="kpi-note">소켓 연결 기준 현재 세션</div></a>
-        <a href="/tc-backstage/online?filter=ingame" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">게임 중 방</div><div class="value green">${formatNumber(gamingRooms)}</div><div class="kpi-note">${formatNumber(activeRooms)}개 활성 방 중 진행 중</div></a>
-        <a href="/tc-backstage/online?filter=waiting" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">대기 방</div><div class="value orange">${formatNumber(waitingRooms)}</div><div class="kpi-note">매칭 전 또는 준비 단계</div></a>
-        <a href="/tc-backstage/online?filter=spectators" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">관전 유저</div><div class="value" style="color:#2878b8">${formatNumber(totalSpectators)}</div><div class="kpi-note">방당 평균 ${avgSpectatorsPerRoom.toFixed(1)}명</div></a>
-      </div>
-
-      <div class="section-label">유저와 매치 현황</div>
-      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr))">
-        <div class="stat-card"><div class="label">전체 유저</div><div class="value">${formatNumber(stats.totalUsers)}</div><div class="kpi-note">오늘 +${formatNumber(stats.newUsersToday)} 가입</div></div>
-        <a href="/tc-backstage/attendance" class="stat-card" style="text-decoration:none;cursor:pointer"><div class="label">오늘 출석</div><div class="value" style="color:#2e8b57">${formatNumber(attStats.todayClaims)}<span style="font-size:14px;color:#8aa;font-weight:500">명</span></div><div class="kpi-note">7일차 완주 ${formatNumber(attStats.todayFinales)} · 지급 ${formatNumber(attStats.todayGold)}G</div></a>
-        <div class="stat-card"><div class="label">오늘 순매출(추정)</div><div class="value green">₩${formatNumber(stats.todayNetRevenue || 0)}</div><div class="kpi-note">결제 ${formatNumber(stats.todayPaidCount || 0)} · 환불 ${formatNumber(stats.todayRefundCount || 0)} · 정가추정</div></div>
-        <div class="stat-card"><div class="label">활성 (24시간)</div><div class="value">${formatNumber(stats.activeUsers24h)}</div><div class="kpi-note">7일 활성 ${formatNumber(stats.activeUsers7d)}명</div></div>
-        <div class="stat-card"><div class="label">총 매치</div><div class="value">${formatNumber(stats.totalMatches)}</div><div class="kpi-note">오늘 게임 ${formatNumber(stats.todayGames)}회</div></div>
-        <div class="stat-card"><div class="label">오늘 게임</div><div class="value green">${formatNumber(stats.todayGames)}</div><div class="kpi-note"><span style="color:#5f62d6">${formatNumber(stats.todayTichuGames)} 티츄</span> · <span style="color:#ff7043">${formatNumber(stats.todaySKGames)} SK</span> · <span style="color:#E91E63">${formatNumber(stats.todayLLGames)} LL</span> · <span style="color:#1565C0">${formatNumber(stats.todayMightyGames)} 마이티</span></div></div>
-        <div class="stat-card"><div class="label">미처리 문의</div><div class="value orange">${formatNumber(stats.pendingInquiries)}</div><div class="kpi-note">사용자 응답 대기 포함</div></div>
-        <div class="stat-card"><div class="label">미처리 신고</div><div class="value red">${formatNumber(stats.pendingReports)}</div><div class="kpi-note">최근 30일 ${formatNumber(reports30d)}건 누적</div></div>
-      </div>
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>일별 게임 (7일)</h3>
-          ${stackedBar(chartTichu, chartSK, chartLL, chartMighty, maxGames, chartLabels)}
-          <div style="margin-top:4px;font-size:11px;color:#888">
-            <span style="display:inline-block;width:10px;height:10px;background:#6c63ff;border-radius:2px;margin-right:4px"></span>티츄
-            <span style="display:inline-block;width:10px;height:10px;background:#ff7043;border-radius:2px;margin:0 4px 0 8px"></span>SK
-            <span style="display:inline-block;width:10px;height:10px;background:#E91E63;border-radius:2px;margin:0 4px 0 8px"></span>LL
-            <span style="display:inline-block;width:10px;height:10px;background:#1565C0;border-radius:2px;margin:0 4px 0 8px"></span>마이티
+      <div class="dash-section">
+        <div class="dash-head"><h2>최근 7일</h2></div>
+        <div class="dash-cols">
+          <div>
+            <div class="section-label">게임 (${formatNumber(chartGames.reduce((a, b) => a + b, 0))}판)</div>
+            ${spark(chartLabels, gameCols, maxGames)}
+            <div class="legend">
+              ${GAME_SERIES.map((g) => {
+                const sum = g.vals.reduce((a, b) => a + b, 0);
+                return `<span class="${sum === 0 ? 'zero' : ''}"><i style="background:${g.color}"></i>${g.label} ${formatNumber(sum)}</span>`;
+              }).join('')}
+            </div>
           </div>
-          <div style="margin-top:8px">
-            <h3 style="font-size:14px">일별 랭크</h3>
-            ${miniBar(chartRanked, maxGames, '#ff9800', chartLabels)}
-          </div>
-        </div>
-        <div class="card">
-          <h3>일별 신규 가입 (7일)</h3>
-          ${miniBar(chartSignups, maxSignups, '#4caf50', chartLabels)}
-        </div>
-      </div>
-
-      <div class="grid-2col">
-        <div class="card">
-          <h3>경제</h3>
-          <div class="split-stats">
-            <div class="soft-panel"><h4>보유 자산</h4>${metricLine('총 골드', `<span style="color:#d07a16">${formatNumber(totalGold)}</span>`)}${metricLine('평균 골드', formatNumber(avgGold))}${metricLine('최대 보유', `<span style="color:#b35b19">${formatNumber(maxGold)}</span>`)}</div>
-            <div class="soft-panel"><h4>구매 전환</h4>${metricLine('상점 구매', formatNumber(totalPurchased))}${metricLine('구매 유저', formatNumber(uniqueBuyers))}${metricLine('유저당 구매', uniqueBuyers > 0 ? (totalPurchased / uniqueBuyers).toFixed(1) : '0')}</div>
-          </div>
-        </div>
-        <div class="card">
-          <h3>건강도</h3>
-          <div class="split-stats">
-            <div class="soft-panel"><h4>플레이 이탈</h4>${metricLine('총 이탈', `<span style="color:#c0563f">${formatNumber(totalLeaves)}</span>`)}${metricLine('3회 이상 유저', `<span style="color:#a13a2f">${formatNumber(problemUsers)}</span>`)}${metricLine('고위험 비율', stats.totalUsers > 0 ? formatPercent((problemUsers / stats.totalUsers) * 100, 1) : '0%')}</div>
-            <div class="soft-panel"><h4>신고 추세</h4>${metricLine('30일 신고', formatNumber(reports30d))}${metricLine('피신고 유저', formatNumber(uniqueReported30d))}${metricLine('유저당 평균', uniqueReported30d > 0 ? (reports30d / uniqueReported30d).toFixed(1) : '0')}</div>
+          <div>
+            <div class="section-label">신규 가입 (${formatNumber(chartSignups.reduce((a, b) => a + b, 0))}명)</div>
+            ${spark(chartLabels, signupCols, maxSignups)}
+            <div class="legend">
+              <span><i style="background:#2e7d54"></i>가입</span>
+              <span class="${chartAdRewards.reduce((a, b) => a + b, 0) === 0 ? 'zero' : ''}">광고 시청 ${formatNumber(chartAdRewards.reduce((a, b) => a + b, 0))}회</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid-2col">
-        <div class="card">
-          <h3>광고 보상</h3>
-          <div class="split-stats">
-            <div class="soft-panel"><h4>오늘</h4>${metricLine('시청 횟수', `<span style="color:#2e8b57">${formatNumber(adTodayClaims)}</span>`)}${metricLine('참여 유저', formatNumber(adTodayUsers))}${metricLine('지급 골드', `<span style="color:#d07a16">${formatNumber(adTodayClaims * 50)}</span>`)}</div>
-            <div class="soft-panel"><h4>누적</h4>${metricLine('총 시청', `<span style="color:#256b43">${formatNumber(adTotalClaims)}</span>`)}${metricLine('누적 참여 유저', formatNumber(adUniqueUsers))}${metricLine('총 지급 골드', `<span style="color:#b35b19">${formatNumber(adTotalClaims * 50)}</span>`)}</div>
+      <div class="dash-section">
+        <div class="dash-head">
+          <h2>지금 서버</h2>
+          <span class="hint">접속 ${formatNumber(connectedUsers)}명 · 방 ${activeRooms}개(게임 ${gamingRooms} / 대기 ${waitingRooms}) · 관전 ${totalSpectators}명</span>
+        </div>
+        <div class="dash-cols">
+          <div>
+            <div class="section-label">접속 중 (${formatNumber(onlineUsers.length)}명)
+              <a href="/tc-backstage/online?filter=connected" style="font-weight:600;font-size:12px;color:var(--brand);text-decoration:none;margin-left:6px">전체 보기</a>
+            </div>
+            ${onlineTable}
+          </div>
+          <div>
+            <div class="section-label">열려 있는 방 (${activeRooms}개)</div>
+            ${allRooms.length > 0 ? roomsTable : '<div class="todo-clear">열려 있는 방이 없습니다.</div>'}
           </div>
         </div>
-        <div class="card">
-          <h3>일별 광고 시청 (7일)</h3>
-          ${miniBar(chartAdRewards, maxAdRewards, '#43a047', chartLabels)}
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-head"><h2>경제와 건강도</h2></div>
+        <div class="facts">
+          <div>
+            ${fact('총 보유 골드', formatNumber(totalGold))}
+            ${fact('1인 평균 / 최대', `${formatNumber(avgGold)} / ${formatNumber(maxGold)}`)}
+            ${fact('상점 구매', `${formatNumber(totalPurchased)}건 · ${formatNumber(uniqueBuyers)}명`)}
+          </div>
+          <div>
+            ${fact('광고 보상 (오늘)', `${formatNumber(adTodayClaims)}회 · ${formatNumber(adTodayUsers)}명`)}
+            ${fact('광고 보상 (누적)', `${formatNumber(adTotalClaims)}회 · ${formatNumber(adUniqueUsers)}명`)}
+            ${fact('출석 (오늘)', `${formatNumber(attStats?.todayClaims || 0)}명`)}
+          </div>
+          <div>
+            ${fact('30일 신고', `${formatNumber(reports30d)}건 · 대상 ${formatNumber(uniqueReported30d)}명`, reports30d > 0)}
+            ${fact('플레이 이탈', `${formatNumber(totalLeaves)}회`)}
+            ${fact('3회 이상 이탈 유저', `${formatNumber(problemUsers)}명`, problemUsers > 0)}
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>활성 방 <span style="font-size:13px;color:#888;font-weight:400">(${activeRooms})</span></h3>
-        <div class="table-meta">
-          <div class="muted">진행 중 방, 대기 방, 랭크 여부와 관전 수를 함께 표시합니다.</div>
-          <a href="/tc-backstage/online?filter=connected" class="btn btn-secondary">접속 유저 보기</a>
-        </div>
-        ${roomsTable}
-      </div>
-
-      <div class="grid-2col">
-        <div class="card">
+      <div class="dash-section">
+        <div class="dash-cols">
           <div id="activity-top-content">
             ${topPlayersContent}
           </div>
-        </div>
-        <div class="card">
-          <div class="table-meta">
-            <h3>최근 매치</h3>
-            <a href="/tc-backstage/matches" class="btn btn-secondary">더보기</a>
+          <div>
+            <div class="dash-head">
+              <h2>최근 매치</h2>
+              <a href="/tc-backstage/matches">전체 보기</a>
+            </div>
+            ${matchesTable}
           </div>
-          ${matchesTable}
         </div>
+      </div>
       </div>
       <script>
         (() => {

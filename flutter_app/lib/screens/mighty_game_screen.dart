@@ -1889,8 +1889,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
           if (showAllSeats) {
             final playerCount = state.players.length;
+            // Six seats stack three to a side, and the ring's vertical radius
+            // is what they have to share. It is capped by how far the centre
+            // sits from the top edge, so at six players the ring moves down —
+            // that is room the board has and the seats were not using.
+            final sixUp = playerCount >= 6;
             final centerY =
-                (isLandscape ? height * 0.39 : height * 0.41) +
+                height *
+                    (isLandscape
+                        ? (sixUp ? 0.42 : 0.39)
+                        : (sixUp ? 0.47 : 0.41)) +
                 spectatorBoardDrop;
             final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
             final seatRadiusX = math.min(
@@ -1918,6 +1926,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       0,
                       isBidding || isKillSelect
                           ? 0.10
+                          // Six seats take the middle of the board, so the
+                          // status line sits under the ring rather than inside
+                          // it — at the old height the lower two seats ran
+                          // straight through it.
+                          : sixUp
+                          ? (isLandscape ? 0.62 : 0.78)
                           : (isLandscape ? 0.36 : 0.46),
                     ),
                     child: isBidding
@@ -1927,7 +1941,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         : Transform.translate(
                             offset: Offset(
                               0,
-                              (isLandscape ? -18 : -26) + spectatorBoardDrop,
+                              sixUp
+                                  ? spectatorBoardDrop
+                                  : (isLandscape ? -18 : -26) +
+                                        spectatorBoardDrop,
                             ),
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 260),
@@ -2852,7 +2869,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   List<double>? _mightyCustomSpectatorSeatAnglesDeg(int count) {
     switch (count) {
       case 6:
-        return const [142, 188, 236, 304, 352, 398];
+        // Pushed away from the horizontal (was 142/188/236 a side): three seats
+        // per side have to share the ring's vertical span, and the enlarged
+        // seat boxes no longer fit in the old spacing. Spreading them costs
+        // nothing — the seats keep their size, they just sit further apart.
+        return const [135, 185, 238, 302, 355, 405];
       default:
         return null;
     }

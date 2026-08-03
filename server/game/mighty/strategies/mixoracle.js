@@ -889,6 +889,15 @@ function _mightyFriendForceWinRule(game, botId) {
     }
   }
 
+  // 위의 "안전한 승리 카드" 검사는 러프를 한 장이라도 맞을 수 있으면 통과하지
+  // 못한다. 그래서 첫 트릭처럼 기루다가 하나도 안 빠진 시점에는 리드 무늬
+  // 에이스를 들고도 전부 "안전하지 않다"가 되어 마이티가 강제된다. 판돈이 거의
+  // 없는 트릭은 그 무늬 최상위로 받고 마이티를 남긴다(휴리스틱과 같은 기준).
+  const winningCards = legal.filter(c => MightyBotInternals.canBeatCurrentWinner(game, c));
+  if (MightyBotInternals.topOfSuitInsteadOfMighty(game, botId, winningCards)) {
+    return null;
+  }
+
   return MightyBotInternals.makePlayAction(mightyCard, game, botId);
 }
 
@@ -1091,63 +1100,42 @@ function _declarerSaveMightyRule(game, botId) {
   return MightyBotInternals.makePlayAction(trumpLead, game, botId);
 }
 
+// 하드 룰은 순서가 곧 우선순위다. 이름을 같이 들고 있는 이유는 어떤 룰이
+// 수를 냈는지 추적할 수 있어야 시뮬레이션에서 원인을 짚을 수 있어서다
+// (global.__mightyRuleTrace).
+const HARD_RULES = [
+  ['friendCardReveal', _friendCardRevealRule],
+  ['declarerSavesAllyWin', _declarerSavesAllyWinRule],
+  ['friendSafeWinner', _friendSafeWinnerRule],
+  ['friendJokerCall', _friendJokerCallRule],
+  ['mightyFriendForceWin', _mightyFriendForceWinRule],
+  ['friendConservePoints', _friendConservePointsRule],
+  ['declarerSaveMighty', _declarerSaveMightyRule],
+  ['declarerJokerProbe', _declarerJokerProbeRule],
+  ['friendJokerLead', _friendJokerLeadRule],
+  ['friendSuitedTopCash', _friendSuitedTopCashRule],
+  ['friendDrawTrump', _friendDrawTrumpRule],
+  ['friendNTLead', _friendNTLeadRule],
+  ['friendNTFollowDumpHigh', _friendNTFollowDumpHighRule],
+  ['friendDeclarerSecure', _friendDeclarerSecureRule],
+  ['friendNoSafeWinner', _friendNoSafeWinnerRule],
+  ['cantWinDefer', _cantWinDeferRule],
+  ['preserveWeakJoker', _preserveWeakJokerRule],
+  ['govLeadNoOppTrump', _govLeadNoOppTrumpRule],
+];
+
 function _applyHardRules(game, botId) {
   if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
 
-  const reveal = _friendCardRevealRule(game, botId);
-  if (reveal) return reveal;
-
-  const declarerSaveAlly = _declarerSavesAllyWinRule(game, botId);
-  if (declarerSaveAlly) return declarerSaveAlly;
-
-  const safeCheapWinner = _friendSafeWinnerRule(game, botId);
-  if (safeCheapWinner) return safeCheapWinner;
-
-  const jokerCall = _friendJokerCallRule(game, botId);
-  if (jokerCall) return jokerCall;
-
-  const mightyForceWin = _mightyFriendForceWinRule(game, botId);
-  if (mightyForceWin) return mightyForceWin;
-
-  const conservePoints = _friendConservePointsRule(game, botId);
-  if (conservePoints) return conservePoints;
-
-  const declarerSaveMighty = _declarerSaveMightyRule(game, botId);
-  if (declarerSaveMighty) return declarerSaveMighty;
-
-  const declarerJokerProbe = _declarerJokerProbeRule(game, botId);
-  if (declarerJokerProbe) return declarerJokerProbe;
-
-  const friendJoker = _friendJokerLeadRule(game, botId);
-  if (friendJoker) return friendJoker;
-
-  const suitedTopCash = _friendSuitedTopCashRule(game, botId);
-  if (suitedTopCash) return suitedTopCash;
-
-  const drawTrump = _friendDrawTrumpRule(game, botId);
-  if (drawTrump) return drawTrump;
-
-  const ntLead = _friendNTLeadRule(game, botId);
-  if (ntLead) return ntLead;
-
-  const ntFollowDumpHigh = _friendNTFollowDumpHighRule(game, botId);
-  if (ntFollowDumpHigh) return ntFollowDumpHigh;
-
-  const secureFollow = _friendDeclarerSecureRule(game, botId);
-  if (secureFollow) return secureFollow;
-
-  const noSafeWinner = _friendNoSafeWinnerRule(game, botId);
-  if (noSafeWinner) return noSafeWinner;
-
-  const cantWin = _cantWinDeferRule(game, botId);
-  if (cantWin) return cantWin;
-
-  const weakJoker = _preserveWeakJokerRule(game, botId);
-  if (weakJoker) return weakJoker;
-
-  const govLeadDry = _govLeadNoOppTrumpRule(game, botId);
-  if (govLeadDry) return govLeadDry;
-
+  for (const [name, rule] of HARD_RULES) {
+    const action = rule(game, botId);
+    if (action) {
+      if (typeof global.__mightyRuleTrace === 'function') {
+        global.__mightyRuleTrace(name, game, botId, action);
+      }
+      return action;
+    }
+  }
   return null;
 }
 
@@ -1197,6 +1185,33 @@ function _oppositionTrumpLeadCensorRule(game, botId, oracleAction) {
   return alt;
 }
 
+/**
+ * 마이티 낭비 검열 — 오라클이 따라내기로 마이티를 고를 때, 판돈이 거의 없는
+ * 트릭이면 그 무늬 최상위 카드로 바꾼다.
+ *
+ * 오라클은 모든 손패를 보고 계산하기 때문에 "여기서 ♠K 는 어차피 러프당한다"
+ * 까지 알고 마이티로 덮는다. 계산상으론 트릭을 확실히 가져오지만, 판돈 0~1점
+ * 짜리 첫 트릭에서 게임 최강 카드를 쓰는 건 남는 장사가 아니다 — 최상위가
+ * 잘려도 잃는 건 몇 점이고, 마이티를 남기면 나중에 큰 트릭을 확실히 가져온다.
+ * 게다가 자리에서 보는 사람 눈에는 그냥 최강 카드를 버린 걸로 보인다.
+ *
+ * 판돈이 커졌거나 손패가 얼마 안 남았으면(= 마이티를 쓸 트릭이 없으면)
+ * 헬퍼가 null 을 돌려주므로 오라클 판단을 그대로 둔다.
+ */
+function _mightyWasteCensorRule(game, botId, oracleAction) {
+  if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (!oracleAction || oracleAction.type !== 'play_card') return null;
+  if (oracleAction.cardId !== game.getMightyCard()) return null;
+
+  const legal = game.getLegalCards(botId) || [];
+  const winningCards = legal.filter(c => MightyBotInternals.canBeatCurrentWinner(game, c));
+  const alt = MightyBotInternals.topOfSuitInsteadOfMighty(game, botId, winningCards);
+  if (!alt) return null;
+
+  return MightyBotInternals.makePlayAction(alt, game, botId);
+}
+
 function decide(game, botId) {
   const __diagOn = process.env.DIAG !== '0';
   const __diagSlowMs = _diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
@@ -1210,6 +1225,9 @@ function decide(game, botId) {
   let __solverNodes = '-';
 
   const __finish = (action) => {
+    if (typeof global.__mightyPathTrace === 'function') {
+      global.__mightyPathTrace(__path, game, botId, action);
+    }
     if (__diagOn) {
       const __totalMs = _diagElapsedMs(__diagStart);
       if (__totalMs > __diagSlowMs) {
@@ -1275,6 +1293,11 @@ function decide(game, botId) {
   if (censored) {
     __path = 'censor';
     return __finish(censored);
+  }
+  const mightyCensored = _mightyWasteCensorRule(game, botId, oracleAction);
+  if (mightyCensored) {
+    __path = 'mightyCensor';
+    return __finish(mightyCensored);
   }
   __path = 'oracle';
   return __finish(oracleAction);

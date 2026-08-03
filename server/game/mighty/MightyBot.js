@@ -1786,6 +1786,9 @@ function governmentFollow(game, botId, legalCards, winningCards, currentWinner, 
           && _isSafeFriendWinner('mighty_joker', game, botId)) {
         return 'mighty_joker';
       }
+      // 마이티로 덮기 전에, 그 무늬 최상위로 받을 수 있으면 그걸 낸다.
+      const cheapTop = _topOfSuitInsteadOfMighty(game, botId, winningCards);
+      if (cheapTop) return cheapTop;
       if (winningCards.includes(mightyCard) && oppBehind) return mightyCard;
       // No safe winner against opp-behind cut risk → concede cleanly.
     }
@@ -2123,6 +2126,62 @@ function _isSafeFriendWinner(cardId, game, botId) {
   return true;
 }
 
+// 마이티를 아껴 두는 기준. 트릭에 이미 깔린 점수가 이 이하이고 손패가 아직
+// 이만큼 남아 있으면, 마이티로 덮는 대신 "그 무늬 최상위"로 받는다.
+const MIGHTY_HOLD_MAX_POT = 1;
+const MIGHTY_HOLD_MIN_HAND = 4;
+
+/** 지금 트릭에 깔려 있는 점수 (10/J/Q/K/A 가 1점씩, 조커 0점). */
+function _trickPot(game) {
+  return (game.currentTrick || []).reduce((sum, play) => {
+    const cardId = play && play.cardId;
+    if (!cardId || cardId === 'mighty_joker') return sum;
+    const info = getCardInfo(cardId);
+    return sum + (info && info.point ? info.point : 0);
+  }, 0);
+}
+
+/**
+ * 마이티를 쓰기 직전에 불러서, 대신 낼 만한 "그 무늬 최상위" 카드를 돌려준다.
+ *
+ * `_isSafeFriendWinner` 는 뒤에 남은 상대가 한 명이라도 받아칠 수 있으면 통과를
+ * 못 시킨다. 그래서 기루다가 한 장도 안 빠진 첫 트릭에서는 리드 무늬 에이스를
+ * 들고 있어도 "안전한 승리 카드 없음"이 되고, 결국 마이티가 강제된다.
+ * 그런데 최상위 카드가 지는 경우는 러프/조커뿐이고 그때 잃는 점수는 많아야
+ * 몇 점인 반면, 마이티를 남기면 나중에 큰 트릭을 확실히 가져온다. 판돈이 거의
+ * 없는 트릭을 게임 최강 카드로 사는 건 남는 장사가 아니다.
+ *
+ * 판돈이 커졌거나(이미 점수가 깔림) 손패가 얼마 안 남아 마이티를 쓸 트릭이
+ * 없을 땐 원래대로 마이티를 쓴다.
+ */
+function _topOfSuitInsteadOfMighty(game, botId, winningCards) {
+  // 따라내기 전용 — 리드에는 "무늬 최상위로 대신 받는다"가 성립하지 않는다.
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  // A/B 측정용 좌석 게이트. 켜지면 예전(마이티 강행) 동작으로 돈다.
+  if (typeof global.__mightyForceLegacy === 'function'
+      && global.__mightyForceLegacy(botId)) {
+    return null;
+  }
+  const hand = game.hands[botId] || [];
+  if (hand.length < MIGHTY_HOLD_MIN_HAND) return null;
+  if (_trickPot(game) > MIGHTY_HOLD_MAX_POT) return null;
+
+  const mightyCard = game.getMightyCard();
+  const tops = (winningCards || []).filter((cardId) => {
+    if (cardId === mightyCard || cardId === 'mighty_joker') return false;
+    return _isEffectiveTopOfSuit(cardId, game);
+  });
+  if (tops.length === 0) return null;
+
+  // 리드 무늬로 받을 수 있으면 기루다를 축내지 않는다.
+  const leadCardId = game.currentTrick[0].cardId;
+  const leadSuit = leadCardId === 'mighty_joker'
+    ? game.jokerSuitDeclared
+    : getCardInfo(leadCardId).suit;
+  const sameSuit = tops.filter(c => getCardInfo(c).suit === leadSuit);
+  return getWeakestCard(sameSuit.length > 0 ? sameSuit : tops, game);
+}
+
 /** Get the suit of the friend-declared card */
 function _getFriendCardSuit(game) {
   if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
@@ -2433,6 +2492,7 @@ module.exports = {
   getPlayedCards: _getPlayedCards,
   isFriend: _isFriend,
   isSafeFriendWinner: _isSafeFriendWinner,
+  topOfSuitInsteadOfMighty: _topOfSuitInsteadOfMighty,
   isEffectiveTopOfSuit: _isEffectiveTopOfSuit,
   countOpponentTrumps: _countOpponentTrumps,
   suitLedCount: _suitLedCount,

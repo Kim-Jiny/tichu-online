@@ -164,6 +164,37 @@ check('fix3: friend preserves joker on locked trick',
     action.jokerSuit, s => s && s !== 'spade');
 })();
 
+// ── Fix 5: 마이티를 아끼고 그 무늬 최상위로 받는다 ──
+// 유저 리포트 국면: 주공이 첫 트릭에 낮은 카드를 리드했고, (아직 공개 안 된)
+// 프렌드 봇이 그 무늬 최상위(♠K)와 마이티(♠A)를 둘 다 들고 있다.
+// 뒤에 스페이드가 없는 상대가 기루다를 들고 있어서 "안전한 승리 카드" 검사는
+// ♠K 를 떨어뜨리고, 예전엔 그래서 마이티가 강제로 나갔다. 판돈 0점짜리
+// 첫 트릭이므로 ♠K 로 받고 마이티는 남겨야 한다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = () => position({
+    declarer: 'p0', partner: null, friendRevealed: false,
+    friendCard: 'mighty_spade_A', trumpSuit: 'club',
+    tricksLen: 0, currentPlayer: 'p1',
+    currentTrick: [{ pid: 'p0', cardId: 'mighty_spade_5' }],
+    hands: {
+      p0: c('spade_6 spade_7 spade_8 club_2 club_3 heart_2 heart_3 diamond_2 diamond_3'),
+      p1: c('spade_A spade_K heart_8 heart_9 heart_10 diamond_8 diamond_9 diamond_10 club_9 club_10'),
+      // 스페이드가 없고 기루다를 들고 있다 → ♠K 는 잘릴 수 있다.
+      // 봇은 모든 손패를 보므로 오라클도 "어차피 러프당한다"를 알고 마이티를
+      // 골랐었다. 그래도 판돈 0점짜리 첫 트릭엔 ♠K 로 받는 게 맞다.
+      p2: c('club_4 club_5 club_6 club_Q club_K heart_4 heart_5 diamond_4 diamond_5 diamond_7'),
+      p3: c('spade_3 spade_4 spade_9 spade_10 heart_6 heart_7 heart_J diamond_6 diamond_J club_7'),
+      p4: c('spade_2 spade_J spade_Q heart_Q heart_K heart_A diamond_Q diamond_K diamond_A club_8'),
+    },
+  });
+  for (const strategy of ['heuristic', 'mixoracle']) {
+    check(`fix5(${strategy}): 첫 트릭에서 마이티 대신 무늬 최상위`,
+      (MightyBot.decideMightyBotAction(build(), 'p1', strategy) || {}).cardId,
+      got => got === 'mighty_spade_K');
+  }
+})();
+
 // ── Endgame solver: legal + deterministic on real seeded endgames ──
 // Plays seeded games to their first solvable position and checks the solver
 // returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0

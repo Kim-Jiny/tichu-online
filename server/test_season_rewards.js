@@ -203,6 +203,19 @@ async function main() {
       `SELECT COUNT(*)::int n FROM tc_seasons WHERE name = '2099-12'`)).rows[0].n === 1,
       '행은 하나만 남는다');
 
+    // ── 설정이 비면 지급하지 않는다 ────────────────────────────────────
+    // 마이그레이션이 반쯤 건너뛰어 기본 티어가 없는 상태로 시즌이 닫히면,
+    // 아무도 못 받았는데 시즌 성적은 이미 초기화되어 되돌릴 수 없다.
+    await clearPayouts();
+    const s7 = await openSeason('T7');
+    await raw.query('DELETE FROM tc_season_reward_config');
+    const noTiers = await db.grantSeasonRewards(s7);
+    check(!noTiers.success, '보상 티어가 비어 있으면 지급이 실패로 끝난다');
+    check((await raw.query(
+      `SELECT status FROM tc_seasons WHERE id = $1`, [s7])).rows[0].status === 'active',
+      '시즌도 닫히지 않는다 — 다음 시도에 다시 걸린다');
+    check(await goldOf('일등') === 0, '골드도 나가지 않는다');
+
     console.log(failures ? `\n${failures} FAILED` : '\nALL PASS');
   } catch (e) {
     console.log(`\nFAIL: ${e.message}\n${e.stack}`);

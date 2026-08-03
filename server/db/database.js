@@ -90,7 +90,15 @@ pool.on('connect', (client) => {
 // Initialize database tables (tc_ prefix for tichu)
 async function initDatabase() {
   const client = await pool.connect();
+  // 배포는 블루/그린이라 새 슬롯이 뜨는 동안 옛 슬롯이 최대 15분 더 산다.
+  // 두 인스턴스가 CREATE TABLE/INDEX IF NOT EXISTS 를 동시에 던지면 포스트그레스
+  // 카탈로그에서 부딪혀 한쪽이 에러를 받는다. 자문 잠금으로 한 번에 하나만
+  // 지나가게 한다 — 뒤에 온 쪽은 앞의 결과를 보고 전부 no-op 으로 끝난다.
+  const MIGRATION_LOCK_KEY = 848213771;
+  let lockHeld = false;
   try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    lockHeld = true;
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_users (
         id SERIAL PRIMARY KEY,
@@ -1254,8 +1262,20 @@ async function initDatabase() {
 
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
-    console.error('Database initialization error:', err);
+    // 예전에는 로그만 찍고 계속 떴다. 그러면 실패한 문장 뒤의 마이그레이션이
+    // 통째로 건너뛰어진 채 서버가 "정상"으로 보이고, 빠진 것이 무엇인지는
+    // 그 기능을 실제로 쓸 때(예: 시즌 종료일)에야 드러난다.
+    //
+    // 여기서 죽으면 /health 가 초록이 되지 않아 배포가 스왑을 포기하고 옛
+    // 슬롯이 그대로 서비스한다. 반쪽 스키마로 트래픽을 받는 것보다 낫다.
+    console.error('[FATAL] 데이터베이스 마이그레이션 실패 — 부팅을 중단합니다.');
+    console.error(err);
+    throw err;
   } finally {
+    if (lockHeld) {
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY])
+        .catch(() => {});
+    }
     client.release();
   }
 }
@@ -4365,8 +4385,11 @@ async function grantSeasonRewards(seasonId) {
   try {
     await client.query('BEGIN');
 
+    // FOR UPDATE: 배포 교체 중에는 인스턴스가 둘이고, 양쪽 다 부팅과 시간별
+    // 타이머에서 롤오버를 돌린다. 잠그지 않으면 둘 다 'active' 를 읽고 골드와
+    // 배너를 두 번 지급한다 — 8월 시즌이 다섯 개 생긴 것과 같은 레이스다.
     const seasonRes = await client.query(
-      `SELECT id, status FROM tc_seasons WHERE id = $1`,
+      `SELECT id, status FROM tc_seasons WHERE id = $1 FOR UPDATE`,
       [seasonId]
     );
     if (seasonRes.rows.length === 0) {
@@ -4402,6 +4425,15 @@ async function grantSeasonRewards(seasonId) {
        FROM tc_season_reward_config WHERE season_id IS NULL
        ORDER BY game_type, rank`,
     )).rows;
+    // 설정이 통째로 비어 있으면 아무에게도 주지 않은 채 시즌만 닫힌다.
+    // 조용한 0원 지급은 실패보다 나쁘다 — 되돌리려면 이미 초기화된 시즌
+    // 성적을 복원해야 한다. 여기서 멈추면 시즌은 열린 채로 남고 다음 시도에
+    // 다시 걸린다.
+    if (cfgRows.length === 0) {
+      await client.query('ROLLBACK');
+      console.error('[season] 보상 티어가 비어 있어 지급을 중단했습니다. season_id =', seasonId);
+      return { success: false, messageKey: 'db_season_reward_failed' };
+    }
     const tiersFor = (gameType) => cfgRows
       .filter((r) => r.game_type === gameType)
       .sort((a, b) => a.rank - b.rank);

@@ -1301,17 +1301,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               padding: EdgeInsets.only(bottom: compact ? 2 : 3),
               child: ProfileAvatar(
                 photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
-                size: compact ? 24 : 28,
+                size: (compact ? 44 : 56).toDouble(),
                 blocked: game.blockedUsers.contains(name),
                 fallback: isBot
                     ? BotAvatar(
-                        size: compact ? 24 : 28,
+                        size: (compact ? 44 : 56).toDouble(),
                         name: name,
                         showBadge: true,
                       )
                     : SizedBox(
-                        width: compact ? 24 : 28,
-                        height: compact ? 24 : 28,
+                        width: (compact ? 44 : 56).toDouble(),
+                        height: (compact ? 44 : 56).toDouble(),
                       ),
               ),
             ),

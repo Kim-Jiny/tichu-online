@@ -1665,9 +1665,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
         final chipFontSize = ultraTight ? 8.0 : (tight ? 9.0 : 10.0);
         final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
+        // Sized from the seat box, like the Mighty and Skull King seats: about
+        // twice what it was, and it follows the device instead of sitting at a
+        // fixed 26px everywhere.
+        final avatarDiameter = (constraints.maxHeight * 0.42).clamp(24.0, 70.0);
+        // Hugs the photo instead of taking a fixed 70% of the box.
         final contentWidth = math.max(
-          24.0,
-          (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+          avatarDiameter + 6,
+          math.min(
+            (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+            avatarDiameter + 20,
+          ),
         );
         final labelTint = player.eliminated
             ? const Color(0xFFE9DFDE).withValues(alpha: 0.78)
@@ -1688,9 +1696,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
               fit: BoxFit.scaleDown,
               alignment: Alignment.topCenter,
               child: Container(
+                // Half the old padding — the frame was reading as a box around
+                // the seat rather than as the seat.
                 padding: EdgeInsets.symmetric(
-                  horizontal: ultraTight ? 6 : 8,
-                  vertical: ultraTight ? 4 : 5,
+                  horizontal: ultraTight ? 3 : 4,
+                  vertical: ultraTight ? 2 : 3,
                 ),
                 decoration: BoxDecoration(
                   color: labelTint,
@@ -1712,18 +1722,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           child: ProfileAvatar(
                             photoUrl:
                                 _gameService?.resolvePhotoUrl(player.photoUrl),
-                            size: ultraTight ? 22 : 26,
+                            size: avatarDiameter,
                             blocked: _gameService?.blockedUsers
                                     .contains(player.name) ??
                                 false,
                             fallback: player.isBot
                                 ? BotAvatar(
-                                    size: ultraTight ? 22 : 26,
+                                    size: avatarDiameter,
                                     name: player.name,
                                   )
                                 : SizedBox(
-                                    width: ultraTight ? 22 : 26,
-                                    height: ultraTight ? 22 : 26,
+                                    width: avatarDiameter,
+                                    height: avatarDiameter,
                                   ),
                           ),
                         ),

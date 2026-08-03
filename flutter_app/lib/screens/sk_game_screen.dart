@@ -1152,11 +1152,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
           final playedCardW = playedCardHeight * 0.7;
-          // Card centred on the photo: the label is top-aligned in the box, so
-          // the photo's middle sits half an avatar below the top edge.
-          final avatarInSeat = seatHeight * 0.56;
+          final seatMetrics = _skSeatMetrics(seatWidth, seatHeight);
           final playedCardTopOffset =
-              (4 * boardScale) + avatarInSeat / 2 - playedCardHeight / 2;
+              seatMetrics.photoCentre - playedCardHeight / 2;
           final playerCount = state.players.length;
           final centerX = width / 2;
           final centerY = isLandscape ? height * 0.39 : height * 0.41;
@@ -1773,10 +1771,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final seatHeight = seatHeightBase * boardScale;
           final playedCardHeight = 72.0 * boardScale;
           final playedCardW = playedCardHeight * 0.7;
-          // Card centred on the photo — see the spectator board for the why.
-          final avatarInSeat = seatHeight * 0.56;
+          final seatMetrics = _skSeatMetrics(seatWidth, seatHeight);
           final playedCardTopOffset =
-              (4 * boardScale) + avatarInSeat / 2 - playedCardHeight / 2;
+              seatMetrics.photoCentre - playedCardHeight / 2;
           final opponentCount = opponents.length;
           final centerX = width / 2;
           final centerY = isLandscape ? height * 0.42 : height * 0.46;
@@ -2044,6 +2041,26 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return 315.0;
   }
 
+  /// Where the photo's centre sits inside a seat box, measured from its top,
+  /// and how big the photo is. The board places the played card from this and
+  /// the seat sizes its avatar from it — one source, so they cannot drift.
+  static ({double avatar, double photoCentre}) _skSeatMetrics(
+    double seatWidth,
+    double seatHeight, {
+    bool hasTimeoutRow = false,
+  }) {
+    final compact = seatHeight <= 70 || seatWidth <= 96;
+    final verticalPadding = compact ? 4.0 : 8.0;
+    final labelPadding = compact ? 2.0 : 3.0;
+    final timeoutHeight = hasTimeoutRow ? (compact ? 11.0 : 12.0) : 0.0;
+    final avatar = (seatHeight * 0.56).clamp(30.0, 84.0).toDouble();
+    return (
+      avatar: avatar,
+      photoCentre:
+          verticalPadding + labelPadding + timeoutHeight + avatar / 2,
+    );
+  }
+
   Widget _buildSpectatorSeat(
     SKGameStateData state,
     GameService game,
@@ -2093,7 +2110,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           // Sized against the name it sits beside; the seat is inside a
           // FittedBox, so this scales down with everything else on a tight
           // board rather than pushing the name out.
-          final avatarSize = compact ? 24.0 : 28.0;
+          // Same rule as the player seats: sized from the seat box, roughly
+          // double what it was. The spectator board had been left behind.
+          final avatarSize = (constraints.maxHeight * 0.5).clamp(26.0, 76.0);
           final nameFontSize = compact ? 10.0 : 11.0;
           final scoreFontSize = compact ? 13.0 : 15.0;
           final bidHeight = compact ? 14.0 : 18.0;
@@ -2118,7 +2137,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               vertical: verticalPadding,
             ),
             decoration: const BoxDecoration(),
-            child: Center(
+            // Top-aligned, not centred: the board positions the played card
+            // from the seat's top edge, so a label that floats vertically makes
+            // the card sit slightly off the photo.
+            child: Align(
+              alignment: Alignment.topCenter,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
@@ -2355,13 +2378,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
-          // Sized from the seat box, like Mighty: the box itself scales with
-          // the board, so the photo follows the device instead of sitting at a
-          // fixed 32px on every screen. Roughly twice what it was.
-          final avatarDiameter = (constraints.maxHeight * 0.56).clamp(
-            30.0,
-            84.0,
-          );
+          // Same source as the board's card placement — see _skSeatMetrics.
+          final avatarDiameter = _skSeatMetrics(
+            constraints.maxWidth,
+            constraints.maxHeight,
+          ).avatar;
           // Hugs the photo rather than taking a fixed 70% of the box — the
           // leftover was empty tint either side of the avatar.
           final contentWidth = math.max(
@@ -2384,7 +2405,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               vertical: verticalPadding,
             ),
             decoration: const BoxDecoration(),
-            child: Center(
+            // Top-aligned, not centred: the board positions the played card
+            // from the seat's top edge, so a label that floats vertically makes
+            // the card sit slightly off the photo.
+            child: Align(
+              alignment: Alignment.topCenter,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
@@ -2431,9 +2456,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         ),
                       // Own row rather than inline before the name: inline it
                       // had to stay at 14-16px to leave the name any width at
-                      // all, which is too small to recognise a face.
-                      if (p.photoUrl != null || p.isBot)
-                        Padding(
+                      // all, which is too small to recognise a face. Drawn for
+                      // every seat, photo or not — otherwise photo-less seats
+                      // render shorter and the played card, which is placed
+                      // from the photo's centre, lands somewhere else on them.
+                      Padding(
                           padding: EdgeInsets.only(bottom: spacing),
                           child: ProfileAvatar(
                             photoUrl: game.resolvePhotoUrl(p.photoUrl),

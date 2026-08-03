@@ -1894,11 +1894,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // inside the box, so the photo's middle sits a role-label and half an
           // avatar below the top edge. Sharing a centre is what makes the card
           // read as "this seat played it" rather than as a card parked nearby.
-          final avatarInSeat = seatHeight * 0.60;
-          final photoCentreFromSeatTop =
-              (3 + 16) * seatScale + avatarInSeat / 2;
+          final seatMetrics = _mightySeatMetrics(seatWidth, seatHeight);
           final playedCardTopOffset =
-              photoCentreFromSeatTop - playedCardHeight / 2;
+              seatMetrics.photoCentre - playedCardHeight / 2;
           final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
             width: width,
             playerCount: state.players.length,
@@ -2389,10 +2387,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final scoreFontSize = compact ? 13.0 : 15.0;
             final metaFontSize = compact ? 8.0 : 8.5;
             final spacing = compact ? 1.0 : 2.0;
-            // Derived from the seat box rather than fixed: the box is sized
-            // from the board, so the photo follows the device instead of
-            // staying 56px on a tablet.
-            final avatarDiameter = (constraints.maxHeight * 0.60).clamp(40.0, 92.0);
+            // Same source as the board's card placement — see
+            // _mightySeatMetrics.
+            final avatarDiameter = _mightySeatMetrics(
+              constraints.maxWidth,
+              constraints.maxHeight,
+            ).avatar;
             // Hugs the photo instead of taking a fixed 70% of the seat box —
             // the leftover width was empty tint either side of the avatar.
             final contentWidth = math.max(
@@ -2418,7 +2418,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     vertical: verticalPadding,
                   ),
                   decoration: const BoxDecoration(),
-                  child: Center(
+                  // Top-aligned, not centred: the board places the played card
+                  // from the seat's top edge, so a label that floats vertically
+                  // puts the card slightly off the photo.
+                  child: Align(
+                    alignment: Alignment.topCenter,
                     child: Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.topCenter,
@@ -2806,6 +2810,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// horizontal axis. The vertical gap between them is 2·R·sin(offset), so on a
   /// short board the caller passes a bigger angle rather than letting the seats
   /// grow into each other.
+  /// Where the photo's centre sits inside a seat box, measured from its top.
+  ///
+  /// The board positions the played card from this, and the seat itself sizes
+  /// its avatar from it — one function so the two cannot drift apart, which is
+  /// exactly what made the card land slightly off the photo.
+  static ({double avatar, double photoCentre}) _mightySeatMetrics(
+    double seatWidth,
+    double seatHeight,
+  ) {
+    final compact = seatHeight <= 70 || seatWidth <= 96;
+    final verticalPadding = compact ? 4.0 : 6.0;
+    final labelPadding = compact ? 2.0 : 3.0;
+    final roleLabelHeight = compact ? 15.0 : 16.0;
+    final avatar = (seatHeight * 0.60).clamp(40.0, 92.0).toDouble();
+    return (
+      avatar: avatar,
+      photoCentre:
+          verticalPadding + labelPadding + roleLabelHeight + avatar / 2,
+    );
+  }
+
   double _mightyTopSeatAngleForIndex(
     int index,
     int playerCount, {

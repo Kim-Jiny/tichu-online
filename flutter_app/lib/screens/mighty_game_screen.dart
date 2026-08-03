@@ -1858,19 +1858,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // one phone. Reference is a 360×420 board (a 6.1" portrait); a bigger
           // device gets proportionally bigger seats and cards instead of the
           // same ones marooned in empty space.
-          final boardScale = math.min(width / 360.0, height / 420.0).clamp(0.82, 1.45);
-          final seatWidth = 116.0 * boardScale;
+          final boardScale = math.min(width / 360.0, height / 400.0).clamp(0.78, 1.45);
+          // Two seat columns plus a gap have to fit across, and two rows have
+          // to fit inside the ring — on a narrow or short board the seat gives
+          // way rather than the seats sliding into each other.
+          // Board drop is not known yet here and only shifts the ring down a
+          // little, so the fit uses the undropped centre — a slightly
+          // conservative estimate, which is the safe direction.
+          final centerYForFit = isLandscape ? height * 0.42 : height * 0.47;
+          final seatFit = math.min(
+            (width - 20) / 2.42 / 116.0,
+            (centerYForFit * 0.9) / 126.0,
+          );
+          final seatScale = math.min(boardScale, seatFit).clamp(0.62, 1.45);
+          final seatWidth = 116.0 * seatScale;
           // Tall enough for the enlarged avatar to render at full size — the
           // label is FittedBox'd, so a box that is too short shrinks the photo
           // and the nickname with it instead of growing them.
-          final seatHeight = 118.0 * boardScale;
+          final seatHeight = 126.0 * seatScale;
           final playedCardHeight = 72.0 * boardScale;
           final playedCardWidth = playedCardHeight * 0.7;
           // The played card is laid ON the seat rather than under it: the
           // avatar is twice the size it was, and stacking the card below would
-          // push every seat outward until the board no longer fits. Deep enough
-          // to sit on the photo, shallow enough to leave the face readable.
-          final playedCardOverlap = 66.0 * boardScale;
+          // push every seat outward until the board no longer fits.
+          //
+          // Centred on the photo, not on the seat box: the label is top-aligned
+          // inside the box, so the photo's middle sits a role-label and half an
+          // avatar below the top edge. Sharing a centre is what makes the card
+          // read as "this seat played it" rather than as a card parked nearby.
+          final avatarInSeat = seatHeight * 0.60;
+          final photoCentreFromSeatTop =
+              (3 + 16) * seatScale + avatarInSeat / 2;
+          final playedCardTopOffset =
+              photoCentreFromSeatTop - playedCardHeight / 2;
           final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
             width: width,
             playerCount: state.players.length,
@@ -2003,7 +2023,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       if (trickPlay == null) return const SizedBox.shrink();
                       return Positioned(
                         left: seatLeft + (seatWidth - playedCardWidth) / 2,
-                        top: seatTop + seatHeight - playedCardOverlap,
+                        top: seatTop + playedCardTopOffset,
                         child: _buildTablePlayedCard(
                           state,
                           trickPlay,
@@ -2044,6 +2064,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               maxSeatRadiusY,
             ),
           );
+          // How far the side seats have to sit off the horizontal for the two
+          // on each side to clear each other: their vertical gap is
+          // 2·R·sin(offset). On a tall board this stays at the 25° that looks
+          // best; on a short one it opens up instead of letting them overlap.
+          final sideOffsetDeg = seatRadiusY <= 0
+              ? 25.0
+              : (math.asin(
+                      (((seatHeight + 8) / (2 * seatRadiusY)).clamp(0.42, 0.80))
+                          .toDouble(),
+                    ) *
+                    180 /
+                    math.pi);
           final bottomMostOpponentCardTop = opponents.isEmpty
               ? centerY
               : List.generate(
@@ -2052,10 +2084,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       centerY +
                       seatRadiusY *
                           math.sin(
-                            _mightyTopSeatAngleForIndex(i, opponents.length),
+                            _mightyTopSeatAngleForIndex(
+                              i,
+                              opponents.length,
+                              sideOffsetDeg: sideOffsetDeg,
+                            ),
                           ) +
                       _mightySmallDeviceSideSeatDrop(
-                        _mightyTopSeatAngleForIndex(i, opponents.length),
+                        _mightyTopSeatAngleForIndex(
+                          i,
+                          opponents.length,
+                          sideOffsetDeg: sideOffsetDeg,
+                        ),
                         width: width,
                         playerCount: opponents.length,
                         spectatorMode: false,
@@ -2103,6 +2143,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   final angle = _mightyTopSeatAngleForIndex(
                     i,
                     opponents.length,
+                    sideOffsetDeg: sideOffsetDeg,
                   );
                   final seatLift = _mightySeatVerticalLift(
                     angle,
@@ -2143,6 +2184,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     final angle = _mightyTopSeatAngleForIndex(
                       i,
                       opponents.length,
+                      sideOffsetDeg: sideOffsetDeg,
                     );
                     final seatLift = _mightySeatVerticalLift(
                       angle,
@@ -2171,7 +2213,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     if (trickPlay == null) return const SizedBox.shrink();
                     return Positioned(
                       left: seatLeft + (seatWidth - playedCardWidth) / 2,
-                      top: seatTop + seatHeight - playedCardOverlap,
+                      top: seatTop + playedCardTopOffset,
                       child: _buildTablePlayedCard(
                         state,
                         trickPlay,
@@ -2342,7 +2384,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             // Derived from the seat box rather than fixed: the box is sized
             // from the board, so the photo follows the device instead of
             // staying 56px on a tablet.
-            final avatarDiameter = (constraints.maxHeight * 0.47).clamp(32.0, 78.0);
+            final avatarDiameter = (constraints.maxHeight * 0.60).clamp(40.0, 92.0);
             // Hugs the photo instead of taking a fixed 70% of the seat box —
             // the leftover width was empty tint either side of the avatar.
             final contentWidth = math.max(
@@ -2752,8 +2794,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return angleDeg * math.pi / 180;
   }
 
-  double _mightyTopSeatAngleForIndex(int index, int playerCount) {
+  /// [sideOffsetDeg] widens the two seats on each side away from the
+  /// horizontal axis. The vertical gap between them is 2·R·sin(offset), so on a
+  /// short board the caller passes a bigger angle rather than letting the seats
+  /// grow into each other.
+  double _mightyTopSeatAngleForIndex(
+    int index,
+    int playerCount, {
+    double? sideOffsetDeg,
+  }) {
     if (playerCount <= 1) return math.pi * 1.5;
+    if (playerCount == 5 && sideOffsetDeg != null) {
+      final o = sideOffsetDeg;
+      final angles = [180 - o, 180 + o, 270.0, 360 - o, 360 + o];
+      return angles[index] * math.pi / 180;
+    }
     final customAngles = _mightyCustomSeatAnglesDeg(playerCount);
     if (customAngles != null) {
       return customAngles[index] * math.pi / 180;

@@ -1854,12 +1854,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
           final centerX = width / 2;
-          const seatWidth = 116.0;
-          // 96, not 90: fits the avatar row without the FittedBox scaling the
-          // whole label (and the nickname with it) down.
-          const seatHeight = 96.0;
-          const playedCardWidth = 72 * 0.7;
-          const playedCardHeight = 72.0;
+          // Sized from the board it has to fit in, not from constants tuned on
+          // one phone. Reference is a 360×420 board (a 6.1" portrait); a bigger
+          // device gets proportionally bigger seats and cards instead of the
+          // same ones marooned in empty space.
+          final boardScale = math.min(width / 360.0, height / 420.0).clamp(0.82, 1.45);
+          final seatWidth = 116.0 * boardScale;
+          // Tall enough for the enlarged avatar to render at full size — the
+          // label is FittedBox'd, so a box that is too short shrinks the photo
+          // and the nickname with it instead of growing them.
+          final seatHeight = 118.0 * boardScale;
+          final playedCardHeight = 72.0 * boardScale;
+          final playedCardWidth = playedCardHeight * 0.7;
+          // The played card is laid ON the seat rather than under it: the
+          // avatar is twice the size it was, and stacking the card below would
+          // push every seat outward until the board no longer fits. Deep enough
+          // to sit on the photo, shallow enough to leave the face readable.
+          final playedCardOverlap = 66.0 * boardScale;
           final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
             width: width,
             playerCount: state.players.length,
@@ -1992,7 +2003,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       if (trickPlay == null) return const SizedBox.shrink();
                       return Positioned(
                         left: seatLeft + (seatWidth - playedCardWidth) / 2,
-                        top: seatTop + seatHeight + 2,
+                        top: seatTop + seatHeight - playedCardOverlap,
                         child: _buildTablePlayedCard(
                           state,
                           trickPlay,
@@ -2011,8 +2022,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
           final opponents = visiblePlayers;
           final opponentCount = opponents.length;
+          // Dropped from 0.41: the ring's vertical radius is capped by how far
+          // the top seat can sit above centre, and with the taller seats that
+          // cap was what pushed the two side seats into each other. There is
+          // empty board below them to give.
           final centerY =
-              (isLandscape ? height * 0.39 : height * 0.41) + playerBoardDrop;
+              (isLandscape ? height * 0.42 : height * 0.47) + playerBoardDrop;
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * _mightySeatRadiusXFactor(opponentCount),
@@ -2156,7 +2171,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     if (trickPlay == null) return const SizedBox.shrink();
                     return Positioned(
                       left: seatLeft + (seatWidth - playedCardWidth) / 2,
-                      top: seatTop + seatHeight + 2,
+                      top: seatTop + seatHeight - playedCardOverlap,
                       child: _buildTablePlayedCard(
                         state,
                         trickPlay,
@@ -2324,9 +2339,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             final scoreFontSize = compact ? 13.0 : 15.0;
             final metaFontSize = compact ? 8.0 : 8.5;
             final spacing = compact ? 1.0 : 2.0;
+            // Derived from the seat box rather than fixed: the box is sized
+            // from the board, so the photo follows the device instead of
+            // staying 56px on a tablet.
+            final avatarDiameter = (constraints.maxHeight * 0.47).clamp(32.0, 78.0);
+            // Hugs the photo instead of taking a fixed 70% of the seat box —
+            // the leftover width was empty tint either side of the avatar.
             final contentWidth = math.max(
-              28.0,
-              (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+              avatarDiameter + 6,
+              math.min(
+                (constraints.maxWidth - horizontalPadding * 2) * 0.7,
+                avatarDiameter + 22,
+              ),
             );
             final labelTint = highlighted
                 ? const Color(0xFFE7F2FF).withValues(alpha: 0.92)
@@ -2358,9 +2382,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 220),
                             curve: Curves.easeOut,
+                            // Half of what it was: with a 56px photo the old
+                            // padding read as a frame around the seat rather
+                            // than as the seat itself.
                             padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 6 : 8,
-                              vertical: compact ? 4 : 5,
+                              horizontal: compact ? 3 : 4,
+                              vertical: compact ? 2 : 3,
                             ),
                             decoration: BoxDecoration(
                               color: labelTint,
@@ -2407,17 +2434,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       photoUrl: game.resolvePhotoUrl(
                                         player.photoUrl,
                                       ),
-                                      size: compact ? 24 : 28,
+                                      size: avatarDiameter,
                                       blocked: game.blockedUsers
                                           .contains(player.name),
                                       fallback: player.isBot
                                           ? BotAvatar(
-                                              size: compact ? 24 : 28,
+                                              size: avatarDiameter,
                                               name: player.name,
                                             )
                                           : Container(
-                                              width: compact ? 24 : 28,
-                                              height: compact ? 24 : 28,
+                                              width: avatarDiameter,
+                                              height: avatarDiameter,
                                               decoration: const BoxDecoration(
                                                 color: Color(0xFFF0E7E3),
                                                 shape: BoxShape.circle,
@@ -2748,7 +2775,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // column at 207.5/152.5 (cos ≈ -0.887), right at 332.5/387.5
         // (cos ≈ +0.887). Order: lower-left, upper-left, top, upper-right,
         // lower-right.
-        return const [152.5, 207.5, 270.0, 332.5, 387.5];
+        // Spread wider than the old ±17.5°: the vertical gap between the two
+        // seats on a side is 2·R·sin(offset), and with the taller seat boxes
+        // ±17.5° left them ~4dp short of clearing each other.
+        return const [145.0, 215.0, 270.0, 325.0, 395.0];
       default:
         return null;
     }
@@ -2785,7 +2815,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   double _mightySeatRadiusYCap(double height, {required bool spectator}) {
-    final base = spectator ? 196.0 : 202.0;
+    // Raised with the seat box: a 132-tall seat needs more room between rings
+    // than a 96-tall one, or the rows sit on top of each other.
+    final base = spectator ? 262.0 : 270.0;
     if (height >= 1100) return base + 90;
     if (height >= 850) return base + 50;
     if (height >= 700) return base + 24;

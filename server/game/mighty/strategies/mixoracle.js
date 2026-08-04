@@ -375,6 +375,46 @@ function _friendDrawTrumpRule(game, botId) {
  * (e.g., friend variant with no called suit — joker/mighty/first_trick/
  * no_friend — and no tops left).
  */
+/**
+ * 부른 문양 — 주공이 프렌드를 끌어낸 무늬.
+ *
+ * 보통은 프렌드 카드의 무늬 그대로다(♣A 프렌드 → 클로버). 그런데 마이티/조커를
+ * 프렌드 카드로 부른 경우엔 카드 자체에 무늬 의미가 없다. 마이티가 ♠A 라고
+ * 스페이드를 부른 게 아니다. 이때는 **주공이 프렌드를 끌어내려고 리드한 그
+ * 트릭의 무늬**가 부른 문양이다 — 주공이 ♣4 를 깔고 프렌드가 마이티로 받아
+ * 나왔으면 클로버가 부른 문양이고, 나중에 돌려줘야 할 곳도 클로버다.
+ *
+ * 주공이 아닌 사람이 리드한 트릭에서 프렌드 카드가 나왔으면 신호가 아니므로
+ * null 을 돌려준다(예전처럼 오라클에 맡긴다).
+ */
+function _calledSuit(game) {
+  const friendCard = game.friendCard;
+  if (!friendCard || friendCard === 'no_friend' || friendCard === 'first_trick') {
+    return null;
+  }
+
+  if (friendCard !== 'mighty_joker' && friendCard !== game.getMightyCard()) {
+    const info = getCardInfo(friendCard);
+    return (info && info.suit) || null;
+  }
+
+  // A/B 측정용 좌석 게이트. 켜지면 예전(마이티/조커 프렌드는 포기) 동작으로 돈다.
+  if (typeof global.__mightyCalledSuitLegacy === 'function'
+      && global.__mightyCalledSuitLegacy()) {
+    return null;
+  }
+
+  for (const trick of game.tricks || []) {
+    if (!(trick.cards || []).some(c => c.cardId === friendCard)) continue;
+    if (trick.leader !== game.declarer) return null;
+    if (trick.leadSuit && typeof global.__mightyCalledSuitHook === 'function') {
+      global.__mightyCalledSuitHook(trick.leadSuit);
+    }
+    return trick.leadSuit || null;
+  }
+  return null;
+}
+
 function _friendNTLeadRule(game, botId) {
   if (game.currentTrick && game.currentTrick.length > 0) return null;
   if (!MightyBotInternals.isFriend(game, botId)) return null;
@@ -385,12 +425,17 @@ function _friendNTLeadRule(game, botId) {
   const hand = game.hands[botId] || [];
   if (hand.length === 0) return null;
 
-  // NOTE: the Mighty-home-suit avoidance is deliberately NOT applied here — it's
-  // a suited-play rule and _mightySuitToAvoidLeading is a no-op in NT. In NT the
-  // friend must be free to return the declarer's called suit even when that IS
-  // the Mighty's home suit.
+  // NT 에서는 원래 마이티 무늬 회피를 안 걸었다 — 부른 문양이 마침 마이티
+  // 무늬여도 돌려줄 수 있어야 하기 때문이다. 다만 주공의 그 무늬 보유가
+  // 마이티 한 장뿐이면 돌리는 순간 마이티가 강제로 끌려 나오므로, 그 좁은
+  // 경우만 NT 에서도 피한다(_mightySuitToAvoidLeading 이 그 판정을 한다).
+  const avoidSuit = MightyBotInternals.mightySuitToAvoidLeading(game, botId);
+  const leadable = avoidSuit
+    ? hand.filter(c => c === 'mighty_joker' || getCardInfo(c).suit !== avoidSuit)
+    : hand;
+
   const tops = [];
-  for (const cardId of hand) {
+  for (const cardId of leadable) {
     if (cardId === 'mighty_joker') continue;
     if (!MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) continue;
     tops.push(cardId);
@@ -404,20 +449,11 @@ function _friendNTLeadRule(game, botId) {
     return MightyBotInternals.makePlayAction(tops[0], game, botId);
   }
 
-  const friendCard = game.friendCard;
-  if (!friendCard
-      || friendCard === 'no_friend'
-      || friendCard === 'first_trick'
-      || friendCard === 'mighty_joker'
-      || friendCard === game.getMightyCard()) {
-    return null;
-  }
-  const friendInfo = getCardInfo(friendCard);
-  if (!friendInfo) return null;
-  const friendSuit = friendInfo.suit;
+  const friendSuit = _calledSuit(game);
+  if (!friendSuit) return null;
 
   const friendSuitCards = [];
-  for (const cardId of hand) {
+  for (const cardId of leadable) {
     if (cardId === 'mighty_joker') continue;
     const info = getCardInfo(cardId);
     if (!info || info.suit !== friendSuit) continue;
@@ -1247,6 +1283,37 @@ function _pointDonationCensorRule(game, botId, oracleAction) {
   return MightyBotInternals.makePlayAction(alt, game, botId);
 }
 
+/**
+ * 마이티 강제 유도 검열 — 프렌드가 선을 잡았는데 오라클이 마이티 무늬를
+ * 돌리려 하고, 주공의 그 무늬 보유가 마이티 한 장뿐이면 다른 리드로 바꾼다.
+ * 그 무늬를 돌리는 순간 주공은 팔로우할 카드가 없어 마이티를 버려야 한다.
+ * 좁은 경우(loneMighty)만 개입한다 — 넓은 회피 규칙까지 오라클에 강제하면
+ * 손대는 범위가 너무 커진다.
+ */
+function _mightySuitLeadCensorRule(game, botId, oracleAction) {
+  if (game.state !== 'playing' || game.currentPlayer !== botId) return null;
+  if (!game.currentTrick || game.currentTrick.length !== 0) return null;
+  if (!oracleAction || oracleAction.type !== 'play_card') return null;
+
+  const cardId = oracleAction.cardId;
+  if (!cardId || cardId === 'mighty_joker') return null;
+  const avoid = MightyBotInternals.loneMightySuitToAvoidLeading(game, botId);
+  if (!avoid) return null;
+  const info = getCardInfo(cardId);
+  if (!info || info.suit !== avoid) return null;
+
+  // 휴리스틱은 같은 회피 규칙을 이미 반영한다. 그래도 그 무늬를 고르면
+  // (다른 리드가 없다는 뜻이므로) 오라클 판단을 그대로 둔다.
+  const alt = _heuristicPlayAction(game, botId);
+  if (!alt || alt.type !== 'play_card' || !alt.cardId) return null;
+  if (alt.cardId === cardId) return null;
+  if (alt.cardId !== 'mighty_joker') {
+    const altInfo = getCardInfo(alt.cardId);
+    if (!altInfo || altInfo.suit === avoid) return null;
+  }
+  return alt;
+}
+
 function decide(game, botId) {
   const __diagOn = process.env.DIAG !== '0';
   const __diagSlowMs = _diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
@@ -1338,6 +1405,11 @@ function decide(game, botId) {
   if (donationCensored) {
     __path = 'donationCensor';
     return __finish(donationCensored);
+  }
+  const mightySuitCensored = _mightySuitLeadCensorRule(game, botId, oracleAction);
+  if (mightySuitCensored) {
+    __path = 'mightySuitCensor';
+    return __finish(mightySuitCensored);
   }
   __path = 'oracle';
   return __finish(oracleAction);

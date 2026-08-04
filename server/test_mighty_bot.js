@@ -318,6 +318,91 @@ check('fix3: friend preserves joker on locked trick',
   }
 })();
 
+// ── Fix 9: NT 프렌드 리드 — 탑패 먼저, 없으면 부른 문양 복귀 ──
+// 유저 스펙: NT 에서 주공이 ♣4 로 프렌드를 끌어내고 프렌드가 마이티(또는 조커)로
+// 받아 나온 뒤, 프렌드가 선을 잡으면 ① 자기 탑패를 높은 것부터 내리고
+// ② 탑패가 없으면 부른 문양(= 주공이 끌어낸 무늬, 여기선 클로버)을 높은 것부터
+// 돌려준다. 클로버가 우선순위인 게 아니라 탑패를 다 쓴 뒤의 복귀처다.
+//
+// 예전엔 부른 문양을 "프렌드 카드의 무늬"로만 계산해서, 마이티(♠A)·조커처럼
+// 무늬 의미가 없는 프렌드 카드면 ②가 통째로 빠지고 오라클로 흘렀다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = (friendCard, withTops) => {
+    const g = position({
+      declarer: 'p0', partner: 'p2', friendRevealed: true,
+      friendCard, trumpSuit: 'no_trump',
+      tricksLen: 0, currentPlayer: 'p2', currentTrick: [],
+      hands: {
+        p0: c('club_2 heart_3 diamond_3 spade_3 club_5'),
+        p1: c('club_6 heart_4 diamond_K spade_4 club_7'),
+        p2: withTops
+          ? c('heart_A heart_K club_K club_9 diamond_5')
+          : c('club_K club_9 club_2 diamond_5 spade_6'),
+        p3: c('club_A heart_6 diamond_A spade_K club_10'),
+        p4: c('club_J heart_7 diamond_Q spade_10 club_Q'),
+      },
+    });
+    // 주공이 ♣4 를 깔고 프렌드가 프렌드 카드로 받아 공개된 트릭.
+    g.tricks = [{
+      leader: 'p0', leadSuit: 'club', winner: 'p2',
+      cards: [
+        { pid: 'p0', cardId: 'mighty_club_4' },
+        { pid: 'p1', cardId: 'mighty_club_3' },
+        { pid: 'p2', cardId: friendCard },
+        { pid: 'p3', cardId: 'mighty_diamond_2' },
+        { pid: 'p4', cardId: 'mighty_heart_2' },
+      ],
+    }];
+    return g;
+  };
+  for (const [label, friendCard] of [['마이티', 'mighty_spade_A'], ['조커', 'mighty_joker']]) {
+    check(`fix9(${label} 프렌드): 탑패부터 높은 순으로`,
+      (MightyBot.decideMightyBotAction(build(friendCard, true), 'p2', 'mixoracle') || {}).cardId,
+      got => got === 'mighty_heart_A');
+    check(`fix9(${label} 프렌드): 탑패 없으면 부른 문양 높은 순으로`,
+      (MightyBot.decideMightyBotAction(build(friendCard, false), 'p2', 'mixoracle') || {}).cardId,
+      got => got === 'mighty_club_K');
+  }
+})();
+
+// ── Fix 10: 주공의 그 무늬가 마이티 한 장뿐이면 그 무늬를 돌리지 않는다 ──
+// 유저 스펙: 주공 손패에 스페이드가 ♠A(마이티) 하나뿐인데 프렌드가 스페이드를
+// 돌리면, 주공은 팔로우할 카드가 없어 마이티를 버려야 한다. 기루다/NT 무관.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = (trumpSuit) => {
+    const g = position({
+      declarer: 'p0', partner: 'p2', friendRevealed: true,
+      friendCard: 'mighty_club_A', trumpSuit,
+      tricksLen: 0, currentPlayer: 'p2', currentTrick: [],
+      hands: {
+        p0: c('spade_A heart_2 heart_3 diamond_2 club_2'), // 스페이드 = 마이티뿐
+        p1: c('spade_2 heart_4 diamond_4 club_4 heart_5'),
+        p2: c('spade_K spade_9 heart_A heart_K diamond_5'), // 프렌드(선)
+        p3: c('spade_3 heart_6 diamond_6 club_6 heart_7'),
+        p4: c('spade_4 heart_8 diamond_8 club_8 heart_9'),
+      },
+    });
+    g.tricks = [{
+      leader: 'p0', leadSuit: 'club', winner: 'p2',
+      cards: [
+        { pid: 'p0', cardId: 'mighty_club_3' }, { pid: 'p1', cardId: 'mighty_club_5' },
+        { pid: 'p2', cardId: 'mighty_club_A' }, { pid: 'p3', cardId: 'mighty_club_7' },
+        { pid: 'p4', cardId: 'mighty_club_9' },
+      ],
+    }];
+    return g;
+  };
+  for (const trumpSuit of ['heart', 'no_trump']) {
+    for (const strategy of ['heuristic', 'mixoracle']) {
+      const got = (MightyBot.decideMightyBotAction(build(trumpSuit), 'p2', strategy) || {}).cardId;
+      check(`fix10(${trumpSuit}/${strategy}): 마이티 무늬를 안 돌린다`,
+        got, x => x === 'mighty_joker' || !String(x).startsWith('mighty_spade_'));
+    }
+  }
+})();
+
 // ── Endgame solver: legal + deterministic on real seeded endgames ──
 // Plays seeded games to their first solvable position and checks the solver
 // returns a legal, deterministic move. (Broad coverage — 4000+ solves with 0

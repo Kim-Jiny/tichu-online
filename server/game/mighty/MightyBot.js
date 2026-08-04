@@ -2336,19 +2336,37 @@ function _shouldHoldMightyInMightyFriends(game, legalCards) {
  */
 function _mightySuitToAvoidLeading(game, botId) {
   if (!game.friendRevealed || botId !== game.partner) return null;
-  // NT is the exception (per user spec): with no trump there's no ruffing to
-  // waste, and the friend must be free to RETURN the declarer's called suit
-  // even when that suit is the Mighty's home suit. Only suppress in suited play.
-  if (!game.trumpSuit || game.trumpSuit === 'no_trump') return null;
+
   const mightyCard = game.getMightyCard();
-  // Exception: mighty/joker-friend designation → suppress nothing.
-  if (game.friendCard === 'mighty_joker' || game.friendCard === mightyCard) return null;
   // Only when the declarer actually still holds the Mighty.
   const declarerHand = game.hands[game.declarer] || [];
   if (!declarerHand.includes(mightyCard)) return null;
   const mightyInfo = getCardInfo(mightyCard);
   const mightySuit = mightyInfo && mightyInfo.suit;
   if (!mightySuit) return null;
+
+  // 주공의 그 무늬 보유가 마이티 한 장뿐이면, 그 무늬를 돌리는 순간 마이티가
+  // 강제로 끌려 나온다. 팔로우할 다른 카드가 없기 때문이다. 이건 기루다든
+  // 노기루다든 마찬가지라 아래 예외들보다 우선한다.
+  let declarerMightySuitCount = 0;
+  for (const cardId of declarerHand) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (info && info.suit === mightySuit) declarerMightySuitCount++;
+  }
+  const forcesMighty = declarerMightySuitCount === 1;
+
+  if (!forcesMighty) {
+    // 아래는 예전부터 있던 넓은 규칙. 주공이 그 무늬를 여러 장 들고 있으면
+    // 마이티가 강제로 나오진 않으므로, 조건을 좁게 유지한다.
+    //
+    // NT is the exception (per user spec): with no trump there's no ruffing to
+    // waste, and the friend must be free to RETURN the declarer's called suit
+    // even when that suit is the Mighty's home suit. Only suppress in suited play.
+    if (!game.trumpSuit || game.trumpSuit === 'no_trump') return null;
+    // Exception: mighty/joker-friend designation → suppress nothing.
+    if (game.friendCard === 'mighty_joker' || game.friendCard === mightyCard) return null;
+  }
 
   const hand = game.hands[botId] || [];
   const trump = (game.trumpSuit && game.trumpSuit !== 'no_trump') ? game.trumpSuit : null;
@@ -2363,10 +2381,43 @@ function _mightySuitToAvoidLeading(game, botId) {
     if (info.suit === mightySuit) mightySuitCount++;
     else hasAlternative = true;
   }
-  // Trump leads take priority — don't override.
-  if (hasTrump) return null;
+  // Trump leads take priority — don't override. 단, 마이티가 강제로 끌려
+  // 나오는 자리에서는 기루다를 들고 있어도 그 무늬는 돌리지 않는다.
+  if (hasTrump && !forcesMighty) return null;
   if (mightySuitCount === 0 || !hasAlternative) return null;
+
+  // A/B 측정용 게이트. 켜지면 "마이티 한 장뿐" 확장분만 예전처럼 끈다.
+  if (forcesMighty
+      && typeof global.__mightyLoneMightySuitLegacy === 'function'
+      && global.__mightyLoneMightySuitLegacy()) {
+    const isNT = !game.trumpSuit || game.trumpSuit === 'no_trump';
+    if (isNT) return null;
+    if (game.friendCard === 'mighty_joker' || game.friendCard === mightyCard) return null;
+    if (hasTrump) return null;
+  }
+
   return mightySuit;
+}
+
+/**
+ * 위 규칙 중 "주공의 그 무늬가 마이티 한 장뿐" 인 경우만 돌려준다.
+ *
+ * 오라클 출력을 검열할 때 쓴다. 예전부터 있던 넓은 규칙(주공이 마이티를 들고
+ * 있기만 하면 회피)까지 오라클에 강제하면 손대는 범위가 너무 커지므로,
+ * 마이티가 강제로 끌려 나오는 자리에만 개입한다.
+ */
+function _loneMightySuitToAvoidLeading(game, botId) {
+  const suit = _mightySuitToAvoidLeading(game, botId);
+  if (!suit) return null;
+  const mightyCard = game.getMightyCard();
+  const declarerHand = game.hands[game.declarer] || [];
+  let count = 0;
+  for (const cardId of declarerHand) {
+    if (cardId === 'mighty_joker') continue;
+    const info = getCardInfo(cardId);
+    if (info && info.suit === suit) count++;
+  }
+  return count === 1 && declarerHand.includes(mightyCard) ? suit : null;
 }
 
 /** Suits that have already appeared as the lead card of any completed trick.
@@ -2615,5 +2666,6 @@ module.exports = {
   declarerStrongSuit: _declarerStrongSuit,
   getFriendCardSuit: _getFriendCardSuit,
   mightySuitToAvoidLeading: _mightySuitToAvoidLeading,
+  loneMightySuitToAvoidLeading: _loneMightySuitToAvoidLeading,
   winnerCardWillHold: _winnerCardWillHold,
 };

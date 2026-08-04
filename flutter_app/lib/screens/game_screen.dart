@@ -3906,7 +3906,11 @@ class _GameScreenState extends State<GameScreen> {
           );
     // Overlay, not the seat's own Stack: a sibling drawn later used to paint
     // straight over the bubble.
-    return SeatBubbleAnchor(text: _seatChat.textFor(name), child: seat);
+    return SeatBubbleAnchor(
+      text: _seatChat.textFor(name),
+      suppressed: _chatOpen,
+      child: seat,
+    );
   }
 
   Widget? _tichuBadgeForPlayer(Player? player) {

@@ -455,7 +455,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// Board bubbles go on the overlay, not inside the seat's own Stack —
   /// otherwise the next seat or the card layer paints over them.
   Widget _wrapWithBubble(String nickname, Widget seat) {
-    return SeatBubbleAnchor(text: _seatChat.textFor(nickname), child: seat);
+    return SeatBubbleAnchor(
+      text: _seatChat.textFor(nickname),
+      suppressed: _chatOpen,
+      child: seat,
+    );
   }
 
   /// What [nickname] just said, or null once it has timed out.

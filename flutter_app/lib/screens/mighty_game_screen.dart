@@ -2077,14 +2077,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // empty board below them to give.
           final centerY =
               (isLandscape ? height * 0.42 : height * 0.47) + playerBoardDrop;
-          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
-          final seatRadiusX = math.min(
-            width * _mightySeatRadiusXFactor(opponentCount),
-            math.min(
-              _mightySeatRadiusXCap(width, opponentCount, spectator: false),
-              maxSeatRadiusX,
-            ),
-          );
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
           final seatRadiusY = math.min(
             height * (isLandscape ? 0.35 : 0.36),
@@ -2097,6 +2089,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // on each side to clear each other: their vertical gap is
           // 2·R·sin(offset). On a tall board this stays at the 25° that looks
           // best; on a short one it opens up instead of letting them overlap.
+          //
+          // Computed before the horizontal radius now: the seats sit at an
+          // angle, so how far out they land depends on it.
           final sideOffsetDeg = seatRadiusY <= 0
               ? 25.0
               : (math.asin(
@@ -2107,6 +2102,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     ) *
                     180 /
                     math.pi);
+          // 옆자리는 정면(±90°)이 아니라 비스듬히 앉는다. 그 x 이동량은
+          // R·|cos| 이므로, 반경을 마치 정면인 것처럼 제한하면 |cos| 만큼
+          // 화면 좌우가 남는다 — 5인에서 |cos|≈0.82 라 30dp 넘게 놀았다.
+          // 실제 이동량 기준으로 잡아 그 여백을 쓴다.
+          final spreadCos = _mightyWidestSeatCos(opponentCount, sideOffsetDeg);
+          final maxSeatRadiusX = math.max(
+            0.0,
+            (centerX - seatWidth / 2 - 8) / spreadCos,
+          );
+          final seatRadiusX = math.min(
+            width * _mightySeatRadiusXFactor(opponentCount),
+            math.min(
+              _mightySeatRadiusXCap(width, opponentCount, spectator: false),
+              maxSeatRadiusX,
+            ),
+          );
           final bottomMostOpponentCardTop = opponents.isEmpty
               ? centerY
               : List.generate(
@@ -2437,6 +2448,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               // 말풍선은 좌석 Stack 안이 아니라 오버레이에 그린다 —
               // 안쪽에 두면 나중에 그려지는 좌석·카드가 그대로 덮는다.
               text: _seatChat.textFor(player.name),
+              suppressed: _chatOpen,
               child: Stack(
               clipBehavior: Clip.none,
               children: [
@@ -2689,11 +2701,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           Positioned(
                             left: 0,
                             right: 0,
-                            bottom: -26,
+                            // 프로필 박스 바로 밑에 붙인다. -26 은 카드 아래로
+                            // 한 줄 띄운 느낌이라 좌석과 따로 노는 것처럼 보였다.
+                            bottom: -17,
                             child: Center(
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                child: _buildSeatPointCards(player),
+                                // 먹은 패를 눌러도 배지를 누른 것과 같은 팝업이
+                                // 뜬다. 카드-보기 요청 모드일 때 좌석 탭은 그쪽에
+                                // 쓰이므로, 이 줄만은 항상 목록을 연다.
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => _showPointCardsDialog(player),
+                                  child: _buildSeatPointCards(player),
+                                ),
                               ),
                             ),
                           ),
@@ -2843,6 +2864,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// The board positions the played card from this, and the seat itself sizes
   /// its avatar from it — one function so the two cannot drift apart, which is
   /// exactly what made the card land slightly off the photo.
+  /// 좌석 중 좌우로 가장 멀리 나가는 자리의 |cos|.
+  ///
+  /// 링 반경을 화면 폭으로 제한할 때 쓴다. 좌석이 정면에 앉지 않으면 x 이동량은
+  /// R 보다 작아서, 이걸 안 나누면 그만큼 좌우 여백이 그냥 남는다.
+  double _mightyWidestSeatCos(int count, double sideOffsetDeg) {
+    final angles = <double>[
+      for (int i = 0; i < count; i++)
+        _mightyTopSeatAngleForIndex(i, count, sideOffsetDeg: sideOffsetDeg),
+    ];
+    var widest = 0.0;
+    for (final a in angles) {
+      final c = math.cos(a).abs();
+      if (c > widest) widest = c;
+    }
+    // 전부 세로에 가까우면 0 에 가까워져 반경이 발산한다 — 하한을 둔다.
+    return widest.clamp(0.35, 1.0).toDouble();
+  }
+
   static ({double avatar, double photoCentre}) _mightySeatMetrics(
     double seatWidth,
     double seatHeight,
@@ -3192,34 +3231,122 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   void _showPointCardsDialog(MightyPlayer p) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          L10n.of(context).mtPointCardsTitle(p.name, p.pointCount),
-          style: const TextStyle(fontSize: 15),
-        ),
-        content: p.pointCards.isEmpty
-            ? Text(L10n.of(context).mtNoPointCards)
-            : Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: p.pointCards
-                    .map(
-                      (cardId) => PlayingCard(
-                        cardId: _displayCardId(cardId),
-                        width: 42,
-                        height: 59,
-                        isInteractive: false,
-                      ),
-                    )
-                    .toList(),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).mtClose),
+      builder: (ctx) {
+        final cards = p.pointCards;
+        return Dialog(
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
           ),
-        ],
-      ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 제목 줄: 누구 것인지 + 몇 장인지. 장수는 배지와 같은 모양으로
+                // 두어 좌석에서 누른 그 표시와 같은 것임이 바로 보이게 한다.
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF4A3A32),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF1F0),
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(
+                          color: const Color(0xFFE53935),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.style,
+                            size: 12,
+                            color: Color(0xFFE53935),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${p.pointCount}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFE53935),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (cards.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Center(
+                      child: Text(
+                        L10n.of(context).mtNoPointCards,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF8A7A72),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  // 카드가 많아지면(최대 20장) 세로로 늘어나 화면을 넘기므로
+                  // 스크롤 영역 안에 둔다.
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final cardId in cards)
+                            PlayingCard(
+                              cardId: _displayCardId(cardId),
+                              width: 42,
+                              height: 59,
+                              isInteractive: false,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(L10n.of(context).mtClose),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

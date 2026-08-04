@@ -497,7 +497,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// Drawn on the overlay, not inside the seat's own Stack — otherwise the
   /// next seat or the played-card layer paints over it and the line is lost.
   Widget _withSeatBubble(String nickname, Widget seat) {
-    return SeatBubbleAnchor(text: _seatChat.textFor(nickname), child: seat);
+    return SeatBubbleAnchor(
+      text: _seatChat.textFor(nickname),
+      suppressed: _chatOpen,
+      child: seat,
+    );
   }
 
   /// The last thing each player said, over their waiting-room seat.

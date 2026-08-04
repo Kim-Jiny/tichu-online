@@ -166,6 +166,7 @@ class SeatBubbleAnchor extends StatefulWidget {
     super.key,
     required this.child,
     required this.text,
+    this.suppressed = false,
     this.maxWidth = 178,
     this.fontSize = 11,
     this.maxLines = 1,
@@ -177,6 +178,11 @@ class SeatBubbleAnchor extends StatefulWidget {
 
   /// What that player just said, or null when nothing is showing.
   final String? text;
+
+  /// Hides the bubble while the chat panel is open. The panel already shows
+  /// the same line, and a bubble floating over the panel reads wrong — the
+  /// overlay puts it above everything in the route, panel included.
+  final bool suppressed;
 
   final double maxWidth;
   final double fontSize;
@@ -196,7 +202,10 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   @override
   void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((oldWidget.text != null) != (widget.text != null)) _scheduleSync();
+    if (oldWidget.text != widget.text
+        || oldWidget.suppressed != widget.suppressed) {
+      _scheduleSync();
+    }
   }
 
   @override
@@ -214,7 +223,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
 
   void _sync() {
     if (!mounted) return;
-    final wanted = widget.text != null;
+    final wanted = widget.text != null && !widget.suppressed;
     if (wanted == _portal.isShowing) return;
     if (wanted) {
       _portal.show();
@@ -237,23 +246,32 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
         controller: _portal,
         overlayChildBuilder: (context) {
           final text = widget.text;
-          if (text == null) return const SizedBox.shrink();
-          return CompositedTransformFollower(
-            link: _link,
-            // Bubble's bottom-centre pinned just above the seat's top-centre.
-            targetAnchor: Alignment.topCenter,
-            followerAnchor: Alignment.bottomCenter,
-            offset: Offset(0, -widget.gap),
-            child: IgnorePointer(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: widget.maxWidth),
-                child: SeatChatBubble(
-                  text: text,
-                  fontSize: widget.fontSize,
-                  maxLines: widget.maxLines,
-                  textAlign: TextAlign.center,
-                  tail: true,
-                  opaque: true,
+          if (text == null || widget.suppressed) return const SizedBox.shrink();
+          // Positioned so the overlay hands down LOOSE constraints. Without it
+          // the overlay's tight full-screen box wins over the maxWidth here,
+          // the bubble inflates to screen size, and pinning its bottom-centre
+          // to the seat throws it clean off the top of the screen — it builds
+          // but never shows.
+          return Positioned(
+            left: 0,
+            top: 0,
+            child: CompositedTransformFollower(
+              link: _link,
+              // Bubble's bottom-centre pinned just above the seat's top-centre.
+              targetAnchor: Alignment.topCenter,
+              followerAnchor: Alignment.bottomCenter,
+              offset: Offset(0, -widget.gap),
+              child: IgnorePointer(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: widget.maxWidth),
+                  child: SeatChatBubble(
+                    text: text,
+                    fontSize: widget.fontSize,
+                    maxLines: widget.maxLines,
+                    textAlign: TextAlign.center,
+                    tail: true,
+                    opaque: true,
+                  ),
                 ),
               ),
             ),

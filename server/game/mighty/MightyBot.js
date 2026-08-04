@@ -1660,7 +1660,7 @@ function decideFollowCard(game, botId, legalCards) {
 
   // 마지막 관문: 상대가 가져갈 트릭에 점수 카드를 얹어 주려 하면 값싼 카드로
   // 바꾼다. 위 분기가 여러 갈래라 각각을 고치는 대신 여기서 한 번에 막는다.
-  const cheaper = _cheapDiscardInsteadOfPoint(game, botId, pick);
+  const cheaper = _cheapDiscardInsteadOfPoint(game, botId, pick, legalCards);
   if (cheaper) return cheaper;
 
   return pick;
@@ -2224,7 +2224,7 @@ function _topOfSuitInsteadOfMighty(game, botId, winningCards) {
  * 야당은 프렌드 공개 전까지 "주공 말고는 우리편"으로 보는 정보 게이트를
  * 그대로 따른다. 봇이 모르는 걸 아는 것처럼 두면 안 되기 때문이다.
  */
-function _cheapDiscardInsteadOfPoint(game, botId, cardId) {
+function _cheapDiscardInsteadOfPoint(game, botId, cardId, legalCards) {
   // A/B 측정용 좌석 게이트. 켜지면 예전 동작으로 돈다.
   if (typeof global.__mightyDonateLegacy === 'function'
       && global.__mightyDonateLegacy(botId)) {
@@ -2248,7 +2248,9 @@ function _cheapDiscardInsteadOfPoint(game, botId, cardId) {
 
   const trump = game.trumpSuit;
   const trumpActive = trump && trump !== 'no_trump';
-  const legal = game.getLegalCards(botId) || [];
+  // 호출부가 이미 계산해 둔 합법 카드가 있으면 그대로 쓴다. 이 함수는 롤아웃
+  // 안에서 수천 번 돌기 때문에 재계산 한 번이 그대로 비용이 된다.
+  const legal = legalCards || game.getLegalCards(botId) || [];
   const cheap = legal.filter((c) => {
     if (c === mightyCard || c === 'mighty_joker') return false;
     const ci = getCardInfo(c);

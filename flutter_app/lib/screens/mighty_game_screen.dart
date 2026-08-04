@@ -711,33 +711,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
 
 
-  /// A board seat's chat bubble: overhangs above the seat so the photo and the
-  /// played card on it stay visible.
-  Widget? _boardChatBubble(String nickname) {
-    final text = _seatChat.textFor(nickname);
-    if (text == null) return null;
-    // Sits on the seat's top edge with its tail pointing into it: seats on a
-    // board are close enough that a bubble floating between two of them could
-    // be read as either one's.
-    return Positioned(
-      top: -30,
-      left: -34,
-      right: -34,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 178),
-          child: SeatChatBubble(
-            text: text,
-            fontSize: 11,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            tail: true,
-          ),
-        ),
-      ),
-    );
-  }
-
   /// The last thing each player said, over their waiting-room seat.
   late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
     if (mounted) setState(() {});
@@ -2460,11 +2433,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
                 : const Color(0xFFFFFCFA).withValues(alpha: 0.64);
 
-            return Stack(
+            return SeatBubbleAnchor(
+              // 말풍선은 좌석 Stack 안이 아니라 오버레이에 그린다 —
+              // 안쪽에 두면 나중에 그려지는 좌석·카드가 그대로 덮는다.
+              text: _seatChat.textFor(player.name),
+              child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Chat over the seat, for a couple of seconds.
-                ?_boardChatBubble(player.name),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   padding: EdgeInsets.symmetric(
@@ -2727,6 +2702,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 ),
               ],
+            ),
             );
           },
         ),

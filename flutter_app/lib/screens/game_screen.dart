@@ -3904,36 +3904,9 @@ class _GameScreenState extends State<GameScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [avatar, SizedBox(width: 6 * s), plate],
           );
-    final bubble = _boardChatBubble(name);
-    if (bubble == null) return seat;
-    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
-  }
-
-  /// A seat's chat bubble: overhangs above the nameplate so nothing on the
-  /// table is covered.
-  Widget? _boardChatBubble(String nickname) {
-    final text = _seatChat.textFor(nickname);
-    if (text == null) return null;
-    // Sits on the seat's top edge with its tail pointing into it: seats on a
-    // board are close enough that a bubble floating between two of them could
-    // be read as either one's.
-    return Positioned(
-      top: -30,
-      left: -34,
-      right: -34,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 178),
-          child: SeatChatBubble(
-            text: text,
-            fontSize: 11,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            tail: true,
-          ),
-        ),
-      ),
-    );
+    // Overlay, not the seat's own Stack: a sibling drawn later used to paint
+    // straight over the bubble.
+    return SeatBubbleAnchor(text: _seatChat.textFor(name), child: seat);
   }
 
   Widget? _tichuBadgeForPlayer(Player? player) {

@@ -491,38 +491,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// screen puts a face — and the bot tag went missing with it.
 
 
-  /// A board seat's chat bubble: overhangs above the seat so the photo and the
-  /// played card on it stay visible.
-  Widget? _boardChatBubble(String nickname) {
-    final text = _seatChat.textFor(nickname);
-    if (text == null) return null;
-    // Sits on the seat's top edge with its tail pointing into it: seats on a
-    // board are close enough that a bubble floating between two of them could
-    // be read as either one's.
-    return Positioned(
-      top: -30,
-      left: -34,
-      right: -34,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 178),
-          child: SeatChatBubble(
-            text: text,
-            fontSize: 11,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            tail: true,
-          ),
-        ),
-      ),
-    );
-  }
 
   /// Wraps a board seat so a chat bubble can hang above it.
+  ///
+  /// Drawn on the overlay, not inside the seat's own Stack — otherwise the
+  /// next seat or the played-card layer paints over it and the line is lost.
   Widget _withSeatBubble(String nickname, Widget seat) {
-    final bubble = _boardChatBubble(nickname);
-    if (bubble == null) return seat;
-    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
+    return SeatBubbleAnchor(text: _seatChat.textFor(nickname), child: seat);
   }
 
   /// The last thing each player said, over their waiting-room seat.

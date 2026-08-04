@@ -452,36 +452,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
 
-  /// A board seat's chat bubble: overhangs above the seat so the cards and the
-  /// photo stay visible.
-  Widget? _boardChatBubble(String nickname) {
-    final text = _seatChat.textFor(nickname);
-    if (text == null) return null;
-    // Sits on the seat's top edge with its tail pointing into it: seats on a
-    // board are close enough that a bubble floating between two of them could
-    // be read as either one's.
-    return Positioned(
-      top: -30,
-      left: -34,
-      right: -34,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 178),
-          child: SeatChatBubble(
-            text: text,
-            fontSize: 11,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            tail: true,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _wrapWithBubble(Widget? bubble, Widget seat) {
-    if (bubble == null) return seat;
-    return Stack(clipBehavior: Clip.none, children: [seat, bubble]);
+  /// Board bubbles go on the overlay, not inside the seat's own Stack —
+  /// otherwise the next seat or the card layer paints over them.
+  Widget _wrapWithBubble(String nickname, Widget seat) {
+    return SeatBubbleAnchor(text: _seatChat.textFor(nickname), child: seat);
   }
 
   /// What [nickname] just said, or null once it has timed out.
@@ -1348,11 +1322,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // report someone whose nickname or photo is the problem. The tap belongs to
     // the card-view button inside, so the seat takes a long-press, and the name
     // row below takes a tap of its own since nothing else wants it.
-    final bubble = _boardChatBubble(name);
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
-      child: _wrapWithBubble(bubble, Container(
+      child: _wrapWithBubble(name, Container(
         margin: EdgeInsets.all(compact ? 2 : 4),
         padding: EdgeInsets.all(compact ? 6 : 8),
         decoration: BoxDecoration(

@@ -86,6 +86,7 @@ class SeatChatBubble extends StatelessWidget {
     this.textAlign = TextAlign.start,
     this.maxLines = 2,
     this.tail = false,
+    this.opaque = false,
   });
 
   final String text;
@@ -99,15 +100,22 @@ class SeatChatBubble extends StatelessWidget {
   final bool tail;
 
   static const _fill = Color(0xE1FFFFFF); // white, 88%
+  static const _fillOpaque = Color(0xFFFFFFFF);
   static const _border = Color(0xFFE6DDD8);
   static const tailHeight = 6.0;
+
+  /// Board bubbles sit over cards and seats, so translucency made them hard to
+  /// read; waiting-room seats keep it so the banner underneath still shows.
+  final bool opaque;
+
+  Color get _bodyFill => opaque ? _fillOpaque : _fill;
 
   @override
   Widget build(BuildContext context) {
     final body = Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: _fill,
+        color: _bodyFill,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: _border),
       ),
@@ -136,7 +144,7 @@ class SeatChatBubble extends StatelessWidget {
             offset: const Offset(0, -1),
             child: CustomPaint(
               size: const Size(12, tailHeight),
-              painter: _TailPainter(),
+              painter: _TailPainter(_bodyFill),
             ),
           ),
         ],
@@ -145,7 +153,123 @@ class SeatChatBubble extends StatelessWidget {
   }
 }
 
+/// Hangs a board seat's chat bubble above the seat, drawn on the overlay so
+/// nothing on the board can cover it.
+///
+/// The bubble used to live inside the seat's own [Stack]. That put it in the
+/// seat's layer, so any sibling drawn later — the next seat, the played-card
+/// layer, a profile card — painted straight over it and the line was lost.
+/// Going through the overlay puts it above the whole board instead, and a
+/// [LayerLink] keeps it glued to the seat as the layout moves.
+class SeatBubbleAnchor extends StatefulWidget {
+  const SeatBubbleAnchor({
+    super.key,
+    required this.child,
+    required this.text,
+    this.maxWidth = 178,
+    this.fontSize = 11,
+    this.maxLines = 1,
+    this.gap = 2,
+  });
+
+  /// The seat the bubble belongs to.
+  final Widget child;
+
+  /// What that player just said, or null when nothing is showing.
+  final String? text;
+
+  final double maxWidth;
+  final double fontSize;
+  final int maxLines;
+
+  /// Space between the seat's top edge and the bubble's tail.
+  final double gap;
+
+  @override
+  State<SeatBubbleAnchor> createState() => _SeatBubbleAnchorState();
+}
+
+class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
+  final _link = LayerLink();
+  final _portal = OverlayPortalController();
+
+  @override
+  void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget.text != null) != (widget.text != null)) _scheduleSync();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleSync();
+  }
+
+  /// Toggling the portal marks it dirty, and both entry points here run inside
+  /// a build (initState / didUpdateWidget) — so it waits for the frame to end.
+  /// The follower also needs one laid-out frame before it has a target.
+  void _scheduleSync() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  void _sync() {
+    if (!mounted) return;
+    final wanted = widget.text != null;
+    if (wanted == _portal.isShowing) return;
+    if (wanted) {
+      _portal.show();
+    } else {
+      _portal.hide();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_portal.isShowing) _portal.hide();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _link,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: (context) {
+          final text = widget.text;
+          if (text == null) return const SizedBox.shrink();
+          return CompositedTransformFollower(
+            link: _link,
+            // Bubble's bottom-centre pinned just above the seat's top-centre.
+            targetAnchor: Alignment.topCenter,
+            followerAnchor: Alignment.bottomCenter,
+            offset: Offset(0, -widget.gap),
+            child: IgnorePointer(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.maxWidth),
+                child: SeatChatBubble(
+                  text: text,
+                  fontSize: widget.fontSize,
+                  maxLines: widget.maxLines,
+                  textAlign: TextAlign.center,
+                  tail: true,
+                  opaque: true,
+                ),
+              ),
+            ),
+          );
+        },
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 class _TailPainter extends CustomPainter {
+  const _TailPainter(this.fill);
+
+  final Color fill;
+
   @override
   void paint(Canvas canvas, Size size) {
     final path = Path()
@@ -153,11 +277,11 @@ class _TailPainter extends CustomPainter {
       ..lineTo(size.width, 0)
       ..lineTo(size.width / 2, size.height)
       ..close();
-    canvas.drawPath(path, Paint()..color = SeatChatBubble._fill);
+    canvas.drawPath(path, Paint()..color = fill);
     // Cover the body's border where the tail joins it.
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, 2),
-      Paint()..color = SeatChatBubble._fill,
+      Paint()..color = fill,
     );
     final edge = Paint()
       ..color = SeatChatBubble._border
@@ -176,5 +300,5 @@ class _TailPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _TailPainter oldDelegate) => oldDelegate.fill != fill;
 }

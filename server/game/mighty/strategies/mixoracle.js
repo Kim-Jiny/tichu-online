@@ -1314,6 +1314,59 @@ function _mightySuitLeadCensorRule(game, botId, oracleAction) {
   return alt;
 }
 
+/**
+ * 현장 진단 — NT 에서 프렌드가 리드했는데, 같은 무늬에 더 높은 카드를 들고
+ * 있으면서 낮은 카드를 냈을 때 그 순간 상태를 통째로 찍는다.
+ *
+ * 유저가 "부른 문양을 K 두고 Q 부터 낸다"고 제보했는데 자가대국·재구성으로는
+ * 재현이 안 됐다(조커 프렌드/구버전/자기친구 세 가설 모두 ♦Q 가 안 나옴).
+ * 실제 판에서 잡아야 원인을 짚을 수 있어서, MIGHTY_DIAG_NT_LEAD=1 일 때만 켠다.
+ */
+const NT_LEAD_DIAG = process.env.MIGHTY_DIAG_NT_LEAD === '1';
+
+function _diagNtFriendLead(game, botId, action, path) {
+  try {
+    if (!action || action.type !== 'play_card' || !action.cardId) return;
+    if (game.state !== 'playing') return;
+    if (game.currentTrick && game.currentTrick.length !== 0) return;
+    if (game.trumpSuit && game.trumpSuit !== 'no_trump') return;
+    if (!MightyBotInternals.isFriend(game, botId)) return;
+    if (action.cardId === 'mighty_joker') return;
+
+    const info = getCardInfo(action.cardId);
+    if (!info) return;
+    const hand = game.hands[botId] || [];
+    const higher = hand.filter((c) => {
+      if (c === 'mighty_joker' || c === action.cardId) return false;
+      const ci = getCardInfo(c);
+      return ci && ci.suit === info.suit
+        && (RANK_ORDER[ci.rank] || 0) > (RANK_ORDER[info.rank] || 0);
+    });
+    if (higher.length === 0) return;
+
+    const strip = (x) => String(x).replace(/mighty_/g, '');
+    console.log('[DIAG-NTLEAD] ' + JSON.stringify({
+      path,
+      bot: botId,
+      played: strip(action.cardId),
+      higherInHand: higher.map(strip),
+      declarer: game.declarer,
+      partner: game.partner,
+      friendCard: strip(game.friendCard),
+      friendRevealed: game.friendRevealed,
+      bid: game.currentBid,
+      hands: Object.fromEntries(Object.entries(game.hands)
+        .map(([k, v]) => [k, (v || []).map(strip)])),
+      tricks: (game.tricks || []).map(t => ({
+        leader: t.leader,
+        leadSuit: t.leadSuit,
+        winner: t.winner,
+        cards: (t.cards || []).map(x => `${x.pid}:${strip(x.cardId)}`),
+      })),
+    }));
+  } catch (e) { /* 진단이 게임을 막으면 안 된다 */ }
+}
+
 function decide(game, botId) {
   const __diagOn = process.env.DIAG !== '0';
   const __diagSlowMs = _diagNumberEnv('DIAG_BOT_SLOW_MS', 100);
@@ -1327,6 +1380,7 @@ function decide(game, botId) {
   let __solverNodes = '-';
 
   const __finish = (action) => {
+    if (NT_LEAD_DIAG) _diagNtFriendLead(game, botId, action, __path);
     if (typeof global.__mightyPathTrace === 'function') {
       global.__mightyPathTrace(__path, game, botId, action);
     }

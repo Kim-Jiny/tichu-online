@@ -922,7 +922,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             const SizedBox(width: 6),
           ],
           _buildTopActionButton(
-            icon: Icons.history_rounded,
+            icon: Icons.leaderboard_outlined,
             active: false,
             onTap: () => _showScoreHistoryDialog(state),
           ),
@@ -986,7 +986,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       // On the status line, in the slot Tichu uses for its tappable score
       // chips — the icon-only button in the title row was easy to overlook.
       statusTrailing: SpectatorStatusChip(
-        icon: Icons.history_rounded,
+        icon: Icons.leaderboard_outlined,
         label: l10n.gameScoreHistory,
         onTap: () => _showScoreHistoryDialog(state),
       ),

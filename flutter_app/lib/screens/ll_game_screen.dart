@@ -725,7 +725,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         ),
         actions: [
           _buildTopActionButton(
-            icon: Icons.history,
+            icon: Icons.leaderboard_outlined,
             active: false,
             onTap: () => showLLScoreHistoryDialog(
               context,
@@ -847,7 +847,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
           const SizedBox(width: 6),
           _buildTopActionButton(
-            icon: Icons.history,
+            icon: Icons.leaderboard_outlined,
             active: false,
             onTap: () => showLLScoreHistoryDialog(
               context,

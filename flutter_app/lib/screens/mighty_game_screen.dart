@@ -946,7 +946,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 // Same slot Tichu uses for its tappable score chips.
                 const SizedBox(width: 8),
                 SpectatorStatusChip(
-                  icon: Icons.history,
+                  icon: Icons.leaderboard_outlined,
                   label: l10n.gameScoreHistory,
                   onTap: () => _showScoreHistoryDialog(state, game),
                 ),
@@ -1043,7 +1043,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
-                  icon: Icons.history,
+                  icon: Icons.leaderboard_outlined,
                   active: false,
                   onTap: () => _showScoreHistoryDialog(state, game),
                 ),

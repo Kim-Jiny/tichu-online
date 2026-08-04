@@ -3462,7 +3462,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       final isKittyWait = state.phase == 'kitty_exchange' && game.isSpectator;
       return Center(
         child: Container(
-          width: 200,
+          // 내용에 맞춰 줄어든다. 고정 200dp 라 "대기 중…" 한 줄일 때도 양옆으로
+          // 길어져서, 좌석이 바깥으로 벌어진 뒤로는 서로 겹쳤다.
+          constraints: const BoxConstraints(minWidth: 116, maxWidth: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.5),
@@ -3528,8 +3530,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     return Center(
       child: Container(
-        width: 150,
-        constraints: const BoxConstraints(minHeight: 74),
+        // 같은 이유로 고정 폭 대신 내용 폭 + 하한. 배경 무늬는 FittedBox 라
+        // 상자가 좁아지면 같이 작아진다.
+        constraints: const BoxConstraints(
+          minWidth: 116,
+          maxWidth: 150,
+          minHeight: 74,
+        ),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.68),

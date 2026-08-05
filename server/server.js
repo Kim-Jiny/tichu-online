@@ -17,6 +17,7 @@ const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
 const { BotWorkerPool } = require('./bots/BotWorkerPool');
+const webApp = require('./webApp');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
@@ -1446,6 +1447,9 @@ const server = http.createServer(async (req, res) => {
   } else if (pathname === '/debug-path') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);
+  } else if (webApp.matches(pathname) && await webApp.serve(req, res, pathname)) {
+    // The web client, served same-origin so it shares this host's WebSocket.
+    // Falls through to the marketing page when the image was built without it.
   } else {
     const html = renderMarketingPage({
       title: 'Tichu Online으로 친구들과 카드 한 판',

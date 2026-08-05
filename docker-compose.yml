@@ -10,7 +10,12 @@ name: tichu
 # profile and always runs (shared singleton).
 
 x-server-common: &server-common
-  build: ./server
+  # Root context, not ./server: the image also builds web/ and serves it at
+  # /play/. Everything heavy (flutter_app especially) is excluded in
+  # /.dockerignore so the context stays small.
+  build:
+    context: .
+    dockerfile: server/Dockerfile
   image: tichu-server:latest
   restart: unless-stopped
   # Resource policy for the shared 4-vCPU / 8GB Contabo box. tichu is the

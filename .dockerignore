@@ -1,0 +1,20 @@
+# The build context is the repo root (the image needs both server/ and web/),
+# so everything heavy has to be excluded explicitly — flutter_app alone is
+# several GB and would otherwise be uploaded to the daemon on every build.
+flutter_app/
+docs/
+releases/
+dist/
+.git/
+.github/
+.claude/
+
+**/node_modules/
+web/dist/
+server/deploy/
+
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

@@ -36,3 +36,6 @@ server/node_modules/
 # Release build artifacts (AAB/IPA archives)
 releases/
 dist/
+
+# Web client build output (produced into the server image by Dockerfile)
+server/public/

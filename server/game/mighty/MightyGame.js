@@ -1056,6 +1056,28 @@ class MightyGame {
     const hand = this.hands[playerId] || [];
     const snapshot = sortCards([...hand], this.trumpSuit);
 
+    // Setting skips the remaining tricks, so a friend card still sitting in
+    // someone's hand would never be played and the round would score as
+    // 노프렌드 (isSolo) even though a friend exists. Resolve it now — the round
+    // ends immediately after this, so revealing leaks nothing.
+    if (!this.friendRevealed && this.friendCard) {
+      if (this.friendCard === 'first_trick') {
+        // 초구 프렌드 with trick 0 skipped: the skipped tricks are all
+        // attributed to the setter, so the setter takes the first trick.
+        this.partner = playerId;
+        this.friendRevealed = true;
+      } else {
+        for (const pid of this.playerIds) {
+          if (this.excludedPlayers.has(pid)) continue;
+          if ((this.hands[pid] || []).includes(this.friendCard)) {
+            this.partner = pid;
+            this.friendRevealed = true;
+            break;
+          }
+        }
+      }
+    }
+
     // Award every remaining point card (across all active hands) to the
     // setter. Non-point remainders just get discarded — they don't affect
     // the score calculation.

@@ -599,7 +599,7 @@ class _GameScreenState extends State<GameScreen> {
               // of it. Below 14 cards the hand shrinks under the reserve
               // and the board still doesn't move.
               child: Padding(
-                padding: EdgeInsets.only(bottom: 220 * _s),
+                padding: EdgeInsets.only(bottom: _handReserveHeight(context)),
                 child: _buildMiddleArea(state, game),
               ),
             ),
@@ -2388,6 +2388,24 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// How much of the screen the two card rows may occupy.
+  ///
+  /// The hand used to be sized from available width alone. On a phone that is
+  /// self-limiting — there simply isn't much width — but a desktop window has
+  /// plenty, so the cards grew to their scaled maximum and left the table with
+  /// what was over.
+  static const double _handHeightShare = 0.26;
+
+  /// Vertical space the board reserves for the hand panel: the rows, plus the
+  /// name/status line and padding drawn around them.
+  double _handReserveHeight(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    return (screenHeight * _handHeightShare + 76 * _s).clamp(
+      180.0,
+      screenHeight * 0.42,
+    );
+  }
+
   Widget _buildBottomArea(GameStateData state, GameService game) {
     final isMyTurn = state.isMyTurn;
     return Container(
@@ -3921,19 +3939,33 @@ class _GameScreenState extends State<GameScreen> {
         final dense = cards.length >= 13;
         final cardPadding = dense ? 2.0 : 3.0;
         final totalPadding = perRow * cardPadding * 2;
-        // Scaled like everything else on the board. These were the only card
-        // sizes left in absolute pixels, so on a large screen the hand stayed
-        // phone-sized while the table around it grew.
+        // Scaled with the board — these were the only card sizes left in
+        // absolute pixels, so on a large screen the hand stayed phone-sized
+        // while the table around it grew.
         final maxWidth = (dense ? 46.0 : 50.0) * _s;
         final minWidth = (dense ? 34.0 : 38.0) * _s;
-        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
+        var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           minWidth,
           maxWidth,
         );
-        final cardHeight = (cardWidth * (dense ? 1.35 : 1.4)).clamp(
+        final ratio = dense ? 1.35 : 1.4;
+        var cardHeight = (cardWidth * ratio).clamp(
           (dense ? 48.0 : 53.0) * _s,
           (dense ? 64.0 : 70.0) * _s,
         );
+
+        // Nothing above was looking at how much *height* the hand takes. Width
+        // is plentiful on a desktop window, so the cards ran straight to their
+        // scaled maximum and the two rows plus the panel around them swallowed
+        // the table. Cap the rows at a share of the screen and, if that bites,
+        // walk the width back down so the cards keep their proportions.
+        final rows = cards.length <= 6 ? 1 : 2;
+        final maxRowsHeight = MediaQuery.of(context).size.height * _handHeightShare;
+        final maxCardHeight = maxRowsHeight / rows;
+        if (cardHeight > maxCardHeight) {
+          cardHeight = maxCardHeight;
+          cardWidth = cardHeight / ratio;
+        }
 
         List<Widget> rowWidgets(List<String> row) {
           return row

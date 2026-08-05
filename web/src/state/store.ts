@@ -302,7 +302,14 @@ export class GameStore {
     this.socket.send({ type: 'exchange_cards', cards });
   }
 
-  playCards(cards: CardId[], callRank?: Rank | null): void {
+  /**
+   * `callRank` must ride along with a Bird play, not follow it: the engine
+   * calls advanceTurn() unconditionally after a play (TichuGame.js:458), so a
+   * wish sent afterwards arrives a turn late. Pass the sentinel `'none'` to
+   * decline the wish — the server rejects it as a rank but it is truthy, which
+   * is what keeps it out of the `needsToCallRank` branch (TichuGame.js:400).
+   */
+  playCards(cards: CardId[], callRank?: Rank | 'none' | null): void {
     const msg: ClientMessage = { type: 'play_cards', cards };
     if (callRank) msg.callRank = callRank;
     this.socket.send(msg);

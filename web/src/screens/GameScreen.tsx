@@ -33,6 +33,8 @@ function GameTable({ game }: { game: TichuState }) {
   const store = useStore();
   const [selected, setSelected] = useState<Set<CardId>>(new Set());
   const [exchange, setExchange] = useState<Partial<ExchangeSlots>>({});
+  /** Cards staged behind the Bird wish prompt; see BirdWishDialog. */
+  const [birdPlay, setBirdPlay] = useState<CardId[] | null>(null);
 
   // A new hand invalidates any selection made against the old one.
   const handKey = game.myCards.join(',');
@@ -125,12 +127,30 @@ function GameTable({ game }: { game: TichuState }) {
         canPlay={canPlay}
         bombReady={bombReady}
         onPlay={() => {
+          // The wish has to be decided before the play is sent, not after.
+          if (selectedList.includes('special_bird')) {
+            setBirdPlay(selectedList);
+            return;
+          }
           store.playCards(selectedList);
           setSelected(new Set());
         }}
         onClear={() => setSelected(new Set())}
       />
 
+      {birdPlay ? (
+        <BirdWishDialog
+          onDecide={(rank) => {
+            store.playCards(birdPlay, rank);
+            setBirdPlay(null);
+            setSelected(new Set());
+          }}
+          onCancel={() => {
+            setBirdPlay(null);
+            setSelected(new Set());
+          }}
+        />
+      ) : null}
       {game.needsToCallRank ? <WishDialog /> : null}
       {game.dragonPending ? <DragonDialog game={game} /> : null}
       {game.phase === 'round_end' || game.phase === 'game_end' ? (
@@ -485,13 +505,60 @@ function ExchangePanel({
   );
 }
 
+/**
+ * Asked before the Bird is played, because the wish must travel with the play
+ * (the engine advances the turn as soon as the cards land). Mirrors the app's
+ * dialog in flutter_app/lib/screens/game_screen.dart:242.
+ */
+function BirdWishDialog({
+  onDecide,
+  onCancel,
+}: {
+  onDecide: (rank: Rank | 'none') => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal" role="dialog" aria-modal="true">
+        <h2>🐦 참새 소원</h2>
+        <p className="muted">원하는 숫자를 고르세요. 다른 사람은 낼 수 있다면 그 숫자를 내야 합니다.</p>
+        <div className="wish-grid">
+          {RANKS.map((rank: Rank) => (
+            <button
+              key={rank}
+              type="button"
+              className="btn btn--sm btn--primary"
+              onClick={() => onDecide(rank)}
+            >
+              {rank}
+            </button>
+          ))}
+        </div>
+        <div className="modal__actions">
+          <button type="button" className="btn" onClick={() => onDecide('none')}>
+            소원 없이 내기
+          </button>
+          <button type="button" className="btn btn--ghost" onClick={onCancel}>
+            다른 카드 고르기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fallback for a Bird that reached the table without a wish — a turn timeout
+ * auto-play, or an older client. The turn has already moved on by now, so this
+ * only ever plays catch-up.
+ */
 function WishDialog() {
   const store = useStore();
   return (
     <div className="modal-backdrop">
       <div className="modal" role="dialog" aria-modal="true">
         <h2>소원을 말하세요</h2>
-        <p className="muted">참새를 냈습니다. 원하는 숫자를 지정하거나 넘어갈 수 있습니다.</p>
+        <p className="muted">참새가 나갔습니다. 원하는 숫자를 지정하거나 넘어갈 수 있습니다.</p>
         <div className="wish-grid">
           {RANKS.map((rank: Rank) => (
             <button

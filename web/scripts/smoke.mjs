@@ -134,7 +134,9 @@ async function main() {
     roomName: '웹스모크',
     password: '',
     turnTimeLimit: 30,
-    targetScore: 400,
+    // High enough that the game does not end before the Bird has had a few
+    // chances to be dealt — the Bird check needs it in hand at least once.
+    targetScore: 3000,
     allowSpectators: true,
     isRanked: false,
   });
@@ -182,24 +184,68 @@ async function main() {
   finish();
 }
 
-/** Drives the host's own hand with the crudest legal play until the round ends. */
+/**
+ * Drives the host's own hand with the crudest legal play, round after round,
+ * until the Bird has been exercised (it needs a wish riding along with the
+ * play) or the round cap is hit.
+ */
 async function playThroughRound() {
-  const roundEnd = waitFor(
-    (m) => m.type === 'game_state' && (m.state.phase === 'round_end' || m.state.phase === 'game_end'),
-    { timeout: 180000, label: 'round_end' },
-  );
+  const MAX_ROUNDS = 6;
+  let roundsFinished = 0;
+  let firstRoundEnd = null;
+  let resolveDone;
+  const done = new Promise((resolve) => {
+    resolveDone = resolve;
+  });
 
   let sawExchange = false;
   let sawPlaying = false;
   let lastActedSignature = '';
+  // Bird handling: the wish must ship with the play, so we assert the server
+  // registered it on the very next snapshot.
+  let birdWishSent = null;
+  let birdVerified = false;
+  let birdTurnAdvancedWithoutWish = false;
 
   const loop = setInterval(() => {
     const state = lastGameState;
     if (!state) return;
 
+    // A Bird went out with a wish on the previous tick — the wish must already
+    // be live, and nobody should still owe a call.
+    if (birdWishSent && !birdVerified) {
+      if (state.needsToCallRank) birdTurnAdvancedWithoutWish = true;
+      if (state.callRank === birdWishSent || state.callRank === null) {
+        birdVerified = true;
+        check(
+          'Bird play carries the wish (callRank rides with play_cards)',
+          !birdTurnAdvancedWithoutWish,
+          `wish=${birdWishSent} serverCallRank=${String(state.callRank)}`,
+        );
+      }
+    }
+
+    if (state.phase === 'round_end' || state.phase === 'game_end') {
+      if (!firstRoundEnd) {
+        firstRoundEnd = state;
+        roundsFinished += 1;
+      }
+      if (state.phase === 'game_end' || birdVerified || roundsFinished >= MAX_ROUNDS) {
+        clearInterval(loop);
+        resolveDone();
+        return;
+      }
+      // Server advances on its own timer; just wait for the next round.
+      return;
+    }
+    if (firstRoundEnd && state.phase !== 'round_end') {
+      // New round started.
+      if (state.round > roundsFinished) roundsFinished = state.round - 1;
+    }
+
     // Act at most once per distinct situation; the server echoes a fresh
     // snapshot after every action and re-acting would double-play.
-    const signature = `${state.phase}|${state.myCards.length}|${state.isMyTurn}|${state.currentTrick.length}|${state.needsToCallRank}|${state.dragonPending}|${state.exchangeDone}|${state.largeTichuResponded}`;
+    const signature = `${state.round}|${state.phase}|${state.myCards.length}|${state.isMyTurn}|${state.currentTrick.length}|${state.needsToCallRank}|${state.dragonPending}|${state.exchangeDone}|${state.largeTichuResponded}`;
     if (signature === lastActedSignature) return;
     lastActedSignature = signature;
 
@@ -232,6 +278,12 @@ async function playThroughRound() {
         sawPlaying = true;
         if (!state.isMyTurn) break;
         if (state.currentTrick.length === 0) {
+          // The Bird can only ever lead, and the wish has to ship with it.
+          if (!birdWishSent && state.myCards.includes('special_bird')) {
+            birdWishSent = 'A';
+            send({ type: 'play_cards', cards: ['special_bird'], callRank: 'A' });
+            break;
+          }
           const lead = state.myCards.find((c) => c !== 'special_dog') ?? state.myCards[0];
           if (lead) send({ type: 'play_cards', cards: [lead] });
           break;
@@ -255,25 +307,33 @@ async function playThroughRound() {
     }
   }, 250);
 
-  try {
-    const end = await roundEnd;
+  const timeout = setTimeout(() => {
     clearInterval(loop);
-    check('played a full round to round_end', true, `phase=${end.state.phase}`);
-    check('card_exchange phase was exercised', sawExchange);
-    check('playing phase was exercised', sawPlaying);
+    resolveDone();
+  }, 300000);
+  await done;
+  clearTimeout(timeout);
+  clearInterval(loop);
+
+  const end = firstRoundEnd;
+  check('played a full round to round_end', Boolean(end), end ? `phase=${end.phase}` : 'never ended');
+  check('card_exchange phase was exercised', sawExchange);
+  check('playing phase was exercised', sawPlaying);
+  if (end) {
     check(
       'round scores arrived',
-      end.state.lastRoundScores !== null && typeof end.state.totalScores?.teamA === 'number',
-      `A=${end.state.totalScores?.teamA} B=${end.state.totalScores?.teamB}`,
+      end.lastRoundScores !== null && typeof end.totalScores?.teamA === 'number',
+      `A=${end.totalScores?.teamA} B=${end.totalScores?.teamB}`,
     );
     check(
       'scoreHistory populated',
-      Array.isArray(end.state.scoreHistory) && end.state.scoreHistory.length > 0,
-      `${end.state.scoreHistory?.length} entries`,
+      Array.isArray(end.scoreHistory) && end.scoreHistory.length > 0,
+      `${end.scoreHistory?.length} entries`,
     );
-  } catch (error) {
-    clearInterval(loop);
-    check('played a full round to round_end', false, error.message);
+  }
+  if (!birdWishSent) {
+    // Not a failure: the Bird simply never landed in this hand within the cap.
+    console.log(`\x1b[33m       skipped: Bird never dealt in ${roundsFinished} round(s)\x1b[0m`);
   }
 }
 

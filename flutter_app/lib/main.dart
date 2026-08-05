@@ -200,59 +200,15 @@ class TichuApp extends StatelessWidget {
             final adjustedScale = platform == TargetPlatform.android
                 ? (currentScale * 0.97).clamp(0.9, 1.5)
                 : currentScale;
-            final scaled = MediaQuery(
+            return MediaQuery(
               data: media.copyWith(
                 textScaler: TextScaler.linear(adjustedScale),
               ),
               child: child ?? const SizedBox.shrink(),
             );
-            return kIsWeb ? _WebPortraitFrame(child: scaled) : scaled;
           },
           theme: _buildTheme(),
           home: const _OrientationGate(child: _EntryScreen()),
-        ),
-      ),
-    );
-  }
-}
-
-/// Keeps the browser on the app's portrait layout.
-///
-/// A desktop window is landscape, so every `orientation == landscape` branch in
-/// the app fires — and those branches are built for a phone held sideways, not
-/// for a 1700px-wide desktop: the game board stretches until it clips and the
-/// lobby header collapses. Instead of maintaining a third layout for the web,
-/// give the browser a centred portrait viewport of the shape the app is
-/// actually designed for and let it grow with the window height.
-///
-/// The MediaQuery override matters as much as the SizedBox: layout code reads
-/// `MediaQuery.orientation` and `.size` directly (game_screen.dart:398), so the
-/// inner tree has to believe it is that size, not the window's.
-class _WebPortraitFrame extends StatelessWidget {
-  const _WebPortraitFrame({required this.child});
-
-  /// The app designs against a 400pt-wide phone (game_screen.dart:400).
-  static const double _aspect = 400 / 820;
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final size = media.size;
-    final width = size.width.clamp(0.0, size.height * _aspect);
-    final frame = Size(width, size.height);
-
-    return ColoredBox(
-      color: const Color(0xFFECE5E0),
-      child: Center(
-        child: SizedBox(
-          width: frame.width,
-          height: frame.height,
-          child: MediaQuery(
-            data: media.copyWith(size: frame),
-            child: child,
-          ),
         ),
       ),
     );

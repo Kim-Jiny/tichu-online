@@ -2150,7 +2150,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   nameRow -
                   spacing * 2 -
                   scoreRow)
-              .clamp(30.0, 84.0)
+              .clamp(30.0, kIsWeb ? 136.0 : 84.0)
               .toDouble();
       return (
         avatar: avatar,

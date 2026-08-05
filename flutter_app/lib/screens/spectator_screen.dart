@@ -743,7 +743,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // Lock the left/right slot widths so a long nickname can't widen
         // the side column and pull the trick area off-center. Mirrors the
         // sideWidth pattern used in the landscape board.
-        final sideWidth = (constraints.maxWidth * 0.22).clamp(76.0, 108.0);
+        // The 22% is the intent; the ceiling was a phone's. On a wide window
+        // it pinned the side seats at 108 while the middle took everything
+        // else, so the two flanking players stayed small no matter the room.
+        final sideWidth = (constraints.maxWidth * 0.22)
+            .clamp(76.0, kIsWeb ? 180.0 : 108.0);
         return Column(
           children: [
             if (players.length > 2)

@@ -226,7 +226,7 @@ class _OrientationGate extends StatefulWidget {
 
 class _OrientationGateState extends State<_OrientationGate>
     with WidgetsBindingObserver {
-  bool? _allowLandscape;
+  bool _locked = false;
 
   @override
   void initState() {
@@ -250,25 +250,15 @@ class _OrientationGateState extends State<_OrientationGate>
   }
 
   Future<void> _syncOrientationPolicy() async {
-    final media = MediaQuery.maybeOf(context);
-    if (media == null) return;
-
-    final allowLandscape = media.size.shortestSide >= 600;
-    if (_allowLandscape == allowLandscape) return;
-    _allowLandscape = allowLandscape;
-
-    if (allowLandscape) {
-      await SystemChrome.setPreferredOrientations(const [
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-    } else {
-      await SystemChrome.setPreferredOrientations(const [
-        DeviceOrientation.portraitUp,
-      ]);
-    }
+    // Portrait everywhere. Tablets used to be allowed to rotate
+    // (shortestSide >= 600), which meant a second board layout to keep working
+    // — and it was the one nobody tested: on a wide viewport it stretched until
+    // it clipped and its header disappeared. One layout, exercised by everyone.
+    if (_locked) return;
+    _locked = true;
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+    ]);
   }
 
   @override

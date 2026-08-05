@@ -396,13 +396,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
-    // The landscape board exists for tablets, which _OrientationGate still lets
-    // rotate (shortestSide >= 600). A desktop browser window is landscape by
-    // default but is not a tablet held sideways: the wide board stretches until
-    // it clips and drops its header. Web takes the portrait board, which is the
-    // one that actually gets exercised.
-    final isLandscape =
-        !kIsWeb && mediaQuery.orientation == Orientation.landscape;
+
     final shortestSide = screenSize.shortestSide;
     // The ceiling used to be a flat 1.0: the board is designed for a 400pt
     // phone and there was never a screen worth growing into. A desktop browser
@@ -410,7 +404,7 @@ class _GameScreenState extends State<GameScreen> {
     // and tablets keep the old ceiling — this is not the place to change how
     // the shipped app looks.
     _s = (shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
-    _maxNameLen = screenSize.width < 370 ? 3 : (isLandscape ? 6 : 4);
+    _maxNameLen = screenSize.width < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
     return ConnectionOverlay(
@@ -427,7 +421,7 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             child: SafeArea(
-              bottom: !isLandscape,
+              bottom: true,
               child: Consumer<GameService>(
                 builder: (context, game, _) {
                   if (session.isRestoring || _waitingForRoomRecovery) {
@@ -516,9 +510,7 @@ class _GameScreenState extends State<GameScreen> {
                         Positioned.fill(
                           child: Container(color: _tichuOverlayColor(state)),
                         ),
-                      isLandscape
-                          ? _buildLandscapeGameLayout(state, game)
-                          : _buildPortraitGameLayout(state, game),
+                      _buildPortraitGameLayout(state, game),
 
                       // Dialogs/Panels
                       if (state.phase == 'large_tichu_phase' &&
@@ -592,7 +584,7 @@ class _GameScreenState extends State<GameScreen> {
     //
     // Turn timer is also a separate top-left overlay for the same reason —
     // its appearance/disappearance can't grow the topbar column.
-    final timerBadge = _buildTimerBadge(state, isLandscape: false);
+    final timerBadge = _buildTimerBadge(state);
     return Stack(
       children: [
         Column(
@@ -669,72 +661,6 @@ class _GameScreenState extends State<GameScreen> {
           left: 12,
           width: MediaQuery.of(context).size.width * 0.38,
           child: IgnorePointer(child: _buildTrickLogOverlay(state)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLandscapeGameLayout(GameStateData state, GameService game) {
-    return Column(
-      children: [
-        _buildTopBar(state, game),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: Column(
-                    children: [
-                      _buildPartnerArea(state, game),
-                      Expanded(child: _buildMiddleArea(state, game)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 6,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              if (state.phase == 'card_exchange' &&
-                                  !state.exchangeDone)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _buildExchangeInline(state, game),
-                                ),
-                              if (game.dragonGivenMessage != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _buildDragonGivenInline(
-                                    game.dragonGivenMessage!,
-                                  ),
-                                ),
-                              if (_canShowSmallTichu(state))
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _buildSmallTichuInline(game),
-                                ),
-                              _buildBottomArea(state, game),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
@@ -1972,23 +1898,16 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget? _buildTimerBadge(GameStateData state, {required bool isLandscape}) {
+  Widget? _buildTimerBadge(GameStateData state) {
     if (_remainingSeconds <= 0) return null;
     final l10n = L10n.of(context);
     final currentPlayerName = _getCurrentPlayerName(state);
-    final compactPlayerName = currentPlayerName.length > 4
-        ? '${currentPlayerName.substring(0, 4)}…'
-        : currentPlayerName;
     final turnLabel = state.isMyTurn
         ? l10n.gameMyTurnShort
-        : (isLandscape
-              ? l10n.gamePlayerTurnShort(compactPlayerName)
-              : l10n.gamePlayerWaiting(currentPlayerName));
-    final timerFontSize = isLandscape ? 11.5 * _s : 13 * _s;
-    final timerIconSize = isLandscape ? 12.5 * _s : 14 * _s;
-    final timerPadding = isLandscape
-        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
-        : const EdgeInsets.symmetric(horizontal: 10, vertical: 5);
+        : l10n.gamePlayerWaiting(currentPlayerName);
+    final timerFontSize = 13 * _s;
+    final timerIconSize = 14 * _s;
+    const timerPadding = EdgeInsets.symmetric(horizontal: 10, vertical: 5);
     return Container(
       padding: timerPadding,
       decoration: BoxDecoration(
@@ -2035,60 +1954,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildTopBar(GameStateData state, GameService game) {
-    // Same rule as build(): the two must agree, or the board renders one layout
-    // while the bar renders the other — which is how the header went missing in
-    // a browser window.
-    final isLandscape =
-        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
-    // Portrait shows the timer as an overlay on top of the game board
-    // (see _buildPortraitGameLayout), so don't include it in the topbar
-    // column there — it caused the whole board to jump in height when the
-    // timer appeared/disappeared between turns.
-    final timerBadge = isLandscape
-        ? _buildTimerBadge(state, isLandscape: true)
-        : null;
-
-    if (isLandscape) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  if (game.hasTopCardCounter && state.phase == 'playing')
-                    Flexible(child: _buildTopCardCounter(state, compact: true)),
-                  if (game.hasTopCardCounter &&
-                      state.phase == 'playing' &&
-                      timerBadge != null)
-                    const SizedBox(width: 6),
-                  if (timerBadge != null) Flexible(child: timerBadge),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Align(
-                alignment: Alignment.center,
-                child: _buildScoreBar(state),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSpectatorButton(game),
-                const SizedBox(width: 6),
-                _buildChatButton(game),
-                const SizedBox(width: 6),
-                _buildMoreButton(game),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Stack(

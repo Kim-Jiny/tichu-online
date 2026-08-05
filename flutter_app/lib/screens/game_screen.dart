@@ -396,7 +396,13 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenSize = mediaQuery.size;
-    final isLandscape = mediaQuery.orientation == Orientation.landscape;
+    // The landscape board exists for tablets, which _OrientationGate still lets
+    // rotate (shortestSide >= 600). A desktop browser window is landscape by
+    // default but is not a tablet held sideways: the wide board stretches until
+    // it clips and drops its header. Web takes the portrait board, which is the
+    // one that actually gets exercised.
+    final isLandscape =
+        !kIsWeb && mediaQuery.orientation == Orientation.landscape;
     final shortestSide = screenSize.shortestSide;
     // The ceiling used to be a flat 1.0: the board is designed for a 400pt
     // phone and there was never a screen worth growing into. A desktop browser
@@ -2029,8 +2035,11 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildTopBar(GameStateData state, GameService game) {
+    // Same rule as build(): the two must agree, or the board renders one layout
+    // while the bar renders the other — which is how the header went missing in
+    // a browser window.
     final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     // Portrait shows the timer as an overlay on top of the game board
     // (see _buildPortraitGameLayout), so don't include it in the topbar
     // column there — it caused the whole board to jump in height when the

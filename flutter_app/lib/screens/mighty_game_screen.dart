@@ -2309,7 +2309,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // NOTE: the kitty-exchange panel is rendered at the top of the body
         // Stack (above the contract bar) so it can overlap it on small screens.
         if (showBottomOverlay)
-          Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+          Align(
+            alignment: Alignment.bottomCenter,
+            // A hand stretched across a 2000px window reads worse than the
+            // same hand at a comfortable width in the middle. The ceiling is
+            // wide enough that ten cards still fit on one line.
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 1180 * _webScale / 1.6),
+              child: bottomOverlay,
+            ),
+          ),
       ],
     );
   }
@@ -6510,11 +6519,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// declares 세팅. Reveals the declarer's hand + who they are + a close
   /// prompt. Dismissed by tapping; keyed on round+playerId so a later
   /// round's reveal re-shows even if the prior key matches.
+  /// Board scale for overlays and dialogs, matching the hand and seats.
+  ///
+  /// Capped at 1.0 off the web so the app is untouched; on a browser the
+  /// panels were drawn at phone sizes in the middle of a large window.
+  double get _webScale => kIsWeb
+      ? (MediaQuery.of(context).size.shortestSide / 400).clamp(1.0, 1.6)
+      : 1.0;
+
   Widget _buildSettingRevealOverlay(
     MightySettingEvent event, {
     String? trumpSuit,
   }) {
     final l10n = L10n.of(context);
+    final s = _webScale;
     // SizedBox.expand (not Positioned.fill) so this can be returned from a
     // Consumer placed at the top of the body Stack — above the round-result
     // overlay — without needing to be a direct Stack child.
@@ -6527,9 +6545,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Container(
           color: Colors.black.withValues(alpha: 0.55),
           alignment: Alignment.center,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          child: ConstrainedBox(
+            // Without a ceiling the box grows with its widest row, so on a
+            // wide window it ran from edge to edge for the sake of one line
+            // of cards.
+            constraints: BoxConstraints(maxWidth: 460 * s),
+            child: Container(
+            margin: EdgeInsets.symmetric(horizontal: 16 * s),
+            padding: EdgeInsets.fromLTRB(18 * s, 16 * s, 18 * s, 14 * s),
             decoration: BoxDecoration(
               color: const Color(0xFFFFFDE7),
               borderRadius: BorderRadius.circular(20),
@@ -6548,47 +6571,48 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.emoji_events,
-                      size: 22,
-                      color: Color(0xFFE65100),
+                      size: 22 * s,
+                      color: const Color(0xFFE65100),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6 * s),
                     Text(
                       l10n.mtSettingRevealTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 17,
-                        color: Color(0xFFE65100),
+                        fontSize: 17 * s,
+                        color: const Color(0xFFE65100),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8 * s),
                 Text(
                   l10n.mtSettingRevealBody(event.playerName),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: TextStyle(
+                    fontSize: 13 * s,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF5A4038),
+                    color: const Color(0xFF5A4038),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12 * s),
                 _buildDealMissCardRows(
                   event.cards,
                   splitAt: 6,
                   trumpSuit: trumpSuit,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10 * s),
                 Text(
                   l10n.mtSettingTapToClose,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF8A7A72),
+                  style: TextStyle(
+                    fontSize: 11 * s,
+                    color: const Color(0xFF8A7A72),
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),
@@ -6938,12 +6962,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     Widget buildRow(List<String> ids) {
       final tiles = <Widget>[];
       for (int i = 0; i < ids.length; i++) {
-        if (i > 0) tiles.add(const SizedBox(width: 4));
+        if (i > 0) tiles.add(SizedBox(width: 4 * _webScale));
         final id = ids[i];
         Widget card = PlayingCard(
           cardId: _displayCardId(id),
-          width: 38,
-          height: 54,
+          width: 38 * _webScale,
+          height: 54 * _webScale,
           isInteractive: false,
         );
         // Frame trump-suit cards so the 기루다 holdings stand out. Match the

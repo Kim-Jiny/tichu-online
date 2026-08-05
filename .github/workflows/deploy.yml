@@ -30,7 +30,11 @@ jobs:
         # request resolves against / and 404s.
         run: |
           flutter pub get
-          flutter build web --release --base-href=/play/
+          # --pwa-strategy=none: the app is useless offline (every screen needs
+          # the WebSocket) and a stale service worker is indistinguishable from
+          # a failed deploy. index.html unregisters any worker left by an
+          # earlier build.
+          flutter build web --release --base-href=/play/ --pwa-strategy=none
 
       - name: Package
         run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .

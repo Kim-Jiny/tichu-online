@@ -70,6 +70,25 @@
   </style>
 </head>
 <body>
+  <script>
+    // Built with --pwa-strategy=none, but a browser that visited an earlier
+    // build still has that service worker registered and will keep serving its
+    // cached bundle — which looks exactly like "the fix didn't deploy". Drop
+    // any registration and its caches once, on load.
+    //
+    // Offline play is not a goal here: every screen needs the WebSocket, so a
+    // cached shell would only ever show a disconnected app.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) {
+        rs.forEach(function (r) { r.unregister(); });
+      });
+      if (window.caches) {
+        caches.keys().then(function (ks) {
+          ks.forEach(function (k) { caches.delete(k); });
+        });
+      }
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

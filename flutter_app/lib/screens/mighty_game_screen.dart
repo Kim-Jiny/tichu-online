@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -5680,11 +5681,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             : (cards.length / 2).ceil();
         final cardPadding = cards.length >= 8 ? 1.5 : 3.0;
         final totalPadding = perRow * cardPadding * 2;
-        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
+        // Phone-sized caps: on a browser window the ten-card hand stayed small
+        // however much room there was. Grow with the viewport against the same
+        // 400pt design width the other boards use, web only.
+        final media = MediaQuery.of(context);
+        final scale = kIsWeb
+            ? (media.size.shortestSide / 400).clamp(1.0, 1.6)
+            : 1.0;
+
+        var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           0.0,
-          52.0,
+          52.0 * scale,
         );
-        final cardHeight = (cardWidth * 1.4).clamp(52.0, 73.0);
+        var cardHeight = (cardWidth * 1.4).clamp(52.0 * scale, 73.0 * scale);
+
+        // Sizing off width alone lets the hand grow until it covers the table,
+        // because a desktop window has width to spare. Bound the rows to a
+        // share of the screen and bring the width back with it.
+        final rows = perRow >= cards.length ? 1 : 2;
+        final maxCardHeight = (media.size.height * 0.26) / rows;
+        if (cardHeight > maxCardHeight) {
+          cardHeight = maxCardHeight;
+          cardWidth = cardHeight / 1.4;
+        }
 
         Widget buildCard(String cardId) {
           final isLegal =

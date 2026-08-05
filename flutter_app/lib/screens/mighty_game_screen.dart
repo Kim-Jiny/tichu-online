@@ -5698,12 +5698,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         final maxCardWidth = 52.0 * scale;
 
         // Two rows is a concession to phone width, not the nicer layout — a
-        // hand read left to right in one line is easier to plan from. Take the
-        // single row whenever the board is wide enough to keep the cards at
-        // full size; anything narrower falls back on its own.
+        // hand read left to right in one line is easier to plan from. So the
+        // single row is worth slightly smaller cards, and the bar sits where
+        // they stop being comfortable rather than at full size: 60% of the cap,
+        // and never below 40px whatever the scale says. Requiring full size
+        // meant a 800-1000px window still split the hand.
+        //
+        // Phone portrait fails this on its own — ten cards across ~380 leaves
+        // about 33px each — so it keeps the two rows it always had.
         final oneRowWidth =
             (availableWidth - cards.length * cardPadding * 2) / cards.length;
-        final perRow = (cards.length <= 7 || oneRowWidth >= maxCardWidth)
+        final oneRowFloor = math.max(40.0, maxCardWidth * 0.6);
+        final perRow = (cards.length <= 7 || oneRowWidth >= oneRowFloor)
             ? cards.length
             : (cards.length / 2).ceil();
         final totalPadding = perRow * cardPadding * 2;

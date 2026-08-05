@@ -24,6 +24,7 @@ REPO_URL="https://github.com/Kim-Jiny/tichu-online.git"
 BRANCH="main"
 HEALTH_TIMEOUT_SEC=60
 DRAIN_TIMEOUT_SEC=900   # docker stop -t (matches stop_grace_period in compose)
+WEB_BUNDLE_DIR="$BASE_DIR/web-bundle"   # uploaded by CI before this runs
 
 log() { echo "[deploy] $*"; }
 
@@ -98,6 +99,25 @@ else
 fi
 
 cd "$APP_DIR"
+
+# ----- 1b. Stage the web client bundle -----
+# CI builds flutter_app for the web and uploads it here, rather than the VPS
+# compiling it: the build would otherwise burn a full core for minutes while the
+# *active* slot is still serving games, which is exactly the headroom
+# BOT_WORKERS=2 and cpus=3.5 exist to protect.
+#
+# A missing bundle is not fatal. The image just ships without /play and
+# server/webApp.js falls through to the marketing page, so a server-only
+# hotfix can deploy without waiting on a web build.
+rm -rf "$APP_DIR/dist/play"
+mkdir -p "$APP_DIR/dist"
+if [ -d "$WEB_BUNDLE_DIR" ] && [ -f "$WEB_BUNDLE_DIR/index.html" ]; then
+  log "staging web bundle from $WEB_BUNDLE_DIR"
+  cp -r "$WEB_BUNDLE_DIR" "$APP_DIR/dist/play"
+else
+  log "WARN: no web bundle at $WEB_BUNDLE_DIR — image will ship without /play"
+  mkdir -p "$APP_DIR/dist/play"
+fi
 
 if [ ! -f "$APP_DIR/.env" ]; then
   log "WARN: $APP_DIR/.env missing — DB_PASSWORD / INTERNAL_MIGRATE_TOKEN may be empty"

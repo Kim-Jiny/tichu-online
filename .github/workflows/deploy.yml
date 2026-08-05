@@ -5,9 +5,81 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
+  # The web client is compiled here rather than on the VPS. A blue/green deploy
+  # builds the inactive slot while the active one is still serving games, so a
+  # dart2js compile on the box would spend minutes of a core exactly when the
+  # live server needs it — the headroom cpus=3.5 and BOT_WORKERS=2 exist to
+  # protect. Runners have CPU to spare and the result is only ~30MB to ship.
+  build-web:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pinned to the version the app is developed against; a minor Flutter
+          # bump can change rendering, and a deploy is the wrong place to find
+          # that out.
+          flutter-version: '3.44.7'
+          channel: stable
+          cache: true
+
+      - name: Build web
+        working-directory: flutter_app
+        # base-href must match where webApp.js serves it from, or every asset
+        # request resolves against / and 404s.
+        run: |
+          flutter pub get
+          flutter build web --release --base-href=/play/
+
+      - name: Package
+        run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: web-bundle.tar.gz
+          retention-days: 7
+
+  deploy:
+    needs: build-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-bundle
+
+      # Unpacked into a staging directory next to the checkout; deploy.sh copies
+      # it into the build context. Replaced wholesale each run so a failed build
+      # can never leave half of an old bundle behind.
+      - name: Upload bundle to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          source: web-bundle.tar.gz
+          target: /opt/services/tichu-online/
+
+      - name: Unpack bundle
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          script: |
+            set -e
+            cd /opt/services/tichu-online
+            rm -rf web-bundle
+            mkdir -p web-bundle
+            tar -xzf web-bundle.tar.gz -C web-bundle
+            rm -f web-bundle.tar.gz
+            test -f web-bundle/index.html
+
       - name: SSH deploy
         uses: appleboy/ssh-action@v1.0.3
         with:

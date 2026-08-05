@@ -4,7 +4,10 @@
 flutter_app/
 docs/
 releases/
-dist/
+# dist/ holds the mobile store artifacts, which the image has no use for —
+# except dist/play, where deploy.sh stages the built web client.
+dist/*
+!dist/play
 .git/
 .github/
 .claude/

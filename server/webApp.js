@@ -34,7 +34,13 @@ const CONTENT_TYPES = {
   '.wav': 'audio/wav',
   '.mp3': 'audio/mpeg',
   '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  // CanvasKit ships as wasm and the browser only stream-compiles it when the
+  // type is exact; anything else falls back to a slower path or fails outright.
+  '.wasm': 'application/wasm',
   '.txt': 'text/plain; charset=utf-8',
+  '.symbols': 'text/plain; charset=utf-8',
 };
 
 /** Whether this image was built with the web client bundled in. */
@@ -46,13 +52,21 @@ function matches(pathname) {
   return pathname === PREFIX || pathname.startsWith(`${PREFIX}/`);
 }
 
-async function sendFile(res, filePath, { immutable = false } = {}) {
+// Nothing here is content-hashed: a Flutter build writes main.dart.js,
+// assets/… and canvaskit/… under fixed names and rewrites them in place on the
+// next release. Fingerprint-style immutable caching would pin players to the
+// build they first loaded, so everything revalidates instead. `no-cache` still
+// allows a 304, so the bytes only move when they actually changed.
+async function sendFile(res, filePath) {
   const body = await fsp.readFile(filePath);
+  const ext = path.extname(filePath).toLowerCase();
   res.writeHead(200, {
-    'Content-Type': CONTENT_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream',
+    'Content-Type': CONTENT_TYPES[ext] || 'application/octet-stream',
     'Content-Length': body.length,
-    'Cache-Control': immutable
-      ? 'public, max-age=31536000, immutable'
+    // The entry point and the bootstrap decide which build everything else
+    // belongs to, so those must never be served from cache at all.
+    'Cache-Control': /(?:index\.html|flutter_bootstrap\.js|flutter_service_worker\.js)$/.test(filePath)
+      ? 'no-store'
       : 'no-cache',
   });
   res.end(body);
@@ -99,9 +113,7 @@ async function serve(req, res, pathname) {
   }
 
   try {
-    // Vite fingerprints everything under /assets/, so those are safe to pin
-    // forever; anything else (public/ passthroughs) revalidates.
-    await sendFile(res, target, { immutable: relative.startsWith('assets/') });
+    await sendFile(res, target);
   } catch (err) {
     if (err.code === 'ENOENT' || err.code === 'EISDIR') {
       res.writeHead(404, { 'Content-Type': 'text/plain' });

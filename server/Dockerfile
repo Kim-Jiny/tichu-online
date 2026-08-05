@@ -1,15 +1,12 @@
-# Build context is the repo root (see docker-compose.yml) because the image
-# bundles both the server and the web client. Keeping the built web assets
-# inside the image is what lets a blue/green swap stay atomic — a host bind
-# mount would let the static files and the running slot drift apart.
-
-FROM node:20-alpine AS web
-WORKDIR /web
-COPY web/package*.json ./
-# Not --omit=dev: the build runs tsc and vite, both devDependencies.
-RUN npm ci
-COPY web/ ./
-RUN npm run build
+# Build context is the repo root (see docker-compose.yml) so the image can pick
+# up dist/play alongside server/.
+#
+# The web client is NOT compiled here. CI builds flutter_app for the web and
+# deploy.sh stages the result at dist/play; compiling it on the VPS would hold a
+# full core for minutes while the active blue/green slot is still serving games.
+#
+# Keeping the bundle inside the image is what makes a slot swap atomic — a host
+# bind mount would let the static files and the running slot drift apart.
 
 FROM node:20-alpine
 
@@ -21,8 +18,10 @@ RUN npm ci --omit=dev
 COPY server/ .
 
 # Served by webApp.js at /play/ — same origin as the WebSocket, which matters
-# because the server emits no CORS headers.
-COPY --from=web /web/dist ./public/play
+# because the server emits no CORS headers. The directory may be empty: a
+# server-only hotfix can deploy without waiting on a web build, and webApp.js
+# falls through to the marketing page when index.html isn't there.
+COPY dist/play ./public/play
 
 EXPOSE 3000
 

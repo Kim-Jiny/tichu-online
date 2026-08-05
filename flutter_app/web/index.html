@@ -18,19 +18,51 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="티츄, 스컬킹, 러브레터, 마이티를 즐기는 멀티플레이 카드게임">
+
+  <!-- Zoom is disabled because the board is laid out to the viewport; iOS
+       otherwise zooms in whenever a text field takes focus and leaves the
+       player scrolled into a corner of the table. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="tichu_online">
+  <meta name="apple-mobile-web-app-title" content="티츄 온라인">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>tichu_online</title>
+  <title>티츄 온라인</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /*
+      Let text fields be selectable again.
+
+      Flutter puts `user-select: none` on its whole view so a drag across the
+      board doesn't select the UI as if it were a document — but the rule also
+      lands on the <input> elements the semantics tree creates for TextFields,
+      and iOS Safari will not raise its on-screen keyboard for an input it
+      considers unselectable. The field focused, drew a caret, and no keyboard
+      ever came up. Android ignores the rule, which is why this only ever
+      showed on iOS.
+
+      Scoped to the inputs themselves so the rest of the app keeps its
+      no-selection behaviour.
+    */
+    flt-semantics input,
+    flt-semantics textarea,
+    input,
+    textarea {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      /* Under 16px iOS zooms the page on focus; the field is drawn by Flutter
+         underneath anyway, so this text is never actually seen. */
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

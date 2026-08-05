@@ -317,6 +317,12 @@ class _LoginScreenState extends State<LoginScreen> {
       canPop: false,
       child: _DismissKeyboardOnTap(
         child: Scaffold(
+          // On the web the engine has already shrunk its canvas to the visual
+          // viewport by the time the keyboard is up, so letting the Scaffold
+          // subtract viewInsets on top of that takes the keyboard height off
+          // twice and leaves an empty band above the keyboard. Native keeps the
+          // default, where the inset is the only thing doing the resizing.
+          resizeToAvoidBottomInset: kIsWeb ? false : null,
           body: Stack(
             children: [
               Container(

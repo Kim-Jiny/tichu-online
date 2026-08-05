@@ -35,6 +35,7 @@ function GameTable({ game }: { game: TichuState }) {
   const [exchange, setExchange] = useState<Partial<ExchangeSlots>>({});
   /** Cards staged behind the Bird wish prompt; see BirdWishDialog. */
   const [birdPlay, setBirdPlay] = useState<CardId[] | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   // A new hand invalidates any selection made against the old one.
   const handKey = game.myCards.join(',');
@@ -66,7 +67,7 @@ function GameTable({ game }: { game: TichuState }) {
 
   return (
     <main className="screen screen--game">
-      <TableHeader game={game} />
+      <TableHeader game={game} onToggleChat={() => setChatOpen((v) => !v)} />
 
       <section className="table">
         <Opponent player={game.players.find((p) => p.position === 'partner')} slot="partner" game={game} />
@@ -157,14 +158,22 @@ function GameTable({ game }: { game: TichuState }) {
         <RoundSummary game={game} />
       ) : null}
 
-      <ChatPanel compact />
+      {/* Chat is an overlay here: in portrait the table needs the height. */}
+      {chatOpen ? (
+        <div className="chat-overlay">
+          <ChatPanel />
+          <button type="button" className="btn btn--sm" onClick={() => setChatOpen(false)}>
+            닫기
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-function TableHeader({ game }: { game: TichuState }) {
+function TableHeader({ game, onToggleChat }: { game: TichuState; onToggleChat: () => void }) {
   const store = useStore();
   const state = useAppState();
   const myTeam = useMemo(() => {
@@ -187,6 +196,14 @@ function TableHeader({ game }: { game: TichuState }) {
         </span>
       </span>
       <TurnClock deadline={game.turnDeadline ?? null} active={game.phase === 'playing'} />
+      <button
+        type="button"
+        className="btn btn--ghost btn--sm"
+        onClick={onToggleChat}
+        aria-label="채팅"
+      >
+        💬
+      </button>
       <button
         type="button"
         className="btn btn--ghost btn--sm"
@@ -249,13 +266,42 @@ function Opponent({
         {player.hasSmallTichu ? <span className="badge badge--tichu">소</span> : null}
         {player.hasFinished ? <span className="badge">{player.finishPosition}등</span> : null}
       </span>
-      <span className="opponent__cards" aria-label={`${player.cardCount}장`}>
-        {Array.from({ length: Math.min(player.cardCount, 14) }, (_, i) => (
-          <span key={i} className="mini-card" />
-        ))}
-        <span className="opponent__count">{player.cardCount}</span>
-      </span>
+      <CardFan count={player.cardCount} vertical={slot !== 'partner'} />
+      <span className="opponent__count">{player.cardCount}장</span>
     </div>
+  );
+}
+
+/**
+ * Overlapped face-down fan, matching the app's `_buildOverlappedHandVertical`
+ * (26×36 cards, mostly hidden behind each other). Capped at 14, the largest a
+ * Tichu hand ever gets.
+ */
+function CardFan({ count, vertical }: { count: number; vertical: boolean }) {
+  const visible = Math.min(Math.max(count, 0), 14);
+  if (visible === 0) return <span className="fan" />;
+  // Step in design px: the app leaves a sliver of each card showing.
+  const step = vertical ? 11 : 9;
+  const extent = `calc(${(visible - 1) * step + (vertical ? 36 : 26)} * var(--u))`;
+
+  return (
+    <span
+      className={vertical ? 'fan fan--vertical' : 'fan fan--horizontal'}
+      style={vertical ? { height: extent } : { width: extent }}
+      aria-label={`${count}장`}
+    >
+      {Array.from({ length: visible }, (_, i) => (
+        <span
+          key={i}
+          className="fan__card"
+          style={
+            vertical
+              ? { top: `calc(${i * step} * var(--u))` }
+              : { left: `calc(${i * step} * var(--u))` }
+          }
+        />
+      ))}
+    </span>
   );
 }
 
@@ -277,7 +323,7 @@ function TrickArea({ game }: { game: TichuState }) {
               <div
                 key={`${play.playerId}-${index}`}
                 className={
-                  index === plays.length - 1 ? 'trick__play trick__play--top' : 'trick__play'
+                  index === plays.length - 1 ? 'trick__play' : 'trick__play trick__play--history'
                 }
               >
                 <span className="trick__player">{play.playerName}</span>
@@ -326,9 +372,19 @@ function Hand({
     game.phase === 'playing' ||
     game.phase === 'card_exchange' ||
     game.phase === 'large_tichu_phase';
+  // Two rows past six cards, same split the app uses (game_screen.dart:4023) —
+  // fourteen cards will not fit across a 400-wide frame.
+  const perRow =
+    game.myCards.length <= 6
+      ? Math.max(game.myCards.length, 1)
+      : Math.ceil(game.myCards.length / 2);
 
   return (
-    <section className="hand" aria-label="내 카드">
+    <section
+      className="hand"
+      aria-label="내 카드"
+      style={{ '--per-row': perRow } as React.CSSProperties}
+    >
       {game.myCards.map((cardId) => (
         <Card
           key={cardId}
@@ -338,7 +394,9 @@ function Hand({
           onClick={interactive && !staged.has(cardId) ? () => onToggle(cardId) : undefined}
         />
       ))}
-      {game.myCards.length === 0 ? <p className="muted">손패가 없습니다.</p> : null}
+      {game.myCards.length === 0 ? (
+        <p className="muted hand__empty">손패가 없습니다.</p>
+      ) : null}
     </section>
   );
 }

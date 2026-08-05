@@ -111,11 +111,15 @@ function RoomRow({ room }: { room: RoomListEntry }) {
         {room.isPrivate ? <span className="badge badge--lock">비공개</span> : null}
         {room.isRanked ? <span className="badge badge--ranked">랭크</span> : null}
       </span>
-      <span className="muted">방장 {room.hostName}</span>
-      <span className="muted">
-        {room.playerCount}/{room.effectiveMaxPlayers}
+      <span className="room-row__meta">
+        <span>방장 {room.hostName}</span>
+        <span>
+          {room.playerCount}/{room.effectiveMaxPlayers}
+        </span>
+        <span>
+          {room.turnTimeLimit}초 · {room.targetScore}점
+        </span>
       </span>
-      <span className="muted">{room.turnTimeLimit}초 · {room.targetScore}점</span>
 
       {askingPassword ? (
         <span className="room-row__password">
@@ -137,7 +141,7 @@ function RoomRow({ room }: { room: RoomListEntry }) {
       ) : (
         <button
           type="button"
-          className="btn btn--primary btn--sm"
+          className="btn btn--primary btn--sm room-row__action"
           disabled={!canJoin}
           onClick={join}
         >

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppState, useStore } from '../state/useStore';
 
 /** Room-scoped chat. There is no global lobby chat in the protocol. */
-export function ChatPanel({ compact = false }: { compact?: boolean }) {
+export function ChatPanel() {
   const { chat } = useAppState();
   const store = useStore();
   const [draft, setDraft] = useState('');
@@ -20,7 +20,7 @@ export function ChatPanel({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <section className={compact ? 'chat chat--compact' : 'chat'}>
+    <section className="chat">
       <div className="chat__log" ref={logRef}>
         {chat.length === 0 ? (
           <p className="muted chat__empty">채팅이 없습니다.</p>

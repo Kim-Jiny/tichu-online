@@ -1810,16 +1810,20 @@ class _GameScreenState extends State<GameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Phase & Turn info
-            Text(
-              _getPhaseName(state.phase),
-              style: TextStyle(
-                fontSize: 13 * _s,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
+            // Phase caption, but not while playing: the turn line directly
+            // below already says whose turn it is, and "게임 진행 중" tells the
+            // table something it can see. The other phases (dealing, exchange,
+            // round end) are worth naming.
+            if (state.phase != 'playing')
+              Text(
+                _getPhaseName(state.phase),
+                style: TextStyle(
+                  fontSize: 13 * _s,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF5A4038),
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
             if (state.phase == 'playing') ...[
               SizedBox(height: 3 * _s),
               Row(
@@ -2263,8 +2267,12 @@ class _GameScreenState extends State<GameScreen> {
     // 36x50 read small, but a fixed bump would wrap a plain 4-card play onto two
     // rows on the narrowest phones. Long combos still fit — the layout below
     // tightens the overlap and falls back to two rows.
-    final double cardW = 44 * _s;
-    final double cardH = 61 * _s;
+    final double baseCardW = 44 * _s;
+    final double baseCardH = 61 * _s;
+    // Assigned by the LayoutBuilder below once it knows the panel width; the
+    // card builder closes over these.
+    var cardW = baseCardW;
+    var cardH = baseCardH;
     final double minOverlap = 22 * _s;
     final double maxOverlap = 32 * _s;
 
@@ -2327,6 +2335,23 @@ class _GameScreenState extends State<GameScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - 16; // padding
+
+        // Shrink the cards rather than spill out of the box. Even at the
+        // tightest overlap a long straight needs more width than the trick
+        // panel has once the board is scaled up, and the overflow drew over
+        // the seats around it. Proportions are kept, and the floor stops a
+        // seven-card play from turning into confetti.
+        cardW = baseCardW;
+        cardH = baseCardH;
+        if (cards.length > 1) {
+          final needed = cardW + minOverlap * (cards.length - 1);
+          if (needed > availableWidth) {
+            final fit = (availableWidth / needed).clamp(0.62, 1.0);
+            cardW *= fit;
+            cardH *= fit;
+          }
+        }
+
         // Calculate overlap to fit all cards in one row
         final neededOverlap = cards.length > 1
             ? (availableWidth - cardW) / (cards.length - 1)

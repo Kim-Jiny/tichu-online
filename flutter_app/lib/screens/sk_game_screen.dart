@@ -4182,12 +4182,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
       builder: (context, constraints) {
         final horizontalMargin = compact ? 10.0 : 12.0;
         final availableWidth = constraints.maxWidth - (horizontalMargin * 2);
-        final perRow = compact
-            ? cards.length
-            : (cards.length <= 6 ? cards.length : (cards.length / 2).ceil());
         final dense = compact || cards.length >= 8;
         final cardPadding = dense ? (compact ? 1.0 : 1.5) : 3.0;
-        final totalPadding = perRow * cardPadding * 2;
         // These caps are phone sizes, so on a browser window the hand stayed
         // small no matter how much room there was. Grow them with the viewport
         // — same 400pt design width the other boards scale against — and only
@@ -4200,6 +4196,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
         final maxCardWidth =
             (interactive ? (compact ? 42.0 : 55.0) : (compact ? 34.0 : 46.0)) *
             scale;
+
+        // One row while the cards can stay full size, two the moment a single
+        // line would force them to shrink — the last round deals ten and a
+        // wide window has room for all of them side by side.
+        final oneRowWidth =
+            (availableWidth - cards.length * cardPadding * 2) / cards.length;
+        final perRow =
+            (compact || cards.length <= 6 || oneRowWidth >= maxCardWidth)
+            ? cards.length
+            : (cards.length / 2).ceil();
+        final totalPadding = perRow * cardPadding * 2;
         // Fill available width, only cap at max
         var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           0.0,
@@ -4235,7 +4242,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
               .toList();
         }
 
-        if (compact || cards.length <= 6) {
+        // Follows perRow rather than re-deciding: in Mighty the same pair had
+        // drifted apart, so the width calculation said one row while the
+        // assembly kept splitting at a fixed count.
+        if (perRow >= cards.length) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: horizontalMargin),
             child: Row(
@@ -4245,7 +4255,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           );
         }
 
-        final half = (cards.length / 2).ceil();
+        final half = perRow;
         final firstRow = cards.take(half).toList();
         final secondRow = cards.skip(half).toList();
 

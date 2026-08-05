@@ -822,7 +822,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   currentPlayer,
                   isLeft: true,
                   compact: compact,
-                  forceScaleDown: cramped,
                 ),
               ),
             if (players.length > 3) const SizedBox(width: 6),
@@ -837,8 +836,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[2],
                         currentPlayer,
                         compact: compact,
-                        forceScaleDown: cramped,
-                      ),
+                            ),
                     ),
                   const SizedBox(height: 4),
                   Expanded(
@@ -867,8 +865,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[0],
                         currentPlayer,
                         compact: compact,
-                        forceScaleDown: cramped,
-                      ),
+                            ),
                     ),
                 ],
               ),
@@ -883,7 +880,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   currentPlayer,
                   isRight: true,
                   compact: compact,
-                  forceScaleDown: cramped,
                 ),
               ),
           ],
@@ -899,7 +895,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isLeft = false,
     bool isRight = false,
     bool compact = false,
-    bool forceScaleDown = false,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -917,15 +912,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             compact: compact,
           ),
         );
+        // Always scale down, not just on short phone-landscape viewports.
+        // The seat slots are height-capped (108px at most), but `compact` and
+        // `cramped` both switch off on a tall window — so a desktop browser
+        // built the full-size seat and dropped it into that cap unscaled. The
+        // top seat's card-view button spilled outside its profile box and the
+        // bottom seat ran off the viewport. BoxFit.scaleDown does nothing when
+        // the child already fits, so phones are unaffected.
         return Align(
           alignment: Alignment.center,
-          child: forceScaleDown
-              ? FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: child,
-                )
-              : child,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.center,
+            child: child,
+          ),
         );
       },
     );

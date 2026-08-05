@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -200,15 +201,76 @@ class TichuApp extends StatelessWidget {
             final adjustedScale = platform == TargetPlatform.android
                 ? (currentScale * 0.97).clamp(0.9, 1.5)
                 : currentScale;
-            return MediaQuery(
+            final scaled = MediaQuery(
               data: media.copyWith(
                 textScaler: TextScaler.linear(adjustedScale),
               ),
               child: child ?? const SizedBox.shrink(),
             );
+            return _isDesktopWeb ? _WebMinHeight(child: scaled) : scaled;
           },
           theme: _buildTheme(),
           home: const _OrientationGate(child: _EntryScreen()),
+        ),
+      ),
+    );
+  }
+}
+
+/// A browser on a desktop, as opposed to a phone browser.
+///
+/// Mobile web is a phone: it should keep behaving like the app, resizing with
+/// the viewport. Only a resizable desktop window can be dragged short enough to
+/// squeeze the board, so only it gets a floor.
+bool get _isDesktopWeb =>
+    kIsWeb &&
+    defaultTargetPlatform != TargetPlatform.iOS &&
+    defaultTargetPlatform != TargetPlatform.android;
+
+/// Stops a short desktop window from crushing the board.
+///
+/// The portrait layout reserves `220 * _s` under the table for the hand, so as
+/// the window gets shorter the hand keeps its share and the trick area is what
+/// disappears behind it. Below the floor the app is laid out at the floor
+/// height anyway and the whole thing is scaled down to fit — everything stays
+/// on screen and in proportion, which beats cropping the middle of the table.
+class _WebMinHeight extends StatelessWidget {
+  const _WebMinHeight({required this.child});
+
+  /// Enough for the top bar, a full trick area and the hand at scale 1.0.
+  static const double _minHeight = 720;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final height = media.size.height;
+    if (height <= 0 || height >= _minHeight) return child;
+
+    final scale = height / _minHeight;
+    // Width is divided by the same factor so that, once scaled, the content
+    // still spans exactly the window: (width / scale) * scale == width.
+    final logical = Size(media.size.width / scale, _minHeight);
+
+    return ClipRect(
+      child: Transform.scale(
+        scale: scale,
+        alignment: Alignment.topLeft,
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: 0,
+          maxWidth: double.infinity,
+          minHeight: 0,
+          maxHeight: double.infinity,
+          child: SizedBox(
+            width: logical.width,
+            height: logical.height,
+            child: MediaQuery(
+              data: media.copyWith(size: logical),
+              child: child,
+            ),
+          ),
         ),
       ),
     );

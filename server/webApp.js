@@ -58,17 +58,32 @@ function matches(pathname) {
 // next release. Fingerprint-style immutable caching would pin players to the
 // build they first loaded, so everything revalidates instead. `no-cache` still
 // allows a 304, so the bytes only move when they actually changed.
-async function sendFile(res, filePath) {
-  const body = await fsp.readFile(filePath);
+async function sendFile(req, res, filePath) {
+  const stat = await fsp.stat(filePath);
   const ext = path.extname(filePath).toLowerCase();
+  // `no-cache` means "revalidate before reusing", and revalidating needs
+  // something to compare — without an ETag the browser has no way to ask "is
+  // mine still current?" and what it does instead is its own business. That
+  // ambiguity is why a rebuild could look like it had not deployed. Size and
+  // mtime are enough here: every file is written fresh by the build.
+  const etag = `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
+  const noStore = /(?:index\.html|flutter_bootstrap\.js|flutter_service_worker\.js)$/
+    .test(filePath);
+
+  if (!noStore && req.headers['if-none-match'] === etag) {
+    res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' });
+    res.end();
+    return;
+  }
+
+  const body = await fsp.readFile(filePath);
   res.writeHead(200, {
     'Content-Type': CONTENT_TYPES[ext] || 'application/octet-stream',
     'Content-Length': body.length,
     // The entry point and the bootstrap decide which build everything else
     // belongs to, so those must never be served from cache at all.
-    'Cache-Control': /(?:index\.html|flutter_bootstrap\.js|flutter_service_worker\.js)$/.test(filePath)
-      ? 'no-store'
-      : 'no-cache',
+    'Cache-Control': noStore ? 'no-store' : 'no-cache',
+    ...(noStore ? {} : { ETag: etag }),
   });
   res.end(body);
 }
@@ -93,7 +108,7 @@ async function serve(req, res, pathname) {
 
   if (!isAsset) {
     // Client-side route (or the root): hand back the shell.
-    await sendFile(res, path.join(ROOT, 'index.html'));
+    await sendFile(req, res, path.join(ROOT, 'index.html'));
     return true;
   }
 
@@ -114,7 +129,7 @@ async function serve(req, res, pathname) {
   }
 
   try {
-    await sendFile(res, target);
+    await sendFile(req, res, target);
   } catch (err) {
     if (err.code === 'ENOENT' || err.code === 'EISDIR') {
       res.writeHead(404, { 'Content-Type': 'text/plain' });

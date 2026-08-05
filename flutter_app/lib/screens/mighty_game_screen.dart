@@ -5686,11 +5686,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - 24;
-        final perRow = cards.length <= 7
-            ? cards.length
-            : (cards.length / 2).ceil();
         final cardPadding = cards.length >= 8 ? 1.5 : 3.0;
-        final totalPadding = perRow * cardPadding * 2;
+
         // Phone-sized caps: on a browser window the ten-card hand stayed small
         // however much room there was. Grow with the viewport against the same
         // 400pt design width the other boards use, web only.
@@ -5698,10 +5695,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         final scale = kIsWeb
             ? (media.size.shortestSide / 400).clamp(1.0, 1.6)
             : 1.0;
+        final maxCardWidth = 52.0 * scale;
 
+        // Two rows is a concession to phone width, not the nicer layout — a
+        // hand read left to right in one line is easier to plan from. Take the
+        // single row whenever the board is wide enough to keep the cards at
+        // full size; anything narrower falls back on its own.
+        final oneRowWidth =
+            (availableWidth - cards.length * cardPadding * 2) / cards.length;
+        final perRow = (cards.length <= 7 || oneRowWidth >= maxCardWidth)
+            ? cards.length
+            : (cards.length / 2).ceil();
+        final totalPadding = perRow * cardPadding * 2;
         var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           0.0,
-          52.0 * scale,
+          maxCardWidth,
         );
         var cardHeight = (cardWidth * 1.4).clamp(52.0 * scale, 73.0 * scale);
 

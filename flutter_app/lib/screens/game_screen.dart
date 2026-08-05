@@ -3363,8 +3363,8 @@ class _GameScreenState extends State<GameScreen> {
       color: Colors.black54,
       child: Center(
         child: Container(
-          margin: const EdgeInsets.all(32),
-          padding: const EdgeInsets.all(24),
+          margin: EdgeInsets.all(32 * _s),
+          padding: EdgeInsets.all(24 * _s),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -3560,23 +3560,23 @@ class _GameScreenState extends State<GameScreen> {
                 children: [
                   Text(
                     L10n.of(dialogCtx).gameReceivedCards,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 18 * _s,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12 * _s),
                   _buildExchangeSummaryRowLine([
                     _ExchangeSummaryItem(leftName, receivedLeft),
                     _ExchangeSummaryItem(partnerName, receivedPartner),
                     _ExchangeSummaryItem(rightName, receivedRight),
                   ]),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12 * _s),
                   Text(
                     L10n.of(dialogCtx).gameTapToClose,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9A8E8A),
+                    style: TextStyle(
+                      fontSize: 12 * _s,
+                      color: const Color(0xFF9A8E8A),
                     ),
                   ),
                 ],
@@ -3596,8 +3596,8 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildExchangeSummaryRowLine(List<_ExchangeSummaryItem> items) {
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 12,
-      runSpacing: 8,
+      spacing: 12 * _s,
+      runSpacing: 8 * _s,
       children: items
           .where((i) => i.cardId != null)
           .map(
@@ -3608,16 +3608,16 @@ class _GameScreenState extends State<GameScreen> {
                   item.name.length > 4
                       ? '${item.name.substring(0, 4)}…'
                       : item.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A7A72),
+                  style: TextStyle(
+                    fontSize: 12 * _s,
+                    color: const Color(0xFF8A7A72),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4 * _s),
                 PlayingCard(
                   cardId: item.cardId!,
-                  width: 34,
-                  height: 48,
+                  width: 34 * _s,
+                  height: 48 * _s,
                   isInteractive: false,
                 ),
               ],

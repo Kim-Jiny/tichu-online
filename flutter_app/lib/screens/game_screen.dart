@@ -683,11 +683,11 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
+              blurRadius: 4 * _s,
             ),
           ],
         ),
-        child: const Icon(Icons.logout, color: Color(0xFFE53935), size: 20),
+        child: Icon(Icons.logout, color: Color(0xFFE53935), size: 20 * _s),
       ),
     );
   }
@@ -728,14 +728,14 @@ class _GameScreenState extends State<GameScreen> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
+                  blurRadius: 4 * _s,
                 ),
               ],
             ),
             child: Icon(
               Icons.chat_bubble_outline,
               color: _chatOpen ? Colors.white : const Color(0xFF5A4038),
-              size: 20,
+              size: 20 * _s,
             ),
           ),
           if (unreadCount > 0)
@@ -751,9 +751,9 @@ class _GameScreenState extends State<GameScreen> {
                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 child: Text(
                   unreadCount > 9 ? '9+' : '$unreadCount',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 10 * _s,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -779,14 +779,14 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
+              blurRadius: 4 * _s,
             ),
           ],
         ),
         child: Icon(
           hasMuted ? Icons.volume_off : Icons.volume_up,
           color: _soundPanelOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20,
+          size: 20 * _s,
         ),
       ),
     );
@@ -813,14 +813,14 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
+              blurRadius: 4 * _s,
             ),
           ],
         ),
         child: Icon(
           Icons.more_horiz,
           color: _moreOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20,
+          size: 20 * _s,
         ),
       ),
     );
@@ -1039,7 +1039,7 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
+              blurRadius: 8 * _s,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1047,14 +1047,14 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           children: [
             const Icon(Icons.warning_amber_rounded, color: Color(0xFFCC4444)),
-            const SizedBox(width: 8),
+            SizedBox(width: 8 * _s),
             Expanded(
               child: Text(
                 displayMessage,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFCC4444),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 14 * _s,
                 ),
               ),
             ),
@@ -1078,7 +1078,7 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
+              blurRadius: 8 * _s,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1086,14 +1086,14 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           children: [
             const Icon(Icons.timer_off, color: Color(0xFFE65100)),
-            const SizedBox(width: 8),
+            SizedBox(width: 8 * _s),
             Expanded(
               child: Text(
                 L10n.of(context).gameTimeout(playerName),
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFE65100),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 14 * _s,
                 ),
               ),
             ),
@@ -1117,7 +1117,7 @@ class _GameScreenState extends State<GameScreen> {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
+              blurRadius: 8 * _s,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1125,16 +1125,16 @@ class _GameScreenState extends State<GameScreen> {
         child: Row(
           children: [
             const Icon(Icons.person_off, color: Color(0xFFCC4444)),
-            const SizedBox(width: 8),
+            SizedBox(width: 8 * _s),
             Expanded(
               child: Text(
                 reason == 'timeout'
                     ? L10n.of(context).gameDesertionTimeout(playerName)
                     : L10n.of(context).gameDesertionLeave(playerName),
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFFCC4444),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 14 * _s,
                 ),
               ),
             ),
@@ -1248,14 +1248,14 @@ class _GameScreenState extends State<GameScreen> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
+                  blurRadius: 4 * _s,
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.people_alt,
               color: Color(0xFF5A4038),
-              size: 20,
+              size: 20 * _s,
             ),
           ),
           if (hasViewers)
@@ -1268,9 +1268,9 @@ class _GameScreenState extends State<GameScreen> {
                   color: Color(0xFF81C784),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.visibility,
-                  size: 10,
+                  size: 10 * _s,
                   color: Colors.white,
                 ),
               ),
@@ -1287,9 +1287,9 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 child: Text(
                   '$count',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 10 * _s,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1317,14 +1317,14 @@ class _GameScreenState extends State<GameScreen> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
+                  blurRadius: 4 * _s,
                 ),
               ],
             ),
             child: Icon(
               Icons.visibility,
               color: _viewersOpen ? Colors.white : const Color(0xFF5A4038),
-              size: 20,
+              size: 20 * _s,
             ),
           ),
           if (count > 0)
@@ -1339,9 +1339,9 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 child: Text(
                   '$count',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 10 * _s,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1658,12 +1658,12 @@ class _GameScreenState extends State<GameScreen> {
               avatarBeside: true,
             ),
           ),
-          const SizedBox(height: 3),
+          SizedBox(height: 3 * _s),
           Text(
             _getPlayerInfo(partner),
             style: TextStyle(fontSize: 11 * _s, color: const Color(0xFF8A7A72)),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6 * _s),
           // Card backs
           _buildOverlappedHand(
             count: partner?.cardCount ?? 0,
@@ -1705,7 +1705,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: left?.name ?? L10n.of(context).gameLeftPlayer,
                   isTurn: isLeftTurn,
-                  fontSize: 11,
+                  fontSize: 11 * _s,
                   badge: _tichuBadgeForPlayer(left),
                   exchangeDone:
                       state.phase == 'card_exchange' &&
@@ -1728,7 +1728,7 @@ class _GameScreenState extends State<GameScreen> {
                   color: const Color(0xFF8A7A72),
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4 * _s),
               _buildOverlappedHandVertical(
                 count: left?.cardCount ?? 0,
                 cardWidth: 26 * _s,
@@ -1760,7 +1760,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: right?.name ?? L10n.of(context).gameRightPlayer,
                   isTurn: isRightTurn,
-                  fontSize: 11,
+                  fontSize: 11 * _s,
                   badge: _tichuBadgeForPlayer(right),
                   exchangeDone:
                       state.phase == 'card_exchange' &&
@@ -1783,7 +1783,7 @@ class _GameScreenState extends State<GameScreen> {
                   color: const Color(0xFF8A7A72),
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4 * _s),
               _buildOverlappedHandVertical(
                 count: right?.cardCount ?? 0,
                 cardWidth: 26 * _s,
@@ -1813,15 +1813,15 @@ class _GameScreenState extends State<GameScreen> {
             // Phase & Turn info
             Text(
               _getPhaseName(state.phase),
-              style: const TextStyle(
-                fontSize: 13,
+              style: TextStyle(
+                fontSize: 13 * _s,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
               ),
               textAlign: TextAlign.center,
             ),
             if (state.phase == 'playing') ...[
-              const SizedBox(height: 3),
+              SizedBox(height: 3 * _s),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1832,7 +1832,7 @@ class _GameScreenState extends State<GameScreen> {
                             context,
                           ).gamePlayerTurn(_getCurrentPlayerName(state)),
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 11 * _s,
                       color: state.isMyTurn
                           ? const Color(0xFFE6A800)
                           : const Color(0xFF8A7A72),
@@ -1847,7 +1847,7 @@ class _GameScreenState extends State<GameScreen> {
 
             // Call rank display
             if (state.callRank != null && state.callRank!.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              SizedBox(height: 4 * _s),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -1858,18 +1858,18 @@ class _GameScreenState extends State<GameScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: const Color(0xFFFF4444),
-                    width: 1.5,
+                    width: 1.5 * _s,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('🐦', style: TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
+                    Text('🐦', style: TextStyle(fontSize: 14 * _s)),
+                    SizedBox(width: 4 * _s),
                     Text(
                       L10n.of(context).gameCall(state.callRank!),
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 16 * _s,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFFF4444),
                       ),
@@ -1879,12 +1879,12 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ],
 
-            const SizedBox(height: 4),
+            SizedBox(height: 4 * _s),
 
             if (game.dogPlayActive)
               _buildDogPlayedBanner(game.dogPlayPlayerName),
 
-            if (game.dogPlayActive) const SizedBox(height: 4),
+            if (game.dogPlayActive) SizedBox(height: 4 * _s),
 
             // Latest trick only
             if (state.currentTrick.isNotEmpty)
@@ -2232,7 +2232,7 @@ class _GameScreenState extends State<GameScreen> {
                       ? '${lastPlay.playerName.substring(0, 8)}..'
                       : lastPlay.playerName,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14 * _s,
                     fontWeight: FontWeight.bold,
                     color: isMyTeam
                         ? const Color(0xFF4A90D9)
@@ -2241,8 +2241,8 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 TextSpan(
                   text: L10n.of(context).gamePlayedCards,
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: TextStyle(
+                    fontSize: 12 * _s,
                     color: Color(0xFF8A7A72),
                   ),
                 ),
@@ -2251,7 +2251,7 @@ class _GameScreenState extends State<GameScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4 * _s),
           _buildOverlappedTrick(lastPlay.cards, lastPlay: lastPlay),
         ],
       ),
@@ -2304,8 +2304,8 @@ class _GameScreenState extends State<GameScreen> {
               ),
               child: Text(
                 phoenixBeatLabel,
-                style: const TextStyle(
-                  fontSize: 9,
+                style: TextStyle(
+                  fontSize: 9 * _s,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF5A4038),
                 ),
@@ -2382,7 +2382,7 @@ class _GameScreenState extends State<GameScreen> {
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: [buildRow(row1), const SizedBox(height: 4), buildRow(row2)],
+          children: [buildRow(row1), SizedBox(height: 4 * _s), buildRow(row2)],
         );
       },
     );
@@ -2402,7 +2402,7 @@ class _GameScreenState extends State<GameScreen> {
             color: isMyTurn
                 ? const Color(0xFFFFD54F).withValues(alpha: 0.4)
                 : Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
+            blurRadius: 10 * _s,
             offset: const Offset(0, -4),
           ),
         ],
@@ -2426,7 +2426,7 @@ class _GameScreenState extends State<GameScreen> {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: const Color(0xFF4A90D9),
-                    width: 0.5,
+                    width: 0.5 * _s,
                   ),
                 ),
                 child: Text(
@@ -2472,11 +2472,11 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
               if (_tichuBadgeForSelf(state) != null) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8 * _s),
                 _tichuBadgeForSelf(state)!,
               ],
               if (game.myTimeoutCount > 0) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8 * _s),
                 GestureDetector(
                   onTap: () => game.resetTimeout(),
                   child: Container(
@@ -2494,17 +2494,17 @@ class _GameScreenState extends State<GameScreen> {
                       children: [
                         Text(
                           '${game.myTimeoutCount}/3',
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: TextStyle(
+                            fontSize: 12 * _s,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFE65100),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4 * _s),
                         Text(
                           L10n.of(context).gameNotAfk,
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: TextStyle(
+                            fontSize: 11 * _s,
                             color: Color(0xFFE65100),
                           ),
                         ),
@@ -2515,7 +2515,7 @@ class _GameScreenState extends State<GameScreen> {
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * _s),
 
           // My hand - two rows (split in half)
           Padding(
@@ -2524,7 +2524,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
             child: _buildHandRows(state),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8 * _s),
 
           // Action buttons (stable layout)
           Row(
@@ -2554,7 +2554,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 child: Text(L10n.of(context).gamePlay),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12 * _s),
               ElevatedButton(
                 onPressed:
                     (state.phase == 'playing' &&
@@ -2826,7 +2826,7 @@ class _GameScreenState extends State<GameScreen> {
           ),
           child: Text(
             L10n.of(context).gameSmallTichuDeclare,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 15 * _s, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -3026,7 +3026,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 name,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 12 * _s,
                   fontWeight: FontWeight.bold,
                   color: isAssigned
                       ? const Color(0xFF3A5A40)
@@ -3036,10 +3036,10 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
             if (isAssigned) ...[
-              const SizedBox(width: 4),
-              const Icon(
+              SizedBox(width: 4 * _s),
+              Icon(
                 Icons.check_circle,
-                size: 14,
+                size: 14 * _s,
                 color: Color(0xFF3A5A40),
               ),
             ],
@@ -3100,12 +3100,12 @@ class _GameScreenState extends State<GameScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('\u{1F409}', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
+          Text('\u{1F409}', style: TextStyle(fontSize: 20 * _s)),
+          SizedBox(width: 8 * _s),
           Text(
             message,
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 14 * _s,
               fontWeight: FontWeight.bold,
               color: Color(0xFF2E7D32),
             ),
@@ -3357,12 +3357,12 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+          Icon(icon, size: 14 * _s, color: color),
+          SizedBox(width: 4 * _s),
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12 * _s,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -3472,8 +3472,8 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                   child: Text(
                     '+${count - visible}',
-                    style: const TextStyle(
-                      fontSize: 10,
+                    style: TextStyle(
+                      fontSize: 10 * _s,
                       color: Color(0xFF8A7A72),
                     ),
                   ),
@@ -3708,7 +3708,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 '⏱ $timeoutCount/3',
                 style: TextStyle(
-                  fontSize: 8 * s,
+                  fontSize: 8 * _s * s,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE65100),
                 ),
@@ -3744,13 +3744,13 @@ class _GameScreenState extends State<GameScreen> {
                         color: isMyTeam
                             ? const Color(0xFF4A90D9)
                             : const Color(0xFFD24B4B),
-                        width: 0.5,
+                        width: 0.5 * _s,
                       ),
                     ),
                     child: Text(
                       teamLabel,
                       style: TextStyle(
-                        fontSize: 8 * s,
+                        fontSize: 8 * _s * s,
                         fontWeight: FontWeight.bold,
                         color: isMyTeam
                             ? const Color(0xFF4A90D9)
@@ -3763,7 +3763,7 @@ class _GameScreenState extends State<GameScreen> {
                     margin: EdgeInsets.only(right: 4 * s),
                     child: Icon(
                       Icons.wifi_off,
-                      size: 12 * s,
+                      size: 12 * _s * s,
                       color: Colors.red,
                     ),
                   ),
@@ -3785,7 +3785,7 @@ class _GameScreenState extends State<GameScreen> {
                     margin: EdgeInsets.only(left: 4 * s),
                     child: Icon(
                       Icons.check_circle,
-                      size: 12 * s,
+                      size: 12 * _s * s,
                       color: const Color(0xFF3A8F52),
                     ),
                   ),
@@ -3800,7 +3800,7 @@ class _GameScreenState extends State<GameScreen> {
         : Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [avatar, SizedBox(width: 6 * s), plate],
+            children: [avatar, SizedBox(width: 6 * _s * s), plate],
           );
     // Overlay, not the seat's own Stack: a sibling drawn later used to paint
     // straight over the bubble.
@@ -3852,14 +3852,14 @@ class _GameScreenState extends State<GameScreen> {
         boxShadow: [
           BoxShadow(
             color: bg.withValues(alpha: 0.4),
-            blurRadius: 6,
+            blurRadius: 6 * _s,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: fg),
+        style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }

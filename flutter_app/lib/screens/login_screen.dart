@@ -27,6 +27,31 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+/// Taps outside a text field dismiss the keyboard — but only outside.
+///
+/// This used to be a GestureDetector wrapping the whole screen with
+/// `onTap: unfocus`. On a mobile browser that raced the field's own tap: the
+/// field took focus, the keyboard started to rise, and the ancestor tap fired
+/// `unfocus()` right behind it, so the keyboard slid back down and no caret
+/// ever appeared. The register dialog was fine precisely because it is a
+/// separate overlay with no such ancestor.
+///
+/// TapRegion only reports taps that land outside its group, so a tap on the
+/// field never reaches it.
+class _DismissKeyboardOnTap extends StatelessWidget {
+  const _DismissKeyboardOnTap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TapRegion(
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+      child: child,
+    );
+  }
+}
+
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -290,8 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final session = context.watch<SessionService>();
     return PopScope(
       canPop: false,
-      child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
+      child: _DismissKeyboardOnTap(
         child: Scaffold(
           body: Stack(
             children: [

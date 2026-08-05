@@ -245,13 +245,23 @@ class _WebMinHeight extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final height = media.size.height;
-    if (height <= 0 || height >= _minHeight) return child;
+    // Measure the window, not what is left of it above the keyboard. An IME
+    // opening must not decide whether the floor applies — that would swap the
+    // layout out from under a focused field, which loses the focus and drops
+    // the keyboard straight back down.
+    final height = media.size.height + media.viewInsets.bottom;
 
-    final scale = height / _minHeight;
+    // The scale is 1.0 when there is nothing to fix, but the wrapper stays in
+    // the tree either way: adding or removing these widgets around a live
+    // screen would rebuild it and, again, cost the focus.
+    final scale = (height <= 0 || height >= _minHeight)
+        ? 1.0
+        : height / _minHeight;
     // Width is divided by the same factor so that, once scaled, the content
     // still spans exactly the window: (width / scale) * scale == width.
-    final logical = Size(media.size.width / scale, _minHeight);
+    final logical = scale == 1.0
+        ? media.size
+        : Size(media.size.width / scale, media.size.height / scale);
 
     return ClipRect(
       child: Transform.scale(

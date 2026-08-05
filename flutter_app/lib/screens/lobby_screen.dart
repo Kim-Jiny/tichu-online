@@ -1397,8 +1397,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    // Same call the game screen makes: the landscape variants are built for a
+    // tablet held sideways, and the app no longer rotates at all, so on the web
+    // they are the only place that code runs — untested by everyone else. It
+    // shows: the landscape lobby packs notices and errors into a bordered
+    // utility box, which is not how the app has ever presented them.
     final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     return ConnectionOverlay(
       child: PopScope(
         canPop: false,

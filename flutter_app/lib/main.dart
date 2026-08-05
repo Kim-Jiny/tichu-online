@@ -9,6 +9,8 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'dart:typed_data' show ByteData;
+import 'package:http/http.dart' as http;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -44,6 +46,7 @@ void main() async {
   // inputs real and present, which is also what a screen reader needs.
   if (kIsWeb) {
     SemanticsBinding.instance.ensureSemantics();
+    await _loadWebFonts();
   }
 
   // The whole mobile stack is skipped on web, and it has to be skipped here
@@ -97,6 +100,37 @@ void main() async {
   runApp(const TichuApp());
 }
 
+/// Registers Pretendard for the browser.
+///
+/// Flutter web ships no Korean font. Left alone, the engine fetches Noto Sans
+/// KR one subset at a time from fonts.gstatic.com as characters appear — so
+/// text renders as ▯ until the right subset lands, and if that host is slow or
+/// blocked it never does. Bundling the font removes both the flicker and the
+/// runtime dependency on Google's CDN.
+///
+/// Web only, on purpose. Phones already have Korean from the OS, and putting
+/// these files in pubspec would add ~1.5MB to the mobile app for nothing. They
+/// live in web/ instead and are fetched relative to the document, so a build
+/// mounted at /play/ resolves them there.
+Future<void> _loadWebFonts() async {
+  try {
+    final loader = FontLoader('Pretendard');
+    for (final file in ['Pretendard-Regular.woff2', 'Pretendard-Bold.woff2']) {
+      loader.addFont(
+        http.readBytes(Uri.base.resolve('fonts/$file')).then(
+          (bytes) => ByteData.view(bytes.buffer),
+        ),
+      );
+    }
+    // Bounded: the first frame waits on this so there is no flash of fallback
+    // text, but a stalled download must not hold the app hostage. Losing the
+    // race just means the engine falls back to what it did before.
+    await loader.load().timeout(const Duration(seconds: 6));
+  } catch (_) {
+    // Non-fatal by design — see above.
+  }
+}
+
 ThemeData _buildTheme() {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: const Color(0xFFF28C26),
@@ -105,6 +139,8 @@ ThemeData _buildTheme() {
   return ThemeData(
     colorScheme: colorScheme,
     useMaterial3: true,
+    // Only on web; native keeps the platform's own font.
+    fontFamily: kIsWeb ? 'Pretendard' : null,
     dialogTheme: DialogThemeData(
       backgroundColor: colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

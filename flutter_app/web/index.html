@@ -20,10 +20,12 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="티츄, 스컬킹, 러브레터, 마이티를 즐기는 멀티플레이 카드게임">
 
-  <!-- Zoom is disabled because the board is laid out to the viewport; iOS
-       otherwise zooms in whenever a text field takes focus and leaves the
-       player scrolled into a corner of the table. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- No maximum-scale / user-scalable=no here on purpose. Locking zoom is
+       tempting because the board is laid out to the viewport, but on iOS it
+       interacts with how Safari brings a focused field into view, and that is
+       exactly the area where the on-screen keyboard is currently misbehaving.
+       Not worth carrying an extra variable through that. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">

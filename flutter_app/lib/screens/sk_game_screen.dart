@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -4177,18 +4178,43 @@ class _SKGameScreenState extends State<SKGameScreen> {
         final dense = compact || cards.length >= 8;
         final cardPadding = dense ? (compact ? 1.0 : 1.5) : 3.0;
         final totalPadding = perRow * cardPadding * 2;
-        final maxCardWidth = interactive
-            ? (compact ? 42.0 : 55.0)
-            : (compact ? 34.0 : 46.0);
+        // These caps are phone sizes, so on a browser window the hand stayed
+        // small no matter how much room there was. Grow them with the viewport
+        // — same 400pt design width the other boards scale against — and only
+        // on web, so the app itself renders exactly as before.
+        final media = MediaQuery.of(context);
+        final scale = kIsWeb
+            ? (media.size.shortestSide / 400).clamp(1.0, 1.6)
+            : 1.0;
+
+        final maxCardWidth =
+            (interactive ? (compact ? 42.0 : 55.0) : (compact ? 34.0 : 46.0)) *
+            scale;
         // Fill available width, only cap at max
-        final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
+        var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           0.0,
           maxCardWidth,
         );
-        final cardHeight = (cardWidth * 1.4).clamp(
-          interactive ? (compact ? 42.0 : 52.0) : (compact ? 34.0 : 42.0),
-          interactive ? (compact ? 60.0 : 77.0) : (compact ? 50.0 : 64.0),
+        var cardHeight = (cardWidth * 1.4).clamp(
+          (interactive ? (compact ? 42.0 : 52.0) : (compact ? 34.0 : 42.0)) *
+              scale,
+          (interactive ? (compact ? 60.0 : 77.0) : (compact ? 50.0 : 64.0)) *
+              scale,
         );
+
+        // Width alone decided the size, and a desktop window has plenty — the
+        // hand would grow until it covered the table. Cap the rows at a share
+        // of the screen and walk the width back to match if it bites. Only the
+        // player's own hand needs this; the smaller read-only strips never get
+        // near it.
+        if (interactive) {
+          final rows = perRow >= cards.length ? 1 : 2;
+          final maxCardHeight = (media.size.height * 0.26) / rows;
+          if (cardHeight > maxCardHeight) {
+            cardHeight = maxCardHeight;
+            cardWidth = cardHeight / 1.4;
+          }
+        }
 
         List<Widget> rowWidgets(List<String> row) {
           return row

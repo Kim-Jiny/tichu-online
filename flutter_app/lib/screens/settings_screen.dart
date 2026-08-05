@@ -48,7 +48,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _bannerAd = AdService.createBannerAd(
+      // AdMob has no web implementation at all, so this can only fail there.
+      // Leaving it to fail was working — the load callbacks null the banner
+      // out — but it is a plugin exception per screen to get to the same
+      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
       AdService.settingsBannerId,
       onAdLoaded: (_) {
         if (mounted) setState(() => _bannerAdLoaded = true);
@@ -61,7 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           });
       },
     );
-    _bannerAd!.load();
+    _bannerAd?.load();
     _loadAppVersion();
     // The profile card shows level and exp, which only arrive with a fetch.
     // Deferred: requestProfile notifies listeners synchronously.

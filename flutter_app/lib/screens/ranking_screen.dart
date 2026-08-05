@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -23,12 +24,16 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    _bannerAd = AdService.createBannerAd(
+      // AdMob has no web implementation at all, so this can only fail there.
+      // Leaving it to fail was working — the load callbacks null the banner
+      // out — but it is a plugin exception per screen to get to the same
+      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
       AdService.rankingBannerId,
       onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
       onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
     );
-    _bannerAd!.load();
+    _bannerAd?.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();

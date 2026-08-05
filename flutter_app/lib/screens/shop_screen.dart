@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -120,6 +121,9 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   void _preloadRewardedAd() {
+    // No AdMob on web; the tiles that need a loaded ad stay hidden because
+    // _rewardedAdReady never flips.
+    if (kIsWeb) return;
     RewardedAd.load(
       adUnitId: AdService.rewardedAdId,
       request: const AdRequest(),
@@ -141,6 +145,9 @@ class _ShopScreenState extends State<ShopScreen> {
   // instance and we can read attendance-specific impression / revenue
   // numbers in AdMob.
   void _preloadAttendanceAd() {
+    // No AdMob on web; the tiles that need a loaded ad stay hidden because
+    // _rewardedAdReady never flips.
+    if (kIsWeb) return;
     if (_attendanceAdLoadInFlight || _attendanceAd != null) return;
     _attendanceAdLoadInFlight = true;
     RewardedAd.load(

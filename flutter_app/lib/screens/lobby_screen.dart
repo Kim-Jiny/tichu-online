@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -76,7 +77,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
-    _bannerAd = AdService.createBannerAd(
+      // AdMob has no web implementation at all, so this can only fail there.
+      // Leaving it to fail was working — the load callbacks null the banner
+      // out — but it is a plugin exception per screen to get to the same
+      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
       AdService.lobbyBannerId,
       onAdLoaded: (_) {
         if (mounted) setState(() => _bannerAdLoaded = true);
@@ -91,8 +96,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
         }
       },
     );
-    _bannerAd!.load();
-    _roomBannerAd = AdService.createBannerAd(
+    _bannerAd?.load();
+      // AdMob has no web implementation at all, so this can only fail there.
+      // Leaving it to fail was working — the load callbacks null the banner
+      // out — but it is a plugin exception per screen to get to the same
+      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _roomBannerAd = kIsWeb ? null : AdService.createBannerAd(
       AdService.skWaitingBannerId,
       onAdLoaded: (_) {
         if (mounted) setState(() => _roomBannerLoaded = true);
@@ -107,7 +116,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         }
       },
     );
-    _roomBannerAd!.load();
+    _roomBannerAd?.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final game = context.read<GameService>();
       game.requestRoomList();

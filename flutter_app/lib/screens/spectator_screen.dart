@@ -797,12 +797,19 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         final sideWidth = cramped
             ? 72.0
             : (constraints.maxHeight > 620 ? 104.0 : 86.0);
+        // A full-size seat (56px avatar + name + badges + the card-view button)
+        // wants roughly 170px. The old ceiling stopped at 108 even when the
+        // window was 800px tall, so on a desktop browser the seat overflowed its
+        // own background: the card-view button ended up drawn outside the
+        // profile box, and the bottom seat ran off the viewport. Phone
+        // landscape is unaffected — it stays under the 700px threshold and keeps
+        // the tighter caps.
+        final slotCeiling = constraints.maxHeight > 700
+            ? 172.0
+            : (constraints.maxHeight > 620 ? 108.0 : 92.0);
         final playerSlotHeight =
             (constraints.maxHeight * (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
-                .clamp(
-                  cramped ? 48.0 : 56.0,
-                  constraints.maxHeight > 620 ? 108.0 : 92.0,
-                );
+                .clamp(cramped ? 48.0 : 56.0, slotCeiling);
         final trickSlotHeight =
             (constraints.maxHeight * (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
                 .clamp(

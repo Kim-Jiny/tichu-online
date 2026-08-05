@@ -49,17 +49,24 @@ function calculateRoundScores({ declarer, partner, playerIds, pointCards, bid, t
   const defenders = playerIds.filter(pid => pid !== declarer && (isSolo || pid !== partner));
 
   if (success) {
-    // ─── Success: existing formula (unchanged) ───
+    // ─── Success ───
     // Base = (bid − minBid + 1) × 2 + surplus(점수 − bid).
-    // Multipliers ×2 for perfect / solo / NT / max-bid stack.
+    // Multipliers ×2 for perfect / NT / max-bid stack, and apply to BOTH
+    // sides — every defender pays one base, the declarer side collects it.
     let baseScore = (bid - minBid + 1) * 2;
     baseScore += (declarerTeamPoints - bid);
     if (isPerfect) baseScore *= 2;
-    if (isSolo) baseScore *= 2;
     if (isNoTrump) baseScore *= 2;
     if (isMaxBid) baseScore *= 2;
 
-    scores[declarer] = baseScore * 2;
+    // 노프렌드 is NOT a base multiplier: it means there is no friend to take a
+    // share, so the declarer alone collects from one extra defender. Doubling
+    // the base instead (the old `if (isSolo) baseScore *= 2`) inflated both
+    // sides and, combined with a hardcoded ×2 declarer share, left the pot
+    // unbalanced — 4 defenders paid 4×base while the declarer took 2×base.
+    // The failure branch below already models solo exactly this way
+    // (−unit×4 to the declarer, +unit to each of the 4 defenders).
+    scores[declarer] = baseScore * (defenders.length - (isSolo ? 0 : 1));
     if (!isSolo && partner) {
       scores[partner] = baseScore;
     }

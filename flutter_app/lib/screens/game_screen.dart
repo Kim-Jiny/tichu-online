@@ -2163,11 +2163,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildDogPlayedBanner(String playerName) {
+    // The Dog gets its own banner instead of going through the normal trick
+    // pile, and it kept a hardcoded 32x45 card while every other played card is
+    // 44x61 * _s — so on a scaled-up board the Dog came out at under half size.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF1F5),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12 * _s),
         border: Border.all(color: const Color(0xFFE6DCE8)),
       ),
       child: Column(
@@ -2180,15 +2183,15 @@ class _GameScreenState extends State<GameScreen> {
                         : playerName,
                   )
                 : L10n.of(context).gameDogPlayed,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7A72)),
+            style: TextStyle(fontSize: 11 * _s, color: const Color(0xFF8A7A72)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
-          const PlayingCard(
+          SizedBox(height: 4 * _s),
+          PlayingCard(
             cardId: 'special_dog',
-            width: 32,
-            height: 45,
+            width: 44 * _s,
+            height: 61 * _s,
             isInteractive: false,
           ),
         ],
@@ -2583,12 +2586,16 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildLargeTichuDialog(GameService game) {
     return Positioned(
-      bottom: 280,
+      // Sits above the hand, and the hand grows with _s (the board reserves
+      // 220 * _s under it). A fixed 280 was 60px of clearance on a phone and
+      // none at all once the cards scaled up — the prompt landed on top of the
+      // eight cards you are supposed to be looking at while deciding.
+      bottom: 280 * _s,
       left: 0,
       right: 0,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: EdgeInsets.symmetric(horizontal: 24 * _s),
+        padding: EdgeInsets.symmetric(horizontal: 16 * _s, vertical: 12 * _s),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -2604,29 +2611,36 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              L10n.of(context).gameLargeTichuQuestion,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Flexible(
+              child: Text(
+                L10n.of(context).gameLargeTichuQuestion,
+                style: TextStyle(
+                  fontSize: 16 * _s,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12 * _s),
             ElevatedButton(
               onPressed: () => game.declareLargeTichu(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFD700),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                textStyle: TextStyle(fontSize: 14 * _s),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16 * _s,
+                  vertical: 8 * _s,
                 ),
               ),
               child: Text(L10n.of(context).gameDeclare),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12 * _s),
             OutlinedButton(
               onPressed: () => game.passLargeTichu(),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                textStyle: TextStyle(fontSize: 14 * _s),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16 * _s,
+                  vertical: 8 * _s,
                 ),
               ),
               child: Text(L10n.of(context).gamePass),

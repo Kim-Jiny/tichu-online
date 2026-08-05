@@ -5882,7 +5882,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           );
         }
 
-        if (cards.length <= 7) {
+        // Single row whenever perRow covers the whole hand. This used to test
+        // `cards.length <= 7` on its own, so perRow only ever influenced the
+        // card width and the split stayed at seven no matter how much room
+        // there was — the two had to agree, or widening the window made the
+        // cards bigger and still cut them in half.
+        if (perRow >= cards.length) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
@@ -5892,7 +5897,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           );
         }
 
-        final half = (cards.length / 2).ceil();
+        final half = perRow;
         final firstRow = cards.take(half).toList();
         final secondRow = cards.skip(half).toList();
 

@@ -1175,6 +1175,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
     _seatChat.consume(game);
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
@@ -1797,6 +1798,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
     _seatChat.consume(game);
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
@@ -3723,6 +3725,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Bidding UI ──
   Widget _buildBiddingUI(SKGameStateData state, GameService game) {
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     final selfPlayer = state.players.firstWhere(
       (p) => p.position == 'self',
@@ -3876,6 +3879,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Hand Area ──
   Widget _buildHandArea(SKGameStateData state, GameService game) {
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     final selfPlayer = state.players.firstWhere(
       (p) => p.position == 'self',
@@ -4381,6 +4385,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Round End ──
   Widget _buildRoundEndUI(SKGameStateData state) {
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     final lastHistory = state.scoreHistory.isNotEmpty
         ? state.scoreHistory.last

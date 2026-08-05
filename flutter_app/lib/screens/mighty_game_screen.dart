@@ -1838,6 +1838,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildTableBoard(MightyGameStateData state, GameService game) {
     _seatChat.consume(game);
     final isLandscape =
+        !kIsWeb &&
         MediaQuery.of(context).orientation == Orientation.landscape;
     final myId = game.playerId;
     final isSelfExcluded =

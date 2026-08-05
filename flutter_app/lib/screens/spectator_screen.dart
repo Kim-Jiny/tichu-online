@@ -121,7 +121,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Widget build(BuildContext context) {
     final session = context.watch<SessionService>();
     final media = MediaQuery.of(context);
-    final isLandscape = media.orientation == Orientation.landscape;
+    // Web takes the portrait layout, like every other screen: the app is
+    // orientation-locked, so the landscape variants only ever run in a
+    // browser and are the paths nobody exercises.
+    final isLandscape =
+        !kIsWeb && media.orientation == Orientation.landscape;
     _s = (media.size.shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(

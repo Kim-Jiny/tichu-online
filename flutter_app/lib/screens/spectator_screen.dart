@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -111,11 +112,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     game.leaveRoom();
   }
 
+  /// Board scale, matching game_screen.dart's `_s`. Capped at 1.0 off the web
+  /// so phones and tablets render exactly as before; a desktop window has the
+  /// room to grow into and looked comically small at 1.0.
+  double _s = 1.0;
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionService>();
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
+    final media = MediaQuery.of(context);
+    final isLandscape = media.orientation == Orientation.landscape;
+    _s = (media.size.shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(
       child: PopScope(
@@ -805,7 +812,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // landscape is unaffected — it stays under the 700px threshold and keeps
         // the tighter caps.
         final slotCeiling = constraints.maxHeight > 700
-            ? 172.0
+            ? 240.0
             : (constraints.maxHeight > 620 ? 108.0 : 92.0);
         final playerSlotHeight =
             (constraints.maxHeight * (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
@@ -814,7 +821,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             (constraints.maxHeight * (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
                 .clamp(
                   cramped ? 76.0 : 88.0,
-                  constraints.maxHeight > 620 ? 180.0 : 132.0,
+                  constraints.maxHeight > 700
+                      ? 380.0
+                      : (constraints.maxHeight > 620 ? 180.0 : 132.0),
                 );
 
         return Row(
@@ -1549,9 +1558,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isLeft = true,
     bool compact = false,
   }) {
-    final cardWidth = compact ? 24.0 : 30.0;
-    final cardHeight = compact ? 36.0 : 45.0;
-    final overlap = compact ? 14.0 : 20.0;
+    final cardWidth = (compact ? 24.0 : 30.0) * _s;
+    final cardHeight = (compact ? 36.0 : 45.0) * _s;
+    final overlap = (compact ? 14.0 : 20.0) * _s;
 
     final totalHeight = cardHeight + (cards.length - 1) * overlap;
     // 좌측: 90도 (pi/2), 우측: 270도 (3*pi/2 = -pi/2)
@@ -1561,7 +1570,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       width: cardHeight + 4, // 회전 후 잘림 방지
       // Cap at a full 14-card hand height + small buffer. Previous
       // 180/300 caps clipped the last card when holding a full hand.
-      height: totalHeight.clamp(40.0, compact ? 240.0 : 320.0),
+      height: totalHeight.clamp(40.0, (compact ? 240.0 : 320.0) * _s),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1678,9 +1687,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }
 
   Widget _buildHorizontalCards(List cards, {bool compact = false}) {
-    final cardWidth = compact ? 24.0 : 30.0;
-    final cardHeight = compact ? 36.0 : 45.0;
-    final overlap = compact ? 16.0 : 20.0;
+    final cardWidth = (compact ? 24.0 : 30.0) * _s;
+    final cardHeight = (compact ? 36.0 : 45.0) * _s;
+    final overlap = (compact ? 16.0 : 20.0) * _s;
 
     final totalWidth = cardWidth + (cards.length - 1) * overlap;
 
@@ -1689,7 +1698,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // hand (14 × 20 + 30 = 290 non-compact / 14 × 16 + 24 = 232 compact).
     return SizedBox(
       height: cardHeight,
-      width: totalWidth.clamp(40.0, compact ? 244.0 : 304.0),
+      width: totalWidth.clamp(40.0, (compact ? 244.0 : 304.0) * _s),
       child: Stack(
         children: [
           for (int i = 0; i < cards.length; i++)
@@ -1975,10 +1984,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String combo = '',
     double comboValue = 0,
   }) {
-    final double cardW = compact ? 24 : 36;
-    final double cardH = compact ? 34 : 50;
-    final double minOverlap = compact ? 10 : 20;
-    final double maxOverlap = compact ? 18 : 30;
+    final double cardW = (compact ? 24 : 36) * _s;
+    final double cardH = (compact ? 34 : 50) * _s;
+    final double minOverlap = (compact ? 10 : 20) * _s;
+    final double maxOverlap = (compact ? 18 : 30) * _s;
 
     final isPhoenixSingleTrick =
         combo == 'single' &&

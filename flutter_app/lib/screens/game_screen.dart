@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -397,7 +398,12 @@ class _GameScreenState extends State<GameScreen> {
     final screenSize = mediaQuery.size;
     final isLandscape = mediaQuery.orientation == Orientation.landscape;
     final shortestSide = screenSize.shortestSide;
-    _s = (shortestSide / 400).clamp(0.72, 1.0);
+    // The ceiling used to be a flat 1.0: the board is designed for a 400pt
+    // phone and there was never a screen worth growing into. A desktop browser
+    // is, and at 1.0 the cards sit tiny in the middle of a large window. Phones
+    // and tablets keep the old ceiling — this is not the place to change how
+    // the shipped app looks.
+    _s = (shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
     _maxNameLen = screenSize.width < 370 ? 3 : (isLandscape ? 6 : 4);
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
@@ -595,7 +601,7 @@ class _GameScreenState extends State<GameScreen> {
               // of it. Below 14 cards the hand shrinks under the reserve
               // and the board still doesn't move.
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 220),
+                padding: EdgeInsets.only(bottom: 220 * _s),
                 child: _buildMiddleArea(state, game),
               ),
             ),
@@ -4027,15 +4033,18 @@ class _GameScreenState extends State<GameScreen> {
         final dense = cards.length >= 13;
         final cardPadding = dense ? 2.0 : 3.0;
         final totalPadding = perRow * cardPadding * 2;
-        final maxWidth = dense ? 46.0 : 50.0;
-        final minWidth = dense ? 34.0 : 38.0;
+        // Scaled like everything else on the board. These were the only card
+        // sizes left in absolute pixels, so on a large screen the hand stayed
+        // phone-sized while the table around it grew.
+        final maxWidth = (dense ? 46.0 : 50.0) * _s;
+        final minWidth = (dense ? 34.0 : 38.0) * _s;
         final cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           minWidth,
           maxWidth,
         );
         final cardHeight = (cardWidth * (dense ? 1.35 : 1.4)).clamp(
-          dense ? 48.0 : 53.0,
-          dense ? 64.0 : 70.0,
+          (dense ? 48.0 : 53.0) * _s,
+          (dense ? 64.0 : 70.0) * _s,
         );
 
         List<Widget> rowWidgets(List<String> row) {

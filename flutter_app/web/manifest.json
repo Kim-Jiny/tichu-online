@@ -1,11 +1,11 @@
 {
-    "name": "tichu_online",
-    "short_name": "tichu_online",
+    "name": "티츄 온라인",
+    "short_name": "티츄",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#014ACC",
+    "theme_color": "#F28C26",
+    "description": "티츄, 스컬킹, 러브레터, 마이티를 즐기는 멀티플레이 카드게임",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

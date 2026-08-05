@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -471,16 +472,21 @@ class GameService extends ChangeNotifier {
 
   GameService(this._network) {
     _subscription = _network.messageStream.listen(_onMessage);
-    _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((
-      newToken,
-    ) {
-      final preview = newToken.substring(0, newToken.length.clamp(0, 20));
-      debugPrint('[FCM] onTokenRefresh: $preview...');
-      if (playerId.isNotEmpty && pushEnabled) {
-        _network.send({'type': 'update_fcm_token', 'fcmToken': newToken});
-        debugPrint('[FCM] Refreshed token sent to server');
-      }
-    });
+    // No FCM on web, and no Firebase app to ask for one — this used to throw
+    // straight out of the constructor, which Provider surfaces as a failure of
+    // whatever first read the service (the EULA fetch), leaving a spinner.
+    if (!kIsWeb) {
+      _fcmTokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((
+        newToken,
+      ) {
+        final preview = newToken.substring(0, newToken.length.clamp(0, 20));
+        debugPrint('[FCM] onTokenRefresh: $preview...');
+        if (playerId.isNotEmpty && pushEnabled) {
+          _network.send({'type': 'update_fcm_token', 'fcmToken': newToken});
+          debugPrint('[FCM] Refreshed token sent to server');
+        }
+      });
+    }
     _loadPushPrefs();
     _loadSfxPrefs();
     _loadReadNoticeIds();
@@ -3550,7 +3556,10 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_gold_history', 'limit': limit});
   }
 
-  String get _iapPlatform => Platform.isIOS ? 'ios' : 'android';
+  // Web has no store purchase path at all (server.js:7981 routes only to
+  // Apple/Google), so this is never sent from a browser.
+  String get _iapPlatform =>
+      kIsWeb ? 'web' : (Platform.isIOS ? 'ios' : 'android');
 
   void requestGoldProducts() {
     goldProductsLoading = true;
@@ -4018,6 +4027,8 @@ class GameService extends ChangeNotifier {
 
   // Send FCM token to server asynchronously after login
   Future<void> _sendFcmTokenAsync() async {
+    // Push has no web implementation; `Platform` below would throw there too.
+    if (kIsWeb) return;
     try {
       final messaging = FirebaseMessaging.instance;
       debugPrint(

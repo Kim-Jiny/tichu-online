@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_android/billing_client_wrappers.dart';
@@ -78,6 +79,13 @@ class IapService {
   Future<void> init() => _initFuture ??= _doInit();
 
   Future<void> _doInit() async {
+    // Same reasoning as macOS below, and more so: the browser has no store at
+    // all, and the `Platform` reads in this file throw there. Report the store
+    // as unavailable so the purchase UI stays shut.
+    if (kIsWeb) {
+      _available = false;
+      return;
+    }
     // macOS is not an IAP sales target. The client would otherwise send the
     // wrong platform string and every purchase would fail after payment —
     // block it outright so the store flow can't even be entered.

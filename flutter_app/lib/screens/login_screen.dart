@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -572,7 +573,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Image.asset('assets/icons/google_logo.png'),
                 ),
               ),
-              if (Platform.isIOS)
+              // dart:io Platform throws on web; Apple sign-in is iOS-only anyway.
+              if (!kIsWeb && Platform.isIOS)
                 _buildSocialButton(
                   onTap: () => _handleSocialSignIn('apple'),
                   backgroundColor: Colors.black,

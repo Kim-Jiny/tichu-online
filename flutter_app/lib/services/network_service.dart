@@ -7,8 +7,22 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 class NetworkService extends ChangeNotifier {
   static const _debugIp = String.fromEnvironment('DEBUG_SERVER_IP', defaultValue: '127.0.0.1');
-  static String get defaultUrl =>
-      kDebugMode ? 'ws://$_debugIp:8080' : 'wss://tichu.jiny.shop';
+  /// Explicit override, e.g. `--dart-define=WS_URL=ws://localhost:8080` when
+  /// serving a release web build against a local server.
+  static const _wsUrlOverride = String.fromEnvironment('WS_URL');
+
+  static String get defaultUrl {
+    if (_wsUrlOverride.isNotEmpty) return _wsUrlOverride;
+    if (kIsWeb) {
+      // The web build is served from the same host that terminates the socket
+      // (/play on tichu.jiny.shop), so derive it rather than hardcoding: that
+      // keeps a staging host, a LAN IP and production all working unchanged.
+      final base = Uri.base;
+      final scheme = base.scheme == 'https' ? 'wss' : 'ws';
+      return '$scheme://${base.authority}';
+    }
+    return kDebugMode ? 'ws://$_debugIp:8080' : 'wss://tichu.jiny.shop';
+  }
 
   // Messages that we cannot afford to drop when WS is momentarily down
   // (the user paid real money for the IAP grant; the daily attendance grant

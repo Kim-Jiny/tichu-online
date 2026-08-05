@@ -12,6 +12,29 @@ class DeviceInfoService {
     String? osVersion;
     String? appVersion;
 
+    // Everything below except the app version is mobile-only; on web the
+    // `Platform` reads throw and the catches would leave devicePlatform null,
+    // which the server stores as an unknown client. Say 'web' instead.
+    //
+    // appVersion still resolves on web (PackageInfo reads version.json), and it
+    // has to: the server treats a missing version as 0.0.0 and gates every
+    // feature past base Tichu on it (server.js:555).
+    if (kIsWeb) {
+      String? webAppVersion;
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        webAppVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      } catch (_) {}
+      return {
+        'fcmToken': null,
+        'devicePlatform': 'web',
+        'deviceModel': null,
+        'osVersion': null,
+        'appVersion': webAppVersion,
+        'locale': locale,
+      };
+    }
+
     // FCM Token
     try {
       if (includeFcmToken) {

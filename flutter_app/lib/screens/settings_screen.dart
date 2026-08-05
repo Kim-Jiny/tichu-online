@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -199,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _openStore() async {
     final uri = Uri.parse(
-      Platform.isIOS
+      (!kIsWeb && Platform.isIOS)
           ? 'https://apps.apple.com/app/tichu-online/id6759035151'
           : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
     );
@@ -878,7 +879,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          if (Platform.isIOS)
+          if (!kIsWeb && Platform.isIOS)
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);

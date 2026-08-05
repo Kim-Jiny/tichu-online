@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Thin wrapper around FirebaseAnalytics so callers don't depend on the SDK
 /// directly. All methods swallow errors — analytics should never crash the
@@ -7,33 +8,42 @@ class AnalyticsService {
   AnalyticsService._();
   static final AnalyticsService instance = AnalyticsService._();
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+  /// Null on web: main() does not call Firebase.initializeApp there (no web app
+  /// is registered yet), and merely touching FirebaseAnalytics.instance throws
+  /// from FirebaseCoreWeb.app. A field initialiser makes that a constructor
+  /// crash for whoever holds this singleton, which is how it took GameService —
+  /// and the whole first frame — down with it.
+  final FirebaseAnalytics? _analytics = kIsWeb ? null : FirebaseAnalytics.instance;
 
-  FirebaseAnalyticsObserver get observer =>
-      FirebaseAnalyticsObserver(analytics: _analytics);
+  FirebaseAnalyticsObserver? get observer {
+    final analytics = _analytics;
+    return analytics == null
+        ? null
+        : FirebaseAnalyticsObserver(analytics: analytics);
+  }
 
   Future<void> setUserId(String? id) async {
     try {
-      await _analytics.setUserId(id: id);
+      await _analytics?.setUserId(id: id);
     } catch (_) {}
   }
 
   Future<void> setUserProperty(String name, String? value) async {
     try {
-      await _analytics.setUserProperty(name: name, value: value);
+      await _analytics?.setUserProperty(name: name, value: value);
     } catch (_) {}
   }
 
   Future<void> _log(String name, [Map<String, Object>? params]) async {
     try {
-      await _analytics.logEvent(name: name, parameters: params);
+      await _analytics?.logEvent(name: name, parameters: params);
     } catch (_) {}
   }
 
   /// Standard `login` event. `method` examples: google, apple, kakao, local.
   Future<void> logLogin(String method) async {
     try {
-      await _analytics.logLogin(loginMethod: method);
+      await _analytics?.logLogin(loginMethod: method);
     } catch (_) {}
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -31,33 +32,54 @@ import 'screens/maintenance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Firebase Analytics: enabled by default once the package is wired up.
-  // Calling this explicitly makes the intent visible and protects against
-  // builds where collection was previously disabled.
-  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-  kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
+
+  // The whole mobile stack is skipped on web, and it has to be skipped here
+  // rather than lazily: every one of these throws before the first frame, and a
+  // throw in main() is a white page with nothing on screen to explain it.
+  //
+  //  - Firebase: firebase_options.dart has no web entry yet, so
+  //    DefaultFirebaseOptions.currentPlatform raises UnsupportedError. Register
+  //    a web app with `flutterfire configure` to turn Google/Apple sign-in back
+  //    on for the browser; until then web is id/password and Kakao only.
+  //  - kakao_flutter_sdk: nativeAppKey is the mobile key; the web SDK wants a
+  //    javaScriptAppKey.
+  //  - google_mobile_ads / firebase_messaging: no web implementation at all.
+  if (!kIsWeb) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Firebase Analytics: enabled by default once the package is wired up.
+    // Calling this explicitly makes the intent visible and protects against
+    // builds where collection was previously disabled.
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+    kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
+  }
+
   await InviteLinkService.instance.initialize();
   // Chat panel geometry, read before the first frame: loading it when the panel
   // opens means one frame at the default size and a visible snap to the saved
   // one.
   await DraggableChatPanel.preloadGeometry();
-  MobileAds.instance.updateRequestConfiguration(
-    RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
-  );
-  await MobileAds.instance.initialize();
-  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-  await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    debugPrint(
-      'Foreground push: ${message.notification?.title} - ${message.notification?.body}',
+  if (!kIsWeb) {
+    MobileAds.instance.updateRequestConfiguration(
+      RequestConfiguration(testDeviceIds: ['45b45cb9d1be2ccb4c01a54eea9a0a64']),
     );
-  });
+    await MobileAds.instance.initialize();
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint(
+        'Foreground push: ${message.notification?.title} - ${message.notification?.body}',
+      );
+    });
+  }
 
   runApp(const TichuApp());
 }
@@ -379,6 +401,8 @@ class _EntryScreenState extends State<_EntryScreen> {
   }
 
   Future<void> _requestATT() async {
+    // Neither ATT nor FCM exists in a browser.
+    if (kIsWeb) return;
     final status = await AppTrackingTransparency.trackingAuthorizationStatus;
     debugPrint('[ATT] current status: $status');
     if (status == TrackingStatus.notDetermined) {
@@ -398,6 +422,19 @@ class _EntryScreenState extends State<_EntryScreen> {
   }
 
   Future<void> _checkEula() async {
+    // The EULA gate exists for the app stores. On the web there is no store
+    // review to satisfy and no install step to gate, so opening the page
+    // shouldn't cost a full-screen contract first — the terms and privacy
+    // pages the server already serves (/terms, /privacy) cover it.
+    if (kIsWeb) {
+      setState(() {
+        _eulaAccepted = true;
+        _checking = false;
+      });
+      _startForceUpdateCheck();
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     final accepted = prefs.getBool('eula_accepted') ?? false;
@@ -559,7 +596,7 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   Future<void> _openStore() async {
     final uri = Uri.parse(
-      Platform.isIOS
+      (!kIsWeb && Platform.isIOS)
           ? 'https://apps.apple.com/app/tichu-online/id6759035151'
           : 'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
     );

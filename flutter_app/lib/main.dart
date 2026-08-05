@@ -200,15 +200,59 @@ class TichuApp extends StatelessWidget {
             final adjustedScale = platform == TargetPlatform.android
                 ? (currentScale * 0.97).clamp(0.9, 1.5)
                 : currentScale;
-            return MediaQuery(
+            final scaled = MediaQuery(
               data: media.copyWith(
                 textScaler: TextScaler.linear(adjustedScale),
               ),
               child: child ?? const SizedBox.shrink(),
             );
+            return kIsWeb ? _WebPortraitFrame(child: scaled) : scaled;
           },
           theme: _buildTheme(),
           home: const _OrientationGate(child: _EntryScreen()),
+        ),
+      ),
+    );
+  }
+}
+
+/// Keeps the browser on the app's portrait layout.
+///
+/// A desktop window is landscape, so every `orientation == landscape` branch in
+/// the app fires — and those branches are built for a phone held sideways, not
+/// for a 1700px-wide desktop: the game board stretches until it clips and the
+/// lobby header collapses. Instead of maintaining a third layout for the web,
+/// give the browser a centred portrait viewport of the shape the app is
+/// actually designed for and let it grow with the window height.
+///
+/// The MediaQuery override matters as much as the SizedBox: layout code reads
+/// `MediaQuery.orientation` and `.size` directly (game_screen.dart:398), so the
+/// inner tree has to believe it is that size, not the window's.
+class _WebPortraitFrame extends StatelessWidget {
+  const _WebPortraitFrame({required this.child});
+
+  /// The app designs against a 400pt-wide phone (game_screen.dart:400).
+  static const double _aspect = 400 / 820;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final size = media.size;
+    final width = size.width.clamp(0.0, size.height * _aspect);
+    final frame = Size(width, size.height);
+
+    return ColoredBox(
+      color: const Color(0xFFECE5E0),
+      child: Center(
+        child: SizedBox(
+          width: frame.width,
+          height: frame.height,
+          child: MediaQuery(
+            data: media.copyWith(size: frame),
+            child: child,
+          ),
         ),
       ),
     );
@@ -373,7 +417,11 @@ class _EntryScreen extends StatefulWidget {
 }
 
 class _EntryScreenState extends State<_EntryScreen> {
-  bool _showSplash = true;
+  /// The splash covers the app's cold start — plugin registration, Firebase,
+  /// the Kakao and AdMob SDKs. Web has none of that (main() skips the whole
+  /// stack) and the browser has already spent that time downloading the bundle,
+  /// so holding a full-screen image for another 1.8s is pure delay.
+  bool _showSplash = !kIsWeb;
   bool _checking = true;
   bool _eulaAccepted = false;
   bool _agreed = false;
@@ -387,13 +435,15 @@ class _EntryScreenState extends State<_EntryScreen> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    Future.delayed(const Duration(milliseconds: 1800), () {
-      if (mounted) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        setState(() => _showSplash = false);
-      }
-    });
+    if (!kIsWeb) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      Future.delayed(const Duration(milliseconds: 1800), () {
+        if (mounted) {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+          setState(() => _showSplash = false);
+        }
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestATT();
     });

@@ -33,8 +33,11 @@
   <meta name="apple-mobile-web-app-title" content="티츄 온라인">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <!-- Favicon. 64px rather than the usual 32: browsers render tab icons at
+       device pixel ratio, and the source art has enough detail to be worth it.
+       The 1024 original lives in docs/brand/ — it must not sit under
+       flutter_app/assets/, which pubspec bundles into the mobile app. -->
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png"/>
 
   <title>티츄 온라인</title>
   <link rel="manifest" href="manifest.json">

@@ -9,6 +9,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,6 +34,17 @@ import 'screens/maintenance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Force the semantics tree on for the browser.
+  //
+  // Without it Flutter web keeps text editing in a hidden element it attaches
+  // lazily, and a mobile browser will only raise its keyboard when a real input
+  // takes focus inside the tap that asked for it. Miss that window and the
+  // field looks focused-but-dead: no caret, no keyboard. Semantics makes the
+  // inputs real and present, which is also what a screen reader needs.
+  if (kIsWeb) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 
   // The whole mobile stack is skipped on web, and it has to be skipped here
   // rather than lazily: every one of these throws before the first frame, and a

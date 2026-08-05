@@ -1,85 +1,108 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { RoomListEntry } from '../protocol/types';
+import { AppHeader } from '../components/AppHeader';
+import { EyeIcon, RefreshIcon } from '../components/Icons';
+import type { GameType, RoomListEntry } from '../protocol/types';
 import { useAppState, useStore } from '../state/useStore';
 
-const GAME_LABELS: Record<string, string> = {
-  tichu: '티츄',
-  skull_king: '스컬킹',
-  love_letter: '러브레터',
-  mighty: '마이티',
-};
+/**
+ * Lobby, following lobby_screen.dart:1466.
+ *
+ * Same three bands as the app: header card, then the filter chips + refresh
+ * row, then the room list, with the create-room button pinned to the bottom.
+ * Colours are the app's — each game owns one hue used by both its filter chip
+ * and the left strip and badge of its rows (lobby_screen.dart:2137).
+ */
+
+const GAMES: { type: GameType; label: string; color: string }[] = [
+  { type: 'tichu', label: '티츄', color: '#64B5F6' },
+  { type: 'mighty', label: '마이티', color: '#5C6BC0' },
+  { type: 'skull_king', label: '스컬킹', color: '#21455F' },
+  { type: 'love_letter', label: '러브레터', color: '#E91E63' },
+];
+
+const GAME_BY_TYPE = new Map(GAMES.map((g) => [g.type, g]));
 
 export function LobbyScreen() {
   const state = useAppState();
   const store = useStore();
   const [creating, setCreating] = useState(false);
-  const [showOtherGames, setShowOtherGames] = useState(false);
+  const [hidden, setHidden] = useState<Set<GameType>>(new Set());
 
   useEffect(() => {
     store.refreshRooms();
   }, [store]);
 
-  const [tichuRooms, otherRooms] = useMemo(() => {
-    const tichu: RoomListEntry[] = [];
-    const other: RoomListEntry[] = [];
-    for (const room of state.rooms) {
-      (room.gameType === 'tichu' ? tichu : other).push(room);
-    }
-    return [tichu, other];
-  }, [state.rooms]);
+  const rooms = useMemo(
+    () => state.rooms.filter((room) => !hidden.has(room.gameType)),
+    [state.rooms, hidden],
+  );
+
+  function toggleFilter(type: GameType) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+        return next;
+      }
+      // The app keeps the last chip on: turning everything off can only ever
+      // produce an empty list (lobby_screen.dart:2040).
+      if (next.size < GAMES.length - 1) next.add(type);
+      return next;
+    });
+  }
 
   return (
     <main className="screen screen--lobby">
-      <header className="lobby-header">
-        <div>
-          <h1>로비</h1>
-          <p className="muted">{state.auth?.nickname}님 환영합니다</p>
-        </div>
-        <div className="lobby-header__actions">
-          <button type="button" className="btn" onClick={() => store.refreshRooms()}>
-            새로고침
-          </button>
-          <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
-            방 만들기
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={() => store.logout()}>
-            로그아웃
-          </button>
-        </div>
-      </header>
+      <AppHeader />
 
-      <section className="room-list">
-        {tichuRooms.length === 0 ? (
-          <p className="empty">열려 있는 티츄 방이 없습니다. 방을 만들어 보세요.</p>
-        ) : (
-          tichuRooms.map((room) => <RoomRow key={room.id} room={room} />)
-        )}
-      </section>
+      {state.maintenance?.notice && state.maintenance.message ? (
+        <p className="banner banner--maintenance">{state.maintenance.message}</p>
+      ) : null}
 
-      {otherRooms.length > 0 ? (
-        <section className="room-list room-list--muted">
+      <section className="room-panel">
+        <div className="room-panel__toolbar">
+          <div className="filters">
+            {GAMES.map(({ type, label, color }) => {
+              const off = hidden.has(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  className={off ? 'chip chip--off' : 'chip'}
+                  style={{ '--tint': color } as React.CSSProperties}
+                  aria-pressed={!off}
+                  onClick={() => toggleFilter(type)}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
           <button
             type="button"
-            className="disclosure"
-            onClick={() => setShowOtherGames((v) => !v)}
-            aria-expanded={showOtherGames}
+            className="icon-plain"
+            aria-label="새로고침"
+            onClick={() => store.refreshRooms()}
           >
-            {showOtherGames ? '▾' : '▸'} 다른 게임 방 {otherRooms.length}개 (앱 전용)
+            <RefreshIcon />
           </button>
-          {showOtherGames
-            ? otherRooms.map((room) => (
-                <div key={room.id} className="room-row room-row--disabled">
-                  <span className="room-row__name">{room.name}</span>
-                  <span className="badge">{GAME_LABELS[room.gameType] ?? room.gameType}</span>
-                  <span className="muted">
-                    {room.playerCount}/{room.effectiveMaxPlayers}
-                  </span>
-                  <span className="muted">웹 미지원</span>
-                </div>
-              ))
-            : null}
-        </section>
-      ) : null}
+        </div>
+
+        <div className="room-list">
+          {rooms.length === 0 ? (
+            <div className="room-list__empty">
+              <span className="room-list__empty-mark" aria-hidden="true" />
+              <p>열려 있는 방이 없습니다.</p>
+            </div>
+          ) : (
+            rooms.map((room) => <RoomRow key={room.id} room={room} />)
+          )}
+        </div>
+
+        <button type="button" className="btn-create" onClick={() => setCreating(true)}>
+          방 만들기
+        </button>
+      </section>
 
       {creating ? <CreateRoomDialog onClose={() => setCreating(false)} /> : null}
     </main>
@@ -91,10 +114,20 @@ function RoomRow({ room }: { room: RoomListEntry }) {
   const [password, setPassword] = useState('');
   const [askingPassword, setAskingPassword] = useState(false);
 
+  const game = GAME_BY_TYPE.get(room.gameType) ?? GAMES[0];
+  const webPlayable = room.gameType === 'tichu';
   const full = room.playerCount >= room.effectiveMaxPlayers;
-  const canJoin = !full && !room.gameInProgress;
 
-  function join() {
+  function activate() {
+    if (!webPlayable) {
+      store.notImplemented(game.label);
+      return;
+    }
+    if (room.gameInProgress) {
+      store.notImplemented('관전');
+      return;
+    }
+    if (full) return;
     if (room.isPrivate && !askingPassword) {
       setAskingPassword(true);
       return;
@@ -105,49 +138,69 @@ function RoomRow({ room }: { room: RoomListEntry }) {
   }
 
   return (
-    <div className="room-row">
-      <span className="room-row__name">
-        {room.name}
-        {room.isPrivate ? <span className="badge badge--lock">비공개</span> : null}
-        {room.isRanked ? <span className="badge badge--ranked">랭크</span> : null}
-      </span>
-      <span className="room-row__meta">
-        <span>방장 {room.hostName}</span>
-        <span>
-          {room.playerCount}/{room.effectiveMaxPlayers}
-        </span>
-        <span>
-          {room.turnTimeLimit}초 · {room.targetScore}점
-        </span>
-      </span>
+    <div
+      className={webPlayable ? 'room-row' : 'room-row room-row--other'}
+      style={{ '--tint': game.color } as React.CSSProperties}
+    >
+      <span className="room-row__strip" aria-hidden="true" />
+      <div className="room-row__body">
+        <div className="room-row__main">
+          <div className="room-row__title">
+            <span className="room-badge">{game.label}</span>
+            <span className="room-row__name">
+              {room.isPrivate ? '🔒 ' : ''}
+              {room.isRanked ? '🏆 ' : ''}
+              {room.name}
+            </span>
+          </div>
+          <div className="room-row__sub">
+            {room.gameType === 'skull_king' || room.gameType === 'love_letter'
+              ? `${room.turnTimeLimit}초`
+              : `${room.turnTimeLimit}초 · ${room.targetScore}점`}
+          </div>
+        </div>
 
-      {askingPassword ? (
-        <span className="room-row__password">
-          <input
-            type="password"
-            placeholder="비밀번호"
-            value={password}
-            autoFocus
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') join();
-              if (e.key === 'Escape') setAskingPassword(false);
-            }}
-          />
-          <button type="button" className="btn btn--primary btn--sm" onClick={join}>
-            입장
+        {room.gameInProgress ? <span className="room-chip">게임중</span> : null}
+
+        {room.allowSpectators ? (
+          <button
+            type="button"
+            className="room-eye"
+            aria-label="관전"
+            onClick={() => store.notImplemented('관전')}
+          >
+            <EyeIcon />
+            {room.spectatorCount > 0 ? <span>{room.spectatorCount}</span> : null}
           </button>
-        </span>
-      ) : (
-        <button
-          type="button"
-          className="btn btn--primary btn--sm room-row__action"
-          disabled={!canJoin}
-          onClick={join}
-        >
-          {room.gameInProgress ? '게임 중' : full ? '가득 참' : '입장'}
-        </button>
-      )}
+        ) : null}
+
+        {askingPassword ? (
+          <span className="room-row__password">
+            <input
+              type="password"
+              placeholder="비밀번호"
+              value={password}
+              autoFocus
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') activate();
+                if (e.key === 'Escape') setAskingPassword(false);
+              }}
+            />
+            <button type="button" className="btn btn--primary btn--sm" onClick={activate}>
+              입장
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            className={full ? 'room-count room-count--full' : 'room-count'}
+            onClick={activate}
+          >
+            {room.playerCount}/{room.effectiveMaxPlayers}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

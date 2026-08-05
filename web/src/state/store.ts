@@ -341,6 +341,11 @@ export class GameStore {
 
   // -- toasts ---------------------------------------------------------------
 
+  /** For app features the header still shows but the web client hasn't built. */
+  notImplemented(feature: string): void {
+    this.pushToast('info', `${feature}은(는) 웹에서 준비 중입니다. 앱을 이용해 주세요.`);
+  }
+
   dismissToast(id: number): void {
     this.patch({ toasts: this.state.toasts.filter((t) => t.id !== id) });
   }

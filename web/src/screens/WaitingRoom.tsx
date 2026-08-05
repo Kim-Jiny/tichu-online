@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import type { RoomSeat } from '../protocol/types';
+import type { RoomSeat, RoomState } from '../protocol/types';
 import { ChatPanel } from '../components/ChatPanel';
 import { useAppState, useStore } from '../state/useStore';
 
 /**
- * Waiting room.
+ * Waiting room, following the app's in-room view (lobby_screen.dart:2496).
+ *
+ * Flat header bar rather than a floating card — the app deliberately avoids
+ * stacking three elevations on one screen (lobby_screen.dart:2891) — then the
+ * two team columns of seat slots, then chat, with the host's start button last.
  *
  * Seats are a fixed-length array with `null` for empty slots
- * (server/game/GameRoom.js:870). Teams are positional: slots 0 and 2 are Team A,
- * 1 and 3 are Team B — so moving team means moving to a specific slot via
- * `change_team {targetSlot}`.
+ * (GameRoom.js:870). Teams are positional: 0 and 2 are Team A, 1 and 3 Team B,
+ * so switching sides means moving to a slot via `change_team {targetSlot}`.
  */
 export function WaitingRoom() {
   const state = useAppState();
@@ -29,9 +32,10 @@ export function WaitingRoom() {
   const seats = room.players;
   const occupied = seats.filter((s): s is RoomSeat => s !== null);
   const me = occupied.find((s) => s.id === myId) ?? null;
+  const full = occupied.length >= room.effectiveMaxPlayers;
 
-  // Mirror GameRoom.areAllReady(): Tichu needs every seat filled, bots count as
-  // ready, and the host is exempt — `toggle_ready` is a no-op for the host
+  // Mirrors GameRoom.areAllReady(): every seat filled, bots count as ready, and
+  // the host is exempt — `toggle_ready` is a no-op for the host
   // (server.js:4858), so requiring their flag would disable Start forever.
   const canStart =
     occupied.length === room.maxPlayers &&
@@ -39,38 +43,50 @@ export function WaitingRoom() {
 
   return (
     <main className="screen screen--waiting">
-      <header className="room-header">
-        <div>
+      <header className="room-bar">
+        <button
+          type="button"
+          className="room-bar__back"
+          aria-label="나가기"
+          onClick={() => store.leaveRoom()}
+        >
+          <BackIcon />
+        </button>
+        <div className="room-bar__title">
           <h1>{room.name}</h1>
-          <p className="muted">
-            티츄 · {room.turnTimeLimit}초 · {room.targetScore}점
-            {room.isPrivate ? ' · 비공개' : ''}
+          <p>
+            {room.turnTimeLimit}초 · {room.targetScore}점
+            <span className="room-bar__dot"> · </span>
+            <span className={full ? 'room-bar__count--full' : 'room-bar__count'}>
+              {occupied.length}/{room.effectiveMaxPlayers}
+            </span>
           </p>
         </div>
-        <button type="button" className="btn btn--ghost" onClick={() => store.leaveRoom()}>
-          나가기
-        </button>
       </header>
 
       <div className="waiting-body">
-        <section className="teams">
-          <TeamColumn
-            label="A팀"
-            slots={[0, 2]}
-            seats={seats}
-            room={room}
-            myId={myId}
-            isHost={isHost}
-          />
-          <TeamColumn
-            label="B팀"
-            slots={[1, 3]}
-            seats={seats}
-            room={room}
-            myId={myId}
-            isHost={isHost}
-          />
-        </section>
+        <div className="teams">
+          <TeamColumn label="TEAM A" slots={[0, 2]} seats={seats} room={room} myId={myId} isHost={isHost} />
+          <TeamColumn label="TEAM B" slots={[1, 3]} seats={seats} room={room} myId={myId} isHost={isHost} />
+        </div>
+
+        {isHost && !full ? (
+          <button
+            type="button"
+            className="fill-bots"
+            onClick={() => {
+              // One add_bot per empty seat, targeted by slot — a bare add_bot
+              // only takes the first free seat.
+              seats.forEach((seat, slot) => {
+                if (seat === null && !room.blockedSlots.includes(slot)) {
+                  store.addBot(slot, 'normal');
+                }
+              });
+            }}
+          >
+            빈 자리 봇으로 채우기
+          </button>
+        ) : null}
 
         <ChatPanel />
       </div>
@@ -80,7 +96,7 @@ export function WaitingRoom() {
           <>
             <button
               type="button"
-              className="btn btn--primary"
+              className="btn-create"
               disabled={!canStart}
               onClick={() => store.startGame()}
             >
@@ -97,7 +113,7 @@ export function WaitingRoom() {
         ) : (
           <button
             type="button"
-            className={me?.isReady ? 'btn' : 'btn btn--primary'}
+            className={me?.isReady ? 'btn' : 'btn-create'}
             onClick={() => store.toggleReady()}
           >
             {me?.isReady ? '준비 해제' : '준비'}
@@ -119,13 +135,15 @@ function TeamColumn({
   label: string;
   slots: number[];
   seats: (RoomSeat | null)[];
-  room: { hostId: string; blockedSlots: number[] };
+  room: RoomState;
   myId: string | undefined;
   isHost: boolean;
 }) {
   return (
     <div className="team">
-      <h2 className="team__label">{label}</h2>
+      <h2 className={label === 'TEAM A' ? 'team__label team__label--a' : 'team__label team__label--b'}>
+        {label}
+      </h2>
       {slots.map((slot) => (
         <SeatCard
           key={slot}
@@ -160,82 +178,101 @@ function SeatCard({
   const [botMenuOpen, setBotMenuOpen] = useState(false);
 
   if (blocked) {
-    return <div className="seat seat--blocked">차단된 자리</div>;
+    return <div className="slot slot--blocked">차단된 자리</div>;
   }
 
   if (!seat) {
     return (
-      <div className="seat seat--empty">
-        <span className="muted">빈 자리</span>
-        <div className="seat__actions">
-          <button
-            type="button"
-            className="btn btn--sm"
-            onClick={() => store.changeTeam(slot)}
-          >
-            이동
-          </button>
-          {isHost ? (
-            <span className="bot-add">
-              <button
-                type="button"
-                className="btn btn--sm"
-                onClick={() => setBotMenuOpen((v) => !v)}
-              >
-                봇 추가
-              </button>
-              {botMenuOpen ? (
-                <span className="bot-add__menu">
-                  {(['slow', 'normal', 'fast'] as const).map((speed) => (
-                    <button
-                      key={speed}
-                      type="button"
-                      className="btn btn--sm btn--ghost"
-                      onClick={() => {
-                        store.addBot(slot, speed);
-                        setBotMenuOpen(false);
-                      }}
-                    >
-                      {speed === 'slow' ? '느림' : speed === 'normal' ? '보통' : '빠름'}
-                    </button>
-                  ))}
-                </span>
-              ) : null}
-            </span>
-          ) : null}
-        </div>
+      <div className="slot slot--empty">
+        <button
+          type="button"
+          className="slot__move"
+          onClick={() => store.changeTeam(slot)}
+          title="이 자리로 이동"
+        >
+          빈 자리
+        </button>
+        {isHost ? (
+          <span className="bot-add">
+            <button
+              type="button"
+              className="btn btn--sm"
+              onClick={() => setBotMenuOpen((v) => !v)}
+            >
+              봇
+            </button>
+            {botMenuOpen ? (
+              <span className="bot-add__menu">
+                {(['slow', 'normal', 'fast'] as const).map((speed) => (
+                  <button
+                    key={speed}
+                    type="button"
+                    className="btn btn--sm btn--ghost"
+                    onClick={() => {
+                      store.addBot(slot, speed);
+                      setBotMenuOpen(false);
+                    }}
+                  >
+                    {speed === 'slow' ? '느림' : speed === 'normal' ? '보통' : '빠름'}
+                  </button>
+                ))}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
       </div>
     );
   }
 
   const isMe = seat.id === myId;
+  const isHostSeat = seat.id === hostId;
 
   return (
-    <div className={`seat${isMe ? ' seat--me' : ''}${seat.isReady ? ' seat--ready' : ''}`}>
-      <span className="seat__name">
-        {seat.photoUrl ? (
-          <img className="avatar" src={seat.photoUrl} alt="" />
-        ) : (
-          <span className="avatar avatar--placeholder" aria-hidden="true" />
-        )}
-        {seat.name}
-        {seat.id === hostId ? <span className="badge">방장</span> : null}
-        {seat.isBot ? <span className="badge badge--bot">봇</span> : null}
-        {!seat.connected ? <span className="badge badge--warn">접속 끊김</span> : null}
-      </span>
-      <span className="seat__status">
-        {/* The host never readies, so "waiting" would read as a blocker. */}
-        {seat.id === hostId ? '시작 대기' : seat.isReady ? '준비 완료' : '대기 중'}
+    <div
+      className={[
+        'slot',
+        isMe ? 'slot--me' : '',
+        !isHostSeat && !seat.isBot && seat.isReady ? 'slot--ready' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {seat.photoUrl ? (
+        <img className="slot__avatar" src={seat.photoUrl} alt="" />
+      ) : (
+        <span className="slot__avatar slot__avatar--empty" aria-hidden="true" />
+      )}
+      <span className="slot__body">
+        <span className="slot__name">
+          {seat.name}
+          {isHostSeat ? <span className="badge">방장</span> : null}
+          {seat.isBot ? <span className="badge badge--bot">봇</span> : null}
+          {!seat.connected ? <span className="badge badge--warn">끊김</span> : null}
+        </span>
+        <span className="slot__status">
+          {/* The host never readies, so "waiting" would read as a blocker. */}
+          {isHostSeat ? '시작 대기' : seat.isReady ? '준비 완료' : '대기 중'}
+        </span>
       </span>
       {isHost && !isMe ? (
         <button
           type="button"
-          className="btn btn--sm btn--ghost"
+          className="slot__kick"
+          aria-label="내보내기"
           onClick={() => store.kickPlayer(seat.id)}
         >
-          내보내기
+          ×
         </button>
       ) : null}
     </div>
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 12H5" />
+      <path d="M11 18l-6-6 6-6" />
+    </svg>
   );
 }

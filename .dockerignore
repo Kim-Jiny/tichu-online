@@ -1,4 +1,4 @@
-# The build context is the repo root (the image needs both server/ and web/),
+# The build context is the repo root (the image needs server/ and dist/play),
 # so everything heavy has to be excluded explicitly — flutter_app alone is
 # several GB and would otherwise be uploaded to the daemon on every build.
 flutter_app/
@@ -13,7 +13,6 @@ dist/*
 .claude/
 
 **/node_modules/
-web/dist/
 server/deploy/
 
 .env

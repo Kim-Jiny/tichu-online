@@ -1,15 +1,15 @@
 /**
- * Protocol smoke test for the web client.
+ * End-to-end protocol test: login → lobby → room → bots → a full Tichu round.
  *
- * Speaks exactly the message sequence src/state/store.ts sends — same field
- * names, same `deviceInfo`, same ordering — and asserts the server's replies.
- * The point is to catch a wrong field name or a missed gate (e.g. appVersion)
- * without opening a browser; the UI is a pure function of these payloads, so a
- * green run here means the client is talking correctly.
+ * Written while the web client was a separate JS app, and kept after that was
+ * dropped for Flutter Web, because what it actually exercises is the server:
+ * a plain WebSocket speaking the same message sequence any client must, with
+ * assertions on the replies. It catches a renamed field or a missed gate (the
+ * appVersion one especially) in about two minutes, without a browser.
  *
- *   node scripts/smoke.mjs [ws://localhost:8080]
+ *   node test_web_protocol.mjs [ws://localhost:8080]
  *
- * Local servers only — it registers an account and plays a full round.
+ * Local servers only — it registers an account and plays real rounds.
  */
 
 const SERVER_URL = process.argv[2] || 'ws://localhost:8080';

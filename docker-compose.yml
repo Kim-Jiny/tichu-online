@@ -10,9 +10,9 @@ name: tichu
 # profile and always runs (shared singleton).
 
 x-server-common: &server-common
-  # Root context, not ./server: the image also builds web/ and serves it at
-  # /play/. Everything heavy (flutter_app especially) is excluded in
-  # /.dockerignore so the context stays small.
+  # Root context, not ./server: the image also copies dist/play, the web client
+  # bundle CI built and deploy.sh staged. Everything heavy (flutter_app
+  # especially) is excluded in /.dockerignore so the context stays small.
   build:
     context: .
     dockerfile: server/Dockerfile

@@ -1,5 +1,6 @@
 /**
- * Static hosting for the web client (web/ → built into ./public/play).
+ * Static hosting for the web client — flutter_app built for the web, staged
+ * by deploy.sh and copied into ./public/play by the Dockerfile.
  *
  * It is served by this process rather than by nginx because nginx runs in a
  * different container and already proxies every path to the backend — putting

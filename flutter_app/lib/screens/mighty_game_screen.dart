@@ -2891,7 +2891,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final verticalPadding = compact ? 4.0 : 6.0;
     final labelPadding = compact ? 2.0 : 3.0;
     final roleLabelHeight = compact ? 15.0 : 16.0;
-    final avatar = (seatHeight * 0.60).clamp(40.0, 92.0).toDouble();
+    // Height alone used to decide this, so making the window wider changed
+    // nothing — and the ceiling was a phone-sized 92, which a desktop board
+    // reaches immediately and then stops. On web, let the seat's width have a
+    // say (so the photo can never outgrow its own box) and raise the ceiling.
+    // Native keeps the original number exactly.
+    final avatar = kIsWeb
+        ? math
+              .min(seatHeight * 0.60, seatWidth * 0.62)
+              .clamp(40.0, 148.0)
+              .toDouble()
+        : (seatHeight * 0.60).clamp(40.0, 92.0).toDouble();
     return (
       avatar: avatar,
       photoCentre:

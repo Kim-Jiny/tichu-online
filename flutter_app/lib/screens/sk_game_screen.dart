@@ -2162,7 +2162,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final verticalPadding = compact ? 4.0 : 8.0;
     final labelPadding = compact ? 2.0 : 3.0;
     final timeoutHeight = hasTimeoutRow ? (compact ? 11.0 : 12.0) : 0.0;
-    final avatar = (seatHeight * 0.56).clamp(30.0, 84.0).toDouble();
+    // Height alone used to decide this, so making the window wider changed
+    // nothing — and the ceiling was a phone-sized 84, which a desktop board
+    // reaches immediately and then stops. On web, let the seat's width have a
+    // say (so the photo can never outgrow its own box) and raise the ceiling.
+    // Native keeps the original number exactly.
+    final avatar = kIsWeb
+        ? math
+              .min(seatHeight * 0.56, seatWidth * 0.60)
+              .clamp(30.0, 136.0)
+              .toDouble()
+        : (seatHeight * 0.56).clamp(30.0, 84.0).toDouble();
     return (
       avatar: avatar,
       photoCentre: verticalPadding + labelPadding + timeoutHeight + avatar / 2,

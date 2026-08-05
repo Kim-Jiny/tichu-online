@@ -12,8 +12,12 @@ class SfxService {
     'large_tichu': 'sfx/large_tichu.wav',
     'dragon': 'sfx/dragon.wav',
     'dog': 'sfx/dog.wav',
-    'bird': 'sfx/bird.wav',
-    'countdown_tick': 'sfx/countdown_tick.wav',
+    // No 'bird' or 'countdown_tick' here: assets/sfx never contained those
+    // files, so both keys only ever resolved to a missing asset. On mobile the
+    // failure was silent; on web each attempt is a 404 plus an AudioPlayers
+    // exception in the console. play() ignores unknown keys, so the callers
+    // stay as they are and simply make no sound — which is what they already
+    // did. Add the files and the keys together to give them a voice.
     'round_end': 'sfx/round_end.wav',
     'victory': 'sfx/victory.wav',
     'defeat': 'sfx/defeat.wav',

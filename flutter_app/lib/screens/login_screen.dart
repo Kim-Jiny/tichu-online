@@ -334,8 +334,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final isLandscape =
-                          constraints.maxWidth > constraints.maxHeight;
+                      // Deliberately the window, not the box the builder was
+                      // handed. Opening the keyboard shrinks that box — on a
+                      // phone from ~800 to ~350 — so width overtakes height and
+                      // this flipped to the landscape branch mid-focus. The
+                      // rebuild swapped the field out, the focus went with it,
+                      // and the keyboard that had just started rising dropped
+                      // straight back down. MediaQuery.size ignores the
+                      // keyboard, so the layout stays put while typing.
+                      final windowSize = MediaQuery.of(context).size;
+                      final isLandscape = windowSize.width > windowSize.height;
                       final horizontalPadding = isLandscape ? 32.0 : 24.0;
                       return Center(
                         child: SingleChildScrollView(

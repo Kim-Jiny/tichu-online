@@ -34,7 +34,7 @@ class DefaultFirebaseOptions {
   // Firebase project without editing this file.
   static const String _webApiKey = String.fromEnvironment(
     'FIREBASE_WEB_API_KEY',
-    defaultValue: '',
+    defaultValue: 'AIzaSyDPIvpUT9iwO3exvlEBH2FYAvWmTa56zCk',
   );
   static const String _webAppId = String.fromEnvironment(
     'FIREBASE_WEB_APP_ID',

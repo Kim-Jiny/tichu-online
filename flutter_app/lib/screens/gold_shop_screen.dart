@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/game_service.dart';
@@ -105,14 +106,28 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           children: [
             const Icon(Icons.check_circle, color: Color(0xFF66BB6A), size: 52),
             const SizedBox(height: 14),
-            Text(L10n.of(ctx).goldPaymentComplete,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5A4038))),
+            Text(
+              L10n.of(ctx).goldPaymentComplete,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(L10n.of(ctx).goldGranted(_fmt(granted)),
-                style: const TextStyle(fontSize: 15, color: Color(0xFF5A4038))),
+            Text(
+              L10n.of(ctx).goldGranted(_fmt(granted)),
+              style: const TextStyle(fontSize: 15, color: Color(0xFF5A4038)),
+            ),
             const SizedBox(height: 4),
-            Text(L10n.of(ctx).goldBalanceNow(_fmt(newGold)),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFB35B19))),
+            Text(
+              L10n.of(ctx).goldBalanceNow(_fmt(newGold)),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFB35B19),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -197,7 +212,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFFFFFDFC),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Consumer<GameService>(
@@ -277,8 +294,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       );
     }
     // Trigger store lookup after the server list is in.
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _loadStoreDetails(products));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _loadStoreDetails(products),
+    );
 
     // Best bonus rate gets a marker, so the tiers are comparable at a glance
     // instead of five near-identical rows.
@@ -300,14 +318,14 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       itemCount: products.length + header + 1,
       separatorBuilder: (_, index) =>
           index < header || index == products.length + header - 1
-              ? const SizedBox(height: 12)
-              : const Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Color(0xFFF2ECE9),
-                ),
+          ? const SizedBox(height: 12)
+          : const Divider(
+              height: 1,
+              thickness: 1,
+              indent: 16,
+              endIndent: 16,
+              color: Color(0xFFF2ECE9),
+            ),
       itemBuilder: (context, i) {
         if (header == 1 && i == 0) return _buildBankPanel(game);
         final index = i - header;
@@ -352,6 +370,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final bank = info['bank']?.toString() ?? '';
     final holder = info['holder']?.toString() ?? '';
     final note = info['note']?.toString() ?? '';
+    final channelUrl = info['channelUrl']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
@@ -366,8 +385,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance,
-                  size: 17, color: Color(0xFFB07A12)),
+              const Icon(
+                Icons.account_balance,
+                size: 17,
+                color: Color(0xFFB07A12),
+              ),
               const SizedBox(width: 6),
               Text(
                 l10n.goldBankSectionTitle,
@@ -394,8 +416,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   _toast(l10n.goldBankCopied);
                 },
                 icon: const Icon(Icons.copy, size: 14),
-                label: Text(l10n.goldBankCopy,
-                    style: const TextStyle(fontSize: 12)),
+                label: Text(
+                  l10n.goldBankCopy,
+                  style: const TextStyle(fontSize: 12),
+                ),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFB07A12),
                   visualDensity: VisualDensity.compact,
@@ -438,6 +462,38 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               color: Color(0xFF9A8A82),
             ),
           ),
+          // Escape hatch for "I paid but it wasn't confirmed". The in-app
+          // inquiry form is text-only, and settling those cases needs a
+          // transfer receipt — an image. The Kakao channel can take one.
+          if (channelUrl.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse(channelUrl),
+                  // New tab: on a phone this hands off to the KakaoTalk app,
+                  // and taking the game's tab with it would end their session.
+                  webOnlyWindowName: '_blank',
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.chat_bubble_outline, size: 15),
+                label: Text(
+                  l10n.goldBankContactChannel,
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF3C1E1E),
+                  backgroundColor: const Color(0xFFFEE500),
+                  side: BorderSide.none,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -483,8 +539,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(l10n.goldBankDialogTitle,
-            style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038))),
+        title: Text(
+          l10n.goldBankDialogTitle,
+          style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038)),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,7 +634,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         children: [
           SizedBox(
             width: 52,
-            child: Center(child: GoldIcon(size: artSize, amount: total)),
+            child: Center(
+              child: GoldIcon(size: artSize, amount: total),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(

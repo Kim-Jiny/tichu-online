@@ -4695,4 +4695,7 @@ class L10nDe extends L10n {
 
   @override
   String get goldHistoryBankDeposit => 'Überweisung bestätigt';
+
+  @override
+  String get goldBankContactChannel => 'Hilfe zur Zahlung (KakaoTalk)';
 }

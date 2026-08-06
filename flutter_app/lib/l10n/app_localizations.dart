@@ -8294,6 +8294,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Bank transfer confirmed'**
   String get goldHistoryBankDeposit;
+
+  /// No description provided for @goldBankContactChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit help (KakaoTalk channel)'**
+  String get goldBankContactChannel;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

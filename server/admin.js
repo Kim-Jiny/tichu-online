@@ -6038,7 +6038,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const latestVersion = latestVersionRaw || '';
     // Bank transfer account shown in the WEB shop only. Stored as JSON in one
     // config row; a bad value must render an empty form, not a 500.
-    let bank = { enabled: false, bank: '', account: '', holder: '', note: '' };
+    let bank = {
+      enabled: false, bank: '', account: '', holder: '', note: '', channelUrl: '',
+    };
     try {
       const raw = await getConfig('bank_deposit');
       if (raw) bank = { ...bank, ...JSON.parse(raw) };
@@ -6095,10 +6097,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <input type="text" name="account" value="${escapeHtml(bank.account || '')}" placeholder="계좌번호" style="width:230px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
             <input type="text" name="holder" value="${escapeHtml(bank.holder || '')}" placeholder="예금주" style="width:150px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
             <input type="text" name="note" value="${escapeHtml(bank.note || '')}" placeholder="안내 문구 (예: 입금자명을 닉네임과 같게 해주세요)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" name="channelUrl" value="${escapeHtml(bank.channelUrl || '')}" placeholder="카카오 채널 채팅 URL (예: https://pf.kakao.com/_abcdEF/chat)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
             <button type="submit" class="btn btn-primary">저장</button>
           </div>
+          <p style="font-size:12px;color:#6c727f;margin-top:8px">
+            채널 URL을 넣으면 웹 상점 계좌 안내에 <b>[카카오 채널로 문의]</b> 버튼이 뜹니다.
+            문의 기능은 파일·이미지를 못 받으므로, 이체확인증을 받아야 할 때 이 경로를 씁니다.
+            <b>https://</b> 로 시작해야 저장됩니다.
+          </p>
         </form>
       </div>
       <div class="card">
@@ -6214,12 +6224,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // panel; the server's reader rejects it anyway, so refuse it here where
     // the admin can see why.
     const enabled = body.enabled === 'on' && !!bankName && !!account;
+    const channelUrl = trim(body.channelUrl, 200);
     await updateConfig('bank_deposit', JSON.stringify({
       enabled,
       bank: bankName,
       account,
       holder: trim(body.holder, 40),
       note: trim(body.note, 300),
+      // Anything not https is dropped rather than stored and filtered later,
+      // so what the admin sees on reload is what the client will get.
+      channelUrl: channelUrl.startsWith('https://') ? channelUrl : '',
     }));
     return redirect(res, '/tc-backstage/settings?saved=1');
   }

@@ -7962,11 +7962,19 @@ async function readBankDepositConfig() {
     const cfg = JSON.parse(raw);
     if (!cfg || cfg.enabled !== true) return null;
     if (!cfg.bank || !cfg.account) return null;
+    // Support channel link. Only https is passed through: this string is
+    // handed to the client to open, and a javascript:/data: URL from a
+    // mistyped config field should not be openable.
+    const rawChannel = String(cfg.channelUrl || '').trim();
+    const channelUrl = rawChannel.startsWith('https://')
+      ? rawChannel.slice(0, 200)
+      : '';
     return {
       bank: String(cfg.bank).slice(0, 40),
       account: String(cfg.account).slice(0, 60),
       holder: String(cfg.holder || '').slice(0, 40),
       note: String(cfg.note || '').slice(0, 300),
+      channelUrl,
     };
   } catch (err) {
     // A malformed value must read as "no bank transfer configured", never as

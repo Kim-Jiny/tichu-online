@@ -2623,5 +2623,6 @@
   "appForceUpdateBodyWeb": "A new version has been deployed.\nReload the page to continue.",
   "appForceUpdateButtonWeb": "Reload",
   "loginGetTheApp": "Also available as an app",
-  "goldHistoryBankDeposit": "Bank transfer confirmed"
+  "goldHistoryBankDeposit": "Bank transfer confirmed",
+  "goldBankContactChannel": "Deposit help (KakaoTalk channel)"
 }

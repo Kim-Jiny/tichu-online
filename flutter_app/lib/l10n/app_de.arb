@@ -1616,5 +1616,6 @@
   "appForceUpdateBodyWeb": "Eine neue Version ist da.\nLade die Seite neu, um weiterzuspielen.",
   "appForceUpdateButtonWeb": "Neu laden",
   "loginGetTheApp": "Auch als App verfügbar",
-  "goldHistoryBankDeposit": "Überweisung bestätigt"
+  "goldHistoryBankDeposit": "Überweisung bestätigt",
+  "goldBankContactChannel": "Hilfe zur Zahlung (KakaoTalk)"
 }

@@ -1614,5 +1614,6 @@
   "appForceUpdateBodyWeb": "새 버전이 배포되었습니다.\n새로고침하면 바로 이용할 수 있습니다.",
   "appForceUpdateButtonWeb": "새로고침",
   "loginGetTheApp": "앱으로도 즐길 수 있어요",
-  "goldHistoryBankDeposit": "입금 확인"
+  "goldHistoryBankDeposit": "입금 확인",
+  "goldBankContactChannel": "입금 문의 (카카오 채널)"
 }

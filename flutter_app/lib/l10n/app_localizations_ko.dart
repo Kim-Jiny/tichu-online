@@ -4547,4 +4547,7 @@ class L10nKo extends L10n {
 
   @override
   String get goldHistoryBankDeposit => '입금 확인';
+
+  @override
+  String get goldBankContactChannel => '입금 문의 (카카오 채널)';
 }

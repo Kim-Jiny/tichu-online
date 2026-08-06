@@ -4659,4 +4659,7 @@ class L10nEn extends L10n {
 
   @override
   String get goldHistoryBankDeposit => 'Bank transfer confirmed';
+
+  @override
+  String get goldBankContactChannel => 'Deposit help (KakaoTalk channel)';
 }

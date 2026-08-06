@@ -8178,7 +8178,7 @@ abstract class L10n {
   /// No description provided for @goldBankHowTo.
   ///
   /// In en, this message translates to:
-  /// **'Transfer to the account below, then press [Confirm deposit] on the pack you bought.'**
+  /// **'Transfer to the account below, then press [Confirm deposit] on the pack you bought. Enter the depositor name exactly as it appears on the transfer.'**
   String get goldBankHowTo;
 
   /// No description provided for @goldBankLabelBank.
@@ -8238,7 +8238,7 @@ abstract class L10n {
   /// No description provided for @goldBankDepositorHint.
   ///
   /// In en, this message translates to:
-  /// **'Name the transfer was sent under'**
+  /// **'Exactly as it appears on the transfer'**
   String get goldBankDepositorHint;
 
   /// No description provided for @goldBankSubmit.

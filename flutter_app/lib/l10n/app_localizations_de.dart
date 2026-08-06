@@ -4631,7 +4631,7 @@ class L10nDe extends L10n {
 
   @override
   String get goldBankHowTo =>
-      'Überweise auf das Konto unten und drücke dann bei deinem Paket auf [Zahlung bestätigen].';
+      'Überweise auf das Konto unten und drücke dann bei deinem Paket auf [Zahlung bestätigen]. Gib den Namen des Einzahlers genau so ein, wie er auf der Überweisung steht.';
 
   @override
   String get goldBankLabelBank => 'Bank';
@@ -4663,7 +4663,7 @@ class L10nDe extends L10n {
   String get goldBankDepositorLabel => 'Name des Einzahlers';
 
   @override
-  String get goldBankDepositorHint => 'Name, unter dem überwiesen wurde';
+  String get goldBankDepositorHint => 'Genau wie auf der Überweisung';
 
   @override
   String get goldBankSubmit => 'Anfrage senden';

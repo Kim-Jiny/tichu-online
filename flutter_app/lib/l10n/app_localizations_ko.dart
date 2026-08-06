@@ -4486,7 +4486,8 @@ class L10nKo extends L10n {
   String get goldBankSectionTitle => '계좌이체로 구매';
 
   @override
-  String get goldBankHowTo => '아래 계좌로 입금하신 뒤, 구매할 상품의 [입금 확인] 버튼을 눌러주세요.';
+  String get goldBankHowTo =>
+      '아래 계좌로 입금하신 뒤, 구매할 상품의 [입금 확인] 버튼을 눌러주세요. 입금자명은 실제 이체에 찍힌 이름 그대로 입력해 주세요.';
 
   @override
   String get goldBankLabelBank => '은행';
@@ -4518,7 +4519,7 @@ class L10nKo extends L10n {
   String get goldBankDepositorLabel => '입금자명';
 
   @override
-  String get goldBankDepositorHint => '입금하신 분 성함';
+  String get goldBankDepositorHint => '실제 입금하신 분 성함 그대로';
 
   @override
   String get goldBankSubmit => '요청 보내기';

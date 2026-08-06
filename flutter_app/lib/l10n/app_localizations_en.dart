@@ -4595,7 +4595,7 @@ class L10nEn extends L10n {
 
   @override
   String get goldBankHowTo =>
-      'Transfer to the account below, then press [Confirm deposit] on the pack you bought.';
+      'Transfer to the account below, then press [Confirm deposit] on the pack you bought. Enter the depositor name exactly as it appears on the transfer.';
 
   @override
   String get goldBankLabelBank => 'Bank';
@@ -4627,7 +4627,7 @@ class L10nEn extends L10n {
   String get goldBankDepositorLabel => 'Depositor name';
 
   @override
-  String get goldBankDepositorHint => 'Name the transfer was sent under';
+  String get goldBankDepositorHint => 'Exactly as it appears on the transfer';
 
   @override
   String get goldBankSubmit => 'Send request';

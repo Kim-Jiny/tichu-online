@@ -5910,6 +5910,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? url.searchParams.get('status') : 'pending';
     const rows = await getBankDeposits({ status: filter, limit: 200 });
     const pending = await countPendingBankDepositsAll();
+
+    // One transfer, two claims. Nothing stops two DIFFERENT accounts from
+    // claiming the same deposit — the per-player lock only prevents one
+    // account queueing twice — so the bank statement is the only thing that
+    // can tell them apart, and it shows a single line. Flag collisions
+    // loudly: approving both is how one ₩3,900 transfer pays out twice.
+    const dupKey = (r) => `${(r.depositor || '').trim()}|${r.price_krw}`;
+    const pendingByKey = new Map();
+    for (const r of rows) {
+      if (r.status !== 'pending') continue;
+      pendingByKey.set(dupKey(r), (pendingByKey.get(dupKey(r)) || 0) + 1);
+    }
     const done = url.searchParams.get('done');
 
     const tab = (key, label) => `<a href="/tc-backstage/deposits?status=${key}"
@@ -5952,8 +5964,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                      <button type="submit" class="btn btn-secondary">반려</button>
                    </form>
                  </div>`;
-            return `<tr>
-              <td style="white-space:nowrap">${formatDate(r.created_at)}</td>
+            const clash = r.status === 'pending' && pendingByKey.get(dupKey(r)) > 1;
+            return `<tr${clash ? ' style="background:#fff8e1"' : ''}>
+              <td style="white-space:nowrap">${formatDate(r.created_at)}${
+                clash
+                  ? `<div style="font-size:11px;color:#c62828;font-weight:700">⚠ 동일 입금자·금액 ${pendingByKey.get(dupKey(r))}건</div>`
+                  : ''}</td>
               <td><b>${escapeHtml(r.nickname)}</b>
                   <div style="font-size:11px;color:#6c727f">보유 ${Number(r.current_gold || 0).toLocaleString()}G</div></td>
               <td>${escapeHtml(r.depositor)}</td>
@@ -5976,6 +5992,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <p style="font-size:13px;color:#6c727f;margin-bottom:10px">
           웹 상점에서 계좌이체 후 [입금 확인]을 누른 요청입니다.
           <b>은행 입금 내역을 직접 확인한 뒤</b> 승인하세요 — 승인하면 즉시 골드가 지급됩니다.
+          입금 <b>1건당 요청 1건</b>만 승인하세요. 같은 입금자명·금액으로 여러 건이 올라오면
+          <b style="color:#c62828">⚠ 표시</b>가 붙습니다 — 통장에 실제로 몇 건이 찍혔는지 세어보고,
+          모자라면 나머지는 반려하세요.
           지급 기록은 유저의 골드 내역에 <b>"입금 확인"</b>으로 남습니다(관리자 지급과 구분됨).
         </p>
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
@@ -6098,7 +6117,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <input type="text" name="holder" value="${escapeHtml(bank.holder || '')}" placeholder="예금주" style="width:150px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
           </div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <input type="text" name="note" value="${escapeHtml(bank.note || '')}" placeholder="안내 문구 (예: 입금자명을 닉네임과 같게 해주세요)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <input type="text" name="note" value="${escapeHtml(bank.note || '')}" placeholder="안내 문구 (예: 실제 입금하신 분 성함을 정확히 입력해 주세요)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <input type="text" name="channelUrl" value="${escapeHtml(bank.channelUrl || '')}" placeholder="카카오 채널 채팅 URL (예: https://pf.kakao.com/_abcdEF/chat)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">

@@ -7952,7 +7952,7 @@ async function handleGetGoldProducts(ws, data) {
 // The account itself lives in tc_config under `bank_deposit` rather than in
 // code, so it can be set (and taken down) from backstage without a deploy:
 //   {"enabled":true,"bank":"카카오뱅크","account":"3333-01-1234567",
-//    "holder":"홍길동","note":"입금자명을 닉네임과 같게 해주세요"}
+//    "holder":"홍길동","note":"실제 입금하신 분 성함을 정확히 입력해 주세요"}
 // ---------------------------------------------------------------------------
 
 async function readBankDepositConfig() {

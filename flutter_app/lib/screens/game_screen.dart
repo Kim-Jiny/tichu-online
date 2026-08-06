@@ -33,6 +33,7 @@ class _GameScreenState extends State<GameScreen> {
 
   // Responsive scale factor (updated every build)
   double _s = 1.0; // scale factor based on screen width
+  double _ts = 1.0; // gentler scale for text and chrome — see build()
   int _maxNameLen = 4;
 
   final Set<String> _selectedCards = {};
@@ -403,7 +404,13 @@ class _GameScreenState extends State<GameScreen> {
     // is, and at 1.0 the cards sit tiny in the middle of a large window. Phones
     // and tablets keep the old ceiling — this is not the place to change how
     // the shipped app looks.
-    _s = (shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
+    _s = (shortestSide / 400).clamp(0.72, kIsWeb ? 1.3 : 1.0);
+    // Text and chrome grow at half the rate of the board. Scaling everything
+    // by _s turned a desktop window into a magnified phone — readable, but the
+    // labels, icons and buttons all looked oversized next to the cards, which
+    // are the only thing that actually needed the room. Half the excess keeps
+    // text comfortable without that zoomed-in feel.
+    _ts = 1 + (_s - 1) * 0.5;
     _maxNameLen = screenSize.width < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
@@ -513,10 +520,8 @@ class _GameScreenState extends State<GameScreen> {
                       _buildPortraitGameLayout(state, game),
 
                       // Dialogs/Panels
-                      if (state.phase == 'large_tichu_phase' &&
-                          !state.largeTichuResponded)
-                        _buildLargeTichuDialog(game),
-
+                      // (Large Tichu is NOT here — it rides in the bottom
+                      // column with the exchange panel so it sits on the hand.)
                       if (state.dragonPending) _buildDragonDialog(state, game),
 
                       if (state.needsToCallRank && !_birdCallDialogOpen)
@@ -618,6 +623,16 @@ class _GameScreenState extends State<GameScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _buildExchangeInline(state, game),
                 ),
+              // Same slot as the exchange panel — the two never show at once,
+              // and both ask you to decide about the cards right below them.
+              // It used to be a free-floating Positioned at a hand-height
+              // guess, which drifted away from the hand as the board scaled.
+              if (state.phase == 'large_tichu_phase' &&
+                  !state.largeTichuResponded)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildLargeTichuDialog(game),
+                ),
               if (game.dragonGivenMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -676,7 +691,7 @@ class _GameScreenState extends State<GameScreen> {
     return GestureDetector(
       onTap: () => _showLeaveGameDialog(game),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(8 * _ts),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.8),
           shape: BoxShape.circle,
@@ -687,7 +702,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
-        child: Icon(Icons.logout, color: Color(0xFFE53935), size: 20 * _s),
+        child: Icon(Icons.logout, color: Color(0xFFE53935), size: 20 * _ts),
       ),
     );
   }
@@ -753,7 +768,7 @@ class _GameScreenState extends State<GameScreen> {
                   unreadCount > 9 ? '9+' : '$unreadCount',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10 * _s,
+                    fontSize: 10 * _ts,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -770,7 +785,7 @@ class _GameScreenState extends State<GameScreen> {
     return GestureDetector(
       onTap: () => setState(() => _soundPanelOpen = !_soundPanelOpen),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(8 * _ts),
         decoration: BoxDecoration(
           color: _soundPanelOpen
               ? const Color(0xFF81C784)
@@ -786,7 +801,7 @@ class _GameScreenState extends State<GameScreen> {
         child: Icon(
           hasMuted ? Icons.volume_off : Icons.volume_up,
           color: _soundPanelOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20 * _s,
+          size: 20 * _ts,
         ),
       ),
     );
@@ -804,7 +819,7 @@ class _GameScreenState extends State<GameScreen> {
         _viewersOpen = false;
       }),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(8 * _ts),
         decoration: BoxDecoration(
           color: _moreOpen
               ? const Color(0xFF81C784)
@@ -820,7 +835,7 @@ class _GameScreenState extends State<GameScreen> {
         child: Icon(
           Icons.more_horiz,
           color: _moreOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20 * _s,
+          size: 20 * _ts,
         ),
       ),
     );
@@ -841,8 +856,12 @@ class _GameScreenState extends State<GameScreen> {
             // shows regardless of hasViewers so that always_deny users
             // (who never have any viewer) can still reach the card-view
             // policy toggle inside the panel.
-            width: 150,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            //
+            // Scales with its contents. It was a flat 150 while the three
+            // buttons inside grew with the scale factor, so on a wide browser
+            // the icons outgrew the pill and spilled over its edges.
+            width: 150 * _ts,
+            padding: EdgeInsets.symmetric(horizontal: 8 * _ts, vertical: 6 * _ts),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
               borderRadius: BorderRadius.circular(14),
@@ -1054,7 +1073,7 @@ class _GameScreenState extends State<GameScreen> {
                 style: TextStyle(
                   color: Color(0xFFCC4444),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14 * _s,
+                  fontSize: 14 * _ts,
                 ),
               ),
             ),
@@ -1093,7 +1112,7 @@ class _GameScreenState extends State<GameScreen> {
                 style: TextStyle(
                   color: Color(0xFFE65100),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14 * _s,
+                  fontSize: 14 * _ts,
                 ),
               ),
             ),
@@ -1134,7 +1153,7 @@ class _GameScreenState extends State<GameScreen> {
                 style: TextStyle(
                   color: Color(0xFFCC4444),
                   fontWeight: FontWeight.bold,
-                  fontSize: 14 * _s,
+                  fontSize: 14 * _ts,
                 ),
               ),
             ),
@@ -1289,7 +1308,7 @@ class _GameScreenState extends State<GameScreen> {
                   '$count',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10 * _s,
+                    fontSize: 10 * _ts,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1308,7 +1327,7 @@ class _GameScreenState extends State<GameScreen> {
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(8 * _ts),
             decoration: BoxDecoration(
               color: _viewersOpen
                   ? const Color(0xFF81C784)
@@ -1324,7 +1343,7 @@ class _GameScreenState extends State<GameScreen> {
             child: Icon(
               Icons.visibility,
               color: _viewersOpen ? Colors.white : const Color(0xFF5A4038),
-              size: 20 * _s,
+              size: 20 * _ts,
             ),
           ),
           if (count > 0)
@@ -1341,7 +1360,7 @@ class _GameScreenState extends State<GameScreen> {
                   '$count',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 10 * _s,
+                    fontSize: 10 * _ts,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1661,7 +1680,7 @@ class _GameScreenState extends State<GameScreen> {
           SizedBox(height: 3 * _s),
           Text(
             _getPlayerInfo(partner),
-            style: TextStyle(fontSize: 11 * _s, color: const Color(0xFF8A7A72)),
+            style: TextStyle(fontSize: 11 * _ts, color: const Color(0xFF8A7A72)),
           ),
           SizedBox(height: 6 * _s),
           // Card backs
@@ -1705,7 +1724,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: left?.name ?? L10n.of(context).gameLeftPlayer,
                   isTurn: isLeftTurn,
-                  fontSize: 11 * _s,
+                  fontSize: 11 * _ts,
                   badge: _tichuBadgeForPlayer(left),
                   exchangeDone:
                       state.phase == 'card_exchange' &&
@@ -1724,7 +1743,7 @@ class _GameScreenState extends State<GameScreen> {
               Text(
                 _getPlayerInfo(left),
                 style: TextStyle(
-                  fontSize: 9 * _s,
+                  fontSize: 9 * _ts,
                   color: const Color(0xFF8A7A72),
                 ),
               ),
@@ -1760,7 +1779,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: _buildTurnName(
                   name: right?.name ?? L10n.of(context).gameRightPlayer,
                   isTurn: isRightTurn,
-                  fontSize: 11 * _s,
+                  fontSize: 11 * _ts,
                   badge: _tichuBadgeForPlayer(right),
                   exchangeDone:
                       state.phase == 'card_exchange' &&
@@ -1779,7 +1798,7 @@ class _GameScreenState extends State<GameScreen> {
               Text(
                 _getPlayerInfo(right),
                 style: TextStyle(
-                  fontSize: 9 * _s,
+                  fontSize: 9 * _ts,
                   color: const Color(0xFF8A7A72),
                 ),
               ),
@@ -1818,7 +1837,7 @@ class _GameScreenState extends State<GameScreen> {
               Text(
                 _getPhaseName(state.phase),
                 style: TextStyle(
-                  fontSize: 13 * _s,
+                  fontSize: 13 * _ts,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF5A4038),
                 ),
@@ -1836,7 +1855,7 @@ class _GameScreenState extends State<GameScreen> {
                             context,
                           ).gamePlayerTurn(_getCurrentPlayerName(state)),
                     style: TextStyle(
-                      fontSize: 11 * _s,
+                      fontSize: 11 * _ts,
                       color: state.isMyTurn
                           ? const Color(0xFFE6A800)
                           : const Color(0xFF8A7A72),
@@ -1868,12 +1887,12 @@ class _GameScreenState extends State<GameScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('🐦', style: TextStyle(fontSize: 14 * _s)),
+                    Text('🐦', style: TextStyle(fontSize: 14 * _ts)),
                     SizedBox(width: 4 * _s),
                     Text(
                       L10n.of(context).gameCall(state.callRank!),
                       style: TextStyle(
-                        fontSize: 16 * _s,
+                        fontSize: 16 * _ts,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFFF4444),
                       ),
@@ -2049,7 +2068,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               dragon ? '\u25CB' : '\u2715',
               style: TextStyle(
-                fontSize: 12 * _s,
+                fontSize: 12 * _ts,
                 color: dragon
                     ? const Color(0xFF4A90D9)
                     : const Color(0xFFCCC0B8),
@@ -2060,7 +2079,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               phoenix ? '\u25CB' : '\u2715',
               style: TextStyle(
-                fontSize: 12 * _s,
+                fontSize: 12 * _ts,
                 color: phoenix
                     ? const Color(0xFFD4A030)
                     : const Color(0xFFCCC0B8),
@@ -2098,7 +2117,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               myTeam,
               style: TextStyle(
-                fontSize: 10 * _s,
+                fontSize: 10 * _ts,
                 fontWeight: FontWeight.bold,
                 color: myLeading ? myColor : const Color(0xFF8A7A72),
               ),
@@ -2107,7 +2126,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               '$myScore',
               style: TextStyle(
-                fontSize: 14 * _s,
+                fontSize: 14 * _ts,
                 fontWeight: FontWeight.bold,
                 color: myLeading ? myColor : const Color(0xFF5A4038),
               ),
@@ -2117,7 +2136,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 ':',
                 style: TextStyle(
-                  fontSize: 14 * _s,
+                  fontSize: 14 * _ts,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF8A7A72),
                 ),
@@ -2126,7 +2145,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               '$enemyScore',
               style: TextStyle(
-                fontSize: 14 * _s,
+                fontSize: 14 * _ts,
                 fontWeight: FontWeight.bold,
                 color: enemyLeading ? enemyColor : const Color(0xFF5A4038),
               ),
@@ -2135,7 +2154,7 @@ class _GameScreenState extends State<GameScreen> {
             Text(
               myTeam == 'A' ? 'B' : 'A',
               style: TextStyle(
-                fontSize: 10 * _s,
+                fontSize: 10 * _ts,
                 fontWeight: FontWeight.bold,
                 color: enemyLeading ? enemyColor : const Color(0xFF8A7A72),
               ),
@@ -2187,7 +2206,7 @@ class _GameScreenState extends State<GameScreen> {
                         : playerName,
                   )
                 : L10n.of(context).gameDogPlayed,
-            style: TextStyle(fontSize: 11 * _s, color: const Color(0xFF8A7A72)),
+            style: TextStyle(fontSize: 11 * _ts, color: const Color(0xFF8A7A72)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -2236,7 +2255,7 @@ class _GameScreenState extends State<GameScreen> {
                       ? '${lastPlay.playerName.substring(0, 8)}..'
                       : lastPlay.playerName,
                   style: TextStyle(
-                    fontSize: 14 * _s,
+                    fontSize: 14 * _ts,
                     fontWeight: FontWeight.bold,
                     color: isMyTeam
                         ? const Color(0xFF4A90D9)
@@ -2246,7 +2265,7 @@ class _GameScreenState extends State<GameScreen> {
                 TextSpan(
                   text: L10n.of(context).gamePlayedCards,
                   style: TextStyle(
-                    fontSize: 12 * _s,
+                    fontSize: 12 * _ts,
                     color: Color(0xFF8A7A72),
                   ),
                 ),
@@ -2313,7 +2332,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 phoenixBeatLabel,
                 style: TextStyle(
-                  fontSize: 9 * _s,
+                  fontSize: 9 * _ts,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF5A4038),
                 ),
@@ -2475,7 +2494,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   state.myTeam,
                   style: TextStyle(
-                    fontSize: 8 * _s,
+                    fontSize: 8 * _ts,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF4A90D9),
                   ),
@@ -2486,7 +2505,7 @@ class _GameScreenState extends State<GameScreen> {
                 child: Text(
                   game.playerName,
                   style: TextStyle(
-                    fontSize: 12 * _s,
+                    fontSize: 12 * _ts,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF5A4038),
                   ),
@@ -2507,7 +2526,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Text(
                     L10n.of(context).gameMyTurn,
                     style: TextStyle(
-                      fontSize: 11 * _s,
+                      fontSize: 11 * _ts,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF5A4038),
                     ),
@@ -2538,7 +2557,7 @@ class _GameScreenState extends State<GameScreen> {
                         Text(
                           '${game.myTimeoutCount}/3',
                           style: TextStyle(
-                            fontSize: 12 * _s,
+                            fontSize: 12 * _ts,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFE65100),
                           ),
@@ -2547,7 +2566,7 @@ class _GameScreenState extends State<GameScreen> {
                         Text(
                           L10n.of(context).gameNotAfk,
                           style: TextStyle(
-                            fontSize: 11 * _s,
+                            fontSize: 11 * _ts,
                             color: Color(0xFFE65100),
                           ),
                         ),
@@ -2628,15 +2647,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildLargeTichuDialog(GameService game) {
-    return Positioned(
-      // Sits above the hand, and the hand grows with _s (the board reserves
-      // 220 * _s under it). A fixed 280 was 60px of clearance on a phone and
-      // none at all once the cards scaled up — the prompt landed on top of the
-      // eight cards you are supposed to be looking at while deciding.
-      bottom: 280 * _s,
-      left: 0,
-      right: 0,
-      child: Container(
+    return Container(
         margin: EdgeInsets.symmetric(horizontal: 24 * _s),
         padding: EdgeInsets.symmetric(horizontal: 16 * _s, vertical: 12 * _s),
         decoration: BoxDecoration(
@@ -2658,7 +2669,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 L10n.of(context).gameLargeTichuQuestion,
                 style: TextStyle(
-                  fontSize: 16 * _s,
+                  fontSize: 16 * _ts,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -2668,7 +2679,7 @@ class _GameScreenState extends State<GameScreen> {
               onPressed: () => game.declareLargeTichu(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFD700),
-                textStyle: TextStyle(fontSize: 14 * _s),
+                textStyle: TextStyle(fontSize: 14 * _ts),
                 padding: EdgeInsets.symmetric(
                   horizontal: 16 * _s,
                   vertical: 8 * _s,
@@ -2680,7 +2691,7 @@ class _GameScreenState extends State<GameScreen> {
             OutlinedButton(
               onPressed: () => game.passLargeTichu(),
               style: OutlinedButton.styleFrom(
-                textStyle: TextStyle(fontSize: 14 * _s),
+                textStyle: TextStyle(fontSize: 14 * _ts),
                 padding: EdgeInsets.symmetric(
                   horizontal: 16 * _s,
                   vertical: 8 * _s,
@@ -2690,7 +2701,6 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -2869,7 +2879,7 @@ class _GameScreenState extends State<GameScreen> {
           ),
           child: Text(
             L10n.of(context).gameSmallTichuDeclare,
-            style: TextStyle(fontSize: 15 * _s, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 15 * _ts, fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -3069,7 +3079,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 name,
                 style: TextStyle(
-                  fontSize: 12 * _s,
+                  fontSize: 12 * _ts,
                   fontWeight: FontWeight.bold,
                   color: isAssigned
                       ? const Color(0xFF3A5A40)
@@ -3143,12 +3153,12 @@ class _GameScreenState extends State<GameScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('\u{1F409}', style: TextStyle(fontSize: 20 * _s)),
+          Text('\u{1F409}', style: TextStyle(fontSize: 20 * _ts)),
           SizedBox(width: 8 * _s),
           Text(
             message,
             style: TextStyle(
-              fontSize: 14 * _s,
+              fontSize: 14 * _ts,
               fontWeight: FontWeight.bold,
               color: Color(0xFF2E7D32),
             ),
@@ -3405,7 +3415,7 @@ class _GameScreenState extends State<GameScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12 * _s,
+              fontSize: 12 * _ts,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -3516,7 +3526,7 @@ class _GameScreenState extends State<GameScreen> {
                   child: Text(
                     '+${count - visible}',
                     style: TextStyle(
-                      fontSize: 10 * _s,
+                      fontSize: 10 * _ts,
                       color: Color(0xFF8A7A72),
                     ),
                   ),
@@ -3618,7 +3628,7 @@ class _GameScreenState extends State<GameScreen> {
                   Text(
                     L10n.of(dialogCtx).gameReceivedCards,
                     style: TextStyle(
-                      fontSize: 18 * _s,
+                      fontSize: 18 * _ts,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -3632,7 +3642,7 @@ class _GameScreenState extends State<GameScreen> {
                   Text(
                     L10n.of(dialogCtx).gameTapToClose,
                     style: TextStyle(
-                      fontSize: 12 * _s,
+                      fontSize: 12 * _ts,
                       color: const Color(0xFF9A8E8A),
                     ),
                   ),
@@ -3666,7 +3676,7 @@ class _GameScreenState extends State<GameScreen> {
                       ? '${item.name.substring(0, 4)}…'
                       : item.name,
                   style: TextStyle(
-                    fontSize: 12 * _s,
+                    fontSize: 12 * _ts,
                     color: const Color(0xFF8A7A72),
                   ),
                 ),
@@ -3751,7 +3761,7 @@ class _GameScreenState extends State<GameScreen> {
               child: Text(
                 '⏱ $timeoutCount/3',
                 style: TextStyle(
-                  fontSize: 8 * _s * s,
+                  fontSize: 8 * _ts * s,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFFE65100),
                 ),
@@ -3793,7 +3803,7 @@ class _GameScreenState extends State<GameScreen> {
                     child: Text(
                       teamLabel,
                       style: TextStyle(
-                        fontSize: 8 * _s * s,
+                        fontSize: 8 * _ts * s,
                         fontWeight: FontWeight.bold,
                         color: isMyTeam
                             ? const Color(0xFF4A90D9)
@@ -3902,7 +3912,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 13 * _s, fontWeight: FontWeight.bold, color: fg),
+        style: TextStyle(fontSize: 13 * _ts, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }

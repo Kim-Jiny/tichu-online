@@ -33,6 +33,15 @@ class InviteLinkService {
     if (_initialized) return;
     _initialized = true;
 
+    if (kIsWeb) {
+      // On the web the "link" is just the address bar. /invite?t=… renders a
+      // server page (so a shared link still previews with the room name) and
+      // then sends the browser here with the token attached — reaching that
+      // page at all means the app did not intercept the universal link, i.e.
+      // it isn't installed, so the browser is where this invite gets played.
+      _storeInviteFromWebUrl();
+    }
+
     try {
       final initialUri = await _appLinks.getInitialLink();
       _storeInvite(initialUri);
@@ -56,6 +65,20 @@ class InviteLinkService {
     _linkSubscription?.cancel();
     _linkSubscription = null;
     _initialized = false;
+  }
+
+  /// Reads the token straight off the current URL.
+  ///
+  /// Deliberately does NOT go through _matchesInviteUri: that checks host and
+  /// path against the production invite URL, which is wrong here twice over —
+  /// the page is served from our own origin (whatever it is: localhost, an
+  /// IP, a future domain), and the redirect lands on '/', not '/invite'.
+  void _storeInviteFromWebUrl() {
+    final q = Uri.base.queryParameters;
+    final token = q['invite'] ?? q['t'] ?? q['token'] ?? '';
+    if (token.isEmpty) return;
+    _pendingInvite = PendingInviteLink(token: token, uri: Uri.base);
+    debugPrint('[InviteLinkService] Invite token from web URL');
   }
 
   bool _matchesInviteUri(Uri uri) {

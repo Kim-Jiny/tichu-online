@@ -307,6 +307,9 @@ function renderMarketingPage({
   tertiaryHref = IOS_STORE_URL,
   metaTitle,
   metaDescription,
+  // Raw markup injected into <head>. Only used by /invite, to bounce a real
+  // browser into the web client while leaving scrapers the preview tags.
+  headExtra = '',
 }) {
   const pageTitle = metaTitle || title;
   const pageDescription = metaDescription || description;
@@ -322,6 +325,7 @@ function renderMarketingPage({
     <meta property="og:type" content="website" />
     <meta property="og:url" content="${escapeHtml(primaryHref)}" />
     <meta name="twitter:card" content="summary_large_image" />
+    ${headExtra}
     <style>
       :root {
         --bg: #dff3ff;
@@ -1303,6 +1307,23 @@ const server = http.createServer(async (req, res) => {
     const description = payload
       ? 'Open this invite in Tichu Online to join the room.'
       : 'This room invite is no longer valid.';
+    // If the app were installed, the universal link would have opened it
+    // before the browser ever loaded this URL. Getting here therefore means
+    // there is no app to hand off to — so hand off to the web client instead
+    // and drop the recipient straight into the room.
+    //
+    // Still server-rendered rather than just serving the SPA: this page is
+    // what KakaoTalk and every other scraper reads to build the share preview
+    // ("<inviter>님의 초대 · <room>"), and a Flutter canvas has nothing for
+    // them to read. Scrapers do not run scripts, so they keep the preview
+    // while a real visitor never sees this page at all.
+    //
+    // replace(), not assign(): Back should return to wherever the link was
+    // tapped, not bounce through this page again.
+    const canPlayInBrowser = webApp.isAvailable() && !!payload;
+    const redirectScript = canPlayInBrowser
+      ? `<script>location.replace(${JSON.stringify(`/?invite=${encodeURIComponent(token)}`)})</script>`
+      : '';
     const html = renderMarketingPage({
       eyebrow: payload ? `${inviter}님의 초대` : 'Tichu Online 초대',
       title: payload ? `${roomName} 방에 참여해보세요` : '초대 링크를 확인할 수 없어요',
@@ -1313,6 +1334,7 @@ const server = http.createServer(async (req, res) => {
       primaryHref: deepLinkUrl,
       metaTitle: title,
       metaDescription: description,
+      headExtra: redirectScript,
     });
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);

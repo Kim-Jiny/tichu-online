@@ -20,6 +20,9 @@ ACTIVE_FILE="$BASE_DIR/active_slot"
 LOCKFILE="$BASE_DIR/.deploy.lock"
 PROXY_CONF=/opt/services/proxy/conf/tichu.conf
 TEMPLATE="$APP_DIR/server/deploy/tichu.conf.template"
+# HTTPS block for tichu.kr, appended only once its certificate exists.
+TEMPLATE_KR="$APP_DIR/server/deploy/tichu-kr-ssl.conf.template"
+KR_CERT=/etc/letsencrypt/live/tichu.kr/fullchain.pem
 REPO_URL="https://github.com/Kim-Jiny/tichu-online.git"
 BRANCH="main"
 HEALTH_TIMEOUT_SEC=60
@@ -175,6 +178,20 @@ log "rewriting $PROXY_CONF (upstream → tichu-online-$INACTIVE)"
 CONF_BACKUP="$PROXY_CONF.pre-$INACTIVE.$$"
 cp "$PROXY_CONF" "$CONF_BACKUP"
 sed "s|{{ACTIVE}}|$INACTIVE|g" "$TEMPLATE" > "$PROXY_CONF.new"
+# tichu.kr's HTTPS block is conditional: ssl_certificate must point at a file
+# that exists or `nginx -t` fails and this deploy — and every one after it —
+# aborts. The :80 block ships unconditionally (it answers the ACME challenge),
+# so the sequence deploy -> certbot -> deploy brings the host up on its own.
+#
+# Asked inside the container rather than with a host-side `test -f`: that is
+# where nginx will actually look, and certbot's live/ directory is root-only,
+# so a host check would answer "missing" whenever deploy.sh runs unprivileged.
+if docker exec nginx test -f "$KR_CERT" 2>/dev/null; then
+  log "tichu.kr certificate found — enabling its HTTPS block"
+  sed "s|{{ACTIVE}}|$INACTIVE|g" "$TEMPLATE_KR" >> "$PROXY_CONF.new"
+else
+  log "tichu.kr certificate not present — serving :80 only (run certbot, then redeploy)"
+fi
 mv "$PROXY_CONF.new" "$PROXY_CONF"
 # From here until the reload is confirmed, the file is ahead of what nginx is
 # serving. Any failure exits non-zero and the EXIT trap puts the old conf back.

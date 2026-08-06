@@ -1,57 +1,29 @@
-# nginx config template for the blue/green deploy.
-# deploy.sh substitutes {{ACTIVE}} with 'blue' or 'green' and writes the
-# result to /opt/services/proxy/conf/tichu.conf inside the nginx container's
-# config volume, then reloads. Existing WebSocket connections survive a
-# reload; only new connections see the new upstream.
-
-server {
-    listen 80;
-    server_name tichu.jiny.shop;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# tichu.kr — the short front door. Additive: tichu.jiny.shop keeps serving
-# everything it does today, because that host is compiled into every shipped
-# app (network_service.dart's wss:// endpoint, the invite host, and the
-# universal-link association files). It can never be retired.
+# HTTPS half of tichu.kr, appended to the rendered config by deploy.sh —
+# but ONLY when /etc/letsencrypt/live/tichu.kr/fullchain.pem exists inside the
+# nginx container. Without that guard a deploy made before certbot ran would
+# fail `nginx -t` (ssl_certificate must point at a real file) and abort, taking
+# every subsequent deploy with it until someone noticed.
 #
-# Port 80 only in this file. The HTTPS half lives in tichu-kr-ssl.conf.template
-# and deploy.sh appends it ONLY once the certificate exists — an
-# ssl_certificate pointing at a missing file fails `nginx -t`, which would
-# abort every deploy until certbot had run. This block is what lets certbot
-# run in the first place: it answers the ACME challenge.
-server {
-    listen 80;
-    server_name tichu.kr;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-upstream tichu_backend {
-    server tichu-online-{{ACTIVE}}:3000;
-    keepalive 16;
-}
+# So the bring-up order is self-healing:
+#   1. deploy  -> the :80 block in tichu.conf.template starts answering ACME
+#   2. certbot certonly --webroot -w /var/www/certbot -d tichu.kr
+#   3. deploy (or nginx -s reload) -> this block activates
+#
+# The body below is a copy of the tichu.jiny.shop server block, differing only
+# in server_name and the certificate paths. nginx cannot pick a certificate per
+# server_name inside one block, and re-issuing the working tichu.jiny.shop
+# certificate as a SAN covering both was not worth risking the host every
+# shipped app connects to. KEEP THE TWO IN SYNC when editing either.
+#
+# {{ACTIVE}} is substituted here too — deploy.sh runs the same sed over it.
 
 server {
     listen 443 ssl;
     http2 on;
-    server_name tichu.jiny.shop;
+    server_name tichu.kr;
 
-    ssl_certificate /etc/letsencrypt/live/tichu.jiny.shop/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/tichu.jiny.shop/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/tichu.kr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tichu.kr/privkey.pem;
 
     # Docker's embedded DNS so the upstream container is re-resolved if
     # the active slot's container is recreated mid-deploy.

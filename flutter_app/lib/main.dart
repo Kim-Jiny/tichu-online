@@ -48,32 +48,30 @@ void main() async {
   // inputs real and present, which is also what a screen reader needs.
   if (kIsWeb) {
     SemanticsBinding.instance.ensureSemantics();
-    await _loadWebFonts();
-    _warmEmojiFont();
   }
 
-  // Firebase backs Google and Apple sign-in on every platform, web included —
-  // the browser gets an OAuth popup instead of a native sheet, but the ID token
-  // that comes out is the same one the server already verifies.
+  // Everything the first frame needs, started together.
   //
-  // On web it only starts when the web app's keys were passed at build time;
-  // without them currentPlatform would hand Firebase an empty apiKey and the
-  // failure would surface later, as a dead button rather than a clear cause.
-  // SocialConfig gates the UI on exactly the same condition.
-  //
-  // This has to happen here rather than lazily: a throw in main() is a white
-  // page with nothing on screen to explain it.
-  if (!kIsWeb || DefaultFirebaseOptions.hasWebConfig) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      // Bad or stale web keys must not cost the whole app. Sign-in with
-      // Google/Apple will fail from here, but id/password still works.
-      debugPrint('Firebase init failed: $e');
-    }
-  }
+  // These used to await one after another, and on the web that queue was the
+  // whole startup: the font download did not even begin until Firebase had
+  // finished, and nothing — including the WebSocket, which only opens after
+  // runApp — could start until the last of them returned. Measured cold on
+  // production that was several seconds of blank page before "연결 중" even
+  // appeared. None of them depend on each other, so none of them should wait.
+  await Future.wait<void>([
+    // Fonts block the first frame on purpose (see _loadWebFonts): without them
+    // the first paint is Korean-less. Bounded, so a slow CDN cannot hold the
+    // app hostage.
+    if (kIsWeb) _loadWebFonts(),
+    _initFirebase(),
+    InviteLinkService.instance.initialize(),
+    // Chat panel geometry, read before the first frame: loading it when the
+    // panel opens means one frame at the default size and a visible snap to
+    // the saved one.
+    DraggableChatPanel.preloadGeometry(),
+  ]);
+
+  if (kIsWeb) _warmEmojiFont();
 
   if (!kIsWeb) {
     // Firebase Analytics: enabled by default once the package is wired up.
@@ -90,12 +88,6 @@ void main() async {
       javaScriptAppKey: kIsWeb ? SocialConfig.kakaoJavaScriptKey : null,
     );
   }
-
-  await InviteLinkService.instance.initialize();
-  // Chat panel geometry, read before the first frame: loading it when the panel
-  // opens means one frame at the default size and a visible snap to the saved
-  // one.
-  await DraggableChatPanel.preloadGeometry();
 
   if (!kIsWeb) {
     MobileAds.instance.updateRequestConfiguration(
@@ -118,6 +110,29 @@ void main() async {
   }
 
   runApp(const TichuApp());
+}
+
+/// Firebase backs Google and Apple sign-in on every platform, web included —
+/// the browser gets an OAuth popup instead of a native sheet, but the ID token
+/// that comes out is the same one the server already verifies.
+///
+/// On web it only starts when the web app's keys were passed at build time;
+/// without them currentPlatform would hand Firebase an empty apiKey and the
+/// failure would surface later, as a dead button rather than a clear cause.
+/// SocialConfig gates the UI on exactly the same condition.
+///
+/// Never throws: bad or stale web keys must not cost the whole app. Sign-in
+/// with Google/Apple fails from there, but id/password still works — and a
+/// throw in main() is a white page with nothing on screen to explain it.
+Future<void> _initFirebase() async {
+  if (kIsWeb && !DefaultFirebaseOptions.hasWebConfig) return;
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase init failed: $e');
+  }
 }
 
 /// Registers Pretendard for the browser.
@@ -145,7 +160,7 @@ Future<void> _loadWebFonts() async {
     // Bounded: the first frame waits on this so there is no flash of fallback
     // text, but a stalled download must not hold the app hostage. Losing the
     // race just means the engine falls back to what it did before.
-    await loader.load().timeout(const Duration(seconds: 6));
+    await loader.load().timeout(const Duration(seconds: 3));
   } catch (_) {
     // Non-fatal by design — see above.
   }

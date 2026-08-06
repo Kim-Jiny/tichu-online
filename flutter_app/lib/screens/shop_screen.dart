@@ -4028,7 +4028,10 @@ class _ShopScreenState extends State<ShopScreen> {
   // switches to a "completed" look so users can still tap it to see the
   // 7-day grid in the dialog (claim button there is disabled).
   bool _shouldShowAttendanceBanner(GameService game) =>
-      game.attendanceState != null;
+      // Not on the web. The daily reward is claimed by watching a rewarded ad,
+      // and AdMob has no web implementation — AdService returns null there, so
+      // the banner would open a dialog whose claim button can never work.
+      !kIsWeb && game.attendanceState != null;
 
   Widget _buildAttendanceTile(GameService game) {
     final s = game.attendanceState!;

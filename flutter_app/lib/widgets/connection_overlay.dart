@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -171,7 +172,13 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       builder: (context, reconnecting, child) => Stack(
         children: [
           child!,
-          if (reconnecting) _buildDimmed(context),
+          // Not on the web. A browser reconnects constantly — tab wake, network
+          // flap, the socket's own idle cycle — and each one threw a full-screen
+          // dim over a page that was still perfectly usable. On a phone the app
+          // is either foreground or gone, so the dim marks a real interruption;
+          // in a tab it mostly marks noise. The reconnect itself is unchanged,
+          // it just no longer announces itself.
+          if (reconnecting && !kIsWeb) _buildDimmed(context),
         ],
       ),
     );

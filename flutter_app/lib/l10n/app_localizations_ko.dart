@@ -4481,4 +4481,58 @@ class L10nKo extends L10n {
   @override
   String get goldNoticeDetails =>
       '• 환불·결제취소는 Apple App Store / Google Play의 정책 및 절차에 따릅니다.\n• 미성년자는 법정대리인의 동의 후 결제해야 하며, 동의 없는 결제는 취소될 수 있습니다.\n• 결제 관련 문의: 설정 > 문의하기 > \'결제·환불\'\n• 판매자 정보 및 환불 정책 상세는 설정의 이용약관·개인정보처리방침에 표기됩니다.';
+
+  @override
+  String get goldBankSectionTitle => '계좌이체로 구매';
+
+  @override
+  String get goldBankHowTo => '아래 계좌로 입금하신 뒤, 구매할 상품의 [입금 확인] 버튼을 눌러주세요.';
+
+  @override
+  String get goldBankLabelBank => '은행';
+
+  @override
+  String get goldBankLabelAccount => '계좌번호';
+
+  @override
+  String get goldBankLabelHolder => '예금주';
+
+  @override
+  String get goldBankCopy => '복사';
+
+  @override
+  String get goldBankCopied => '계좌번호를 복사했습니다';
+
+  @override
+  String get goldBankConfirm => '입금 확인';
+
+  @override
+  String get goldBankDialogTitle => '입금 확인 요청';
+
+  @override
+  String goldBankDialogAmount(Object price) {
+    return '$price 입금 후 요청해 주세요';
+  }
+
+  @override
+  String get goldBankDepositorLabel => '입금자명';
+
+  @override
+  String get goldBankDepositorHint => '입금하신 분 성함';
+
+  @override
+  String get goldBankSubmit => '요청 보내기';
+
+  @override
+  String get goldBankRequestSent => '입금 확인 요청을 보냈습니다. 관리자 확인 후 골드가 지급됩니다.';
+
+  @override
+  String get goldBankRequestTimeout => '서버 응답이 없습니다. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get goldBankUnavailable => '계좌이체 구매는 현재 준비 중입니다.';
+
+  @override
+  String get goldBankManualNotice =>
+      '계좌이체는 자동 처리되지 않습니다. 관리자가 입금을 확인한 뒤 골드를 지급하므로 시간이 걸릴 수 있습니다.';
 }

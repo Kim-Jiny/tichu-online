@@ -3140,6 +3140,12 @@ async function handleMessage(ws, data) {
     case 'verify_iap_purchase':
       await handleVerifyIapPurchase(ws, data);
       break;
+    case 'get_bank_deposit_info':
+      await handleGetBankDepositInfo(ws);
+      break;
+    case 'request_bank_deposit':
+      await handleRequestBankDeposit(ws, data);
+      break;
     case 'get_attendance_state':
       await handleGetAttendanceState(ws);
       break;
@@ -7883,9 +7889,10 @@ function normalizePlatform(p) {
   return null;
 }
 
-// Active gold products for the client's platform. Prices/currency are NOT
-// returned — the client resolves those from the store at runtime. We only
-// expose which product_ids are live and how much gold each grants.
+// Active gold products for the client's platform. On iOS/Android the store
+// owns the price and the client resolves it at runtime — we only expose which
+// product_ids are live and how much gold each grants. price_krw rides along
+// for the web client, which has no store to ask (see handleGetBankDepositInfo).
 async function handleGetGoldProducts(ws, data) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'gold_products_result', success: false, message: t(ws.locale, 'login_required') });
@@ -7894,6 +7901,127 @@ async function handleGetGoldProducts(ws, data) {
   const platform = normalizePlatform(data?.platform) || 'both';
   const result = await getActiveGoldProducts(platform);
   sendTo(ws, { type: 'gold_products_result', ...result });
+}
+
+// ---------------------------------------------------------------------------
+// Bank transfer (web only)
+//
+// There is no PG behind this and no automation: the player transfers won to a
+// bank account, taps "deposit sent", and an admin confirms the incoming money
+// by eye and grants the gold with the existing admin_adjust_gold tool. This
+// handler's whole job is to get the request in front of that admin.
+//
+// WEB ONLY, and it has to stay that way. Apple and Google both require
+// in-app digital goods to go through their own billing; shipping a bank
+// account inside the mobile build is a review rejection at best. The client
+// gates the UI on kIsWeb, and the account details only ever leave the server
+// through this handler.
+//
+// The account itself lives in tc_config under `bank_deposit` rather than in
+// code, so it can be set (and taken down) from backstage without a deploy:
+//   {"enabled":true,"bank":"카카오뱅크","account":"3333-01-1234567",
+//    "holder":"홍길동","note":"입금자명을 닉네임과 같게 해주세요"}
+// ---------------------------------------------------------------------------
+
+async function readBankDepositConfig() {
+  try {
+    const raw = await getConfig('bank_deposit');
+    if (!raw) return null;
+    const cfg = JSON.parse(raw);
+    if (!cfg || cfg.enabled !== true) return null;
+    if (!cfg.bank || !cfg.account) return null;
+    return {
+      bank: String(cfg.bank).slice(0, 40),
+      account: String(cfg.account).slice(0, 60),
+      holder: String(cfg.holder || '').slice(0, 40),
+      note: String(cfg.note || '').slice(0, 300),
+    };
+  } catch (err) {
+    // A malformed value must read as "no bank transfer configured", never as
+    // a crash on the shop screen.
+    console.error('bank_deposit config parse error:', err);
+    return null;
+  }
+}
+
+async function handleGetBankDepositInfo(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'bank_deposit_info', enabled: false });
+    return;
+  }
+  const cfg = await readBankDepositConfig();
+  if (!cfg) {
+    sendTo(ws, { type: 'bank_deposit_info', enabled: false });
+    return;
+  }
+  sendTo(ws, { type: 'bank_deposit_info', enabled: true, ...cfg });
+}
+
+// One pending notification per player at a time. Tapping the button twice
+// shouldn't buzz the admin's phone twice, and the admin has to reconcile each
+// one against a bank statement by hand.
+const bankDepositCooldown = new Map(); // nickname -> timestamp
+const BANK_DEPOSIT_COOLDOWN_MS = 60 * 1000;
+
+async function handleRequestBankDeposit(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const cfg = await readBankDepositConfig();
+  if (!cfg) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_unavailable') });
+    return;
+  }
+
+  const last = bankDepositCooldown.get(ws.nickname) || 0;
+  if (Date.now() - last < BANK_DEPOSIT_COOLDOWN_MS) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_too_soon') });
+    return;
+  }
+
+  // The amount comes from the product row, never from the client — the same
+  // rule the store path follows. A client that asks for gold5 gets gold5's
+  // price on the admin's screen no matter what it claims to have paid.
+  const productId = String(data?.productId || '').slice(0, 80);
+  const product = await getGoldProductByProductId(productId);
+  if (!product || !product.is_active) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_bad_product') });
+    return;
+  }
+  const depositor = String(data?.depositor || '').trim().slice(0, 40);
+  if (!depositor) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_need_name') });
+    return;
+  }
+
+  const price = Number(product.price_krw) || 0;
+  const gold = (Number(product.gold_amount) || 0) + (Number(product.bonus_gold) || 0);
+  bankDepositCooldown.set(ws.nickname, Date.now());
+
+  // Filed as an inquiry so it lands in the existing backstage list with a
+  // reply box, instead of being a push notification that vanishes. Category
+  // is 'other' because that's what tc_inquiries accepts; the title prefix is
+  // what makes these findable.
+  const title = `[입금확인] ${ws.nickname} · ₩${price.toLocaleString()}`;
+  const content = [
+    `상품: ${productId} (${gold.toLocaleString()}G)`,
+    `금액: ₩${price.toLocaleString()}`,
+    `입금자명: ${depositor}`,
+    `계정: ${ws.nickname}`,
+    '',
+    '입금 내역 확인 후 어드민 > 골드 지급으로 처리하세요.',
+  ].join('\n');
+  await submitInquiry(ws.nickname, 'other', title, content);
+
+  await notifyAdminUsers(
+    'payment',
+    '💰 입금 확인 요청',
+    `${ws.nickname} 님 · ₩${price.toLocaleString()} · 입금자 ${depositor}`,
+  ).catch((err) => console.error('bank deposit admin notify failed:', err));
+
+  console.log(`[BANK] deposit claim: ${ws.nickname} ${productId} ₩${price} by "${depositor}"`);
+  sendTo(ws, { type: 'bank_deposit_result', success: true, message: t(ws.locale, 'bank_deposit_submitted') });
 }
 
 // Verify a store purchase and grant gold. The client never tells us the gold

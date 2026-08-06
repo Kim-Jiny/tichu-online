@@ -271,5 +271,10 @@
   "custom_title_too_long": "칭호는 4글자까지 가능합니다",
   "custom_title_banned": "사용할 수 없는 단어가 포함되어 있습니다",
   "custom_title_color": "사용할 수 없는 색상입니다",
-  "login_throttled": "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요"
+  "login_throttled": "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요",
+  "bank_deposit_unavailable": "계좌이체 구매를 사용할 수 없습니다",
+  "bank_deposit_too_soon": "방금 요청을 보냈습니다. 잠시 후 다시 시도해 주세요",
+  "bank_deposit_bad_product": "판매 중인 상품이 아닙니다",
+  "bank_deposit_need_name": "입금자명을 입력해 주세요",
+  "bank_deposit_submitted": "입금 확인 요청을 보냈습니다. 확인 후 골드가 지급됩니다"
 }

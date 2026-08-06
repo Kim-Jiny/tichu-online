@@ -1595,5 +1595,22 @@
   "goldNoticeTitle": "Vor dem Kauf",
   "goldNoticeBody": "• Gold ist kostenpflichtiger digitaler Inhalt und nur im Spiel verwendbar. Es kann nicht in Bargeld getauscht, bar erstattet oder übertragen werden.\n• Gold ist sofort nach dem Kauf nutzbar; bereits ausgegebenes Gold ist vom Widerruf (Erstattung) ausgenommen.",
   "goldNoticeMore": "Erstattungen und Zahlungssupport",
-  "goldNoticeDetails": "• Erstattungen und Stornierungen richten sich nach den Richtlinien und Verfahren des Apple App Store / Google Play.\n• Minderjährige benötigen die Zustimmung ihrer Erziehungsberechtigten; Käufe ohne Zustimmung können storniert werden.\n• Fragen zur Zahlung: Einstellungen > Kontakt > „Zahlung & Erstattung“\n• Verkäuferinformationen und die vollständige Erstattungsrichtlinie stehen in den AGB und der Datenschutzerklärung in den Einstellungen."
+  "goldNoticeDetails": "• Erstattungen und Stornierungen richten sich nach den Richtlinien und Verfahren des Apple App Store / Google Play.\n• Minderjährige benötigen die Zustimmung ihrer Erziehungsberechtigten; Käufe ohne Zustimmung können storniert werden.\n• Fragen zur Zahlung: Einstellungen > Kontakt > „Zahlung & Erstattung“\n• Verkäuferinformationen und die vollständige Erstattungsrichtlinie stehen in den AGB und der Datenschutzerklärung in den Einstellungen.",
+  "goldBankSectionTitle": "Per Banküberweisung kaufen",
+  "goldBankHowTo": "Überweise auf das Konto unten und drücke dann bei deinem Paket auf [Zahlung bestätigen].",
+  "goldBankLabelBank": "Bank",
+  "goldBankLabelAccount": "Kontonummer",
+  "goldBankLabelHolder": "Kontoinhaber",
+  "goldBankCopy": "Kopieren",
+  "goldBankCopied": "Kontonummer kopiert",
+  "goldBankConfirm": "Zahlung bestätigen",
+  "goldBankDialogTitle": "Zahlungsbestätigung",
+  "goldBankDialogAmount": "Überweise zuerst {price}, dann anfragen",
+  "goldBankDepositorLabel": "Name des Einzahlers",
+  "goldBankDepositorHint": "Name, unter dem überwiesen wurde",
+  "goldBankSubmit": "Anfrage senden",
+  "goldBankRequestSent": "Deine Zahlungsmeldung wurde gesendet. Das Gold kommt, sobald ein Admin sie bestätigt.",
+  "goldBankRequestTimeout": "Keine Antwort vom Server. Bitte versuche es gleich noch einmal.",
+  "goldBankUnavailable": "Banküberweisung ist noch nicht verfügbar.",
+  "goldBankManualNotice": "Banküberweisungen werden nicht automatisch verarbeitet. Ein Admin bestätigt die Zahlung, bevor das Gold gutgeschrieben wird — das kann dauern."
 }

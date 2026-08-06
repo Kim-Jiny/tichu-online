@@ -271,5 +271,10 @@
   "custom_title_too_long": "Titel dürfen höchstens 4 Zeichen haben",
   "custom_title_banned": "Dieser Titel enthält ein nicht erlaubtes Wort",
   "custom_title_color": "Diese Farbe ist nicht verfügbar",
-  "login_throttled": "Zu viele Anmeldeversuche. Bitte versuche es später erneut"
+  "login_throttled": "Zu viele Anmeldeversuche. Bitte versuche es später erneut",
+  "bank_deposit_unavailable": "Banküberweisung ist nicht verfügbar",
+  "bank_deposit_too_soon": "Du hast gerade eine Anfrage gesendet. Bitte versuche es gleich noch einmal",
+  "bank_deposit_bad_product": "Dieses Produkt wird nicht verkauft",
+  "bank_deposit_need_name": "Bitte gib den Namen des Einzahlers ein",
+  "bank_deposit_submitted": "Deine Einzahlungsmeldung wurde gesendet. Das Gold wird nach der Bestätigung gutgeschrieben"
 }

@@ -2602,5 +2602,22 @@
   "goldNoticeTitle": "Before you buy",
   "goldNoticeBody": "• Gold is paid digital content for use inside the game only. It cannot be exchanged for cash, refunded as cash or transferred.\n• Gold is usable immediately after purchase, so gold you have already spent is excluded from withdrawal (refund).",
   "goldNoticeMore": "Refunds and payment support",
-  "goldNoticeDetails": "• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian's consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > 'Payment & refunds'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings."
+  "goldNoticeDetails": "• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian's consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > 'Payment & refunds'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings.",
+  "goldBankSectionTitle": "Buy by bank transfer",
+  "goldBankHowTo": "Transfer to the account below, then press [Confirm deposit] on the pack you bought.",
+  "goldBankLabelBank": "Bank",
+  "goldBankLabelAccount": "Account",
+  "goldBankLabelHolder": "Account holder",
+  "goldBankCopy": "Copy",
+  "goldBankCopied": "Account number copied",
+  "goldBankConfirm": "Confirm deposit",
+  "goldBankDialogTitle": "Deposit confirmation",
+  "goldBankDialogAmount": "Send {price} first, then request",
+  "goldBankDepositorLabel": "Depositor name",
+  "goldBankDepositorHint": "Name the transfer was sent under",
+  "goldBankSubmit": "Send request",
+  "goldBankRequestSent": "Your deposit notice was sent. Gold is granted once an admin confirms it.",
+  "goldBankRequestTimeout": "No response from the server. Please try again shortly.",
+  "goldBankUnavailable": "Bank transfer is not available yet.",
+  "goldBankManualNotice": "Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while."
 }

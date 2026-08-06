@@ -8168,6 +8168,108 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian\'s consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > \'Payment & refunds\'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings.'**
   String get goldNoticeDetails;
+
+  /// No description provided for @goldBankSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy by bank transfer'**
+  String get goldBankSectionTitle;
+
+  /// No description provided for @goldBankHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer to the account below, then press [Confirm deposit] on the pack you bought.'**
+  String get goldBankHowTo;
+
+  /// No description provided for @goldBankLabelBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank'**
+  String get goldBankLabelBank;
+
+  /// No description provided for @goldBankLabelAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get goldBankLabelAccount;
+
+  /// No description provided for @goldBankLabelHolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Account holder'**
+  String get goldBankLabelHolder;
+
+  /// No description provided for @goldBankCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get goldBankCopy;
+
+  /// No description provided for @goldBankCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Account number copied'**
+  String get goldBankCopied;
+
+  /// No description provided for @goldBankConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm deposit'**
+  String get goldBankConfirm;
+
+  /// No description provided for @goldBankDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit confirmation'**
+  String get goldBankDialogTitle;
+
+  /// No description provided for @goldBankDialogAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Send {price} first, then request'**
+  String goldBankDialogAmount(Object price);
+
+  /// No description provided for @goldBankDepositorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Depositor name'**
+  String get goldBankDepositorLabel;
+
+  /// No description provided for @goldBankDepositorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Name the transfer was sent under'**
+  String get goldBankDepositorHint;
+
+  /// No description provided for @goldBankSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get goldBankSubmit;
+
+  /// No description provided for @goldBankRequestSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your deposit notice was sent. Gold is granted once an admin confirms it.'**
+  String get goldBankRequestSent;
+
+  /// No description provided for @goldBankRequestTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'No response from the server. Please try again shortly.'**
+  String get goldBankRequestTimeout;
+
+  /// No description provided for @goldBankUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer is not available yet.'**
+  String get goldBankUnavailable;
+
+  /// No description provided for @goldBankManualNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.'**
+  String get goldBankManualNotice;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

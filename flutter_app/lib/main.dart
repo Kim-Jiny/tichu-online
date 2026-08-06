@@ -131,6 +131,11 @@ Future<void> _loadWebFonts() async {
   }
 }
 
+// The bundled web font, or null on native so the platform font wins. Every
+// explicit TextStyle inside a *ThemeData below has to carry this — see the
+// note on dialogTheme.
+const String? _webFont = kIsWeb ? 'Pretendard' : null;
+
 ThemeData _buildTheme() {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: const Color(0xFFF28C26),
@@ -140,16 +145,24 @@ ThemeData _buildTheme() {
     colorScheme: colorScheme,
     useMaterial3: true,
     // Only on web; native keeps the platform's own font.
-    fontFamily: kIsWeb ? 'Pretendard' : null,
+    fontFamily: _webFont,
     dialogTheme: DialogThemeData(
       backgroundColor: colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      // An explicit TextStyle REPLACES the theme's font — fontFamily above
+      // does not merge into it. Left off, every dialog title and snackbar on
+      // web fell back to the engine's default font, which has no Korean and
+      // fetches Noto subsets from gstatic one block at a time: the text drew
+      // as ▯ until (and unless) the right subset arrived. Any TextStyle set
+      // on a *Theme here has to name the family again.
       titleTextStyle: TextStyle(
+        fontFamily: _webFont,
         fontSize: 18,
         fontWeight: FontWeight.bold,
         color: colorScheme.onSurface,
       ),
       contentTextStyle: TextStyle(
+        fontFamily: _webFont,
         fontSize: 14,
         color: colorScheme.onSurfaceVariant,
       ),
@@ -166,7 +179,10 @@ ThemeData _buildTheme() {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: colorScheme.inverseSurface,
-      contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
+      contentTextStyle: TextStyle(
+        fontFamily: _webFont,
+        color: colorScheme.onInverseSurface,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       behavior: SnackBarBehavior.floating,
     ),

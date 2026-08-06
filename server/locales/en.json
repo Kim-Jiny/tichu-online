@@ -271,5 +271,10 @@
   "custom_title_too_long": "Titles can be up to 4 characters",
   "custom_title_banned": "That title contains a word that is not allowed",
   "custom_title_color": "That colour is not available",
-  "login_throttled": "Too many sign-in attempts. Please try again in a little while"
+  "login_throttled": "Too many sign-in attempts. Please try again in a little while",
+  "bank_deposit_unavailable": "Bank transfer is not available",
+  "bank_deposit_too_soon": "You just sent a request. Please try again shortly",
+  "bank_deposit_bad_product": "That product is not on sale",
+  "bank_deposit_need_name": "Please enter the depositor name",
+  "bank_deposit_submitted": "Your deposit notice was sent. Gold is granted once it is confirmed"
 }

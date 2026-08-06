@@ -4589,4 +4589,61 @@ class L10nEn extends L10n {
   @override
   String get goldNoticeDetails =>
       '• Refunds and cancellations follow the policies and procedures of the Apple App Store / Google Play.\n• Minors must have their legal guardian\'s consent before purchasing; purchases made without consent may be cancelled.\n• Payment enquiries: Settings > Contact us > \'Payment & refunds\'\n• Seller information and the full refund policy are stated in the Terms of Service and Privacy Policy in Settings.';
+
+  @override
+  String get goldBankSectionTitle => 'Buy by bank transfer';
+
+  @override
+  String get goldBankHowTo =>
+      'Transfer to the account below, then press [Confirm deposit] on the pack you bought.';
+
+  @override
+  String get goldBankLabelBank => 'Bank';
+
+  @override
+  String get goldBankLabelAccount => 'Account';
+
+  @override
+  String get goldBankLabelHolder => 'Account holder';
+
+  @override
+  String get goldBankCopy => 'Copy';
+
+  @override
+  String get goldBankCopied => 'Account number copied';
+
+  @override
+  String get goldBankConfirm => 'Confirm deposit';
+
+  @override
+  String get goldBankDialogTitle => 'Deposit confirmation';
+
+  @override
+  String goldBankDialogAmount(Object price) {
+    return 'Send $price first, then request';
+  }
+
+  @override
+  String get goldBankDepositorLabel => 'Depositor name';
+
+  @override
+  String get goldBankDepositorHint => 'Name the transfer was sent under';
+
+  @override
+  String get goldBankSubmit => 'Send request';
+
+  @override
+  String get goldBankRequestSent =>
+      'Your deposit notice was sent. Gold is granted once an admin confirms it.';
+
+  @override
+  String get goldBankRequestTimeout =>
+      'No response from the server. Please try again shortly.';
+
+  @override
+  String get goldBankUnavailable => 'Bank transfer is not available yet.';
+
+  @override
+  String get goldBankManualNotice =>
+      'Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.';
 }

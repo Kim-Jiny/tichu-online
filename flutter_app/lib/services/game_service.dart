@@ -159,6 +159,12 @@ class GameService extends ChangeNotifier {
   // bonus_gold, label_*}. Store price/currency is merged in by IapService.
   List<Map<String, dynamic>> goldProducts = [];
   bool goldProductsLoading = false;
+
+  // Bank transfer, web only — there is no store to buy from in a browser, so
+  // the shop shows an account number instead. Null until the server answers;
+  // `enabled: false` (an admin who hasn't configured an account, or has taken
+  // it down) is the same thing to the UI as never having asked.
+  Map<String, dynamic>? bankDepositInfo;
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
 
@@ -1852,6 +1858,17 @@ class GameService extends ChangeNotifier {
           goldProducts = list.map((e) => Map<String, dynamic>.from(e)).toList();
         }
         notifyListeners();
+        break;
+      case 'bank_deposit_info':
+        bankDepositInfo = Map<String, dynamic>.from(data);
+        notifyListeners();
+        break;
+      case 'bank_deposit_result':
+        final pending = _bankDepositPending;
+        _bankDepositPending = null;
+        if (pending != null && !pending.isCompleted) {
+          pending.complete(Map<String, dynamic>.from(data));
+        }
         break;
       case 'iap_purchase_result':
         // Balance is server-authoritative; apply it from any result even if
@@ -3565,6 +3582,48 @@ class GameService extends ChangeNotifier {
     goldProductsLoading = true;
     notifyListeners();
     _network.send({'type': 'get_gold_products', 'platform': _iapPlatform});
+  }
+
+  // Bank transfer (web only). Asking on a mobile build would be harmless —
+  // the server would answer — but the shop never calls this off the web, and
+  // the account details must not reach a store build.
+  void requestBankDepositInfo() {
+    if (!kIsWeb) return;
+    _network.send({'type': 'get_bank_deposit_info'});
+  }
+
+  Completer<Map<String, dynamic>>? _bankDepositPending;
+
+  // Tells the server the player says they've transferred the money, which
+  // notifies the admins. Grants nothing by itself — an admin confirms the
+  // deposit by hand and issues the gold.
+  Future<Map<String, dynamic>> requestBankDeposit(
+    String productId,
+    String depositor,
+  ) {
+    // The button is disabled while one is in flight, but a reconnect could
+    // still strand the old completer; hand the caller the live one rather
+    // than leaking a future nobody completes.
+    final existing = _bankDepositPending;
+    if (existing != null && !existing.isCompleted) return existing.future;
+
+    final completer = Completer<Map<String, dynamic>>();
+    _bankDepositPending = completer;
+    _network.send({
+      'type': 'request_bank_deposit',
+      'productId': productId,
+      'depositor': depositor,
+    });
+    // A dropped socket must not leave the dialog spinning forever.
+    Future.delayed(const Duration(seconds: 15), () {
+      if (!completer.isCompleted) {
+        completer.complete({'success': false, 'timeout': true});
+        if (identical(_bankDepositPending, completer)) {
+          _bankDepositPending = null;
+        }
+      }
+    });
+    return completer.future;
   }
 
   // Correlated pending verifications keyed by a per-request id echoed by the

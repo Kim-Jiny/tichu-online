@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -14,7 +16,10 @@ class GoldShopScreen extends StatefulWidget {
 }
 
 class _GoldShopScreenState extends State<GoldShopScreen> {
-  late final IapService _iap;
+  // Null on web: in_app_purchase has no web implementation, so there is no
+  // store to start, no ProductDetails to resolve, and nothing to detach in
+  // dispose(). Web pays by bank transfer instead (see _buildBankPanel).
+  IapService? _iap;
   bool _storeReady = false;
   bool _storeUnavailable = false;
   bool _detailsRequested = false;
@@ -25,20 +30,23 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   void initState() {
     super.initState();
     final game = context.read<GameService>();
-    // Use the APP-LIVED instance (not a screen-scoped one) so pending-purchase
-    // reconciliation keeps working after this screen is closed.
-    game.ensureIapStarted();
-    _iap = game.iap!;
-    _iap
-      ..onSuccess = _handleSuccess
-      ..onError = _handleError
-      ..onPending = () {
-        _toast(L10n.of(context).goldPaymentProcessing);
-      }
-      ..onSettled = (_) {
-        if (mounted) setState(() => _busyProductId = null);
-      };
-    _initStore();
+    if (!kIsWeb) {
+      // Use the APP-LIVED instance (not a screen-scoped one) so pending-purchase
+      // reconciliation keeps working after this screen is closed.
+      game.ensureIapStarted();
+      final iap = game.iap!;
+      _iap = iap;
+      iap
+        ..onSuccess = _handleSuccess
+        ..onError = _handleError
+        ..onPending = () {
+          _toast(L10n.of(context).goldPaymentProcessing);
+        }
+        ..onSettled = (_) {
+          if (mounted) setState(() => _busyProductId = null);
+        };
+      _initStore();
+    }
     // requestGoldProducts() calls notifyListeners() synchronously. initState
     // can run mid-build (e.g. this screen re-inflated during a GameService-
     // triggered ShopScreen rebuild after a prior purchase), so defer it to
@@ -46,28 +54,34 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       game.requestGoldProducts();
+      game.requestBankDepositInfo();
     });
   }
 
   Future<void> _initStore() async {
-    await _iap.init();
+    final iap = _iap;
+    if (iap == null) return;
+    await iap.init();
     if (!mounted) return;
     setState(() {
-      _storeReady = _iap.isAvailable;
-      _storeUnavailable = !_iap.isAvailable;
+      _storeReady = iap.isAvailable;
+      _storeUnavailable = !iap.isAvailable;
     });
   }
 
   // Server list arrives via WS after requestGoldProducts(); once we have the
   // product ids, resolve their store price/currency exactly once.
   Future<void> _loadStoreDetails(List<Map<String, dynamic>> products) async {
-    if (_detailsRequested || !_storeReady || products.isEmpty) return;
+    final iap = _iap;
+    if (iap == null || _detailsRequested || !_storeReady || products.isEmpty) {
+      return;
+    }
     _detailsRequested = true;
     final ids = products
         .map((p) => p['product_id']?.toString() ?? '')
         .where((s) => s.isNotEmpty)
         .toList();
-    final details = await _iap.loadProducts(ids);
+    final details = await iap.loadProducts(ids);
     if (!mounted) return;
     setState(() {
       _details = {for (final d in details) d.id: d};
@@ -124,6 +138,8 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   }
 
   Future<void> _buy(Map<String, dynamic> product) async {
+    final iap = _iap;
+    if (iap == null) return;
     final id = product['product_id']?.toString() ?? '';
     final pd = _details[id];
     // Resolved before the await: the store call can outlive this screen, and
@@ -135,7 +151,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     }
     setState(() => _busyProductId = id);
     try {
-      await _iap.buy(pd);
+      await iap.buy(pd);
     } catch (e) {
       if (mounted) setState(() => _busyProductId = null);
       _toast(l10n.goldPurchaseStartFailed('$e'));
@@ -148,10 +164,13 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     // here or pending-purchase reconciliation would stop. Just detach our UI
     // callbacks so this screen's State can be GC'd; background reconciliation
     // (verify + completePurchase + balance update) continues without them.
-    if (identical(_iap.onSuccess, _handleSuccess)) _iap.onSuccess = null;
-    if (identical(_iap.onError, _handleError)) _iap.onError = null;
-    _iap.onPending = null;
-    _iap.onSettled = null;
+    final iap = _iap;
+    if (iap != null) {
+      if (identical(iap.onSuccess, _handleSuccess)) iap.onSuccess = null;
+      if (identical(iap.onError, _handleError)) iap.onError = null;
+      iap.onPending = null;
+      iap.onSettled = null;
+    }
     super.dispose();
   }
 
@@ -273,24 +292,253 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       }
     }
 
+    // On web the account panel is the header of the list, not a separate
+    // section: the tier buttons do nothing until the player has read it.
+    final header = kIsWeb ? 1 : 0;
     return ListView.separated(
       padding: const EdgeInsets.only(top: 4, bottom: 20),
-      itemCount: products.length + 1,
-      separatorBuilder: (_, index) => index == products.length - 1
-          ? const SizedBox(height: 12)
-          : const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 16,
-              endIndent: 16,
-              color: Color(0xFFF2ECE9),
-            ),
+      itemCount: products.length + header + 1,
+      separatorBuilder: (_, index) =>
+          index < header || index == products.length + header - 1
+              ? const SizedBox(height: 12)
+              : const Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: Color(0xFFF2ECE9),
+                ),
       itemBuilder: (context, i) {
-        if (i == products.length) return _purchaseNotice();
-        return _buildTierRow(products[i], bestPct, i, products.length);
+        if (header == 1 && i == 0) return _buildBankPanel(game);
+        final index = i - header;
+        if (index == products.length) return _purchaseNotice();
+        return _buildTierRow(products[index], bestPct, index, products.length);
       },
     );
   }
+
+  // ---------------------------------------------------------------------
+  // Bank transfer — web only.
+  //
+  // A browser has no store to buy from, and unlike the app there is no store
+  // policy forbidding us from taking the money directly. So the web shop
+  // shows an account number, the player transfers, and an admin grants the
+  // gold by hand after checking the bank statement. Nothing here moves gold
+  // on its own.
+  // ---------------------------------------------------------------------
+
+  Widget _buildBankPanel(GameService game) {
+    final l10n = L10n.of(context);
+    final info = game.bankDepositInfo;
+    // Not answered yet, or the admin hasn't configured an account. Both mean
+    // "you can't pay right now" — say so rather than showing a dead panel.
+    if (info == null || info['enabled'] != true) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAF7F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEDE4DE)),
+        ),
+        child: Text(
+          l10n.goldBankUnavailable,
+          style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A7A72)),
+        ),
+      );
+    }
+
+    final account = info['account']?.toString() ?? '';
+    final bank = info['bank']?.toString() ?? '';
+    final holder = info['holder']?.toString() ?? '';
+    final note = info['note']?.toString() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF0E0BE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance,
+                  size: 17, color: Color(0xFFB07A12)),
+              const SizedBox(width: 6),
+              Text(
+                l10n.goldBankSectionTitle,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5A4038),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _bankRow(l10n.goldBankLabelBank, bank),
+          const SizedBox(height: 3),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _bankRow(l10n.goldBankLabelAccount, account)),
+              // A 14-digit account number is exactly the thing nobody should
+              // be retyping into a banking app from memory.
+              TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: account));
+                  _toast(l10n.goldBankCopied);
+                },
+                icon: const Icon(Icons.copy, size: 14),
+                label: Text(l10n.goldBankCopy,
+                    style: const TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFB07A12),
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+            ],
+          ),
+          if (holder.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            _bankRow(l10n.goldBankLabelHolder, holder),
+          ],
+          const SizedBox(height: 9),
+          Text(
+            l10n.goldBankHowTo,
+            style: const TextStyle(
+              fontSize: 11.5,
+              height: 1.45,
+              color: Color(0xFF7A6A62),
+            ),
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              note,
+              style: const TextStyle(
+                fontSize: 11.5,
+                height: 1.45,
+                color: Color(0xFFB35B19),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            l10n.goldBankManualNotice,
+            style: const TextStyle(
+              fontSize: 11,
+              height: 1.4,
+              color: Color(0xFF9A8A82),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bankRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        SizedBox(
+          width: 58,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: Color(0xFF9A8A82)),
+          ),
+        ),
+        Expanded(
+          child: SelectableText(
+            value,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // "I've sent the money" — collects the depositor name (the only thing that
+  // ties a line on a bank statement to an account) and pings the admins.
+  Future<void> _claimDeposit(Map<String, dynamic> product) async {
+    final game = context.read<GameService>();
+    final l10n = L10n.of(context);
+    final id = product['product_id']?.toString() ?? '';
+    final price = (product['price_krw'] ?? 0) as int;
+    if (id.isEmpty || price <= 0) return;
+
+    final controller = TextEditingController(text: game.playerName);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(l10n.goldBankDialogTitle,
+            style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.goldBankDialogAmount(_krw(price)),
+              style: const TextStyle(fontSize: 13.5, color: Color(0xFF5A4038)),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLength: 40,
+              decoration: InputDecoration(
+                labelText: l10n.goldBankDepositorLabel,
+                hintText: l10n.goldBankDepositorHint,
+                counterText: '',
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.goldBankSubmit),
+          ),
+        ],
+      ),
+    );
+    // The dialog owns the controller's lifetime; read the value before it goes.
+    final depositor = controller.text.trim();
+    controller.dispose();
+    if (confirmed != true || depositor.isEmpty || !mounted) return;
+
+    setState(() => _busyProductId = id);
+    final result = await game.requestBankDeposit(id, depositor);
+    if (!mounted) return;
+    setState(() => _busyProductId = null);
+    if (result['success'] == true) {
+      _toast(l10n.goldBankRequestSent);
+    } else if (result['timeout'] == true) {
+      _toast(l10n.goldBankRequestTimeout);
+    } else {
+      _toast(result['message']?.toString() ?? l10n.goldBankRequestTimeout);
+    }
+  }
+
+  String _krw(int won) => '₩${_fmt(won)}';
 
   Widget _buildTierRow(
     Map<String, dynamic> product,
@@ -308,7 +556,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final isBest = bonusPct > 0 && bonusPct == bestPct;
     final pd = _details[id];
     final busy = _busyProductId == id;
-    final pending = busy || pd == null;
+    // Web has no store to resolve a price from — the won price comes down with
+    // the product row, so the button is ready as soon as the list is.
+    final priceKrw = (product['price_krw'] ?? 0) as int;
+    final priceLabel = kIsWeb ? _krw(priceKrw) : pd?.price;
+    final pending = busy || priceLabel == null || (kIsWeb && priceKrw <= 0);
 
     // Five identical coin icons said nothing about which tier was which. The
     // art itself steps with the amount (coin → pile → hoard) and grows with it,
@@ -432,10 +684,12 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           const SizedBox(width: 10),
           // The price IS the button — there is nothing else to press on a row.
           SizedBox(
-            width: 96,
+            width: kIsWeb ? 116 : 96,
             height: 38,
             child: ElevatedButton(
-              onPressed: pending ? null : () => _buy(product),
+              onPressed: pending
+                  ? null
+                  : () => kIsWeb ? _claimDeposit(product) : _buy(product),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFE9B0),
                 foregroundColor: const Color(0xFFB07A12),
@@ -457,12 +711,29 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                     )
                   : FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: Text(
-                        pd.price,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            priceLabel,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          // The price alone reads as "buy now" — on web it
+                          // isn't: the money moves in a banking app first, and
+                          // this button only tells us about it afterwards.
+                          if (kIsWeb)
+                            Text(
+                              L10n.of(context).goldBankConfirm,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.1,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
             ),

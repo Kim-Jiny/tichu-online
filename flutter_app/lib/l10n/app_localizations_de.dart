@@ -4625,4 +4625,61 @@ class L10nDe extends L10n {
   @override
   String get goldNoticeDetails =>
       '• Erstattungen und Stornierungen richten sich nach den Richtlinien und Verfahren des Apple App Store / Google Play.\n• Minderjährige benötigen die Zustimmung ihrer Erziehungsberechtigten; Käufe ohne Zustimmung können storniert werden.\n• Fragen zur Zahlung: Einstellungen > Kontakt > „Zahlung & Erstattung“\n• Verkäuferinformationen und die vollständige Erstattungsrichtlinie stehen in den AGB und der Datenschutzerklärung in den Einstellungen.';
+
+  @override
+  String get goldBankSectionTitle => 'Per Banküberweisung kaufen';
+
+  @override
+  String get goldBankHowTo =>
+      'Überweise auf das Konto unten und drücke dann bei deinem Paket auf [Zahlung bestätigen].';
+
+  @override
+  String get goldBankLabelBank => 'Bank';
+
+  @override
+  String get goldBankLabelAccount => 'Kontonummer';
+
+  @override
+  String get goldBankLabelHolder => 'Kontoinhaber';
+
+  @override
+  String get goldBankCopy => 'Kopieren';
+
+  @override
+  String get goldBankCopied => 'Kontonummer kopiert';
+
+  @override
+  String get goldBankConfirm => 'Zahlung bestätigen';
+
+  @override
+  String get goldBankDialogTitle => 'Zahlungsbestätigung';
+
+  @override
+  String goldBankDialogAmount(Object price) {
+    return 'Überweise zuerst $price, dann anfragen';
+  }
+
+  @override
+  String get goldBankDepositorLabel => 'Name des Einzahlers';
+
+  @override
+  String get goldBankDepositorHint => 'Name, unter dem überwiesen wurde';
+
+  @override
+  String get goldBankSubmit => 'Anfrage senden';
+
+  @override
+  String get goldBankRequestSent =>
+      'Deine Zahlungsmeldung wurde gesendet. Das Gold kommt, sobald ein Admin sie bestätigt.';
+
+  @override
+  String get goldBankRequestTimeout =>
+      'Keine Antwort vom Server. Bitte versuche es gleich noch einmal.';
+
+  @override
+  String get goldBankUnavailable => 'Banküberweisung ist noch nicht verfügbar.';
+
+  @override
+  String get goldBankManualNotice =>
+      'Banküberweisungen werden nicht automatisch verarbeitet. Ein Admin bestätigt die Zahlung, bevor das Gold gutgeschrieben wird — das kann dauern.';
 }

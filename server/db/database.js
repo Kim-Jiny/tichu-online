@@ -457,6 +457,14 @@ async function runMigrations() {
       )
     `);
 
+    // Won price, for the web client only. On iOS/Android the store owns the
+    // price and we must not show our own (and store policy forbids paying
+    // anywhere but the store anyway) — but the web build has no store to ask,
+    // so a bank transfer needs a number to put on screen. Admin-editable.
+    await client.query(
+      `ALTER TABLE tc_gold_products ADD COLUMN IF NOT EXISTS price_krw INT NOT NULL DEFAULT 0`
+    );
+
     // IAP receipt ledger. transaction_id is the idempotency key: a verified
     // store transaction grants gold exactly once even if the client retries.
     await client.query(`
@@ -562,6 +570,21 @@ async function runMigrations() {
         ('jiny.tichu.gold4', 48300,  16700,  'both', '골드 65,000 (+35%)',  4, FALSE),
         ('jiny.tichu.gold5', 165000, 135000, 'both', '골드 300,000 (+82%)', 5, FALSE)
       ON CONFLICT (product_id) DO NOTHING
+    `);
+
+    // Backfill the agreed won prices onto the seeded tiers. Guarded on
+    // price_krw = 0 so this only ever fills a blank — an admin who edits a
+    // price keeps it across restarts, same contract as the ON CONFLICT above.
+    await client.query(`
+      UPDATE tc_gold_products AS p SET price_krw = v.price
+        FROM (VALUES
+          ('jiny.tichu.gold1', 1200),
+          ('jiny.tichu.gold2', 3900),
+          ('jiny.tichu.gold3', 9900),
+          ('jiny.tichu.gold4', 29000),
+          ('jiny.tichu.gold5', 99000)
+        ) AS v(product_id, price)
+       WHERE p.product_id = v.product_id AND p.price_krw = 0
     `);
 
     // App config table (EULA, etc.)
@@ -7784,7 +7807,7 @@ async function getPushHistoryDetail(id, page = 1, limit = 50) {
 async function getActiveGoldProducts(platform) {
   try {
     const result = await pool.query(
-      `SELECT product_id, gold_amount, bonus_gold, platform,
+      `SELECT product_id, gold_amount, bonus_gold, platform, price_krw,
               label_ko, label_en, label_de, sort_order
          FROM tc_gold_products
         WHERE is_active = TRUE
@@ -7804,7 +7827,7 @@ async function getActiveGoldProducts(platform) {
 async function getGoldProductByProductId(productId) {
   try {
     const result = await pool.query(
-      `SELECT product_id, gold_amount, bonus_gold, platform, is_active,
+      `SELECT product_id, gold_amount, bonus_gold, platform, is_active, price_krw,
               label_ko, label_en, label_de
          FROM tc_gold_products WHERE product_id = $1`,
       [productId]

@@ -5912,6 +5912,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     ]);
     const minVersion = minVersionRaw || '';
     const latestVersion = latestVersionRaw || '';
+    // Bank transfer account shown in the WEB shop only. Stored as JSON in one
+    // config row; a bad value must render an empty form, not a 500.
+    let bank = { enabled: false, bank: '', account: '', holder: '', note: '' };
+    try {
+      const raw = await getConfig('bank_deposit');
+      if (raw) bank = { ...bank, ...JSON.parse(raw) };
+    } catch { /* keep the blank default */ }
     const saved = url.searchParams.get('saved');
 
     const langTabs = (baseId, values) => {
@@ -5944,6 +5951,30 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <form method="POST" action="/tc-backstage/settings/min-version" style="display:flex;align-items:center;gap:8px">
           <input type="text" name="min_version" value="${escapeHtml(minVersion)}" placeholder="예: 2.0.1" style="width:200px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
           <button type="submit" class="btn btn-primary">저장</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>계좌이체 입금 계좌 (웹 상점 전용)</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">
+          웹(<code>/play</code>) 골드 충전 화면에만 표시됩니다. 앱(iOS/Android)에는 절대 노출되지 않습니다 —
+          스토어 정책상 앱 내 디지털 재화는 인앱결제만 허용되므로 여기에 계좌를 넣어도 앱에는 나가지 않습니다.<br>
+          이용자가 [입금 확인]을 누르면 <b>문의 목록에 <code>[입금확인]</code> 글이 쌓이고 어드민에게 푸시가 갑니다.</b>
+          골드는 자동 지급되지 않습니다 — 입금 내역을 직접 확인한 뒤 유저 상세에서 골드를 지급하세요.
+        </p>
+        <form method="POST" action="/tc-backstage/settings/bank-deposit">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:14px">
+              <input type="checkbox" name="enabled" value="on" ${bank.enabled === true ? 'checked' : ''}>
+              웹 상점에 표시
+            </label>
+            <input type="text" name="bank" value="${escapeHtml(bank.bank || '')}" placeholder="은행 (예: 카카오뱅크)" style="width:190px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <input type="text" name="account" value="${escapeHtml(bank.account || '')}" placeholder="계좌번호" style="width:230px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <input type="text" name="holder" value="${escapeHtml(bank.holder || '')}" placeholder="예금주" style="width:150px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" name="note" value="${escapeHtml(bank.note || '')}" placeholder="안내 문구 (예: 입금자명을 닉네임과 같게 해주세요)" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+            <button type="submit" class="btn btn-primary">저장</button>
+          </div>
         </form>
       </div>
       <div class="card">
@@ -6047,6 +6078,25 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/settings/latest-version' && method === 'POST') {
     const body = await parseBody(req);
     await updateConfig('latest_version', (body.latest_version || '').trim());
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/bank-deposit' && method === 'POST') {
+    const body = await parseBody(req);
+    const trim = (v, n) => String(v || '').trim().slice(0, n);
+    const bankName = trim(body.bank, 40);
+    const account = trim(body.account, 60);
+    // Turning it on without both fields would publish a half-filled account
+    // panel; the server's reader rejects it anyway, so refuse it here where
+    // the admin can see why.
+    const enabled = body.enabled === 'on' && !!bankName && !!account;
+    await updateConfig('bank_deposit', JSON.stringify({
+      enabled,
+      bank: bankName,
+      account,
+      holder: trim(body.holder, 40),
+      note: trim(body.note, 300),
+    }));
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 

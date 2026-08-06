@@ -31,28 +31,40 @@ jobs:
         # resolves against the wrong prefix and 404s. (/play/* still 301s
         # here, for links from when it lived there.)
         #
-        # The three social keys are build-time inputs rather than committed
-        # values. They are not secrets — a web app ships them in the clear, and
-        # what actually guards the project is Firebase's authorised-domains
-        # list and Kakao's registered platform origins. They live in GitHub
-        # secrets so the repo does not have to be edited to rotate one.
+        # The three social keys have working defaults committed in
+        # lib/firebase_options.dart and lib/config/social_config.dart, so
+        # NOTHING has to be configured for a normal deploy. These secrets exist
+        # only to override them (a different Firebase project, a rotated key).
         #
-        # Missing/empty is a supported state: SocialConfig then hides the
-        # provider's button instead of offering a sign-in that cannot complete.
+        # An unset secret must therefore pass NO --dart-define at all.
+        # `--dart-define=KEY=` is not the same as omitting it:
+        # String.fromEnvironment returns the empty string it was given, the
+        # defaultValue is skipped, and SocialConfig then hides every provider
+        # button — a live site with no way to sign in with Google, Apple or
+        # Kakao, and nothing in the build log to say why.
         env:
           FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
           FIREBASE_WEB_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
           KAKAO_JS_KEY: ${{ secrets.KAKAO_JS_KEY }}
         run: |
           flutter pub get
+          DEFINES=""
+          if [ -n "$FIREBASE_WEB_API_KEY" ]; then
+            DEFINES="$DEFINES --dart-define=FIREBASE_WEB_API_KEY=$FIREBASE_WEB_API_KEY"
+          fi
+          if [ -n "$FIREBASE_WEB_APP_ID" ]; then
+            DEFINES="$DEFINES --dart-define=FIREBASE_WEB_APP_ID=$FIREBASE_WEB_APP_ID"
+          fi
+          if [ -n "$KAKAO_JS_KEY" ]; then
+            DEFINES="$DEFINES --dart-define=KAKAO_JS_KEY=$KAKAO_JS_KEY"
+          fi
+          echo "overrides in use:${DEFINES:- (none — using committed defaults)}"
           # --pwa-strategy=none: the app is useless offline (every screen needs
           # the WebSocket) and a stale service worker is indistinguishable from
           # a failed deploy. index.html unregisters any worker left by an
           # earlier build.
-          flutter build web --release --base-href=/ --pwa-strategy=none \
-            --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
-            --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
-            --dart-define=KAKAO_JS_KEY="$KAKAO_JS_KEY"
+          # shellcheck disable=SC2086  # DEFINES is intentionally word-split
+          flutter build web --release --base-href=/ --pwa-strategy=none $DEFINES
 
       - name: Package
         run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .

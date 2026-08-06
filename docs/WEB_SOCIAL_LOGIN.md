@@ -76,10 +76,9 @@
 (`kakao_flutter_sdk_common/lib/src/server_hosts.dart`). JS SDK 팝업은 어디로
 이동하는 대신 opener로 결과를 돌려주기 때문. Redirect URI는 REST API 방식 전용이다.
 
-## GitHub 시크릿
+## GitHub 시크릿 — 설정할 필요 없다
 
-셋 다 코드에 기본값이 있으므로 **아무것도 설정하지 않아도 된다.**
-설정하면 코드 기본값보다 우선한다(다른 Firebase 프로젝트로 돌릴 때 유용).
+셋 다 코드에 기본값이 있다. **아무것도 등록하지 않아도 정상 배포된다.**
 
 | 이름 | 기본값 위치 |
 |---|---|
@@ -87,7 +86,23 @@
 | `FIREBASE_WEB_APP_ID` | `lib/firebase_options.dart` |
 | `KAKAO_JS_KEY` | `lib/config/social_config.dart` |
 
-`.github/workflows/deploy.yml`이 `--dart-define`으로 넘긴다.
+시크릿은 **덮어쓸 때만** 쓴다(다른 Firebase 프로젝트, 키 교체 등).
+
+### 함정: 빈 값은 기본값을 지운다
+
+`--dart-define=KEY=` 는 인자를 생략한 것과 다르다. `String.fromEnvironment`는
+넘겨받은 빈 문자열을 그대로 돌려주고 `defaultValue`를 쓰지 않는다:
+
+```
+define 없이     → FALLBACK
+--define=KEY=   → (빈 문자열)
+```
+
+그러면 `SocialConfig`가 모든 제공자 버튼을 숨겨서, **로그인 수단이 하나도 없는
+사이트**가 배포된다. 빌드 로그에는 아무 단서도 안 남는다.
+
+그래서 워크플로는 시크릿이 비어 있으면 해당 `--dart-define`을 **아예 넘기지
+않는다**. 손댈 때 이 조건을 없애지 말 것.
 
 ## 로컬에서 빌드
 

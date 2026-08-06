@@ -4646,4 +4646,11 @@ class L10nEn extends L10n {
   @override
   String get goldBankManualNotice =>
       'Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.';
+
+  @override
+  String get appForceUpdateBodyWeb =>
+      'A new version has been deployed.\nReload the page to continue.';
+
+  @override
+  String get appForceUpdateButtonWeb => 'Reload';
 }

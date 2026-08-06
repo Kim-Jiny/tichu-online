@@ -2619,5 +2619,7 @@
   "goldBankRequestSent": "Your deposit notice was sent. Gold is granted once an admin confirms it.",
   "goldBankRequestTimeout": "No response from the server. Please try again shortly.",
   "goldBankUnavailable": "Bank transfer is not available yet.",
-  "goldBankManualNotice": "Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while."
+  "goldBankManualNotice": "Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.",
+  "appForceUpdateBodyWeb": "A new version has been deployed.\nReload the page to continue.",
+  "appForceUpdateButtonWeb": "Reload"
 }

@@ -41,6 +41,41 @@ server {
     # Sits above the app's limit so the app's message is always the one seen.
     client_max_body_size 6m;
 
+    # Compress the web client. It is the only thing here big enough to care
+    # about, and it is all highly compressible text/wasm:
+    #
+    #   main.dart.js        5.0MB -> 1.4MB
+    #   canvaskit.wasm      5.5MB -> 2.1MB
+    #
+    # ~12MB of first-visit transfer becomes ~4MB. Neither nginx nor the Node
+    # static handler compressed anything before this, so every new visitor
+    # pulled the full uncompressed bundle.
+    #
+    # Applies to proxied responses too (gzip_proxied), which is the whole
+    # point — /play is served by the app container, not from disk here.
+    gzip on;
+    gzip_proxied any;
+    gzip_vary on;
+    # 6 is the usual sweet spot; 9 costs noticeably more CPU for ~1% less
+    # size, and this box is shared with the game loop.
+    gzip_comp_level 6;
+    # Below ~1KB the framing overhead outweighs the saving.
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/manifest+json
+        application/wasm
+        image/svg+xml;
+    # NOT font/woff2, image/png or image/jpeg: already compressed, so gzip
+    # burns CPU to make them very slightly larger.
+    #
+    # WebSockets are unaffected — an upgraded connection is not an HTTP
+    # response body, so gzip never sees it.
+
     # Internal-only endpoints (room migration). nginx blocks them at the
     # public edge; the in-network call from the peer container
     # (http://tichu-online-blue:3000/internal/...) bypasses this since

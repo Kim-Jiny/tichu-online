@@ -1610,5 +1610,7 @@
   "goldBankRequestSent": "입금 확인 요청을 보냈습니다. 관리자 확인 후 골드가 지급됩니다.",
   "goldBankRequestTimeout": "서버 응답이 없습니다. 잠시 후 다시 시도해 주세요.",
   "goldBankUnavailable": "계좌이체 구매는 현재 준비 중입니다.",
-  "goldBankManualNotice": "계좌이체는 자동 처리되지 않습니다. 관리자가 입금을 확인한 뒤 골드를 지급하므로 시간이 걸릴 수 있습니다."
+  "goldBankManualNotice": "계좌이체는 자동 처리되지 않습니다. 관리자가 입금을 확인한 뒤 골드를 지급하므로 시간이 걸릴 수 있습니다.",
+  "appForceUpdateBodyWeb": "새 버전이 배포되었습니다.\n새로고침하면 바로 이용할 수 있습니다.",
+  "appForceUpdateButtonWeb": "새로고침"
 }

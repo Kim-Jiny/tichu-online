@@ -4682,4 +4682,11 @@ class L10nDe extends L10n {
   @override
   String get goldBankManualNotice =>
       'Banküberweisungen werden nicht automatisch verarbeitet. Ein Admin bestätigt die Zahlung, bevor das Gold gutgeschrieben wird — das kann dauern.';
+
+  @override
+  String get appForceUpdateBodyWeb =>
+      'Eine neue Version ist da.\nLade die Seite neu, um weiterzuspielen.';
+
+  @override
+  String get appForceUpdateButtonWeb => 'Neu laden';
 }

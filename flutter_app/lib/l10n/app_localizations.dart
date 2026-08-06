@@ -8270,6 +8270,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.'**
   String get goldBankManualNotice;
+
+  /// No description provided for @appForceUpdateBodyWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version has been deployed.\nReload the page to continue.'**
+  String get appForceUpdateBodyWeb;
+
+  /// No description provided for @appForceUpdateButtonWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get appForceUpdateButtonWeb;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

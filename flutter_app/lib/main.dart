@@ -770,6 +770,18 @@ class _EntryScreenState extends State<_EntryScreen> {
     return 0;
   }
 
+  /// Re-navigates the current tab to itself, which re-fetches the entry point
+  /// instead of replaying the app already in memory.
+  ///
+  /// Done through url_launcher (already a dependency) rather than a browser
+  /// API, so main.dart needs no conditional import to keep compiling for
+  /// mobile. `_self` is what makes it replace this tab instead of opening a
+  /// new one. index.html and flutter_bootstrap.js are served no-store, so the
+  /// browser has to revalidate them and lands on the newest build.
+  Future<void> _reloadWebPage() async {
+    await launchUrl(Uri.base, webOnlyWindowName: '_self');
+  }
+
   Future<void> _openStore() async {
     final uri = Uri.parse(
       (!kIsWeb && Platform.isIOS)
@@ -819,7 +831,14 @@ class _EntryScreenState extends State<_EntryScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  L10n.of(context).appForceUpdateBody,
+                  // On the web there is nothing to install: the page always
+                  // serves the newest bundle (index.html and the bootstrap
+                  // are no-store), so reloading IS the update. This only ever
+                  // fires for a tab that has been sitting open since before a
+                  // deploy.
+                  kIsWeb
+                      ? L10n.of(context).appForceUpdateBodyWeb
+                      : L10n.of(context).appForceUpdateBody,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14,
@@ -832,7 +851,9 @@ class _EntryScreenState extends State<_EntryScreen> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: _openStore,
+                    // A store link is useless in a browser — it used to send
+                    // web users to Google Play regardless of platform.
+                    onPressed: kIsWeb ? _reloadWebPage : _openStore,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7E57C2),
                       foregroundColor: Colors.white,
@@ -841,7 +862,9 @@ class _EntryScreenState extends State<_EntryScreen> {
                       ),
                     ),
                     child: Text(
-                      L10n.of(context).appForceUpdateButton,
+                      kIsWeb
+                          ? L10n.of(context).appForceUpdateButtonWeb
+                          : L10n.of(context).appForceUpdateButton,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

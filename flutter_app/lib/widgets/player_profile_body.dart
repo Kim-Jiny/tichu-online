@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import 'player_profile_header.dart';
+import 'game_type_icon.dart';
 
 /// Body of the player-profile popup: manner/desertion, a game selector, that
 /// game's season and overall records, and recent matches.
@@ -46,12 +47,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   @override
   Widget build(BuildContext context) => _buildProfileContent(
-        widget.data,
-        widget.game,
-        dialogContext: context,
-        selectedTab: _tab,
-        onTabChanged: (g) => setState(() => _tab = g),
-      );
+    widget.data,
+    widget.game,
+    dialogContext: context,
+    selectedTab: _tab,
+    onTabChanged: (g) => setState(() => _tab = g),
+  );
 
   Widget _buildProfileContent(
     Map<String, dynamic> data,
@@ -123,31 +124,26 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         Builder(
           builder: (_) {
             String gameLabel;
-            String gameEmoji;
             Color gameBgColor;
             Color gameFgColor;
             switch (selectedTab) {
               case 'skull_king':
                 gameLabel = l10n.lobbySkullKing;
-                gameEmoji = '⚓';
                 gameBgColor = const Color(0xFF2D2D3D);
                 gameFgColor = const Color(0xFFFFD54F);
                 break;
               case 'mighty':
                 gameLabel = l10n.rankingMighty;
-                gameEmoji = '🎯';
                 gameBgColor = const Color(0xFF2E7D32);
                 gameFgColor = Colors.white;
                 break;
               case 'love_letter':
                 gameLabel = l10n.lobbyLoveLetter;
-                gameEmoji = '❤️';
                 gameBgColor = const Color(0xFFE91E63);
                 gameFgColor = Colors.white;
                 break;
               default:
                 gameLabel = l10n.lobbyTichu;
-                gameEmoji = '🃏';
                 gameBgColor = const Color(0xFF7E57C2);
                 gameFgColor = Colors.white;
             }
@@ -175,9 +171,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                         ),
                         const SizedBox(height: 12),
                         ListTile(
-                          leading: const Text(
-                            '🃏',
-                            style: TextStyle(fontSize: 20),
+                          leading: Icon(
+                            gameTypeIcon('tichu'),
+                            size: 20,
+                            color: const Color(0xFF7E57C2),
                           ),
                           title: Text(l10n.lobbyTichu),
                           trailing: selectedTab == 'tichu'
@@ -192,9 +189,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: const Text(
-                            '⚓',
-                            style: TextStyle(fontSize: 20),
+                          leading: Icon(
+                            gameTypeIcon('skull_king'),
+                            size: 20,
+                            color: const Color(0xFF2D2D3D),
                           ),
                           title: Text(l10n.lobbySkullKing),
                           trailing: selectedTab == 'skull_king'
@@ -209,9 +207,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: const Text(
-                            '🎯',
-                            style: TextStyle(fontSize: 20),
+                          leading: Icon(
+                            gameTypeIcon('mighty'),
+                            size: 20,
+                            color: const Color(0xFF2E7D32),
                           ),
                           title: Text(l10n.rankingMighty),
                           trailing: selectedTab == 'mighty'
@@ -226,9 +225,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: const Text(
-                            '❤️',
-                            style: TextStyle(fontSize: 20),
+                          leading: Icon(
+                            gameTypeIcon('love_letter'),
+                            size: 20,
+                            color: const Color(0xFFE91E63),
                           ),
                           title: Text(l10n.lobbyLoveLetter),
                           trailing: selectedTab == 'love_letter'
@@ -261,7 +261,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 ),
                 child: Row(
                   children: [
-                    Text(gameEmoji, style: const TextStyle(fontSize: 18)),
+                    Icon(
+                      gameTypeIcon(selectedTab),
+                      size: 18,
+                      color: gameFgColor,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

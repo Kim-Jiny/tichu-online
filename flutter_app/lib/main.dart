@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'dart:typed_data' show ByteData;
+import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +48,7 @@ void main() async {
   if (kIsWeb) {
     SemanticsBinding.instance.ensureSemantics();
     await _loadWebFonts();
+    _warmEmojiFont();
   }
 
   // The whole mobile stack is skipped on web, and it has to be skipped here
@@ -117,9 +119,9 @@ Future<void> _loadWebFonts() async {
     final loader = FontLoader('Pretendard');
     for (final file in ['Pretendard-Regular.woff2', 'Pretendard-Bold.woff2']) {
       loader.addFont(
-        http.readBytes(Uri.base.resolve('fonts/$file')).then(
-          (bytes) => ByteData.view(bytes.buffer),
-        ),
+        http
+            .readBytes(Uri.base.resolve('fonts/$file'))
+            .then((bytes) => ByteData.view(bytes.buffer)),
       );
     }
     // Bounded: the first frame waits on this so there is no flash of fallback
@@ -128,6 +130,29 @@ Future<void> _loadWebFonts() async {
     await loader.load().timeout(const Duration(seconds: 6));
   } catch (_) {
     // Non-fatal by design — see above.
+  }
+}
+
+/// Pulls the emoji/symbol fallback fonts down while the login screen is up.
+///
+/// CanvasKit ships no emoji glyphs. The first time one is painted it goes to
+/// fonts.gstatic.com — Noto Color Emoji (~153KB, ~300ms) and Noto Sans Symbols
+/// (~68KB, ~260ms) — so whichever screen shows an emoji first draws its labels
+/// before its icons. That looked like slow image loading in the create-room
+/// sheet, and would look the same on any other screen that uses one.
+///
+/// Laying out a paragraph is enough: font fallback is resolved during layout,
+/// so the fetch starts without anything being drawn. Not awaited — this is a
+/// warm-up, and the app must not wait on Google's CDN to boot.
+void _warmEmojiFont() {
+  try {
+    final builder = ui.ParagraphBuilder(ui.ParagraphStyle(fontSize: 14))
+      // One representative from each fallback family the UI reaches for:
+      // pictographs, symbols, dingbats, and the playing-card block.
+      ..addText('👑🏆🎯❤️⚓✅★🃏🃑');
+    builder.build().layout(const ui.ParagraphConstraints(width: 400));
+  } catch (_) {
+    // Best-effort only; the fonts still load on demand as they did before.
   }
 }
 
@@ -186,17 +211,13 @@ ThemeData _buildTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       behavior: SnackBarBehavior.floating,
     ),
-    dividerTheme: DividerThemeData(
-      color: colorScheme.outlineVariant,
-    ),
+    dividerTheme: DividerThemeData(color: colorScheme.outlineVariant),
     listTileTheme: ListTileThemeData(
       iconColor: colorScheme.onSurfaceVariant,
       textColor: colorScheme.onSurface,
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: colorScheme.primary,
-      ),
+      style: TextButton.styleFrom(foregroundColor: colorScheme.primary),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(

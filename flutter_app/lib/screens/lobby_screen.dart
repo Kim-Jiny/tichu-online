@@ -18,6 +18,7 @@ import 'rules_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/game_type_icon.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
@@ -77,45 +78,49 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
-      // AdMob has no web implementation at all, so this can only fail there.
-      // Leaving it to fail was working — the load callbacks null the banner
-      // out — but it is a plugin exception per screen to get to the same
-      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
-    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
-      AdService.lobbyBannerId,
-      onAdLoaded: (_) {
-        if (mounted) setState(() => _bannerAdLoaded = true);
-      },
-      onAdFailedToLoad: (ad, error) {
-        ad.dispose();
-        if (mounted) {
-          setState(() {
-            _bannerAd = null;
-            _bannerAdLoaded = false;
-          });
-        }
-      },
-    );
+    // AdMob has no web implementation at all, so this can only fail there.
+    // Leaving it to fail was working — the load callbacks null the banner
+    // out — but it is a plugin exception per screen to get to the same
+    // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb
+        ? null
+        : AdService.createBannerAd(
+            AdService.lobbyBannerId,
+            onAdLoaded: (_) {
+              if (mounted) setState(() => _bannerAdLoaded = true);
+            },
+            onAdFailedToLoad: (ad, error) {
+              ad.dispose();
+              if (mounted) {
+                setState(() {
+                  _bannerAd = null;
+                  _bannerAdLoaded = false;
+                });
+              }
+            },
+          );
     _bannerAd?.load();
-      // AdMob has no web implementation at all, so this can only fail there.
-      // Leaving it to fail was working — the load callbacks null the banner
-      // out — but it is a plugin exception per screen to get to the same
-      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
-    _roomBannerAd = kIsWeb ? null : AdService.createBannerAd(
-      AdService.skWaitingBannerId,
-      onAdLoaded: (_) {
-        if (mounted) setState(() => _roomBannerLoaded = true);
-      },
-      onAdFailedToLoad: (ad, error) {
-        ad.dispose();
-        if (mounted) {
-          setState(() {
-            _roomBannerAd = null;
-            _roomBannerLoaded = false;
-          });
-        }
-      },
-    );
+    // AdMob has no web implementation at all, so this can only fail there.
+    // Leaving it to fail was working — the load callbacks null the banner
+    // out — but it is a plugin exception per screen to get to the same
+    // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _roomBannerAd = kIsWeb
+        ? null
+        : AdService.createBannerAd(
+            AdService.skWaitingBannerId,
+            onAdLoaded: (_) {
+              if (mounted) setState(() => _roomBannerLoaded = true);
+            },
+            onAdFailedToLoad: (ad, error) {
+              ad.dispose();
+              if (mounted) {
+                setState(() {
+                  _roomBannerAd = null;
+                  _roomBannerLoaded = false;
+                });
+              }
+            },
+          );
     _roomBannerAd?.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final game = context.read<GameService>();
@@ -156,12 +161,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // local _inRoom flag, which flips to false optimistically on leave before
     // the server confirms the exit. Defer WITHOUT consuming: the listener stays
     // active and fires again on the server-confirm notify, once truly on lobby.
-    if (_inRoom || game.hasRoom || game.currentDestination != AppDestination.lobby) return;
+    if (_inRoom ||
+        game.hasRoom ||
+        game.currentDestination != AppDestination.lobby)
+      return;
     Map<String, dynamic>? reply;
     for (final it in game.inquiries) {
       final status = it['status']?.toString() ?? '';
       final adminNote = it['admin_note']?.toString() ?? '';
-      if (status == 'resolved' && adminNote.isNotEmpty && it['user_read'] != true) {
+      if (status == 'resolved' &&
+          adminNote.isNotEmpty &&
+          it['user_read'] != true) {
         reply = it;
         break;
       }
@@ -187,7 +197,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                l10n.serviceInquiryReply(title.isEmpty ? l10n.serviceInquiryDefault : title),
+                l10n.serviceInquiryReply(
+                  title.isEmpty ? l10n.serviceInquiryDefault : title,
+                ),
                 style: const TextStyle(fontSize: 16),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
@@ -202,7 +214,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             children: [
               Text(
                 l10n.inquiryAnswerLabel,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4CAF50)),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4CAF50),
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -715,49 +731,47 @@ class _LobbyScreenState extends State<LobbyScreen> {
             return Opacity(
               opacity: enabled ? 1 : 0.5,
               child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Color(0x22000000)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Color(0x22000000))),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: enabled
-                                ? const Color(0xFF4B3C35)
-                                : const Color(0xFF9A8E8A),
-                          ),
-                        ),
-                        // Only where the switch has consequences you cannot
-                        // see (ranked pins the score and clears private).
-                        if (description != null) ...[
-                          const SizedBox(height: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            description,
+                            title,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
                               color: enabled
-                                  ? const Color(0xFF7E7069)
-                                  : const Color(0xFFAAA09C),
+                                  ? const Color(0xFF4B3C35)
+                                  : const Color(0xFF9A8E8A),
                             ),
                           ),
+                          // Only where the switch has consequences you cannot
+                          // see (ranked pins the score and clears private).
+                          if (description != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: enabled
+                                    ? const Color(0xFF7E7069)
+                                    : const Color(0xFFAAA09C),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Switch(value: value, onChanged: enabled ? onChanged : null),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Switch(value: value, onChanged: enabled ? onChanged : null),
+                  ],
+                ),
               ),
             );
           }
@@ -797,595 +811,645 @@ class _LobbyScreenState extends State<LobbyScreen> {
               behavior: HitTestBehavior.translucent,
               onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
               child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            backgroundColor: themeColors.first.withValues(alpha: 0.94),
-            contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: SingleChildScrollView(
-                // No inner panel: the dialog already has a background, and a
-                // gradient box inside it just drew a second edge around the
-                // same content.
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  // Stack so the game picker can FLOAT over the options below
-                  // instead of pushing them down — expanding in place made the
-                  // whole dialog taller every time it opened.
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // No title: you arrive here by pressing "새 방 만들기", and
-                      // the confirm button at the bottom says it again. Same for
-                      // the section captions above a game picker and a name
-                      // field — they named what was already visible.
-                      const SizedBox(height: 4),
-                      Builder(
-                        builder: (ctx) {
-                          String gameLabel;
-                          String gameEmoji;
-                          Color gameBgColor;
-                          Color gameFgColor;
-                          // Same colours as the room list's strips, badges
-                          // and filters — the dialog had its own palette
-                          // (purple Tichu, yellow-on-navy SK) so the same game
-                          // wore different colours two screens apart.
-                          switch (selectedGameType) {
-                            case 'skull_king':
-                              gameLabel = l10n.lobbySkullKing;
-                              gameEmoji = '⚓';
-                              gameBgColor = const Color(0xFF21455F);
-                              gameFgColor = Colors.white;
-                              break;
-                            case 'love_letter':
-                              gameLabel = l10n.lobbyLoveLetter;
-                              gameEmoji = '❤️';
-                              gameBgColor = const Color(0xFFE91E63);
-                              gameFgColor = Colors.white;
-                              break;
-                            case 'mighty':
-                              gameLabel = l10n.lobbyMighty;
-                              gameEmoji = '🃑';
-                              gameBgColor = const Color(0xFF5C6BC0);
-                              gameFgColor = Colors.white;
-                              break;
-                            default:
-                              gameLabel = l10n.lobbyTichu;
-                              gameEmoji = '🃏';
-                              gameBgColor = const Color(0xFF64B5F6);
-                              gameFgColor = Colors.white;
-                          }
-                          return Column(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                backgroundColor: themeColors.first.withValues(alpha: 0.94),
+                contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+                content: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: SingleChildScrollView(
+                    // No inner panel: the dialog already has a background, and a
+                    // gradient box inside it just drew a second edge around the
+                    // same content.
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      // Stack so the game picker can FLOAT over the options below
+                      // instead of pushing them down — expanding in place made the
+                      // whole dialog taller every time it opened.
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              InkWell(
-                                onTap: () => setState(
-                                  () => gamePickerOpen = !gamePickerOpen,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: gameBgColor,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
+                              // No title: you arrive here by pressing "새 방 만들기", and
+                              // the confirm button at the bottom says it again. Same for
+                              // the section captions above a game picker and a name
+                              // field — they named what was already visible.
+                              const SizedBox(height: 4),
+                              Builder(
+                                builder: (ctx) {
+                                  String gameLabel;
+                                  Color gameBgColor;
+                                  Color gameFgColor;
+                                  // Same colours as the room list's strips, badges
+                                  // and filters — the dialog had its own palette
+                                  // (purple Tichu, yellow-on-navy SK) so the same game
+                                  // wore different colours two screens apart.
+                                  switch (selectedGameType) {
+                                    case 'skull_king':
+                                      gameLabel = l10n.lobbySkullKing;
+                                      gameBgColor = const Color(0xFF21455F);
+                                      gameFgColor = Colors.white;
+                                      break;
+                                    case 'love_letter':
+                                      gameLabel = l10n.lobbyLoveLetter;
+                                      gameBgColor = const Color(0xFFE91E63);
+                                      gameFgColor = Colors.white;
+                                      break;
+                                    case 'mighty':
+                                      gameLabel = l10n.lobbyMighty;
+                                      gameBgColor = const Color(0xFF5C6BC0);
+                                      gameFgColor = Colors.white;
+                                      break;
+                                    default:
+                                      gameLabel = l10n.lobbyTichu;
+                                      gameBgColor = const Color(0xFF64B5F6);
+                                      gameFgColor = Colors.white;
+                                  }
+                                  return Column(
                                     children: [
-                                      Text(
-                                        gameEmoji,
-                                        style: const TextStyle(fontSize: 18),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          gameLabel,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: gameFgColor,
-                                          ),
+                                      InkWell(
+                                        onTap: () => setState(
+                                          () =>
+                                              gamePickerOpen = !gamePickerOpen,
                                         ),
-                                      ),
-                                      AnimatedRotation(
-                                        turns: gamePickerOpen ? 0.5 : 0,
-                                        duration:
-                                            const Duration(milliseconds: 160),
-                                        child: Icon(
-                                          Icons.arrow_drop_down,
-                                          color: gameFgColor,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: gameBgColor,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                gameTypeIcon(selectedGameType),
+                                                size: 18,
+                                                color: gameFgColor,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  gameLabel,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: gameFgColor,
+                                                  ),
+                                                ),
+                                              ),
+                                              AnimatedRotation(
+                                                turns: gamePickerOpen ? 0.5 : 0,
+                                                duration: const Duration(
+                                                  milliseconds: 160,
+                                                ),
+                                                child: Icon(
+                                                  Icons.arrow_drop_down,
+                                                  color: gameFgColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
-                            ],
-                          );
-                        },
-                      ),
-                      if (selectedGameType == 'skull_king') ...[
-                        const SizedBox(height: 14),
-                        Text(
-                          l10n.lobbyExpansionOptional,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // One row, three equal buttons; pressed = filled. The
-                        // switch rows this replaces read as three settings —
-                        // these are a pick-any-of-three, which is a button
-                        // group. The one-line effect stays as the caption.
-                        Row(
-                          children: [
-                            for (final (i, entry) in [
-                              [
-                                'kraken',
-                                l10n.lobbyExpKraken,
-                                l10n.lobbyExpKrakenDesc,
-                              ],
-                              [
-                                'white_whale',
-                                l10n.lobbyExpWhiteWhale,
-                                l10n.lobbyExpWhiteWhaleDesc,
-                              ],
-                              [
-                                'loot',
-                                l10n.lobbyExpLoot,
-                                l10n.lobbyExpLootDesc,
-                              ],
-                            ].indexed) ...[
-                              if (i > 0) const SizedBox(width: 6),
-                              Expanded(
-                                child: Builder(
-                                  builder: (_) {
-                                    final selected = skExpansionsSelected
-                                        .contains(entry[0]);
-                                    return GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () => setState(() {
-                                        if (selected) {
-                                          skExpansionsSelected
-                                              .remove(entry[0]);
-                                        } else {
-                                          skExpansionsSelected.add(entry[0]);
-                                        }
-                                      }),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 150,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 8,
-                                          horizontal: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          // Solid brown, not the theme accent:
-                                          // the accent is a pale peach and a
-                                          // pale fill did not read as "on".
-                                          color: selected
-                                              ? const Color(0xFF6A5A52)
-                                              : Colors.white.withValues(
-                                                  alpha: 0.82,
-                                                ),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: selected
-                                                ? const Color(0xFF6A5A52)
-                                                : const Color(0xFFE0D5D0),
-                                          ),
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Text(
-                                              entry[1],
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w800,
-                                                color: selected
-                                                    ? Colors.white
-                                                    : const Color(0xFF8A7A72),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              entry[2],
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                color: selected
-                                                    ? Colors.white.withValues(
-                                                        alpha: 0.85,
-                                                      )
-                                                    : const Color(0xFFAAA09C),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      // Name field with the dice on the same line. The random
-                      // button was a low-contrast text button floating above the
-                      // field, easy to miss entirely.
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: controller,
-                              decoration: fieldDecoration(randomName),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Material(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => setState(() {
-                                randomName = _generateRandomRoomName(
-                                  gameType: selectedGameType,
-                                  l10n: l10n,
-                                );
-                                controller.text = randomName;
-                              }),
-                              child: Container(
-                                padding: const EdgeInsets.all(11),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFFD8CCC6),
-                                  ),
-                                ),
-                                // Dark, not the pale theme accent — it was
-                                // nearly invisible against the white square.
-                                child: const Icon(
-                                  Icons.casino,
-                                  size: 20,
-                                  color: Color(0xFF6A5A52),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      optionCard(
-                        title: l10n.lobbyPrivateRoom,
-                        description: isRanked
-                            ? l10n.lobbyPrivateRoomDescRanked
-                            : null,
-                        value: isPrivate,
-                        enabled: !isRanked,
-                        onChanged: (v) => setState(() => isPrivate = v),
-                      ),
-                      if (isPrivate) ...[
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: passwordController,
-                          obscureText: true,
-                          decoration: fieldDecoration(l10n.lobbyPasswordHint),
-                        ),
-                      ],
-                      optionCard(
-                        title: l10n.lobbyAllowSpectators,
-                        value: allowSpectators,
-                        onChanged: (v) =>
-                            setState(() => allowSpectators = v),
-                      ),
-                      if (selectedGameType != 'love_letter' &&
-                          context.read<GameService>().authProvider !=
-                              'local') ...[
-                        optionCard(
-                          title: l10n.lobbyRanked,
-                          description: selectedGameType == 'skull_king'
-                              ? l10n.lobbyRankedDescSk
-                              : selectedGameType == 'mighty'
-                              ? l10n.lobbyRankedDescMighty
-                              : l10n.lobbyRankedDesc,
-                          value: isRanked,
-                          onChanged: (v) => setState(() {
-                            isRanked = v;
-                            if (isRanked) {
-                              isPrivate = false;
-                              passwordController.clear();
-                              targetScoreController.text =
-                                  selectedGameType == 'mighty' ? '50' : '1000';
-                            }
-                          }),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      sectionTitle(
-                        l10n.lobbyGameSettings,
-                        (selectedGameType == 'tichu' ||
-                                selectedGameType == 'mighty')
-                            ? l10n.lobbyGameSettingsDescTichu
-                            : l10n.lobbyGameSettingsDescSk,
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                              if (selectedGameType == 'skull_king') ...[
+                                const SizedBox(height: 14),
                                 Text(
-                                  l10n.lobbyTimeLimit,
+                                  l10n.lobbyExpansionOptional,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: timeLimitController,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(3),
-                                  ],
-                                  textAlign: TextAlign.center,
-                                  decoration: fieldDecoration(
-                                    l10n.lobbyTimeLimitRange,
-                                    suffixText: l10n.lobbySuffixSeconds,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (selectedGameType == 'tichu' ||
-                              selectedGameType == 'mighty') ...[
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.lobbyTargetScore,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextField(
-                                    controller: targetScoreController,
-                                    enabled: !isRanked,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(5),
-                                    ],
-                                    textAlign: TextAlign.center,
-                                    decoration: fieldDecoration(
-                                      isRanked
-                                          ? (selectedGameType == 'mighty'
-                                                ? l10n.lobbyTargetScoreFixedMighty
-                                                : l10n.lobbyTargetScoreFixed)
-                                          : (selectedGameType == 'mighty'
-                                                ? l10n.lobbyTargetScoreRangeMighty
-                                                : l10n.lobbyTargetScoreRange),
-                                      suffixText: l10n.lobbySuffixPoints,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      // The info box that sat here restated things already on
-                      // screen: the ranked rules are the ranked toggle's own
-                      // description, and the valid ranges are the fields'
-                      // placeholders (out-of-range input is clamped anyway).
-                      if (errorText != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFECEC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFF2B3B3)),
-                          ),
-                          child: Text(
-                            errorText!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFFB54A4A),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                      ),
-                      if (gamePickerOpen)
-                        Positioned(
-                          top: 52,
-                          left: 0,
-                          right: 0,
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE0D5D0),
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        Colors.black.withValues(alpha: 0.14),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (final (type, label, emoji, color) in [
-                                    ('tichu', l10n.lobbyTichu, '🃏',
-                                        const Color(0xFF64B5F6)),
-                                    ('mighty', l10n.lobbyMighty, '🃑',
-                                        const Color(0xFF5C6BC0)),
-                                    ('skull_king', l10n.lobbySkullKing, '⚓',
-                                        const Color(0xFF21455F)),
-                                    ('love_letter', l10n.lobbyLoveLetter,
-                                        '❤️', const Color(0xFFE91E63)),
-                                  ])
-                                    InkWell(
-                                      onTap: () {
-                                        selectGame(type);
-                                        setState(
-                                            () => gamePickerOpen = false);
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 10,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text(
-                                              emoji,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                label,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: color,
+                                const SizedBox(height: 8),
+                                // One row, three equal buttons; pressed = filled. The
+                                // switch rows this replaces read as three settings —
+                                // these are a pick-any-of-three, which is a button
+                                // group. The one-line effect stays as the caption.
+                                Row(
+                                  children: [
+                                    for (final (i, entry) in [
+                                      [
+                                        'kraken',
+                                        l10n.lobbyExpKraken,
+                                        l10n.lobbyExpKrakenDesc,
+                                      ],
+                                      [
+                                        'white_whale',
+                                        l10n.lobbyExpWhiteWhale,
+                                        l10n.lobbyExpWhiteWhaleDesc,
+                                      ],
+                                      [
+                                        'loot',
+                                        l10n.lobbyExpLoot,
+                                        l10n.lobbyExpLootDesc,
+                                      ],
+                                    ].indexed) ...[
+                                      if (i > 0) const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Builder(
+                                          builder: (_) {
+                                            final selected =
+                                                skExpansionsSelected.contains(
+                                                  entry[0],
+                                                );
+                                            return GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () => setState(() {
+                                                if (selected) {
+                                                  skExpansionsSelected.remove(
+                                                    entry[0],
+                                                  );
+                                                } else {
+                                                  skExpansionsSelected.add(
+                                                    entry[0],
+                                                  );
+                                                }
+                                              }),
+                                              child: AnimatedContainer(
+                                                duration: const Duration(
+                                                  milliseconds: 150,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 8,
+                                                      horizontal: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  // Solid brown, not the theme accent:
+                                                  // the accent is a pale peach and a
+                                                  // pale fill did not read as "on".
+                                                  color: selected
+                                                      ? const Color(0xFF6A5A52)
+                                                      : Colors.white.withValues(
+                                                          alpha: 0.82,
+                                                        ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: selected
+                                                        ? const Color(
+                                                            0xFF6A5A52,
+                                                          )
+                                                        : const Color(
+                                                            0xFFE0D5D0,
+                                                          ),
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  children: [
+                                                    Text(
+                                                      entry[1],
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: selected
+                                                            ? Colors.white
+                                                            : const Color(
+                                                                0xFF8A7A72,
+                                                              ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      entry[2],
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        fontSize: 9,
+                                                        color: selected
+                                                            ? Colors.white
+                                                                  .withValues(
+                                                                    alpha: 0.85,
+                                                                  )
+                                                            : const Color(
+                                                                0xFFAAA09C,
+                                                              ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                            ),
-                                            if (selectedGameType == type)
-                                              Icon(
-                                                Icons.check,
-                                                size: 18,
-                                                color: color,
-                                              ),
-                                          ],
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              // Name field with the dice on the same line. The random
+                              // button was a low-contrast text button floating above the
+                              // field, easy to miss entirely.
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: controller,
+                                      decoration: fieldDecoration(randomName),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Material(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () => setState(() {
+                                        randomName = _generateRandomRoomName(
+                                          gameType: selectedGameType,
+                                          l10n: l10n,
+                                        );
+                                        controller.text = randomName;
+                                      }),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(11),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFFD8CCC6),
+                                          ),
+                                        ),
+                                        // Dark, not the pale theme accent — it was
+                                        // nearly invisible against the white square.
+                                        child: const Icon(
+                                          Icons.casino,
+                                          size: 20,
+                                          color: Color(0xFF6A5A52),
                                         ),
                                       ),
                                     ),
+                                  ),
                                 ],
                               ),
-                            ),
+                              const SizedBox(height: 8),
+                              optionCard(
+                                title: l10n.lobbyPrivateRoom,
+                                description: isRanked
+                                    ? l10n.lobbyPrivateRoomDescRanked
+                                    : null,
+                                value: isPrivate,
+                                enabled: !isRanked,
+                                onChanged: (v) => setState(() => isPrivate = v),
+                              ),
+                              if (isPrivate) ...[
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: passwordController,
+                                  obscureText: true,
+                                  decoration: fieldDecoration(
+                                    l10n.lobbyPasswordHint,
+                                  ),
+                                ),
+                              ],
+                              optionCard(
+                                title: l10n.lobbyAllowSpectators,
+                                value: allowSpectators,
+                                onChanged: (v) =>
+                                    setState(() => allowSpectators = v),
+                              ),
+                              if (selectedGameType != 'love_letter' &&
+                                  context.read<GameService>().authProvider !=
+                                      'local') ...[
+                                optionCard(
+                                  title: l10n.lobbyRanked,
+                                  description: selectedGameType == 'skull_king'
+                                      ? l10n.lobbyRankedDescSk
+                                      : selectedGameType == 'mighty'
+                                      ? l10n.lobbyRankedDescMighty
+                                      : l10n.lobbyRankedDesc,
+                                  value: isRanked,
+                                  onChanged: (v) => setState(() {
+                                    isRanked = v;
+                                    if (isRanked) {
+                                      isPrivate = false;
+                                      passwordController.clear();
+                                      targetScoreController.text =
+                                          selectedGameType == 'mighty'
+                                          ? '50'
+                                          : '1000';
+                                    }
+                                  }),
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              sectionTitle(
+                                l10n.lobbyGameSettings,
+                                (selectedGameType == 'tichu' ||
+                                        selectedGameType == 'mighty')
+                                    ? l10n.lobbyGameSettingsDescTichu
+                                    : l10n.lobbyGameSettingsDescSk,
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.lobbyTimeLimit,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        TextField(
+                                          controller: timeLimitController,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter
+                                                .digitsOnly,
+                                            LengthLimitingTextInputFormatter(3),
+                                          ],
+                                          textAlign: TextAlign.center,
+                                          decoration: fieldDecoration(
+                                            l10n.lobbyTimeLimitRange,
+                                            suffixText: l10n.lobbySuffixSeconds,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (selectedGameType == 'tichu' ||
+                                      selectedGameType == 'mighty') ...[
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            l10n.lobbyTargetScore,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          TextField(
+                                            controller: targetScoreController,
+                                            enabled: !isRanked,
+                                            keyboardType: TextInputType.number,
+                                            inputFormatters: [
+                                              FilteringTextInputFormatter
+                                                  .digitsOnly,
+                                              LengthLimitingTextInputFormatter(
+                                                5,
+                                              ),
+                                            ],
+                                            textAlign: TextAlign.center,
+                                            decoration: fieldDecoration(
+                                              isRanked
+                                                  ? (selectedGameType ==
+                                                            'mighty'
+                                                        ? l10n.lobbyTargetScoreFixedMighty
+                                                        : l10n.lobbyTargetScoreFixed)
+                                                  : (selectedGameType ==
+                                                            'mighty'
+                                                        ? l10n.lobbyTargetScoreRangeMighty
+                                                        : l10n.lobbyTargetScoreRange),
+                                              suffixText:
+                                                  l10n.lobbySuffixPoints,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              // The info box that sat here restated things already on
+                              // screen: the ranked rules are the ranked toggle's own
+                              // description, and the valid ranges are the fields'
+                              // placeholders (out-of-range input is clamped anyway).
+                              if (errorText != null) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFECEC),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFF2B3B3),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    errorText!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFFB54A4A),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                    ],
+                          if (gamePickerOpen)
+                            Positioned(
+                              top: 52,
+                              left: 0,
+                              right: 0,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFFE0D5D0),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.14,
+                                        ),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      for (final (type, label, color) in [
+                                        (
+                                          'tichu',
+                                          l10n.lobbyTichu,
+                                          const Color(0xFF64B5F6),
+                                        ),
+                                        (
+                                          'mighty',
+                                          l10n.lobbyMighty,
+                                          const Color(0xFF5C6BC0),
+                                        ),
+                                        (
+                                          'skull_king',
+                                          l10n.lobbySkullKing,
+                                          const Color(0xFF21455F),
+                                        ),
+                                        (
+                                          'love_letter',
+                                          l10n.lobbyLoveLetter,
+                                          const Color(0xFFE91E63),
+                                        ),
+                                      ])
+                                        InkWell(
+                                          onTap: () {
+                                            selectGame(type);
+                                            setState(
+                                              () => gamePickerOpen = false,
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  gameTypeIcon(type),
+                                                  size: 16,
+                                                  color: color,
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Text(
+                                                    label,
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: color,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (selectedGameType == type)
+                                                  Icon(
+                                                    Icons.check,
+                                                    size: 18,
+                                                    color: color,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(l10n.commonCancel),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final name = controller.text.trim().isEmpty
-                      ? randomName
-                      : controller.text.trim();
-                  final password = passwordController.text.trim();
-                  if (name.isEmpty) {
-                    dialogSetState?.call(
-                      () => errorText = l10n.lobbyEnterRoomName,
-                    );
-                    return;
-                  }
-                  if (isPrivate && password.length < 4) {
-                    dialogSetState?.call(
-                      () => errorText = l10n.lobbyPasswordTooShort,
-                    );
-                    return;
-                  }
-                  final turnTimeLimit =
-                      (int.tryParse(timeLimitController.text.trim()) ?? 30)
-                          .clamp(10, 999);
-                  final targetScore = isRanked
-                      ? (selectedGameType == 'mighty' ? 50 : 1000)
-                      : selectedGameType == 'mighty'
-                      ? (int.tryParse(targetScoreController.text.trim()) ?? 50)
-                            .clamp(10, 500)
-                      : (int.tryParse(targetScoreController.text.trim()) ??
-                                1000)
-                            .clamp(100, 20000);
-                  context.read<GameService>().createRoom(
-                    name,
-                    password: isPrivate ? password : '',
-                    isRanked: isRanked,
-                    turnTimeLimit: turnTimeLimit,
-                    targetScore: targetScore,
-                    gameType: selectedGameType,
-                    maxPlayers: selectedGameType == 'skull_king'
-                        ? 6
-                        : selectedGameType == 'mighty'
-                        ? 6
-                        : selectedGameType == 'love_letter'
-                        ? 4
-                        : 4,
-                    skExpansions: selectedGameType == 'skull_king'
-                        ? skExpansionsSelected.toList()
-                        : const [],
-                    allowSpectators: allowSpectators,
-                  );
-                  Navigator.pop(context);
-                  setState(() => _inRoom = true);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: const Color(0xFF2A1E18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(l10n.commonCancel),
                   ),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final name = controller.text.trim().isEmpty
+                          ? randomName
+                          : controller.text.trim();
+                      final password = passwordController.text.trim();
+                      if (name.isEmpty) {
+                        dialogSetState?.call(
+                          () => errorText = l10n.lobbyEnterRoomName,
+                        );
+                        return;
+                      }
+                      if (isPrivate && password.length < 4) {
+                        dialogSetState?.call(
+                          () => errorText = l10n.lobbyPasswordTooShort,
+                        );
+                        return;
+                      }
+                      final turnTimeLimit =
+                          (int.tryParse(timeLimitController.text.trim()) ?? 30)
+                              .clamp(10, 999);
+                      final targetScore = isRanked
+                          ? (selectedGameType == 'mighty' ? 50 : 1000)
+                          : selectedGameType == 'mighty'
+                          ? (int.tryParse(targetScoreController.text.trim()) ??
+                                    50)
+                                .clamp(10, 500)
+                          : (int.tryParse(targetScoreController.text.trim()) ??
+                                    1000)
+                                .clamp(100, 20000);
+                      context.read<GameService>().createRoom(
+                        name,
+                        password: isPrivate ? password : '',
+                        isRanked: isRanked,
+                        turnTimeLimit: turnTimeLimit,
+                        targetScore: targetScore,
+                        gameType: selectedGameType,
+                        maxPlayers: selectedGameType == 'skull_king'
+                            ? 6
+                            : selectedGameType == 'mighty'
+                            ? 6
+                            : selectedGameType == 'love_letter'
+                            ? 4
+                            : 4,
+                        skExpansions: selectedGameType == 'skull_king'
+                            ? skExpansionsSelected.toList()
+                            : const [],
+                        allowSpectators: allowSpectators,
+                      );
+                      Navigator.pop(context);
+                      setState(() => _inRoom = true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: const Color(0xFF2A1E18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: Text(
+                      l10n.lobbyCreateRoom,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
-                ),
-                icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: Text(
-                  l10n.lobbyCreateRoom,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ],
+                ],
               ),
             ),
           );
@@ -1455,7 +1519,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     _inRoom = false;
                     // Back on the lobby: re-check for a reply popup deferred
                     // while in a room (no further notify is guaranteed).
-                    WidgetsBinding.instance.addPostFrameCallback((_) => _onInquiryUpdate());
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _onInquiryUpdate(),
+                    );
                   }
                   if (game.isInWaitingRoom && !_inRoom) {
                     _inRoom = true;
@@ -1616,8 +1682,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   List<Widget> _buildLobbyActionButtons(GameService game) {
     final attendance = game.attendanceState;
-    final attendanceUnclaimed = attendance != null
-        && attendance['claimedToday'] != true;
+    final attendanceUnclaimed =
+        attendance != null && attendance['claimedToday'] != true;
     return [
       Stack(
         children: [
@@ -1777,7 +1843,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // Not a spinner: nothing is loading here and the wait is on the
           // other server finishing its round. This says "your game is being
           // moved here", which is what is actually happening.
-          const Icon(Icons.swap_horiz_rounded, size: 20, color: Color(0xFF4A4080)),
+          const Icon(
+            Icons.swap_horiz_rounded,
+            size: 20,
+            color: Color(0xFF4A4080),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -1954,8 +2024,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: !game.roomListReceived
                   ? _buildRoomListLoading()
                   : (game.roomList.isEmpty
-                      ? _buildEmptyRoomList()
-                      : _buildRoomList(game.roomList)),
+                        ? _buildEmptyRoomList()
+                        : _buildRoomList(game.roomList)),
             ),
           ),
           const SizedBox(height: 16),
@@ -2018,8 +2088,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.meeting_room_outlined,
-                size: 48, color: Color(0xFFC4B8B0)),
+            const Icon(
+              Icons.meeting_room_outlined,
+              size: 48,
+              color: Color(0xFFC4B8B0),
+            ),
             const SizedBox(height: 12),
             Text(
               L10n.of(context).lobbyEmptyRoomList,
@@ -2339,44 +2412,44 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ),
                           ),
                         if (room.allowSpectators)
-                        GestureDetector(
-                          onTap: () => _spectateWithPasswordCheck(room),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 7,
-                            ),
-                            margin: const EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: const Color(0xFFE6DDD8),
+                          GestureDetector(
+                            onTap: () => _spectateWithPasswordCheck(room),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 7,
+                              ),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFE6DDD8),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.visibility,
+                                    size: 16,
+                                    color: Color(0xFF7A6A62),
+                                  ),
+                                  if (room.spectatorCount > 0) ...[
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${room.spectatorCount}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF7A6A62),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.visibility,
-                                  size: 16,
-                                  color: Color(0xFF7A6A62),
-                                ),
-                                if (room.spectatorCount > 0) ...[
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${room.spectatorCount}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF7A6A62),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
                           ),
-                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -2522,40 +2595,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Stack(
         children: [
           Column(
-        children: [
-          _buildRoomHeader(game, isLandscape: isLandscape),
+            children: [
+              _buildRoomHeader(game, isLandscape: isLandscape),
 
-          // Maintenance notice banner (in waiting room)
-          if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
+              // Maintenance notice banner (in waiting room)
+              if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
 
-          // Error message banner
-          if (game.errorMessage != null) _buildErrorBanner(game.errorMessage!),
+              // Error message banner
+              if (game.errorMessage != null)
+                _buildErrorBanner(game.errorMessage!),
 
-          // Scrollable content area
-          // Chat is a header button and an overlay panel now, the same as every
-          // in-game chat — it used to sit under the seats, so reading it meant
-          // scrolling past the whole room first.
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _buildRoomPlayersPanel(game),
-            ),
-          ),
-          if (_roomBannerAd != null && _roomBannerLoaded)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Center(
-                child: SizedBox(
-                  height: _roomBannerAd!.size.height.toDouble(),
-                  width: _roomBannerAd!.size.width.toDouble(),
-                  child: AdWidget(
-                    ad: _roomBannerAd!,
-                    key: ValueKey(_roomBannerAd!.hashCode),
-                  ),
+              // Scrollable content area
+              // Chat is a header button and an overlay panel now, the same as every
+              // in-game chat — it used to sit under the seats, so reading it meant
+              // scrolling past the whole room first.
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: _buildRoomPlayersPanel(game),
                 ),
               ),
-            ),
-          ],
+              if (_roomBannerAd != null && _roomBannerLoaded)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Center(
+                    child: SizedBox(
+                      height: _roomBannerAd!.size.height.toDouble(),
+                      width: _roomBannerAd!.size.width.toDouble(),
+                      child: AdWidget(
+                        ad: _roomBannerAd!,
+                        key: ValueKey(_roomBannerAd!.hashCode),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           if (_roomChatOpen) _buildRoomChatPanel(game),
           if (_roomMoreOpen) _buildRoomMoreMenu(game, isKoreanUser),
@@ -2848,11 +2922,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       color: const Color(0xFFF6F3F2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      icon,
-                      size: 19,
-                      color: const Color(0xFF6A5A52),
-                    ),
+                    child: Icon(icon, size: 19, color: const Color(0xFF6A5A52)),
                   ),
                   if (badgeCount > 0)
                     Positioned(
@@ -2906,7 +2976,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // Three stacked cards (header, players, chat) put three elevations on one
     // screen, and the 16dp margin on every side cost width the room title needs.
     return Container(
-      padding: EdgeInsets.fromLTRB(8, isLandscape ? 6 : 8, 12, isLandscape ? 6 : 8),
+      padding: EdgeInsets.fromLTRB(
+        8,
+        isLandscape ? 6 : 8,
+        12,
+        isLandscape ? 6 : 8,
+      ),
       decoration: const BoxDecoration(
         color: Color(0xFFFDFBFA),
         border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
@@ -2939,8 +3014,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final isSeatCounted =
                     game.currentGameType == 'skull_king' ||
                     game.currentGameType == 'love_letter';
-                final full =
-                    game.playerCount >= game.effectiveRoomMaxPlayers;
+                final full = game.playerCount >= game.effectiveRoomMaxPlayers;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3390,9 +3464,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       message: message,
       isMe: isMe,
       game: game,
-      onTap: sender.isEmpty
-          ? null
-          : () => _showUserProfileDialog(sender, game),
+      onTap: sender.isEmpty ? null : () => _showUserProfileDialog(sender, game),
       bottomSpacing: 6,
       avatarRadius: 12,
       avatarBackground: const Color(0xFFE0D8D4),
@@ -3404,6 +3476,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       theirsBorder: Border.all(color: const Color(0xFFE0D8D4)),
     );
   }
+
   void _scrollChatToBottom() {
     // ListView is reverse:true so offset 0 == bottom.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3457,8 +3530,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   // by the bulk "fill empty seats" button.
   bool _hasFillableEmptySlot(GameService game) {
     for (int i = 0; i < game.roomPlayers.length; i++) {
-      if (game.roomPlayers[i] == null &&
-          !game.roomBlockedSlots.contains(i)) {
+      if (game.roomPlayers[i] == null && !game.roomBlockedSlots.contains(i)) {
         return true;
       }
     }
@@ -3474,13 +3546,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ? BotStrategy.mixOracle
         : BotStrategy.heuristic;
     for (int i = 0; i < game.roomPlayers.length; i++) {
-      if (game.roomPlayers[i] == null &&
-          !game.roomBlockedSlots.contains(i)) {
-        game.addBot(
-          targetSlot: i,
-          speed: speed,
-          strategy: defaultStrategy,
-        );
+      if (game.roomPlayers[i] == null && !game.roomBlockedSlots.contains(i)) {
+        game.addBot(targetSlot: i, speed: speed, strategy: defaultStrategy);
       }
     }
   }
@@ -3520,11 +3587,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.smart_toy,
-            size: 16,
-            color: Color(0xFF7A6A62),
-          ),
+          const Icon(Icons.smart_toy, size: 16, color: Color(0xFF7A6A62)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -3830,7 +3893,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     width: (isMySlot || isReady) ? 2 : 1,
                   ),
                 ),
-            child: Row(
+                child: Row(
                   children: [
                     // Left-side block X button (host, empty, SK/LL)
                     if (canBlockSlot)
@@ -3864,367 +3927,398 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     // Ready state is now conveyed by the background check
                     // watermark (see Stack below) so the inline check icon is
                     // removed to keep the row layout stable.
-            // Level badge takes the previous host-pill spot. The host
-            // indicator itself is now a 👑 emoji overhanging the top-left
-            // corner (see Positioned below).
-            if (player != null && !isBot)
-              Builder(builder: (_) {
-                // The level badge used to BE the avatar, so a player with a paid
-                // photo showed no level at all, and a photo-less one showed a
-                // brown disc with a number where a face goes. One 38dp avatar —
-                // photo, else a plain silhouette — with the level as a corner
-                // chip, the same shape the bot marker uses. The seat row is 56
-                // tall with no vertical padding.
-                final resolved = game.resolvePhotoUrl(player.photoUrl);
-                final hidden = game.blockedUsers.contains(player.name);
-                const avatarSize = 46.0;
-                final avatar = ProfileAvatar(
-                  photoUrl: resolved,
-                  size: avatarSize,
-                  blocked: hidden,
-                  fallback: Container(
-                    width: avatarSize,
-                    height: avatarSize,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF0E7E3),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.person,
-                      size: 27,
-                      color: Color(0xFF9C8B84),
-                    ),
-                  ),
-                );
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: player.level == null
-                      ? avatar
-                      : SizedBox(
-                          width: avatarSize,
-                          height: avatarSize,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              avatar,
-                              Positioned(
-                                right: -3,
-                                bottom: -3,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1.2,
+                    // Level badge takes the previous host-pill spot. The host
+                    // indicator itself is now a 👑 emoji overhanging the top-left
+                    // corner (see Positioned below).
+                    if (player != null && !isBot)
+                      Builder(
+                        builder: (_) {
+                          // The level badge used to BE the avatar, so a player with a paid
+                          // photo showed no level at all, and a photo-less one showed a
+                          // brown disc with a number where a face goes. One 38dp avatar —
+                          // photo, else a plain silhouette — with the level as a corner
+                          // chip, the same shape the bot marker uses. The seat row is 56
+                          // tall with no vertical padding.
+                          final resolved = game.resolvePhotoUrl(
+                            player.photoUrl,
+                          );
+                          final hidden = game.blockedUsers.contains(
+                            player.name,
+                          );
+                          const avatarSize = 46.0;
+                          final avatar = ProfileAvatar(
+                            photoUrl: resolved,
+                            size: avatarSize,
+                            blocked: hidden,
+                            fallback: Container(
+                              width: avatarSize,
+                              height: avatarSize,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF0E7E3),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.person,
+                                size: 27,
+                                color: Color(0xFF9C8B84),
+                              ),
+                            ),
+                          );
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: player.level == null
+                                ? avatar
+                                : SizedBox(
+                                    width: avatarSize,
+                                    height: avatarSize,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        avatar,
+                                        Positioned(
+                                          right: -3,
+                                          bottom: -3,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 1.2,
+                                              ),
+                                            ),
+                                            child: LevelBadge(
+                                              level: player.level,
+                                              size: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: LevelBadge(
-                                    level: player.level,
-                                    size: 14,
+                          );
+                        },
+                      ),
+                    // Bots have no level and never had a photo, so this slot was empty
+                    // for them and every bot row looked alike apart from its number.
+                    // Sized like the other games' waiting rooms rather than like the
+                    // level badge it sits next to.
+                    if (player != null && isBot)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        // The corner marker replaces the "BOT" text chip that used to
+                        // sit beside the seat: avatar + chip together left the nickname
+                        // no width at all, and it rendered as nothing — so you could
+                        // not tell 봇 1 from 봇 2.
+                        child: BotAvatar(
+                          size: 44,
+                          name: player.name,
+                          showBadge: true,
+                          speed: player.botSpeed,
+                        ),
+                      ),
+                    // Strategy chip only. Speed used to have its own icon here; it is
+                    // now the colour of the avatar's corner marker (slow green, normal
+                    // blue, fast red), so the icon was saying the same thing twice.
+                    if (isBot)
+                      Builder(
+                        builder: (_) {
+                          final strategy = player.botStrategy;
+                          final showStrategy =
+                              strategy != null &&
+                              strategy != BotStrategy.heuristic &&
+                              strategy != BotStrategy.winrate &&
+                              strategy != BotStrategy.mixOracle &&
+                              strategy != BotStrategy.legacyMixExpectimax;
+                          if (!showStrategy) return const SizedBox.shrink();
+                          return Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC5CAE9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _shortStrategyLabel(strategy),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF6A1B9A),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    // Blocked indicator
+                    if (isBlockedPlayer)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Icon(
+                          Icons.block,
+                          size: 14,
+                          color: Color(0xFFE57373),
+                        ),
+                      ),
+                    // Bug #8: Disconnected indicator
+                    if (player != null && !player.connected)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 6),
+                        child: Icon(
+                          Icons.wifi_off,
+                          size: 14,
+                          color: Color(0xFFFF8A65),
+                        ),
+                      ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, cons) => FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: cons.maxWidth,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                if (player != null && player.titleName != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 2),
+                                    child: TitleChip(
+                                      titleKey: player.titleKey,
+                                      titleName: player.titleName,
+                                    ),
                                   ),
+                                Builder(
+                                  builder: (_) {
+                                    // When the slot is showing an equipped banner, prefer the
+                                    // banner's admin-defined text color (white-on-galaxy,
+                                    // etc.) so the nickname stays readable on dark gradients.
+                                    // Falls through to the existing state-based palette for
+                                    // empty / bot / blocked / disconnected slots.
+                                    final bannerTextOverride =
+                                        (player != null &&
+                                            !isBot &&
+                                            player.connected)
+                                        ? game.bannerTextColor(player.bannerKey)
+                                        : null;
+                                    final defaultColor = isBot
+                                        ? const Color(0xFF3949AB)
+                                        : isBlockedPlayer
+                                        ? const Color(0xFFBB8888)
+                                        : (player != null && !player.connected)
+                                        ? const Color(0xFFBBAAAA)
+                                        : player != null
+                                        ? const Color(0xFF5A4038)
+                                        : isSlotBlocked
+                                        ? const Color(0xFF8A7A72)
+                                        : const Color(0xFFAA9A92);
+                                    return Text(
+                                      player?.name ??
+                                          (isSlotBlocked
+                                              ? L10n.of(
+                                                  context,
+                                                ).lobbySlotBlocked
+                                              : L10n.of(
+                                                  context,
+                                                ).lobbyEmptySlot),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color:
+                                            bannerTextOverride ?? defaultColor,
+                                        fontWeight: isMySlot
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Add bot button on empty slots (host only, not ranked, not blocked)
+                    if (isEmpty &&
+                        game.isHost &&
+                        !game.isRankedRoom &&
+                        !isSlotBlocked)
+                      PopupMenuButton<String>(
+                        onSelected: (speed) {
+                          final defaultStrategy =
+                              game.currentGameType == 'tichu'
+                              ? BotStrategy.winrate
+                              : game.currentGameType == 'mighty'
+                              ? BotStrategy.mixOracle
+                              : BotStrategy.heuristic;
+                          game.addBot(
+                            targetSlot: slotIndex,
+                            speed: speed,
+                            strategy: defaultStrategy,
+                          );
+                        },
+                        itemBuilder: (ctx) {
+                          final l10n = L10n.of(ctx);
+                          return [
+                            PopupMenuItem(
+                              value: 'fast',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.fast_forward,
+                                    size: 16,
+                                    color: Color(0xFFE65100),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      l10n.lobbyBotSpeedFast,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'normal',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.play_arrow,
+                                    size: 16,
+                                    color: Color(0xFF3949AB),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      l10n.lobbyBotSpeedNormal,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'slow',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.slow_motion_video,
+                                    size: 16,
+                                    color: Color(0xFF558B2F),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      l10n.lobbyBotSpeedSlow,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ];
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        position: PopupMenuPosition.under,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8EAF6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.smart_toy,
+                                size: 14,
+                                color: Color(0xFF3949AB),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                L10n.of(context).lobbyBot,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF3949AB),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                );
-              }),
-            // Bots have no level and never had a photo, so this slot was empty
-            // for them and every bot row looked alike apart from its number.
-            // Sized like the other games' waiting rooms rather than like the
-            // level badge it sits next to.
-            if (player != null && isBot)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                // The corner marker replaces the "BOT" text chip that used to
-                // sit beside the seat: avatar + chip together left the nickname
-                // no width at all, and it rendered as nothing — so you could
-                // not tell 봇 1 from 봇 2.
-                child: BotAvatar(
-                  size: 44,
-                  name: player.name,
-                  showBadge: true,
-                  speed: player.botSpeed,
-                ),
-              ),
-            // Strategy chip only. Speed used to have its own icon here; it is
-            // now the colour of the avatar's corner marker (slow green, normal
-            // blue, fast red), so the icon was saying the same thing twice.
-            if (isBot)
-              Builder(
-                builder: (_) {
-                  final strategy = player.botStrategy;
-                  final showStrategy =
-                      strategy != null &&
-                      strategy != BotStrategy.heuristic &&
-                      strategy != BotStrategy.winrate &&
-                      strategy != BotStrategy.mixOracle &&
-                      strategy != BotStrategy.legacyMixExpectimax;
-                  if (!showStrategy) return const SizedBox.shrink();
-                  return Container(
-                    margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFC5CAE9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _shortStrategyLabel(strategy),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6A1B9A),
                       ),
-                    ),
-                  );
-                },
-              ),
-            // Blocked indicator
-            if (isBlockedPlayer)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.block, size: 14, color: Color(0xFFE57373)),
-              ),
-            // Bug #8: Disconnected indicator
-            if (player != null && !player.connected)
-              const Padding(
-                padding: EdgeInsets.only(right: 6),
-                child: Icon(Icons.wifi_off, size: 14, color: Color(0xFFFF8A65)),
-              ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, cons) => FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: cons.maxWidth),
-                    child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (player != null && player.titleName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: TitleChip(
-                        titleKey: player.titleKey,
-                        titleName: player.titleName,
-                      ),
-                    ),
-                  Builder(
-                    builder: (_) {
-                      // When the slot is showing an equipped banner, prefer the
-                      // banner's admin-defined text color (white-on-galaxy,
-                      // etc.) so the nickname stays readable on dark gradients.
-                      // Falls through to the existing state-based palette for
-                      // empty / bot / blocked / disconnected slots.
-                      final bannerTextOverride =
-                          (player != null && !isBot && player.connected)
-                          ? game.bannerTextColor(player.bannerKey)
-                          : null;
-                      final defaultColor = isBot
-                          ? const Color(0xFF3949AB)
-                          : isBlockedPlayer
-                          ? const Color(0xFFBB8888)
-                          : (player != null && !player.connected)
-                          ? const Color(0xFFBBAAAA)
-                          : player != null
-                          ? const Color(0xFF5A4038)
-                          : isSlotBlocked
-                          ? const Color(0xFF8A7A72)
-                          : const Color(0xFFAA9A92);
-                      return Text(
-                        player?.name ??
-                            (isSlotBlocked
-                                ? L10n.of(context).lobbySlotBlocked
-                                : L10n.of(context).lobbyEmptySlot),
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: bannerTextOverride ?? defaultColor,
-                          fontWeight: isMySlot
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
-                ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // Add bot button on empty slots (host only, not ranked, not blocked)
-            if (isEmpty && game.isHost && !game.isRankedRoom && !isSlotBlocked)
-              PopupMenuButton<String>(
-                onSelected: (speed) {
-                  final defaultStrategy = game.currentGameType == 'tichu'
-                      ? BotStrategy.winrate
-                      : game.currentGameType == 'mighty'
-                      ? BotStrategy.mixOracle
-                      : BotStrategy.heuristic;
-                  game.addBot(
-                    targetSlot: slotIndex,
-                    speed: speed,
-                    strategy: defaultStrategy,
-                  );
-                },
-                itemBuilder: (ctx) {
-                  final l10n = L10n.of(ctx);
-                  return [
-                    PopupMenuItem(
-                      value: 'fast',
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.fast_forward,
-                            size: 16,
-                            color: Color(0xFFE65100),
+                    // Season rating chip on the right — only in ranked rooms, only
+                    // for humans. Number-only, no emoji.
+                    if (player != null &&
+                        !isBot &&
+                        game.isRankedRoom &&
+                        player.seasonRating != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              l10n.lobbyBotSpeedFast,
-                              overflow: TextOverflow.ellipsis,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFFE0B2)),
+                          ),
+                          child: Text(
+                            '${player.seasonRating}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFE65100),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'normal',
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.play_arrow,
-                            size: 16,
-                            color: Color(0xFF3949AB),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              l10n.lobbyBotSpeedNormal,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'slow',
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.slow_motion_video,
-                            size: 16,
-                            color: Color(0xFF558B2F),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              l10n.lobbyBotSpeedSlow,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ];
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                position: PopupMenuPosition.under,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8EAF6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.smart_toy,
-                        size: 14,
-                        color: Color(0xFF3949AB),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        L10n.of(context).lobbyBot,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF3949AB),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            // Season rating chip on the right — only in ranked rooms, only
-            // for humans. Number-only, no emoji.
-            if (player != null &&
-                !isBot &&
-                game.isRankedRoom &&
-                player.seasonRating != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFFE0B2)),
-                  ),
-                  child: Text(
-                    '${player.seasonRating}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFFE65100),
-                    ),
-                  ),
-                ),
-              ),
-            // Kick button: show only for host, on other players' occupied slots (including bots)
-            if (game.isHost && !isEmpty && !isMySlot)
-              Padding(
-                padding: const EdgeInsets.only(left: 6),
-                child: GestureDetector(
-                  onTap: () {
-                    if (isBot) {
-                      game.kickPlayer(player.id);
-                    } else {
-                      _showKickConfirmDialog(player.name, player.id, game);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFCDD2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: Color(0xFFC62828),
-                    ),
-                  ),
-                ),
-              ),
+                    // Kick button: show only for host, on other players' occupied slots (including bots)
+                    if (game.isHost && !isEmpty && !isMySlot)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (isBot) {
+                              game.kickPlayer(player.id);
+                            } else {
+                              _showKickConfirmDialog(
+                                player.name,
+                                player.id,
+                                game,
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFCDD2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Color(0xFFC62828),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               );
@@ -4243,11 +4337,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
           if (player != null && !isBot && player.isHost)
-            const Positioned(
-              left: -3,
-              top: -7,
-              child: HostCrown(size: 22),
-            ),
+            const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
           // What this player just said, for a couple of seconds. Laid over the
           // seat so a line of chat is visible without opening the panel.
           if (player != null) ?_seatChatBubble(player.name),
@@ -4255,7 +4345,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
     );
   }
-
 
   String _shortStrategyLabel(String strategy) {
     switch (strategy) {

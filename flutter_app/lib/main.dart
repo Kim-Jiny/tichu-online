@@ -147,9 +147,14 @@ Future<void> _loadWebFonts() async {
 void _warmEmojiFont() {
   try {
     final builder = ui.ParagraphBuilder(ui.ParagraphStyle(fontSize: 14))
-      // One representative from each fallback family the UI reaches for:
-      // pictographs, symbols, dingbats, and the playing-card block.
-      ..addText('👑🏆🎯❤️⚓✅★🃏🃑');
+      // Exactly the characters the app uses that Pretendard does not carry,
+      // found by diffing every ARB string and Korean literal against the
+      // bundled font's cmap. Hangul itself is fully covered (11,172/11,172) —
+      // what falls through is emoji plus, surprisingly, three of the four card
+      // suits: Pretendard has ♥ but not ♠, ♣ or ♦, and those appear in the
+      // rules text, which is why opening 게임 설명 fetched Noto Sans KR.
+      // Keep this in sync when new symbols enter the UI.
+      ..addText('♠♣♦♥👑🏆🎯❤️⚓✅★🃏🃑🐋🐙💰🎉');
     builder.build().layout(const ui.ParagraphConstraints(width: 400));
   } catch (_) {
     // Best-effort only; the fonts still load on demand as they did before.

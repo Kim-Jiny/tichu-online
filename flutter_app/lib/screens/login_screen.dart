@@ -58,6 +58,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _isConnecting = false;
+
+  /// Bumped every time a social sign-in starts or is abandoned.
+  ///
+  /// signInWithPopup is supposed to reject with popup-closed-by-user when the
+  /// window goes away, but it does not always notice — closing the popup can
+  /// leave the future pending forever, and the spinner with it. The user is
+  /// given a way out (see _buildConnectingOverlay); this id is what stops the
+  /// abandoned attempt from resolving later and yanking them into a login they
+  /// already backed out of.
+  int _socialAttempt = 0;
   bool _showRegister = false;
   bool _showSocialNickname = false;
   bool _autoLoginAttempted = false;
@@ -191,6 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleSocialSignIn(String providerName) async {
     final l10n = L10n.of(context);
+    final attempt = ++_socialAttempt;
     setState(() {
       _isConnecting = true;
       _error = null;
@@ -213,22 +224,31 @@ class _LoginScreenState extends State<LoginScreen> {
           throw Exception('Unknown provider: $providerName');
       }
 
+      // The popup outlived the user's patience and they dismissed the
+      // spinner; whatever it eventually returned is not wanted.
+      if (attempt != _socialAttempt || !mounted) return;
+
       if (result.cancelled) {
         setState(() => _isConnecting = false);
         return;
       }
 
-      if (!mounted) return;
-
       _socialProvider = result.provider;
       _socialToken = result.token;
       await _socialLogin(result.provider, result.token);
     } catch (e) {
+      if (attempt != _socialAttempt || !mounted) return;
       setState(() {
         _error = l10n.loginSocialFailed('$e');
         _isConnecting = false;
       });
     }
+  }
+
+  /// Abandons a social sign-in whose popup never reported back.
+  void _cancelSocialSignIn() {
+    _socialAttempt++;
+    setState(() => _isConnecting = false);
   }
 
   Future<void> _socialLogin(String provider, String token) async {
@@ -865,6 +885,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 1.4,
                 ),
               ),
+              // Only for a social popup, and only on the web: closing the
+              // provider's window does not reliably reject the pending future,
+              // which used to leave this spinner up with no way back to the
+              // login form. Session restore is not offered a cancel — it ends
+              // on its own.
+              if (kIsWeb && !session.isRestoring) ...[
+                const SizedBox(height: 18),
+                TextButton(
+                  onPressed: _cancelSocialSignIn,
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF8A746A),
+                  ),
+                  child: Text(l10n.commonCancel),
+                ),
+              ],
             ],
           ),
         ),

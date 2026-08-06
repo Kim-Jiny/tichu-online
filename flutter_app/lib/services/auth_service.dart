@@ -142,13 +142,14 @@ class AuthService {
     try {
       kakao.OAuthToken token;
 
-      // No KakaoTalk app to hand off to in a browser — go straight to the
-      // account login, which the SDK renders as a popup on web.
-      if (kIsWeb) {
-        token = await kakao.UserApi.instance.loginWithKakaoAccount();
-        return SocialAuthResult(provider: 'kakao', token: token.accessToken);
-      }
-
+      // No web special-case on purpose. isKakaoTalkInstalled() answers on the
+      // web too — true on a mobile browser, false on desktop — and
+      // loginWithKakaoTalk() has its own kIsWeb branch that builds the
+      // redirect URI the KakaoTalk app hands back to. Short-circuiting to the
+      // account login here (which an earlier version did, on the assumption
+      // that a browser has no app to talk to) is what made mobile web open a
+      // bare id/password window instead of offering KakaoTalk.
+      //
       // Try KakaoTalk login first, fallback to web
       if (await kakao.isKakaoTalkInstalled()) {
         try {

@@ -1682,8 +1682,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   List<Widget> _buildLobbyActionButtons(GameService game) {
     final attendance = game.attendanceState;
-    final attendanceUnclaimed =
-        attendance != null && attendance['claimedToday'] != true;
+    // Never on the web: the attendance banner inside the shop is hidden there
+    // (the daily reward needs a rewarded ad, and AdMob has no web build), so a
+    // dot pointing at it would send players to a screen with nothing to claim.
+    // Same condition as _shouldShowAttendanceBanner in shop_screen.
+    final attendanceUnclaimed = !kIsWeb &&
+        attendance != null &&
+        attendance['claimedToday'] != true;
     return [
       Stack(
         children: [

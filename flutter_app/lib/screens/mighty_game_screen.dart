@@ -2896,11 +2896,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // nothing — and the ceiling was a phone-sized 92, which a desktop board
     // reaches immediately and then stops. On web, let the seat's width have a
     // say (so the photo can never outgrow its own box) and raise the ceiling.
-    // Native keeps the original number exactly.
+    // Native keeps the original number exactly. The web ceiling came down
+    // with the board (148 was picked against a 1.6 scale, this is 1.3).
     final avatar = kIsWeb
         ? math
               .min(seatHeight * 0.60, seatWidth * 0.62)
-              .clamp(40.0, 148.0)
+              .clamp(40.0, 120.0)
               .toDouble()
         : (seatHeight * 0.60).clamp(40.0, 92.0).toDouble();
     return (
@@ -5693,8 +5694,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // however much room there was. Grow with the viewport against the same
         // 400pt design width the other boards use, web only.
         final media = MediaQuery.of(context);
+        // 1.3, not 1.6 — see the Tichu board: 1.6 made every screen look
+        // like a zoomed-in phone rather than a desktop layout.
         final scale = kIsWeb
-            ? (media.size.shortestSide / 400).clamp(1.0, 1.6)
+            ? (media.size.shortestSide / 400).clamp(1.0, 1.3)
             : 1.0;
         final maxCardWidth = 52.0 * scale;
 
@@ -6518,8 +6521,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// Capped at 1.0 off the web so the app is untouched; on a browser the
   /// panels were drawn at phone sizes in the middle of a large window.
   double get _webScale => kIsWeb
-      ? (MediaQuery.of(context).size.shortestSide / 400).clamp(1.0, 1.6)
+      ? (MediaQuery.of(context).size.shortestSide / 400).clamp(1.0, 1.3)
       : 1.0;
+
+  /// Text/chrome scale: half of _webScale's excess. Growing labels at the same
+  /// rate as the cards is what made these panels look oversized on a browser.
+  double get _webTextScale => 1 + (_webScale - 1) * 0.5;
 
   Widget _buildSettingRevealOverlay(
     MightySettingEvent event, {
@@ -6527,6 +6534,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }) {
     final l10n = L10n.of(context);
     final s = _webScale;
+    // Labels grow at half the card rate — see _webTextScale.
+    final ts = _webTextScale;
     // SizedBox.expand (not Positioned.fill) so this can be returned from a
     // Consumer placed at the top of the body Stack — above the round-result
     // overlay — without needing to be a direct Stack child.
@@ -6575,7 +6584,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       l10n.mtSettingRevealTitle,
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 17 * s,
+                        fontSize: 17 * ts,
                         color: const Color(0xFFE65100),
                       ),
                     ),
@@ -6586,7 +6595,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   l10n.mtSettingRevealBody(event.playerName),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13 * s,
+                    fontSize: 13 * ts,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF5A4038),
                   ),
@@ -6601,7 +6610,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Text(
                   l10n.mtSettingTapToClose,
                   style: TextStyle(
-                    fontSize: 11 * s,
+                    fontSize: 11 * ts,
                     color: const Color(0xFF8A7A72),
                   ),
                 ),

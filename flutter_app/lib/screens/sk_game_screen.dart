@@ -4193,8 +4193,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
         // — same 400pt design width the other boards scale against — and only
         // on web, so the app itself renders exactly as before.
         final media = MediaQuery.of(context);
+        // 1.3, not 1.6: at 1.6 the whole board read as a magnified phone.
+        // Matches the Tichu board's ceiling so the games look like one app.
         final scale = kIsWeb
-            ? (media.size.shortestSide / 400).clamp(1.0, 1.6)
+            ? (media.size.shortestSide / 400).clamp(1.0, 1.3)
             : 1.0;
 
         final maxCardWidth =

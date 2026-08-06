@@ -126,7 +126,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // browser and are the paths nobody exercises.
     final isLandscape =
         !kIsWeb && media.orientation == Orientation.landscape;
-    _s = (media.size.shortestSide / 400).clamp(0.72, kIsWeb ? 1.6 : 1.0);
+    // Same 1.3 ceiling as the boards it mirrors. Spectating a Tichu game
+    // drawn at 1.6 next to playing one at 1.3 would just look like two
+    // different apps.
+    _s = (media.size.shortestSide / 400).clamp(0.72, kIsWeb ? 1.3 : 1.0);
     // C9: Wrap in ConnectionOverlay for reconnection support
     return ConnectionOverlay(
       child: PopScope(

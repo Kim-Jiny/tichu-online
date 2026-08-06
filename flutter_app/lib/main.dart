@@ -19,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 import 'app_navigation.dart';
 import 'firebase_options.dart';
+import 'config/social_config.dart';
 import 'l10n/app_localizations.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
@@ -51,26 +52,43 @@ void main() async {
     _warmEmojiFont();
   }
 
-  // The whole mobile stack is skipped on web, and it has to be skipped here
-  // rather than lazily: every one of these throws before the first frame, and a
-  // throw in main() is a white page with nothing on screen to explain it.
+  // Firebase backs Google and Apple sign-in on every platform, web included —
+  // the browser gets an OAuth popup instead of a native sheet, but the ID token
+  // that comes out is the same one the server already verifies.
   //
-  //  - Firebase: firebase_options.dart has no web entry yet, so
-  //    DefaultFirebaseOptions.currentPlatform raises UnsupportedError. Register
-  //    a web app with `flutterfire configure` to turn Google/Apple sign-in back
-  //    on for the browser; until then web is id/password and Kakao only.
-  //  - kakao_flutter_sdk: nativeAppKey is the mobile key; the web SDK wants a
-  //    javaScriptAppKey.
-  //  - google_mobile_ads / firebase_messaging: no web implementation at all.
+  // On web it only starts when the web app's keys were passed at build time;
+  // without them currentPlatform would hand Firebase an empty apiKey and the
+  // failure would surface later, as a dead button rather than a clear cause.
+  // SocialConfig gates the UI on exactly the same condition.
+  //
+  // This has to happen here rather than lazily: a throw in main() is a white
+  // page with nothing on screen to explain it.
+  if (!kIsWeb || DefaultFirebaseOptions.hasWebConfig) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      // Bad or stale web keys must not cost the whole app. Sign-in with
+      // Google/Apple will fail from here, but id/password still works.
+      debugPrint('Firebase init failed: $e');
+    }
+  }
+
   if (!kIsWeb) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
     // Firebase Analytics: enabled by default once the package is wired up.
     // Calling this explicitly makes the intent visible and protects against
     // builds where collection was previously disabled.
     await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-    kakao.KakaoSdk.init(nativeAppKey: 'd9b4b3cfc86537fed9a80a659641ad30');
+  }
+
+  // Kakao issues a different key per platform and rejects the wrong one, so
+  // the browser needs the JavaScript key where the app uses the native one.
+  if (SocialConfig.kakaoEnabled) {
+    kakao.KakaoSdk.init(
+      nativeAppKey: kIsWeb ? null : SocialConfig.kakaoNativeKey,
+      javaScriptAppKey: kIsWeb ? SocialConfig.kakaoJavaScriptKey : null,
+    );
   }
 
   await InviteLinkService.instance.initialize();

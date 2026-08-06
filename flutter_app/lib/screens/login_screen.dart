@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../config/social_config.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -574,60 +574,79 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center,
               ),
           ],
-          SizedBox(height: compact ? 20 : 24),
-          Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+          // "간편 로그인" heads a row that can now be empty — a build with no
+          // provider keys would otherwise show a divider labelling nothing.
+          if (SocialConfig.anyEnabled) ...[
+            SizedBox(height: compact ? 20 : 24),
+            Row(
+              children: [
+                Expanded(
+                  child: Divider(
+                    color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  l10n.loginQuickLogin,
-                  style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 13),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    l10n.loginQuickLogin,
+                    style: const TextStyle(
+                      color: Color(0xFFAA9A92),
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Divider(
-                  color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                Expanded(
+                  child: Divider(
+                    color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: socialSpacing,
-            runSpacing: socialSpacing,
-            children: [
-              _buildSocialButton(
-                onTap: () => _handleSocialSignIn('google'),
-                backgroundColor: Colors.white,
-                borderColor: const Color(0xFFDADADA),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Image.asset('assets/icons/google_logo.png'),
-                ),
-              ),
-              // dart:io Platform throws on web; Apple sign-in is iOS-only anyway.
-              if (!kIsWeb && Platform.isIOS)
-                _buildSocialButton(
-                  onTap: () => _handleSocialSignIn('apple'),
-                  backgroundColor: Colors.black,
-                  child: const Icon(Icons.apple, color: Colors.white, size: 30),
-                ),
-              _buildSocialButton(
-                onTap: () => _handleSocialSignIn('kakao'),
-                backgroundColor: const Color(0xFFFEE500),
-                child: CustomPaint(
-                  size: const Size(24, 24),
-                  painter: _KakaoLogoPainter(),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: socialSpacing,
+              runSpacing: socialSpacing,
+              // A provider only appears when this build can actually complete
+              // it. Google and Kakao used to be unconditional, so on the web
+              // they rendered, threw on tap and left the user staring at a
+              // button that did nothing. SocialConfig answers off the same
+              // keys main() initialises with, so the two can't drift.
+              children: [
+                if (SocialConfig.googleEnabled)
+                  _buildSocialButton(
+                    onTap: () => _handleSocialSignIn('google'),
+                    backgroundColor: Colors.white,
+                    borderColor: const Color(0xFFDADADA),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Image.asset('assets/icons/google_logo.png'),
+                    ),
+                  ),
+                // Native Apple sign-in needs the iOS system sheet; on the web it
+                // is an ordinary OAuth popup, so the browser gets it everywhere.
+                if (SocialConfig.appleEnabled)
+                  _buildSocialButton(
+                    onTap: () => _handleSocialSignIn('apple'),
+                    backgroundColor: Colors.black,
+                    child: const Icon(
+                      Icons.apple,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                if (SocialConfig.kakaoEnabled)
+                  _buildSocialButton(
+                    onTap: () => _handleSocialSignIn('kakao'),
+                    backgroundColor: const Color(0xFFFEE500),
+                    child: CustomPaint(
+                      size: const Size(24, 24),
+                      painter: _KakaoLogoPainter(),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -727,7 +746,8 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            localizeRestoreError(session.restoreErrorRaw, l10n) ?? l10n.loginCheckSavedInfo,
+            localizeRestoreError(session.restoreErrorRaw, l10n) ??
+                l10n.loginCheckSavedInfo,
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF7A4B1F),
@@ -778,7 +798,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const CircularProgressIndicator(color: Color(0xFFF28C26)),
               const SizedBox(height: 20),
               Text(
-                session.isRestoring ? l10n.loginAutoLoggingIn : l10n.loginLoggingIn,
+                session.isRestoring
+                    ? l10n.loginAutoLoggingIn
+                    : l10n.loginLoggingIn,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1245,7 +1267,10 @@ class _RegisterDialogState extends State<RegisterDialog> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(l10n.loginCheckAvailability, style: const TextStyle(fontSize: 13)),
+                    : Text(
+                        l10n.loginCheckAvailability,
+                        style: const TextStyle(fontSize: 13),
+                      ),
               ),
             ),
           ],
@@ -1431,7 +1456,10 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
                   const SizedBox(height: 8),
                   Text(
                     l10n.loginSetNicknameDesc,
-                    style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 14),
+                    style: const TextStyle(
+                      color: Color(0xFF8A7A72),
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Row(

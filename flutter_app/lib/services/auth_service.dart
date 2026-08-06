@@ -13,7 +13,11 @@ class SocialAuthResult {
   final String token; // Firebase ID token or Kakao access token
   final bool cancelled;
 
-  SocialAuthResult({required this.provider, required this.token, this.cancelled = false});
+  SocialAuthResult({
+    required this.provider,
+    required this.token,
+    this.cancelled = false,
+  });
 
   factory SocialAuthResult.cancelled() =>
       SocialAuthResult(provider: '', token: '', cancelled: true);
@@ -23,8 +27,43 @@ class AuthService {
   static final _auth = FirebaseAuth.instance;
   static final _googleSignIn = GoogleSignIn();
 
+  /// Firebase's own OAuth popup, used for both providers on the web.
+  ///
+  /// The native path builds a credential from a platform SDK and hands it to
+  /// Firebase. A browser has no platform SDK, so Firebase runs the OAuth dance
+  /// itself in a popup and returns the same signed-in user — which means the
+  /// same uid and the same ID token shape the server already verifies. Nothing
+  /// changes server-side, and an account made in the app signs in here.
+  static Future<SocialAuthResult> _signInWithPopup(
+    String provider,
+    AuthProvider authProvider,
+  ) async {
+    try {
+      final userCredential = await _auth.signInWithPopup(authProvider);
+      final idToken = await userCredential.user?.getIdToken();
+      if (idToken == null) throw Exception('Failed to get Firebase ID token');
+      return SocialAuthResult(provider: provider, token: idToken);
+    } on FirebaseAuthException catch (e) {
+      // Closing the popup, or a second click while one is already open, is a
+      // cancel — not an error worth showing.
+      if (e.code == 'popup-closed-by-user' ||
+          e.code == 'cancelled-popup-request' ||
+          e.code == 'user-cancelled') {
+        return SocialAuthResult.cancelled();
+      }
+      debugPrint('$provider popup sign-in error: ${e.code} ${e.message}');
+      rethrow;
+    }
+  }
+
   // --- Google Sign-In ---
   static Future<SocialAuthResult> signInWithGoogle() async {
+    if (kIsWeb) {
+      return _signInWithPopup(
+        'google',
+        GoogleAuthProvider()..addScope('email'),
+      );
+    }
     try {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return SocialAuthResult.cancelled();
@@ -48,6 +87,17 @@ class AuthService {
 
   // --- Apple Sign-In ---
   static Future<SocialAuthResult> signInWithApple() async {
+    if (kIsWeb) {
+      // 'name' is only ever returned on the very first authorisation, and the
+      // server does not use it — but asking keeps parity with the app, where
+      // the same scopes are requested.
+      return _signInWithPopup(
+        'apple',
+        OAuthProvider('apple.com')
+          ..addScope('email')
+          ..addScope('name'),
+      );
+    }
     try {
       // Generate nonce
       final rawNonce = _generateNonce();
@@ -61,7 +111,9 @@ class AuthService {
         nonce: nonce,
       );
 
-      debugPrint('Apple identityToken: ${appleCredential.identityToken != null ? 'present' : 'NULL'}');
+      debugPrint(
+        'Apple identityToken: ${appleCredential.identityToken != null ? 'present' : 'NULL'}',
+      );
       debugPrint('Apple authorizationCode: present');
 
       final oauthCredential = OAuthProvider('apple.com').credential(
@@ -89,6 +141,13 @@ class AuthService {
   static Future<SocialAuthResult> signInWithKakao() async {
     try {
       kakao.OAuthToken token;
+
+      // No KakaoTalk app to hand off to in a browser — go straight to the
+      // account login, which the SDK renders as a popup on web.
+      if (kIsWeb) {
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        return SocialAuthResult(provider: 'kakao', token: token.accessToken);
+      }
 
       // Try KakaoTalk login first, fallback to web
       if (await kakao.isKakaoTalkInstalled()) {
@@ -142,7 +201,8 @@ class AuthService {
         try {
           await kakao.UserApi.instance.accessTokenInfo();
           // Token is valid, get it from token manager
-          final tokenManager = await kakao.TokenManagerProvider.instance.manager.getToken();
+          final tokenManager = await kakao.TokenManagerProvider.instance.manager
+              .getToken();
           return tokenManager?.accessToken;
         } catch (e) {
           return null;
@@ -176,9 +236,13 @@ class AuthService {
 
   // --- Helpers ---
   static String _generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   static String _sha256ofString(String input) {

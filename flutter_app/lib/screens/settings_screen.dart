@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../config/social_config.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -48,23 +49,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-      // AdMob has no web implementation at all, so this can only fail there.
-      // Leaving it to fail was working — the load callbacks null the banner
-      // out — but it is a plugin exception per screen to get to the same
-      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
-    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
-      AdService.settingsBannerId,
-      onAdLoaded: (_) {
-        if (mounted) setState(() => _bannerAdLoaded = true);
-      },
-      onAdFailedToLoad: (_, _) {
-        if (mounted)
-          setState(() {
-            _bannerAd = null;
-            _bannerAdLoaded = false;
-          });
-      },
-    );
+    // AdMob has no web implementation at all, so this can only fail there.
+    // Leaving it to fail was working — the load callbacks null the banner
+    // out — but it is a plugin exception per screen to get to the same
+    // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb
+        ? null
+        : AdService.createBannerAd(
+            AdService.settingsBannerId,
+            onAdLoaded: (_) {
+              if (mounted) setState(() => _bannerAdLoaded = true);
+            },
+            onAdFailedToLoad: (_, _) {
+              if (mounted)
+                setState(() {
+                  _bannerAd = null;
+                  _bannerAdLoaded = false;
+                });
+            },
+          );
     _bannerAd?.load();
     _loadAppVersion();
     // The profile card shows level and exp, which only arrive with a fetch.
@@ -854,36 +857,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(l10n.linkDialogTitle),
         content: Text(l10n.linkDialogContent),
         actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await AuthService.signOutGoogle();
-                final result = await AuthService.signInWithGoogle();
-                if (result.cancelled || !mounted) return;
-                context.read<GameService>().linkSocial(
-                  result.provider,
-                  result.token,
-                );
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.settingsLinkFailed(e.toString())),
-                    ),
+          if (SocialConfig.googleEnabled)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  await AuthService.signOutGoogle();
+                  final result = await AuthService.signInWithGoogle();
+                  if (result.cancelled || !mounted) return;
+                  context.read<GameService>().linkSocial(
+                    result.provider,
+                    result.token,
                   );
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.settingsLinkFailed(e.toString())),
+                      ),
+                    );
+                  }
                 }
-              }
-            },
-            child: const Text(
-              'Google',
-              style: TextStyle(
-                color: Color(0xFF4285F4),
-                fontWeight: FontWeight.bold,
+              },
+              child: const Text(
+                'Google',
+                style: TextStyle(
+                  color: Color(0xFF4285F4),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          if (!kIsWeb && Platform.isIOS)
+          if (SocialConfig.appleEnabled)
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
@@ -912,34 +916,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                final result = await AuthService.signInWithKakao();
-                if (result.cancelled || !mounted) return;
-                context.read<GameService>().linkSocial(
-                  result.provider,
-                  result.token,
-                );
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.settingsLinkFailed(e.toString())),
-                    ),
+          if (SocialConfig.kakaoEnabled)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                try {
+                  final result = await AuthService.signInWithKakao();
+                  if (result.cancelled || !mounted) return;
+                  context.read<GameService>().linkSocial(
+                    result.provider,
+                    result.token,
                   );
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.settingsLinkFailed(e.toString())),
+                      ),
+                    );
+                  }
                 }
-              }
-            },
-            child: const Text(
-              'Kakao',
-              style: TextStyle(
-                color: Color(0xFF3C1E1E),
-                fontWeight: FontWeight.bold,
+              },
+              child: const Text(
+                'Kakao',
+                style: TextStyle(
+                  color: Color(0xFF3C1E1E),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),

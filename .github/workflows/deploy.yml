@@ -28,13 +28,29 @@ jobs:
         working-directory: flutter_app
         # base-href must match where webApp.js serves it from, or every asset
         # request resolves against / and 404s.
+        #
+        # The three social keys are build-time inputs rather than committed
+        # values. They are not secrets — a web app ships them in the clear, and
+        # what actually guards the project is Firebase's authorised-domains
+        # list and Kakao's registered platform origins. They live in GitHub
+        # secrets so the repo does not have to be edited to rotate one.
+        #
+        # Missing/empty is a supported state: SocialConfig then hides the
+        # provider's button instead of offering a sign-in that cannot complete.
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_WEB_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+          KAKAO_JS_KEY: ${{ secrets.KAKAO_JS_KEY }}
         run: |
           flutter pub get
           # --pwa-strategy=none: the app is useless offline (every screen needs
           # the WebSocket) and a stale service worker is indistinguishable from
           # a failed deploy. index.html unregisters any worker left by an
           # earlier build.
-          flutter build web --release --base-href=/play/ --pwa-strategy=none
+          flutter build web --release --base-href=/play/ --pwa-strategy=none \
+            --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
+            --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
+            --dart-define=KAKAO_JS_KEY="$KAKAO_JS_KEY"
 
       - name: Package
         run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .

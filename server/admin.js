@@ -7,6 +7,7 @@ const {
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
@@ -123,7 +124,9 @@ function redirect(res, location) {
 
 // ===== Layout & Styles =====
 
-function layout(title, content, activePage = '') {
+// pendingDeposits drives the badge on the 입금확인 tab. Passed in rather than
+// queried here because layout() is synchronous and called from every page.
+function layout(title, content, activePage = '', pendingDeposits = 0) {
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -616,6 +619,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
     <a href="/tc-backstage/iap-consumption" class="${activePage === 'iap-consumption' ? 'active' : ''}" onclick="closeSidebar()">환불요청</a>
     <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
+    <a href="/tc-backstage/deposits" class="${activePage === 'deposits' ? 'active' : ''}" onclick="closeSidebar()">입금확인${pendingDeposits > 0 ? ` <b style="color:#d88c38">${pendingDeposits}</b>` : ''}</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
@@ -5896,6 +5900,126 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       await insertMaintenanceHistory({ action: 'clear', config: {}, adminUser: sessionInfo.session.username });
     }
     return redirect(res, '/tc-backstage/maintenance');
+  }
+
+
+  // ===== Bank-transfer deposits =====
+  if (pathname === '/tc-backstage/deposits' && method === 'GET') {
+    const filter = ['pending', 'approved', 'rejected', 'all']
+      .includes(url.searchParams.get('status'))
+      ? url.searchParams.get('status') : 'pending';
+    const rows = await getBankDeposits({ status: filter, limit: 200 });
+    const pending = await countPendingBankDepositsAll();
+    const done = url.searchParams.get('done');
+
+    const tab = (key, label) => `<a href="/tc-backstage/deposits?status=${key}"
+        style="padding:6px 14px;border:1px solid ${filter === key ? '#0f6c5c' : '#ddd'};
+               background:${filter === key ? '#d9eee7' : '#fff'};color:#1f2328;
+               border-radius:8px;text-decoration:none;font-size:13px">${label}</a>`;
+
+    const body = rows.length === 0
+      ? '<div class="empty">해당하는 요청이 없습니다</div>'
+      : `<table>
+          <thead><tr>
+            <th>요청시각</th><th>계정</th><th>입금자명</th><th>상품</th>
+            <th style="text-align:right">금액</th><th style="text-align:right">지급골드</th>
+            <th>상태</th><th>처리</th>
+          </tr></thead>
+          <tbody>${rows.map((r) => {
+            const badge = r.status === 'pending'
+              ? '<span class="badge" style="background:#fff3e0;color:#b26a00">대기</span>'
+              : r.status === 'approved'
+              ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">지급완료</span>'
+              : '<span class="badge" style="background:#ffebee;color:#c62828">반려</span>';
+            const handled = r.handled_at
+              ? `<div style="font-size:11px;color:#6c727f">${escapeHtml(r.handled_by || '')} · ${formatDate(r.handled_at)}</div>`
+              : '';
+            const actions = r.status !== 'pending'
+              ? (r.admin_note ? `<div style="font-size:11px;color:#6c727f">${escapeHtml(r.admin_note)}</div>` : '—')
+              : `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                   <form method="POST" action="/tc-backstage/deposits/approve" style="margin:0"
+                         onsubmit="return confirm('${escapeHtml(r.nickname)}님에게 ${Number(r.gold_amount).toLocaleString()}G를 지급합니다. 입금 내역을 확인하셨나요?')">
+                     <input type="hidden" name="id" value="${r.id}">
+                     <input type="hidden" name="status" value="${filter}">
+                     <button type="submit" class="btn btn-primary">입금 확인</button>
+                   </form>
+                   <form method="POST" action="/tc-backstage/deposits/reject" style="margin:0;display:flex;gap:4px"
+                         onsubmit="return confirm('이 요청을 반려합니다. 골드는 지급되지 않습니다.')">
+                     <input type="hidden" name="id" value="${r.id}">
+                     <input type="hidden" name="status" value="${filter}">
+                     <input type="text" name="note" placeholder="반려 사유(선택)"
+                            style="width:130px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+                     <button type="submit" class="btn btn-secondary">반려</button>
+                   </form>
+                 </div>`;
+            return `<tr>
+              <td style="white-space:nowrap">${formatDate(r.created_at)}</td>
+              <td><b>${escapeHtml(r.nickname)}</b>
+                  <div style="font-size:11px;color:#6c727f">보유 ${Number(r.current_gold || 0).toLocaleString()}G</div></td>
+              <td>${escapeHtml(r.depositor)}</td>
+              <td style="font-size:12px">${escapeHtml(r.product_id)}</td>
+              <td style="text-align:right;white-space:nowrap">₩${Number(r.price_krw).toLocaleString()}</td>
+              <td style="text-align:right;white-space:nowrap"><b>${Number(r.gold_amount).toLocaleString()}</b></td>
+              <td>${badge}${handled}</td>
+              <td>${actions}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+
+    const content = `
+      <h1 class="page-title">입금 확인 요청</h1>
+      ${done === 'approved' ? '<div style="color:#2e7d32;margin-bottom:12px;font-weight:600">지급 완료했습니다.</div>' : ''}
+      ${done === 'rejected' ? '<div style="color:#c62828;margin-bottom:12px;font-weight:600">반려했습니다.</div>' : ''}
+      ${done === 'conflict' ? '<div style="color:#c62828;margin-bottom:12px;font-weight:600">이미 처리된 요청입니다. 목록을 새로고침했습니다.</div>' : ''}
+      ${done === 'error' ? '<div style="color:#c62828;margin-bottom:12px;font-weight:600">처리 중 오류가 발생했습니다.</div>' : ''}
+      <div class="card">
+        <p style="font-size:13px;color:#6c727f;margin-bottom:10px">
+          웹 상점에서 계좌이체 후 [입금 확인]을 누른 요청입니다.
+          <b>은행 입금 내역을 직접 확인한 뒤</b> 승인하세요 — 승인하면 즉시 골드가 지급됩니다.
+          지급 기록은 유저의 골드 내역에 <b>"입금 확인"</b>으로 남습니다(관리자 지급과 구분됨).
+        </p>
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+          ${tab('pending', `대기 ${pending}`)}${tab('approved', '지급완료')}${tab('rejected', '반려')}${tab('all', '전체')}
+        </div>
+        ${body}
+      </div>`;
+    return html(res, layout('입금확인', content, 'deposits', pending));
+  }
+
+  if (pathname === '/tc-backstage/deposits/approve' && method === 'POST') {
+    const body = await parseBody(req);
+    const back = ['pending', 'approved', 'rejected', 'all'].includes(body.status)
+      ? body.status : 'pending';
+    const result = await approveBankDeposit(
+      parseInt(body.id, 10), sessionInfo.session.username || 'admin');
+    // Same notification the manual gold tool sends. Fire-and-forget: a push
+    // problem must never undo a payout that already committed.
+    if (result.success && sendPushNotification) {
+      try {
+        const user = await getUserDetail(result.nickname);
+        if (user && user.fcm_token && user.push_enabled !== false) {
+          await sendPushNotification(
+            user.fcm_token,
+            '입금이 확인되었어요',
+            `+${Number(result.gold).toLocaleString()} 골드가 지급되었어요.`
+          );
+        }
+      } catch (e) {
+        console.error('[ADMIN] deposit-approve push failed:', e.message);
+      }
+    }
+    return redirect(res, `/tc-backstage/deposits?status=${back}&done=${
+      result.success ? 'approved' : (result.message === 'already_handled' ? 'conflict' : 'error')}`);
+  }
+
+  if (pathname === '/tc-backstage/deposits/reject' && method === 'POST') {
+    const body = await parseBody(req);
+    const back = ['pending', 'approved', 'rejected', 'all'].includes(body.status)
+      ? body.status : 'pending';
+    const result = await rejectBankDeposit(
+      parseInt(body.id, 10), sessionInfo.session.username || 'admin', body.note || '');
+    return redirect(res, `/tc-backstage/deposits?status=${back}&done=${
+      result.success ? 'rejected' : (result.message === 'already_handled' ? 'conflict' : 'error')}`);
   }
 
   // ===== Settings =====

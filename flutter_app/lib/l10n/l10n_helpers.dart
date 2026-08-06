@@ -182,6 +182,10 @@ String localizeGoldTitle(String? title, String? source, L10n l10n, String locale
       return l10n.goldHistorySkRankedLoss;
     case 'sk_casual_loss':
       return l10n.goldHistorySkCasualLoss;
+    // A confirmed bank transfer is a purchase, not a hand-out — the player's
+    // history says so rather than reading like an admin adjustment.
+    case 'bank_deposit_grant':
+      return l10n.goldHistoryBankDeposit;
     case 'admin_grant':
       return l10n.goldHistoryAdminGrant;
     case 'admin_deduct':

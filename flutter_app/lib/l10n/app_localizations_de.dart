@@ -4692,4 +4692,7 @@ class L10nDe extends L10n {
 
   @override
   String get loginGetTheApp => 'Auch als App verfügbar';
+
+  @override
+  String get goldHistoryBankDeposit => 'Überweisung bestätigt';
 }

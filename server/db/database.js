@@ -587,6 +587,37 @@ async function runMigrations() {
        WHERE p.product_id = v.product_id AND p.price_krw = 0
     `);
 
+    // Bank-transfer deposit claims (web shop). A player says they have
+    // transferred the money; an admin checks the bank statement and approves
+    // or rejects. Nothing here moves gold on its own.
+    //
+    // A table rather than the tc_inquiries row this used to write: the admin
+    // needs a queue with a status and one-click approval, and parsing the
+    // product and amount back out of a Korean sentence to grant the right
+    // gold would be its own bug source. gold_amount is snapshotted at request
+    // time so editing a product later cannot change what an old claim pays.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_bank_deposits (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        product_id VARCHAR(80) NOT NULL,
+        price_krw INT NOT NULL DEFAULT 0,
+        gold_amount INT NOT NULL DEFAULT 0,
+        depositor VARCHAR(40) NOT NULL,
+        status VARCHAR(10) NOT NULL DEFAULT 'pending',
+        admin_note TEXT,
+        handled_by VARCHAR(50),
+        handled_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // The admin list is "pending first, newest first"; the user-facing check
+    // is "does this player already have one open".
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_bank_deposits_status
+         ON tc_bank_deposits (status, created_at DESC)`
+    );
+
     // App config table (EULA, etc.)
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_config (
@@ -8881,6 +8912,142 @@ async function getRefundIssues({ page = 1, limit = 50 } = {}) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Bank-transfer deposits (web shop)
+// ---------------------------------------------------------------------------
+
+async function createBankDeposit({ nickname, productId, priceKrw, goldAmount, depositor }) {
+  try {
+    const res = await pool.query(
+      `INSERT INTO tc_bank_deposits
+         (nickname, product_id, price_krw, gold_amount, depositor)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [nickname, productId, priceKrw, goldAmount, depositor]
+    );
+    return { success: true, id: res.rows[0].id };
+  } catch (err) {
+    console.error('createBankDeposit error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+/** Open claims for one player — used to refuse a duplicate while one is queued. */
+async function countPendingBankDeposits(nickname) {
+  try {
+    const res = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM tc_bank_deposits
+        WHERE nickname = $1 AND status = 'pending'`,
+      [nickname]
+    );
+    return res.rows[0].n;
+  } catch (err) {
+    console.error('countPendingBankDeposits error:', err);
+    return 0;
+  }
+}
+
+async function getBankDeposits({ status = 'pending', limit = 100 } = {}) {
+  try {
+    const all = status === 'all';
+    const res = await pool.query(
+      `SELECT d.*, u.gold AS current_gold
+         FROM tc_bank_deposits d
+         LEFT JOIN tc_users u ON u.nickname = d.nickname
+        ${all ? '' : 'WHERE d.status = $2'}
+        ORDER BY (d.status = 'pending') DESC, d.created_at DESC
+        LIMIT $1`,
+      all ? [limit] : [limit, status]
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('getBankDeposits error:', err);
+    return [];
+  }
+}
+
+async function countPendingBankDepositsAll() {
+  try {
+    const res = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM tc_bank_deposits WHERE status = 'pending'`
+    );
+    return res.rows[0].n;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Approve a claim and pay out, in one transaction.
+ *
+ * The status flip is guarded on `status = 'pending'` inside the same
+ * transaction as the credit, so two admins clicking Approve at the same
+ * moment cannot pay the same claim twice — the second UPDATE matches no row
+ * and the whole thing rolls back.
+ *
+ * The history row is deliberately NOT 'admin_adjust'. A confirmed bank
+ * transfer is a purchase the player made, and their gold history should say
+ * so rather than reading like a hand-out.
+ */
+async function approveBankDeposit(id, adminActor = 'admin') {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const claim = await client.query(
+      `UPDATE tc_bank_deposits
+          SET status = 'approved', handled_by = $2, handled_at = NOW()
+        WHERE id = $1 AND status = 'pending'
+        RETURNING nickname, product_id, gold_amount, price_krw`,
+      [id, adminActor]
+    );
+    if (claim.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'already_handled' };
+    }
+    const { nickname, product_id: productId, gold_amount: gold } = claim.rows[0];
+
+    const paid = await client.query(
+      `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold`,
+      [nickname, gold]
+    );
+    if (paid.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'user_not_found' };
+    }
+
+    await client.query(
+      `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+       VALUES ($1, $2, 'bank_deposit', 'bank_deposit_grant', $3)`,
+      [nickname, gold, productId]
+    );
+    await client.query('COMMIT');
+    return { success: true, nickname, gold, newGold: paid.rows[0].gold };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('approveBankDeposit error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+async function rejectBankDeposit(id, adminActor = 'admin', note = '') {
+  try {
+    const res = await pool.query(
+      `UPDATE tc_bank_deposits
+          SET status = 'rejected', handled_by = $2, handled_at = NOW(),
+              admin_note = $3
+        WHERE id = $1 AND status = 'pending'
+        RETURNING nickname`,
+      [id, adminActor, String(note || '').slice(0, 500)]
+    );
+    if (res.rows.length === 0) return { success: false, message: 'already_handled' };
+    return { success: true, nickname: res.rows[0].nickname };
+  } catch (err) {
+    console.error('rejectBankDeposit error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
 module.exports = {
   initDatabase,
   registerUser,
@@ -8984,6 +9151,12 @@ module.exports = {
   getLocalizedConfig,
   updateConfig,
   adminAdjustGold,
+  createBankDeposit,
+  countPendingBankDeposits,
+  countPendingBankDepositsAll,
+  getBankDeposits,
+  approveBankDeposit,
+  rejectBankDeposit,
   adminAdjustExp,
   getVisualCatalog,
   claimAdReward,

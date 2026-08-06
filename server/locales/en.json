@@ -276,5 +276,6 @@
   "bank_deposit_too_soon": "You just sent a request. Please try again shortly",
   "bank_deposit_bad_product": "That product is not on sale",
   "bank_deposit_need_name": "Please enter the depositor name",
-  "bank_deposit_submitted": "Your deposit notice was sent. Gold is granted once it is confirmed"
+  "bank_deposit_submitted": "Your deposit notice was sent. Gold is granted once it is confirmed",
+  "bank_deposit_pending_exists": "You already have a deposit awaiting confirmation"
 }

@@ -4656,4 +4656,7 @@ class L10nEn extends L10n {
 
   @override
   String get loginGetTheApp => 'Also available as an app';
+
+  @override
+  String get goldHistoryBankDeposit => 'Bank transfer confirmed';
 }

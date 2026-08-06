@@ -4544,4 +4544,7 @@ class L10nKo extends L10n {
 
   @override
   String get loginGetTheApp => '앱으로도 즐길 수 있어요';
+
+  @override
+  String get goldHistoryBankDeposit => '입금 확인';
 }

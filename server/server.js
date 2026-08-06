@@ -28,6 +28,7 @@ const {
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
+  createBankDeposit, countPendingBankDeposits,
   getConsumptionSnapshot, recordConsumptionRequest, listConsumptionRequests,
   getAttendanceState, claimAttendance,
   incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
@@ -8026,24 +8027,32 @@ async function handleRequestBankDeposit(ws, data) {
     return;
   }
 
+  // One open claim at a time. Two pending rows for the same player is an
+  // invitation to approve both for a single transfer.
+  if (await countPendingBankDeposits(ws.nickname) > 0) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_pending_exists') });
+    return;
+  }
+
   const price = Number(product.price_krw) || 0;
   const gold = (Number(product.gold_amount) || 0) + (Number(product.bonus_gold) || 0);
   bankDepositCooldown.set(ws.nickname, Date.now());
 
-  // Filed as an inquiry so it lands in the existing backstage list with a
-  // reply box, instead of being a push notification that vanishes. Category
-  // is 'other' because that's what tc_inquiries accepts; the title prefix is
-  // what makes these findable.
-  const title = `[입금확인] ${ws.nickname} · ₩${price.toLocaleString()}`;
-  const content = [
-    `상품: ${productId} (${gold.toLocaleString()}G)`,
-    `금액: ₩${price.toLocaleString()}`,
-    `입금자명: ${depositor}`,
-    `계정: ${ws.nickname}`,
-    '',
-    '입금 내역 확인 후 어드민 > 골드 지급으로 처리하세요.',
-  ].join('\n');
-  await submitInquiry(ws.nickname, 'other', title, content);
+  // Queued in tc_bank_deposits, which backstage renders as an approve/reject
+  // list. It used to be filed as an inquiry — readable, but the admin then had
+  // to retype the amount into the manual gold tool, and the payout could drift
+  // from what was requested.
+  const created = await createBankDeposit({
+    nickname: ws.nickname,
+    productId,
+    priceKrw: price,
+    goldAmount: gold,
+    depositor,
+  });
+  if (!created.success) {
+    sendTo(ws, { type: 'bank_deposit_result', success: false, message: t(ws.locale, 'bank_deposit_unavailable') });
+    return;
+  }
 
   await notifyAdminUsers(
     'payment',

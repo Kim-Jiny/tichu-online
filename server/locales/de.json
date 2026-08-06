@@ -276,5 +276,6 @@
   "bank_deposit_too_soon": "Du hast gerade eine Anfrage gesendet. Bitte versuche es gleich noch einmal",
   "bank_deposit_bad_product": "Dieses Produkt wird nicht verkauft",
   "bank_deposit_need_name": "Bitte gib den Namen des Einzahlers ein",
-  "bank_deposit_submitted": "Deine Einzahlungsmeldung wurde gesendet. Das Gold wird nach der Bestätigung gutgeschrieben"
+  "bank_deposit_submitted": "Deine Einzahlungsmeldung wurde gesendet. Das Gold wird nach der Bestätigung gutgeschrieben",
+  "bank_deposit_pending_exists": "Du hast bereits eine Einzahlung in Prüfung"
 }

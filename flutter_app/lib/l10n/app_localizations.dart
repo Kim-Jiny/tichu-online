@@ -8288,6 +8288,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Also available as an app'**
   String get loginGetTheApp;
+
+  /// No description provided for @goldHistoryBankDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer confirmed'**
+  String get goldHistoryBankDeposit;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

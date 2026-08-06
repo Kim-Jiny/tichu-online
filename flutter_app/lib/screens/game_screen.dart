@@ -410,7 +410,13 @@ class _GameScreenState extends State<GameScreen> {
     // labels, icons and buttons all looked oversized next to the cards, which
     // are the only thing that actually needed the room. Half the excess keeps
     // text comfortable without that zoomed-in feel.
-    _ts = 1 + (_s - 1) * 0.5;
+    //
+    // Web only. Off the web _s also goes BELOW 1 (down to 0.72 on a small
+    // phone), and halving that excess would make text LARGER than the shipped
+    // app draws it — 0.80 becomes 0.90 on a 320pt screen, a 12.5% jump in
+    // every label on a layout that was tuned at the smaller size. The app must
+    // render exactly as it does today.
+    _ts = kIsWeb ? 1 + (_s - 1) * 0.5 : _s;
     _maxNameLen = screenSize.width < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();

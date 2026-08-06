@@ -2621,5 +2621,6 @@
   "goldBankUnavailable": "Bank transfer is not available yet.",
   "goldBankManualNotice": "Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.",
   "appForceUpdateBodyWeb": "A new version has been deployed.\nReload the page to continue.",
-  "appForceUpdateButtonWeb": "Reload"
+  "appForceUpdateButtonWeb": "Reload",
+  "loginGetTheApp": "Also available as an app"
 }

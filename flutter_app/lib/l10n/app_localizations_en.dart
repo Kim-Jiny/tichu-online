@@ -4653,4 +4653,7 @@ class L10nEn extends L10n {
 
   @override
   String get appForceUpdateButtonWeb => 'Reload';
+
+  @override
+  String get loginGetTheApp => 'Also available as an app';
 }

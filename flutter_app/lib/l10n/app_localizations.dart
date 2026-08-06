@@ -8282,6 +8282,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Reload'**
   String get appForceUpdateButtonWeb;
+
+  /// No description provided for @loginGetTheApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Also available as an app'**
+  String get loginGetTheApp;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

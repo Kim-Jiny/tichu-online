@@ -2,6 +2,12 @@
  * Static hosting for the web client — flutter_app built for the web, staged
  * by deploy.sh and copied into ./public/play by the Dockerfile.
  *
+ * Mounted at the SITE ROOT: tichu.jiny.shop is the game. This runs as the last
+ * branch of the request chain in server.js, so every real route (/health,
+ * /invite, /terms, /tc-backstage, /media, /upload, /.well-known, …) is matched
+ * before it and can never be swallowed by the SPA fallback. /play/* — the old
+ * mount point — 301s to the same path at the root.
+ *
  * It is served by this process rather than by nginx because nginx runs in a
  * different container and already proxies every path to the backend — putting
  * the files inside the app image is what keeps a blue/green swap atomic. The
@@ -17,8 +23,11 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
+// Directory name is historical; deploy.sh and the Dockerfile stage here.
 const ROOT = path.join(__dirname, 'public', 'play');
-const PREFIX = '/play';
+// Where the client used to be mounted. Kept as a redirect so links and
+// bookmarks from the /play era keep working.
+const LEGACY_PREFIX = '/play';
 
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -49,8 +58,8 @@ function isAvailable() {
   return fs.existsSync(path.join(ROOT, 'index.html'));
 }
 
-function matches(pathname) {
-  return pathname === PREFIX || pathname.startsWith(`${PREFIX}/`);
+function isLegacyPath(pathname) {
+  return pathname === LEGACY_PREFIX || pathname.startsWith(`${LEGACY_PREFIX}/`);
 }
 
 // Nothing here is content-hashed: a Flutter build writes main.dart.js,
@@ -89,21 +98,25 @@ async function sendFile(req, res, filePath) {
 }
 
 /**
- * Serves `/play/*`. Returns false when the request should fall through to the
- * caller's own handling (i.e. the bundle isn't in this image).
+ * Serves the web client from the root. Returns false when the request should
+ * fall through to the caller's own handling (i.e. the bundle isn't in this
+ * image, and the marketing page should answer instead).
+ *
+ * Call this LAST: it answers every path it is given, either with a file or
+ * with the SPA shell.
  */
 async function serve(req, res, pathname) {
   if (!isAvailable()) return false;
 
-  if (pathname === PREFIX) {
-    // Without the trailing slash every relative asset URL would resolve one
-    // directory too high.
-    res.writeHead(301, { Location: `${PREFIX}/` });
+  if (isLegacyPath(pathname)) {
+    // '/play' -> '/', '/play/foo' -> '/foo'.
+    const moved = pathname.slice(LEGACY_PREFIX.length) || '/';
+    res.writeHead(301, { Location: moved });
     res.end();
     return true;
   }
 
-  const relative = pathname.slice(PREFIX.length + 1);
+  const relative = pathname.replace(/^\/+/, '');
   const isAsset = relative.length > 0 && path.extname(relative) !== '';
 
   if (!isAsset) {
@@ -142,4 +155,4 @@ async function serve(req, res, pathname) {
   return true;
 }
 
-module.exports = { serve, matches, isAvailable, PREFIX, ROOT };
+module.exports = { serve, isAvailable, LEGACY_PREFIX, ROOT };

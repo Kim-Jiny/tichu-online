@@ -18,7 +18,30 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="티츄, 스컬킹, 러브레터, 마이티를 즐기는 멀티플레이 카드게임">
+  <meta name="description" content="티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임. 설치 없이 브라우저에서 바로 시작하세요.">
+
+  <!-- Safari's Smart App Banner. A meta tag, NOT a universal link: it draws a
+       dismissible bar at the top of the page offering to open the app, and
+       leaves the page itself alone. Universal links would do the opposite —
+       intercept the URL before the browser ever renders it — which is why the
+       app-link scope stays limited to /invite. This site IS the game now; a
+       phone with the app installed must still be able to open it in a
+       browser. -->
+  <meta name="apple-itunes-app" content="app-id=6759035151">
+
+  <!-- Open Graph / Twitter. This used to come from the server-rendered
+       marketing page at '/', which the web client has now replaced. A crawler
+       cannot read a Flutter canvas, so without these a shared link would
+       preview as a blank card with no title. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tichu Online">
+  <meta property="og:title" content="Tichu Online — 친구들과 카드 한 판">
+  <meta property="og:description" content="티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임. 설치 없이 브라우저에서 바로 시작하세요.">
+  <meta property="og:image" content="icons/Icon-512.png">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Tichu Online — 친구들과 카드 한 판">
+  <meta name="twitter:description" content="티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임.">
 
   <!-- No maximum-scale / user-scalable=no here on purpose. Locking zoom is
        tempting because the board is laid out to the viewport, but on iOS it
@@ -39,8 +62,23 @@
        flutter_app/assets/, which pubspec bundles into the mobile app. -->
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png"/>
 
-  <title>티츄 온라인</title>
+  <title>Tichu Online — 티츄 · 마이티 · 스컬킹 · 러브레터 멀티플레이 카드게임</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Structured data, so a search result can show the game rather than a
+       bare URL. Kept minimal and factual. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Tichu Online",
+    "inLanguage": "ko",
+    "genre": "카드게임",
+    "gamePlatform": ["Web", "Android", "iOS"],
+    "playMode": "MultiPlayer",
+    "description": "티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임."
+  }
+  </script>
 
   <style>
     /*
@@ -89,6 +127,20 @@
       }
     }
   </script>
+  <!-- Visible only when the app cannot run (crawlers, JS disabled). Flutter
+       replaces the body content once it boots, so this never shows to a real
+       player. -->
+  <noscript>
+    <div style="max-width:38rem;margin:3rem auto;padding:0 1.5rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.7;color:#143a57">
+      <h1>Tichu Online</h1>
+      <p>티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임입니다.
+         브라우저에서 바로 플레이하려면 자바스크립트를 켜주세요.</p>
+      <p>
+        <a href="https://play.google.com/store/apps/details?id=com.jiny.tichuOnline">Google Play</a> ·
+        <a href="https://apps.apple.com/app/tichu-online/id6759035151">App Store</a>
+      </p>
+    </div>
+  </noscript>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

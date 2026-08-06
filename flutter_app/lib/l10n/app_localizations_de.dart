@@ -4689,4 +4689,7 @@ class L10nDe extends L10n {
 
   @override
   String get appForceUpdateButtonWeb => 'Neu laden';
+
+  @override
+  String get loginGetTheApp => 'Auch als App verfügbar';
 }

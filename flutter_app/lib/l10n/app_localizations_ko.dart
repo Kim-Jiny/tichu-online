@@ -4541,4 +4541,7 @@ class L10nKo extends L10n {
 
   @override
   String get appForceUpdateButtonWeb => '새로고침';
+
+  @override
+  String get loginGetTheApp => '앱으로도 즐길 수 있어요';
 }

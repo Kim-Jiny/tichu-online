@@ -26,8 +26,10 @@ jobs:
 
       - name: Build web
         working-directory: flutter_app
-        # base-href must match where webApp.js serves it from, or every asset
-        # request resolves against / and 404s.
+        # Mounted at the site root — tichu.jiny.shop IS the game. base-href
+        # must match where webApp.js serves from, or every asset request
+        # resolves against the wrong prefix and 404s. (/play/* still 301s
+        # here, for links from when it lived there.)
         #
         # The three social keys are build-time inputs rather than committed
         # values. They are not secrets — a web app ships them in the clear, and
@@ -47,7 +49,7 @@ jobs:
           # the WebSocket) and a stale service worker is indistinguishable from
           # a failed deploy. index.html unregisters any worker left by an
           # earlier build.
-          flutter build web --release --base-href=/play/ --pwa-strategy=none \
+          flutter build web --release --base-href=/ --pwa-strategy=none \
             --dart-define=FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" \
             --dart-define=FIREBASE_WEB_APP_ID="$FIREBASE_WEB_APP_ID" \
             --dart-define=KAKAO_JS_KEY="$KAKAO_JS_KEY"

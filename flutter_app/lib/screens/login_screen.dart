@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../config/social_config.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/network_service.dart';
@@ -647,8 +648,53 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ],
+          // Store links, web only. The site root used to be a marketing page
+          // whose whole job was pointing at the stores; the web client took
+          // that spot, so the install path lives here now. Safari also draws
+          // its own Smart App Banner (see web/index.html) — this covers
+          // Android and desktop, where no such banner exists.
+          if (kIsWeb) ...[
+            SizedBox(height: compact ? 18 : 24),
+            Text(
+              l10n.loginGetTheApp,
+              style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildStoreButton(
+                  label: 'Google Play',
+                  url:
+                      'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
+                ),
+                _buildStoreButton(
+                  label: 'App Store',
+                  url: 'https://apps.apple.com/app/tichu-online/id6759035151',
+                ),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildStoreButton({required String label, required String url}) {
+    return OutlinedButton(
+      // New tab: the player may be mid-login, and replacing this tab would
+      // throw that away.
+      onPressed: () => launchUrl(Uri.parse(url), webOnlyWindowName: '_blank'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF8A7A72),
+        side: const BorderSide(color: Color(0xFFE0D8D4)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        visualDensity: VisualDensity.compact,
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12.5)),
     );
   }
 

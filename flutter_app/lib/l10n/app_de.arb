@@ -1614,5 +1614,6 @@
   "goldBankUnavailable": "Banküberweisung ist noch nicht verfügbar.",
   "goldBankManualNotice": "Banküberweisungen werden nicht automatisch verarbeitet. Ein Admin bestätigt die Zahlung, bevor das Gold gutgeschrieben wird — das kann dauern.",
   "appForceUpdateBodyWeb": "Eine neue Version ist da.\nLade die Seite neu, um weiterzuspielen.",
-  "appForceUpdateButtonWeb": "Neu laden"
+  "appForceUpdateButtonWeb": "Neu laden",
+  "loginGetTheApp": "Auch als App verfügbar"
 }

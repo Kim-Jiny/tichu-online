@@ -1447,19 +1447,28 @@ const server = http.createServer(async (req, res) => {
   } else if (pathname === '/debug-path') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);
-  } else if (webApp.matches(pathname) && await webApp.serve(req, res, pathname)) {
-    // The web client, served same-origin so it shares this host's WebSocket.
-    // Falls through to the marketing page when the image was built without it.
+  } else if (await webApp.serve(req, res, pathname)) {
+    // The web client IS the site: every branch above this one is a real route,
+    // so by the time we get here the path belongs to the app (a bundled file,
+    // or a client-side route that gets the shell). Same-origin with the
+    // WebSocket, which matters because nothing here emits CORS headers.
+    //
+    // Returns false only when the image shipped without a web bundle — a
+    // server-only hotfix — and then the marketing page answers instead.
   } else {
+    // Only reached when the image shipped without a web bundle (server-only
+    // hotfix). Normally the web client answers '/' above — this is the
+    // stand-in, so it points at the stores and says nothing about playing in
+    // a browser, which is exactly what is unavailable right now.
     const html = renderMarketingPage({
       title: 'Tichu Online으로 친구들과 카드 한 판',
-      description: '티츄, 스컬킹, 러브레터를 모바일에서 빠르게 즐길 수 있는 멀티플레이 카드게임 앱입니다. 친구 초대 링크를 받았다면 아래 스토어에서 설치한 뒤 바로 게임에 참여할 수 있어요.',
+      description: '티츄, 마이티, 스컬킹, 러브레터를 즐길 수 있는 멀티플레이 카드게임입니다. 아래 스토어에서 설치한 뒤 바로 게임에 참여할 수 있어요.',
       secondaryLabel: 'Google Play에서 설치',
       secondaryHref: ANDROID_STORE_URL,
       tertiaryLabel: 'App Store에서 설치',
       tertiaryHref: IOS_STORE_URL,
       metaTitle: 'Tichu Online',
-      metaDescription: '티츄, 스컬킹, 러브레터를 즐길 수 있는 모바일 카드게임 앱 Tichu Online',
+      metaDescription: '티츄, 마이티, 스컬킹, 러브레터를 즐길 수 있는 멀티플레이 카드게임 Tichu Online',
     });
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);

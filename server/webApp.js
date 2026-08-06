@@ -65,9 +65,29 @@ function isLegacyPath(pathname) {
 // Nothing here is content-hashed: a Flutter build writes main.dart.js,
 // assets/… and canvaskit/… under fixed names and rewrites them in place on the
 // next release. Fingerprint-style immutable caching would pin players to the
-// build they first loaded, so everything revalidates instead. `no-cache` still
-// allows a 304, so the bytes only move when they actually changed.
-async function sendFile(req, res, filePath) {
+// build they first loaded, so nothing gets a long life here.
+//
+// But blanket `no-cache` was too far the other way: it forces a conditional
+// request for EVERY file on EVERY load. A card game opens dozens of images, so
+// a revisit spent dozens of round trips just to be told "304, unchanged" —
+// latency that no amount of shrinking the files removes.
+//
+// So: the entry point still never caches (it decides which build you are on),
+// code revalidates (a wrong main.dart.js is a broken app), and the heavy,
+// slow-changing media gets a short freshness window. Ten minutes is long
+// enough to cover a play session end to end, and short enough that replaced
+// art is live before anyone files a bug about it.
+const MEDIA_MAX_AGE_SEC = 600;
+const MEDIA_RE = /^\/(assets|canvaskit|fonts|icons)\//;
+
+function cacheControlFor(pathname, noStore) {
+  if (noStore) return 'no-store';
+  return MEDIA_RE.test(pathname)
+    ? `public, max-age=${MEDIA_MAX_AGE_SEC}`
+    : 'no-cache';
+}
+
+async function sendFile(req, res, filePath, pathname) {
   const stat = await fsp.stat(filePath);
   const ext = path.extname(filePath).toLowerCase();
   // `no-cache` means "revalidate before reusing", and revalidating needs
@@ -79,8 +99,10 @@ async function sendFile(req, res, filePath) {
   const noStore = /(?:index\.html|flutter_bootstrap\.js|flutter_service_worker\.js)$/
     .test(filePath);
 
+  const cacheControl = cacheControlFor(pathname || '', noStore);
+
   if (!noStore && req.headers['if-none-match'] === etag) {
-    res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' });
+    res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl });
     res.end();
     return;
   }
@@ -91,7 +113,7 @@ async function sendFile(req, res, filePath) {
     'Content-Length': body.length,
     // The entry point and the bootstrap decide which build everything else
     // belongs to, so those must never be served from cache at all.
-    'Cache-Control': noStore ? 'no-store' : 'no-cache',
+    'Cache-Control': cacheControl,
     ...(noStore ? {} : { ETag: etag }),
   });
   res.end(body);
@@ -121,7 +143,7 @@ async function serve(req, res, pathname) {
 
   if (!isAsset) {
     // Client-side route (or the root): hand back the shell.
-    await sendFile(req, res, path.join(ROOT, 'index.html'));
+    await sendFile(req, res, path.join(ROOT, 'index.html'), pathname);
     return true;
   }
 
@@ -142,7 +164,7 @@ async function serve(req, res, pathname) {
   }
 
   try {
-    await sendFile(req, res, target);
+    await sendFile(req, res, target, pathname);
   } catch (err) {
     if (err.code === 'ENOENT' || err.code === 'EISDIR') {
       res.writeHead(404, { 'Content-Type': 'text/plain' });

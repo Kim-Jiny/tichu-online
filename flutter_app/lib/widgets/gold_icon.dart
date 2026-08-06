@@ -28,9 +28,9 @@ class GoldIcon extends StatelessWidget {
 
   const GoldIcon({super.key, this.size = 20, this.amount});
 
-  static const _single = 'assets/icons/goldIcon.png';
-  static const _pile = 'assets/icons/goldIcon2.png';
-  static const _hoard = 'assets/icons/goldIcon3.png';
+  static const _single = 'assets/icons/goldIcon.webp';
+  static const _pile = 'assets/icons/goldIcon2.webp';
+  static const _hoard = 'assets/icons/goldIcon3.webp';
 
   static String assetFor(int? amount) {
     if (amount == null) return _single;

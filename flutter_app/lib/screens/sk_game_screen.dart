@@ -4806,14 +4806,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   // Special card asset mapping
   static const _specialAssets = {
-    'skull_king': 'assets/cards/sk_skull_king.png',
-    'pirate': 'assets/cards/sk_pirate.png',
-    'mermaid': 'assets/cards/sk_mermaid.png',
-    'escape': 'assets/cards/sk_escape.png',
-    'tigress': 'assets/cards/sk_tigress.png',
-    'kraken': 'assets/cards/sk_kraken.png',
-    'white_whale': 'assets/cards/sk_white_whale.png',
-    'loot': 'assets/cards/sk_loot.png',
+    'skull_king': 'assets/cards/sk_skull_king.webp',
+    'pirate': 'assets/cards/sk_pirate.webp',
+    'mermaid': 'assets/cards/sk_mermaid.webp',
+    'escape': 'assets/cards/sk_escape.webp',
+    'tigress': 'assets/cards/sk_tigress.webp',
+    'kraken': 'assets/cards/sk_kraken.webp',
+    'white_whale': 'assets/cards/sk_white_whale.webp',
+    'loot': 'assets/cards/sk_loot.webp',
   };
   static const _specialLabels = {
     'skull_king': 'SKULL\nKING',
@@ -4946,7 +4946,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // fall back to the default asset from _specialAssets.
     String? assetPath;
     if (info.type == 'pirate' && info.number.isNotEmpty) {
-      assetPath = 'assets/cards/sk_pirate${info.number}.png';
+      assetPath = 'assets/cards/sk_pirate${info.number}.webp';
     } else {
       assetPath = _specialAssets[info.type];
     }

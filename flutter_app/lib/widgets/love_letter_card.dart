@@ -72,7 +72,7 @@ class LoveLetterCard extends StatelessWidget {
     if (type == null) return '';
     // Capitalize first letter for asset name
     final name = type[0].toUpperCase() + type.substring(1);
-    return 'assets/cards/ll_$name.png';
+    return 'assets/cards/ll_$name.webp';
   }
 
   @override

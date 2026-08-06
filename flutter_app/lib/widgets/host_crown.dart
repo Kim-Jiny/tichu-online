@@ -18,7 +18,7 @@ class HostCrown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      'assets/icons/crown.png',
+      'assets/icons/crown.webp',
       width: size,
       // A missing asset must not take the seat layout with it — the emoji is a
       // fine stand-in.

@@ -36,10 +36,10 @@ class PlayingCard extends StatelessWidget {
   };
 
   static const Map<String, String> specialImages = {
-    'special_bird': 'assets/cards/bird.png',
-    'special_dog': 'assets/cards/dog.png',
-    'special_phoenix': 'assets/cards/phoenix.png',
-    'special_dragon': 'assets/cards/dragon.png',
+    'special_bird': 'assets/cards/bird.webp',
+    'special_dog': 'assets/cards/dog.webp',
+    'special_phoenix': 'assets/cards/phoenix.webp',
+    'special_dragon': 'assets/cards/dragon.webp',
   };
 
   @override
@@ -116,7 +116,7 @@ class PlayingCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(7),
       child: Image.asset(
-        'assets/cards/joker.png',
+        'assets/cards/joker.webp',
         fit: BoxFit.cover,
         width: width,
         height: height,
@@ -228,7 +228,7 @@ class PlayingCard extends StatelessWidget {
     final iconSize = (width * 0.45).clamp(14.0, 36.0);
     return Center(
       child: Image.asset(
-        'assets/dragonIcon.png',
+        'assets/dragonIcon.webp',
         width: iconSize,
         height: iconSize,
         fit: BoxFit.contain,

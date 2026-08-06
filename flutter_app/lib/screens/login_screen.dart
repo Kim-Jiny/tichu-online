@@ -450,7 +450,7 @@ class _LoginScreenState extends State<LoginScreen> {
           : CrossAxisAlignment.center,
       children: [
         Image.asset(
-          'assets/dragonIcon.png',
+          'assets/dragonIcon.webp',
           width: compact ? 72 : 80,
           height: compact ? 72 : 80,
         ),
@@ -641,7 +641,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderColor: const Color(0xFFDADADA),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Image.asset('assets/icons/google_logo.png'),
+                      child: Image.asset('assets/icons/google_logo.webp'),
                     ),
                   ),
                 // Native Apple sign-in needs the iOS system sheet; on the web it

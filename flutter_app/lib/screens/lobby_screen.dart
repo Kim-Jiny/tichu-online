@@ -1661,7 +1661,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: isLandscape ? 36 : 44),
-            child: Image.asset('assets/logo2.png', fit: BoxFit.contain),
+            child: Image.asset('assets/logo2.webp', fit: BoxFit.contain),
           ),
           const SizedBox(width: 12),
           Expanded(

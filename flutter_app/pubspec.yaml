@@ -113,16 +113,26 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # WebP throughout. These are photographic card illustrations, and as PNG they
+  # came to 16.5MB — fine on a phone where they load off local storage, ruinous
+  # on the web where every one is an HTTP download (the login screen alone
+  # pulled a 1.4MB dragonIcon over 2.7s). At q90 the same art is 2.4MB with no
+  # visible difference at the sizes they render, and the mobile bundle gets
+  # ~14MB smaller as a side effect.
+  #
+  # assets/icon.png stays on disk as flutter_launcher_icons' source — that tool
+  # reads the path directly, so it does not need to be bundled — but is no
+  # longer shipped; the 80x80 runtime use reads assets/icon.webp.
+  # assets/logo.png was referenced from nowhere and is gone entirely.
   assets:
     - assets/cards/
     - assets/sfx/
     - assets/icons/
     - assets/bots/
-    - assets/icon.png
-    - assets/logo.png
-    - assets/logo2.png
-    - assets/splash.png
-    - assets/dragonIcon.png
+    - assets/icon.webp
+    - assets/logo2.webp
+    - assets/splash.webp
+    - assets/dragonIcon.webp
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

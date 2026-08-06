@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 /// instead of a hole, which is what kept the seat layout from lining up between
 /// human and bot players.
 ///
-/// Art lives in `assets/bots/bot1.png` … `bot6.png` (originals in `art/bots/`,
+/// Art lives in `assets/bots/bot1.webp` … `bot6.webp` (originals in `art/bots/`,
 /// see the README there). Six covers the largest table, and anything beyond
 /// wraps.
 class BotAvatar extends StatelessWidget {
@@ -99,7 +99,7 @@ class BotAvatar extends StatelessWidget {
       height: size,
       child: _clip(
         child: Image.asset(
-          'assets/bots/bot${_slot + 1}.png',
+          'assets/bots/bot${_slot + 1}.webp',
           width: size,
           height: size,
           fit: BoxFit.cover,

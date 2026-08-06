@@ -800,7 +800,7 @@ class _EntryScreenState extends State<_EntryScreen> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: SizedBox.expand(
-          child: Image.asset('assets/splash.png', fit: BoxFit.cover),
+          child: Image.asset('assets/splash.webp', fit: BoxFit.cover),
         ),
       );
     }
@@ -819,7 +819,7 @@ class _EntryScreenState extends State<_EntryScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.asset('assets/icon.png', width: 80, height: 80),
+                  child: Image.asset('assets/icon.webp', width: 80, height: 80),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -893,7 +893,7 @@ class _EntryScreenState extends State<_EntryScreen> {
               // App logo
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.asset('assets/icon.png', width: 80, height: 80),
+                child: Image.asset('assets/icon.webp', width: 80, height: 80),
               ),
               const SizedBox(height: 12),
               const Text(

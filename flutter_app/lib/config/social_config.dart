@@ -18,10 +18,18 @@ class SocialConfig {
   ///
   ///   flutter build web --dart-define=KAKAO_JS_KEY=...
   ///
-  /// Also register the serving origin under 카카오 개발자 → 앱 설정 →
-  /// 플랫폼 → Web, and the redirect URI under 카카오 로그인.
+  /// Register the serving origin under 카카오 개발자 → 앱 설정 → 플랫폼 → Web.
+  /// That domain is what authorises this key — there is no redirect URI to
+  /// set: on the web the SDK passes the sentinel 'JS-SDK' instead of a URL
+  /// (kakao_flutter_sdk_user/user_api.dart) and Kakao's JS popup flow returns
+  /// to the opener rather than navigating anywhere.
+  ///
+  /// Committed as a default: like the Firebase web keys this is public by
+  /// nature — it ships inside the page. What restricts it is the site domain
+  /// registered under 플랫폼 → Web.
   static const String kakaoJavaScriptKey = String.fromEnvironment(
     'KAKAO_JS_KEY',
+    defaultValue: 'fc15a482c29541d51d894a827bce4bc2',
   );
 
   static const String kakaoNativeKey = 'd9b4b3cfc86537fed9a80a659641ad30';

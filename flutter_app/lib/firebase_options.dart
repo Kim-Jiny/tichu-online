@@ -28,10 +28,18 @@ class DefaultFirebaseOptions {
   // These are not secrets — a web app ships them in plain sight, and Firebase
   // says so. What actually protects the project is the authorised-domains list
   // in Authentication → Settings. Keep tichu.jiny.shop on it.
+  //
+  // Committed as defaults so a plain `flutter build web` works; the
+  // --dart-define still wins if you ever need to point a build at another
+  // Firebase project without editing this file.
   static const String _webApiKey = String.fromEnvironment(
     'FIREBASE_WEB_API_KEY',
+    defaultValue: '',
   );
-  static const String _webAppId = String.fromEnvironment('FIREBASE_WEB_APP_ID');
+  static const String _webAppId = String.fromEnvironment(
+    'FIREBASE_WEB_APP_ID',
+    defaultValue: '1:503039725107:web:0336b42005b7f629571d46',
+  );
 
   /// Whether this build can talk to Firebase at all on the web.
   ///

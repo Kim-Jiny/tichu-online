@@ -68,19 +68,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool _roomChatDocked = true;
   static const String _kRoomChatDocked = 'room_chat_docked';
 
-  /// The docked chat never gets less than this; past that the seats scroll.
+  /// Last-resort floor for the docked chat: below this it is a title bar and
+  /// a text field with nothing between them, which reads as broken.
   ///
-  /// Generous on purpose. A six-seat Skull King room eats most of a phone by
-  /// itself, and a chat squeezed into what was left showed a title bar, a
-  /// text field and about one line — which is not a chat, just a reminder
-  /// that there is one. Scrolling two seats out of view costs less than that,
-  /// and the seats are still a flick away.
-  static const double _dockedChatMinHeight = 260;
+  /// Deliberately small, because whatever the chat reserves comes out of the
+  /// seats. A generous floor looked like the safe choice and was not: at 260
+  /// a six-seat Skull King room went into a scroller on a phone even though
+  /// its seats (~510dp) fit in the ~700dp available with ~190dp to spare.
+  /// Waiting for a room you can only see half of is worse than a shortish
+  /// chat, so the seats are served first and the chat takes the rest.
+  static const double _dockedChatMinHeight = 140;
 
-  /// The floor while the keyboard is up. The room is short then and the seats
-  /// lose either way — but what you need on screen is what you are replying
-  /// to, so the chat pushes further into them.
-  static const double _dockedChatMinHeightTyping = 320;
+  /// The floor while the keyboard is up. The seats are not what you are
+  /// looking at mid-sentence, so here the chat does push into them.
+  static const double _dockedChatMinHeightTyping = 240;
 
   /// Which floor applies right now.
   ///

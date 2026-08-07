@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
+import 'rules_screen.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../widgets/choice_pill.dart';
@@ -1439,6 +1440,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ]);
                             },
                           ),
+                          const SizedBox(height: 12),
+                          // Moved here from the lobby header. The rulebook is
+                          // read once when a game is new to you and then never
+                          // again, so it does not earn a permanent slot next
+                          // to the lobby's everyday actions — the profile
+                          // button took that spot.
+                          _buildSection(L10n.of(context).rulesTitle, [
+                            _buildRow(
+                              icon: Icons.menu_book_rounded,
+                              iconColor: const Color(0xFFFF8A65),
+                              title: L10n.of(context).rulesTitle,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RulesScreen(),
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFB0A8A4),
+                              ),
+                            ),
+                          ]),
                           const SizedBox(height: 12),
                           _buildSection(L10n.of(context).settingsNotices, [
                             _buildRow(

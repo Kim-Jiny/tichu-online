@@ -14,7 +14,6 @@ import '../models/room.dart';
 import 'ranking_screen.dart';
 import 'shop_screen.dart';
 import 'settings_screen.dart';
-import 'rules_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
@@ -577,6 +576,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Text(l10n.lobbyChange),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Lobby header button that opens your own profile.
+  ///
+  /// Sized and padded to match _buildIconButton exactly (22px glyph inside 8px
+  /// padding = 38px box) so it sits flush with its neighbours whether it is
+  /// drawing a photo or the fallback.
+  Widget _buildMyProfileButton(GameService game) {
+    const accent = Color(0xFFFF8A65);
+    return GestureDetector(
+      onTap: () => _showUserProfileDialog(game.playerName, game),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: ProfileAvatar(
+          photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
+          size: 22,
+          borderRadius: 7,
+          fallback: const Icon(Icons.person, color: accent, size: 22),
+        ),
       ),
     );
   }
@@ -1770,16 +1794,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           );
         },
       ),
-      _buildIconButton(
-        icon: Icons.menu_book_rounded,
-        color: const Color(0xFFFF8A65),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const RulesScreen()),
-          );
-        },
-      ),
+      // Own profile, in the slot the rulebook used to sit in. The rulebook
+      // moved into settings: it is read once and then never again, while your
+      // own profile is the thing you actually reach for from the lobby.
+      // Shows the player's photo when they have one so the row reads as
+      // "you" rather than as another generic icon.
+      _buildMyProfileButton(game),
       Stack(
         clipBehavior: Clip.none,
         children: [

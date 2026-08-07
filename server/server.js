@@ -6137,6 +6137,10 @@ function scheduleBotActions(roomId, forceReschedule = false) {
   pendingBotTimers[roomId] = setTimeout(async () => {
     delete pendingBotTimers[roomId];
     delete pendingBotCheck[roomId];
+    // When the bot "started thinking". Deciding can take a worker round trip,
+    // and that time is part of the pause the player sees — so the pause that
+    // still owes them is measured from here, not from when the decision lands.
+    const thinkStart = Date.now();
     const r = lobby.getRoom(roomId);
     if (!r || !r.game) return;
 
@@ -6353,7 +6357,23 @@ function scheduleBotActions(roomId, forceReschedule = false) {
             } catch (e) {
               console.error(`[BOT] scheduleBotActions play-delay timer error room=${roomId}:`, e);
             }
-          }, getBotExtraDelay(botSpeed));
+          },
+          // Spend what is left of the pause, not another full one. The spacing
+          // used to be additive — base + however long the decision took +
+          // extra — so a worker round trip that spiked to ~250ms (seen in
+          // production: mqw0 mc92 mt257) stretched that one move well past its
+          // budget while the next came back at the normal 200-400ms. Even
+          // spacing is what reads as a bot thinking; uneven spacing is what
+          // reads as it stalling and then rattling off a burst.
+          //
+          // Bounded on purpose: this can only absorb up to extraDelay, since
+          // the base wait already happened before the decision started. For
+          // 'normal' (300ms) that covers the spikes observed so far; for
+          // 'fast' (100ms) it only takes the edge off. Absorbing the whole
+          // budget means deciding first and waiting afterwards, which turns
+          // this function async and changes its re-entrancy — a bigger change
+          // than the symptom has earned yet.
+          Math.max(0, getBotExtraDelay(botSpeed) - (Date.now() - thinkStart)));
           return;
         }
         let result = r.game.handleAction(botId, action);

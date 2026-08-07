@@ -52,6 +52,12 @@ class _RankingScreenState extends State<RankingScreen> {
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
     return Scaffold(
+      // On the web the engine has already shrunk its canvas to the visual
+      // viewport by the time the keyboard is up, so letting the Scaffold
+      // subtract viewInsets on top of that takes the keyboard height off
+      // twice and leaves an empty band above the keyboard. Native keeps the
+      // default, where the inset is the only thing doing the resizing.
+      resizeToAvoidBottomInset: kIsWeb ? false : null,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

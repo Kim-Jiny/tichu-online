@@ -160,6 +160,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
           final themeColors = gs.themeGradient;
 
           return Scaffold(
+            // Pinned like the other three boards: the table must not jump
+            // when the chat keyboard opens, and on the web the engine has
+            // already shrunk the canvas by then anyway.
+            resizeToAvoidBottomInset: false,
             body: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

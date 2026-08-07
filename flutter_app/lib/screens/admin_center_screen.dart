@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -72,6 +73,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     final themeColors = context.watch<GameService>().themeGradient;
     final isCompact = MediaQuery.sizeOf(context).width < 600;
     return Scaffold(
+      // On the web the engine has already shrunk its canvas to the visual
+      // viewport by the time the keyboard is up, so letting the Scaffold
+      // subtract viewInsets on top of that takes the keyboard height off
+      // twice and leaves an empty band above the keyboard. Native keeps the
+      // default, where the inset is the only thing doing the resizing.
+      resizeToAvoidBottomInset: kIsWeb ? false : null,
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),

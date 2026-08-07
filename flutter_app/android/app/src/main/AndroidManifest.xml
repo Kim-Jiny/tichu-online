@@ -31,16 +31,34 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- One filter per host. Purely for legibility: autoVerify is an
+                 app-wide switch, not a per-filter one — Android verifies every
+                 host in every web-link filter as soon as any one of them sets
+                 it — so splitting does NOT isolate the two hosts from each
+                 other's verification result. What decides that is whether each
+                 host serves /.well-known/assetlinks.json with this app's
+                 signing fingerprint. Both do; keep it that way.
+
+                 tichu.kr is where new invites are minted. tichu.jiny.shop
+                 stays until every build carrying it is gone, so links shared
+                 by older versions keep opening the app. See
+                 docs/DOMAIN_MIGRATION.md.
+
+                 http alongside https on purpose: only https links are ever
+                 auto-verified, but declaring http still routes a typed or
+                 pasted http link into the app (via the chooser) instead of
+                 stranding it in the browser. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Both hosts. tichu.kr is where new invites are minted;
-                     tichu.jiny.shop stays until every build carrying it is
-                     gone, so links shared by older versions keep opening the
-                     app. See docs/DOMAIN_MIGRATION.md. -->
                 <data android:scheme="https" android:host="tichu.kr" android:pathPrefix="/invite" />
                 <data android:scheme="http" android:host="tichu.kr" android:pathPrefix="/invite" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
                 <data android:scheme="http" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
             </intent-filter>

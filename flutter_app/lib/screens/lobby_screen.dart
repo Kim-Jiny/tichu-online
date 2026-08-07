@@ -582,24 +582,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   /// Lobby header button that opens your own profile.
   ///
-  /// Sized and padded to match _buildIconButton exactly (22px glyph inside 8px
-  /// padding = 38px box) so it sits flush with its neighbours whether it is
-  /// drawing a photo or the fallback.
+  /// The same 38px box as _buildIconButton (22px glyph + 8px padding), but the
+  /// photo *is* the box rather than a small square floating inside it — a
+  /// bordered frame around an already-framed avatar read as two nested boxes.
+  /// The fallback keeps the tinted plate and the inset glyph so an empty
+  /// profile still matches the neighbouring buttons.
   Widget _buildMyProfileButton(GameService game) {
     const accent = Color(0xFFFF8A65);
+    const box = 38.0;
     return GestureDetector(
       onTap: () => _showUserProfileDialog(game.playerName, game),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: ProfileAvatar(
-          photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
-          size: 22,
-          borderRadius: 7,
-          fallback: const Icon(Icons.person, color: accent, size: 22),
+      child: ProfileAvatar(
+        photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
+        size: box,
+        borderRadius: 10,
+        fallback: Container(
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.person, color: accent, size: 22),
         ),
       ),
     );

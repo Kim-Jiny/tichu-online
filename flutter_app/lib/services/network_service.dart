@@ -21,7 +21,12 @@ class NetworkService extends ChangeNotifier {
       final scheme = base.scheme == 'https' ? 'wss' : 'ws';
       return '$scheme://${base.authority}';
     }
-    return kDebugMode ? 'ws://$_debugIp:8080' : 'wss://tichu.jiny.shop';
+    // tichu.kr is the endpoint from this build on. tichu.jiny.shop still
+    // serves everything — it has to, every previously shipped binary has it
+    // compiled in — but new installs stop depending on a domain that is
+    // scheduled to be retired once those old versions are gone.
+    // See docs/DOMAIN_MIGRATION.md.
+    return kDebugMode ? 'ws://$_debugIp:8080' : 'wss://tichu.kr';
   }
 
   // Messages that we cannot afford to drop when WS is momentarily down

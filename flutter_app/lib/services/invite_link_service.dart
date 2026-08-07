@@ -18,7 +18,14 @@ class InviteLinkService {
 
   static final InviteLinkService instance = InviteLinkService._();
 
-  static const String inviteHost = 'tichu.jiny.shop';
+  /// Both hosts, deliberately.
+  ///
+  /// New links are minted on tichu.kr (server INVITE_BASE_URL), but a player
+  /// still on an older build shares tichu.jiny.shop links — and this build has
+  /// to open those too. Dropping the old host would break invites between
+  /// versions, which is exactly the window a migration creates.
+  /// Remove tichu.jiny.shop only when it is retired for good.
+  static const Set<String> inviteHosts = {'tichu.kr', 'tichu.jiny.shop'};
   static const String invitePath = '/invite';
 
   final AppLinks _appLinks = AppLinks();
@@ -83,7 +90,7 @@ class InviteLinkService {
 
   bool _matchesInviteUri(Uri uri) {
     final host = uri.host.toLowerCase();
-    if (host != inviteHost) return false;
+    if (!inviteHosts.contains(host)) return false;
     return uri.path == invitePath || uri.path.startsWith('$invitePath/');
   }
 

@@ -35,6 +35,12 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Both hosts. tichu.kr is where new invites are minted;
+                     tichu.jiny.shop stays until every build carrying it is
+                     gone, so links shared by older versions keep opening the
+                     app. See docs/DOMAIN_MIGRATION.md. -->
+                <data android:scheme="https" android:host="tichu.kr" android:pathPrefix="/invite" />
+                <data android:scheme="http" android:host="tichu.kr" android:pathPrefix="/invite" />
                 <data android:scheme="https" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
                 <data android:scheme="http" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
             </intent-filter>

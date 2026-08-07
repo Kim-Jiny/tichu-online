@@ -236,7 +236,11 @@ function resultMessage(result, locale) {
 }
 
 const PORT = process.env.PORT || 8080;
-const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
+// tichu.kr from here on — newly minted invite links point at the host the app
+// is migrating to. Links already in the wild keep working: tichu.jiny.shop
+// still serves /invite, and the client accepts both hosts (inviteHosts).
+// See docs/DOMAIN_MIGRATION.md.
+const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.kr';
 
 // Blue/green deploy hooks. Set per-container so the surviving instance
 // (PEER_URL) can adopt rooms migrated from this one when SIGTERM hits.

@@ -19,6 +19,7 @@ import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/game_type_icon.dart';
+import '../util/image_precache.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
@@ -78,6 +79,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
+    // Bot faces, fetched now rather than when a waiting room first draws one.
+    // Needs a context, so it waits for the first frame. See image_precache.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) precacheCommonImages(context);
+    });
     // AdMob has no web implementation at all, so this can only fail there.
     // Leaving it to fail was working — the load callbacks null the banner
     // out — but it is a plugin exception per screen to get to the same

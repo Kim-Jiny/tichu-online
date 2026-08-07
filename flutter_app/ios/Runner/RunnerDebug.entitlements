@@ -10,6 +10,7 @@
 	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:tichu.kr</string>
 		<string>applinks:tichu.jiny.shop</string>
 	</array>
 </dict>

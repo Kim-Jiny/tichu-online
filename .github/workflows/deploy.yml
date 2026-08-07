@@ -13,6 +13,12 @@ jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
+      # ⚠️ checkout / upload-artifact / download-artifact 는 아직 @v4 —
+      # node20 타깃이라 러너가 Node 24 로 강제 실행하며 매번 경고를 남긴다.
+      # GitHub 이 그 호환 레이어를 걷어내면 경고가 실패로 바뀌고, 하필
+      # 그 자리가 실서버 배포 경로다. @v5 로 올려야 하며, 검증이 실행
+      # 자체이므로 "다음에 배포하는 날 그 커밋에 얹어서" 한다.
+      # 절차와 근거: docs/MAINTENANCE.md 1번.
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2

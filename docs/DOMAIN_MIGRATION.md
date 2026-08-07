@@ -1,5 +1,8 @@
 # 도메인 이전 (tichu.jiny.shop → tichu.kr) 과 CDN
 
+> 기한이 있는 다른 유지보수는 `docs/MAINTENANCE.md` 에 모여 있다.
+> 이 문서의 2단계(INVITE_BASE_URL)도 거기서 한 줄로 가리킨다.
+
 두 가지 별개의 작업을 한 문서에 둔다. 순서가 있기 때문이다:
 **앱을 tichu.kr로 옮기는 게 먼저고, CDN은 그 위에 얹는 게 이득이 크다.**
 

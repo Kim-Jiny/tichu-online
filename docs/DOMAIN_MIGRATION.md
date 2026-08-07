@@ -44,8 +44,8 @@
 
 ### 서버 변경
 
-- `INVITE_BASE_URL=https://tichu.kr` (docker-compose 환경변수)
-  → 새로 만드는 초대 링크만 바뀐다. 기존 링크는 계속 동작한다.
+- `INVITE_BASE_URL` — **아직 바꾸지 않는다.** 이유는 아래 별도 절 참조.
+  1단계에서는 `https://tichu.jiny.shop` 그대로 둔다.
 - AASA / assetlinks.json은 경로 기반이라 **두 호스트 모두에서 이미 응답한다.**
   확인: `curl https://tichu.kr/apple-app-site-association`
 
@@ -54,6 +54,33 @@
 - Firebase → 승인된 도메인에 `tichu.kr` (이미 되어 있으면 통과)
 - 카카오 → 플랫폼 Web 사이트 도메인에 `https://tichu.kr`
 - Apple Developer → Services ID의 Return URL은 `firebaseapp.com`이라 **무관**
+
+### ⚠️ INVITE_BASE_URL 은 마지막에 바꾼다
+
+`server.js`의 `INVITE_BASE_URL`이 초대 링크를 어느 호스트로 찍을지 정한다.
+**이건 앱 코드를 바꾼다고 같이 바꾸면 안 된다.**
+
+찍히는 호스트는 **받는 사람의 앱**이 앱 링크로 등록한 것이어야 하고, 앱 링크는
+설치된 바이너리 안에 있다. 지금 깔려 있는 모든 빌드는 `tichu.jiny.shop`만
+알고 `tichu.kr`은 모른다.
+
+| 링크 호스트 | 구버전 앱 | 신버전 앱 |
+|---|---|---|
+| `tichu.jiny.shop` | ✅ 앱 열림 | ✅ 앱 열림 |
+| `tichu.kr` | ❌ 브라우저로 감 | ✅ 앱 열림 |
+
+지금 `tichu.kr`로 찍으면 **앱을 깔아둔 사람이 초대를 눌러도 앱이 아니라
+브라우저로 간다.** 그래서 두 빌드가 공통으로 아는 `tichu.jiny.shop`을
+계속 쓴다.
+
+> 커스텀 스킴(`tichu://`)으로 우회하는 방법은 통하지 않는다. 이 앱에는 애초에
+> 자체 스킴이 없고(구글·카카오 OAuth 콜백용뿐), 지금 추가해도 그 역시 새
+> 바이너리에만 들어간다. 정작 문제인 구버전에는 닿지 않는다.
+
+**바꾸는 시점**: 2단계에서 강제 업데이트로 구버전을 정리한 뒤.
+`docker-compose.yml`의 두 슬롯 environment 에
+`INVITE_BASE_URL=https://tichu.kr` 를 넣거나, `server.js:239`의 기본값을
+바꾸면 된다.
 
 ### 검증
 
@@ -70,6 +97,8 @@
 
 **서두를 이유가 없다.** 도메인 만료일까지는 두 호스트를 병행하는 게 안전하다.
 
+0. **`INVITE_BASE_URL` → `https://tichu.kr`** (위 절 참조). 여기서 바꿔야
+   비로소 새 초대 링크가 새 호스트로 나간다
 1. 1단계 앱이 스토어에 나가고 **충분히 보급될 때까지 대기**
 2. 백스테이지 → 설정 → `min_version`을 새 버전으로 올려 강제 업데이트
    - 구버전은 `tichu.jiny.shop`으로 접속해 이 지시를 받는다 →

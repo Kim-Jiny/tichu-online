@@ -236,11 +236,19 @@ function resultMessage(result, locale) {
 }
 
 const PORT = process.env.PORT || 8080;
-// tichu.kr from here on — newly minted invite links point at the host the app
-// is migrating to. Links already in the wild keep working: tichu.jiny.shop
-// still serves /invite, and the client accepts both hosts (inviteHosts).
-// See docs/DOMAIN_MIGRATION.md.
-const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.kr';
+// ⚠️ STILL tichu.jiny.shop, on purpose. Flip to tichu.kr only after the
+// tichu.kr build has shipped and taken hold — see docs/DOMAIN_MIGRATION.md 2단계.
+//
+// Whichever host is minted here has to be one the RECIPIENT's app already
+// registers as an app link, and app links live in the installed binary. Every
+// build in the wild today knows tichu.jiny.shop; none of them know tichu.kr.
+// Minting tichu.kr links now would mean a player with the app installed taps
+// an invite and lands in the browser instead of the app.
+//
+// tichu.jiny.shop is the only host BOTH old and new builds register, so it
+// stays the mint until the old ones are gone. A custom scheme (tichu://) does
+// not rescue this: it would also only exist in the new binary.
+const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
 
 // Blue/green deploy hooks. Set per-container so the surviving instance
 // (PEER_URL) can adopt rooms migrated from this one when SIGTERM hits.

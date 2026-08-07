@@ -108,7 +108,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MediaQuery.of(context).viewInsets.bottom,
       view.viewInsets.bottom / ratio,
     );
-    final base = math.max(_dockedChatMinHeight, _dockedChatHeight ?? 0);
+    // Re-clamp the dragged height rather than trusting it: it was clamped
+    // against the screen it was dragged on, and the same preference comes back
+    // on a phone after a tablet, or in landscape after portrait. Unclamped, a
+    // value larger than the room leaves the seats zero pixels and the only way
+    // out is guessing that the chat header still drags.
+    final room = MediaQuery.of(context).size.height;
+    final dragged = (_dockedChatHeight ?? 0).clamp(
+      0.0,
+      math.max(0.0, room - _dockedChatSeatMinHeight),
+    );
+    final base = math.max(_dockedChatMinHeight, dragged.toDouble());
     if (keyboard <= 0) return base;
     final t = (keyboard / _dockedChatFloorRamp).clamp(0.0, 1.0);
     return math.max(

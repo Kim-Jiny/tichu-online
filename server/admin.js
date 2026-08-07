@@ -916,6 +916,21 @@ function formatNumber(value) {
   return Number.isFinite(num) ? num.toLocaleString('ko-KR') : '0';
 }
 
+// devicePlatform as the client reports it ('web' / 'ios' / 'android'), as a
+// short badge. Anything else gets a dash rather than a guess: builds older
+// than deviceInfo send nothing, and neither does the dev guest login, so an
+// unknown value means "we were not told", not "some fourth platform".
+function platformBadge(platform) {
+  const known = {
+    web: ['Web', '#42a5f5'],
+    ios: ['iOS', '#6c63ff'],
+    android: ['AOS', '#4caf50'],
+  }[String(platform || '').toLowerCase()];
+  if (!known) return '<span style="color:#c4bdb6">-</span>';
+  const [label, color] = known;
+  return `<span style="display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;font-weight:700;background:${color}1f;color:${color}">${label}</span>`;
+}
+
 function formatPercent(value, digits = 0) {
   const num = Number(value || 0);
   return `${num.toFixed(digits)}%`;
@@ -1918,6 +1933,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         const room = c.roomId ? allRooms.find((r) => r.id === c.roomId) : null;
         onlineUsers.push({
           nickname: c.nickname,
+          platform: c.devicePlatform || null,
           roomName: room ? room.name : null,
           roomId: c.roomId || null,
           where: room ? (room.gameInProgress ? '게임 중' : '대기 중') : '로비',
@@ -1930,9 +1946,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const onlineTable = onlineUsers.length === 0
       ? '<div class="todo-clear">접속 중인 유저가 없습니다.</div>'
       : `<div class="table-wrap"><table>
-          <tr><th>닉네임</th><th>위치</th><th>상태</th></tr>
+          <tr><th>닉네임</th><th>기기</th><th>위치</th><th>상태</th></tr>
           ${onlineUsers.slice(0, 20).map((u) => `<tr>
             <td class="cell-ellipsis" style="max-width:150px"><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}">${escapeHtml(u.nickname)}</a></td>
+            <td style="white-space:nowrap">${platformBadge(u.platform)}</td>
             <td class="cell-ellipsis" style="max-width:170px;font-size:13px">${u.roomName
               ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}">${escapeHtml(u.roomName)}</a>`
               : '<span style="color:#9a958c">로비</span>'}</td>
@@ -6725,6 +6742,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let users = [];
     let title = '접속 중 유저';
 
+    // The other three filters walk room players, which carry no device info,
+    // so look it up by nickname off the live sockets. A player listed as
+    // 연결 끊김 has no socket and falls through to the dash, which is right.
+    const platformByNick = new Map();
+    if (wss) wss.clients.forEach((c) => {
+      if (c.nickname) platformByNick.set(c.nickname, c.devicePlatform || null);
+    });
+
     if (filter === 'connected') {
       title = '접속 중 유저';
       if (wss) {
@@ -6776,9 +6801,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableHtml = '';
     if (users.length > 0) {
       tableHtml = `<div class="table-wrap"><table>
-        <tr><th>닉네임</th><th>방</th><th>상태</th><th></th></tr>
+        <tr><th>닉네임</th><th>기기</th><th>방</th><th>상태</th><th></th></tr>
         ${users.map(u => `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td style="white-space:nowrap">${platformBadge(platformByNick.get(u.nickname))}</td>
           <td>${u.room ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}" style="color:#6c63ff;text-decoration:none">${escapeHtml(u.room)}</a>` : '<span style="color:#888">-</span>'}</td>
           <td>${escapeHtml(u.status)}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>

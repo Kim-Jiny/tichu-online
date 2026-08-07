@@ -3568,6 +3568,10 @@ async function handleLogin(ws, data) {
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
   ws.locale = deviceInfo.locale || null;
+  // Kept on the socket, not just written to the row: the backstage online list
+  // reads live sockets, and the stored column is whatever the account last
+  // logged in from — which is the wrong answer when someone is on two devices.
+  ws.devicePlatform = deviceInfo.devicePlatform || null;
   logVerboseConnection(`Player logged in: ${ws.nickname} (${ws.playerId})`);
 
   // Notify friends of online status
@@ -3635,6 +3639,7 @@ async function handleSocialLogin(ws, data) {
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;
+      ws.devicePlatform = socialDeviceInfo.devicePlatform || null;
       logVerboseConnection(`Player logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
       notifyFriendsOfStatusChange(ws.nickname, true);
@@ -3729,6 +3734,7 @@ async function handleSocialRegister(ws, data) {
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
     ws.locale = regDeviceInfo.locale || null;
+    ws.devicePlatform = regDeviceInfo.devicePlatform || null;
     logVerboseConnection(`Player registered & logged in (social/${provider}): ${ws.nickname} (${ws.playerId})`);
 
     notifyFriendsOfStatusChange(ws.nickname, true);

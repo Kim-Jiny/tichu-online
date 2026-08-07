@@ -69,9 +69,34 @@ class _LobbyScreenState extends State<LobbyScreen> {
   static const String _kRoomChatDocked = 'room_chat_docked';
 
   /// The docked chat never gets less than this; past that the seats scroll.
-  /// Below it the panel is a title bar and a text field with room for one
-  /// message, which is not worth the space it costs the seats.
-  static const double _dockedChatMinHeight = 150;
+  ///
+  /// Generous on purpose. A six-seat Skull King room eats most of a phone by
+  /// itself, and a chat squeezed into what was left showed a title bar, a
+  /// text field and about one line — which is not a chat, just a reminder
+  /// that there is one. Scrolling two seats out of view costs less than that,
+  /// and the seats are still a flick away.
+  static const double _dockedChatMinHeight = 220;
+
+  /// The floor while the keyboard is up. The room is short then and the seats
+  /// lose either way — but what you need on screen is what you are replying
+  /// to, so the chat pushes further into them.
+  static const double _dockedChatMinHeightTyping = 280;
+
+  /// Which floor applies right now.
+  ///
+  /// The keyboard height has to come off the window rather than off
+  /// MediaQuery: the Scaffold resizes its body for the inset and strips it
+  /// from the body's MediaQuery, so down here it always reads zero. Same
+  /// reason DraggableChatPanel asks View.of — see its _keyboardInset.
+  double _dockedChatMinHeightNow() {
+    final view = View.of(context);
+    final ratio = view.devicePixelRatio == 0 ? 1.0 : view.devicePixelRatio;
+    final keyboard = math.max(
+      MediaQuery.of(context).viewInsets.bottom,
+      view.viewInsets.bottom / ratio,
+    );
+    return keyboard > 0 ? _dockedChatMinHeightTyping : _dockedChatMinHeight;
+  }
 
   /// The last thing each player said, shown briefly over their seat so a
   /// message is visible without opening the panel at all.
@@ -2690,16 +2715,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
               // The seats take only the height they need, so the chat starts
               // right under the start button rather than at the bottom of the
               // screen with a field of nothing between them. It then fills
-              // everything left. When the seats would need more than the room
-              // minus [_dockedChatMinHeight], they scroll instead and the chat
-              // keeps that floor.
+              // everything left. When the seats would need more than that
+              // leaves, they scroll instead and the chat keeps its floor —
+              // which is higher while the keyboard is up.
               Expanded(
                 child: _roomChatDocked
                     ? LayoutBuilder(
                         builder: (context, constraints) {
+                          final minChat = math.min(
+                            _dockedChatMinHeightNow(),
+                            constraints.maxHeight,
+                          );
                           final seatMax = math.max(
                             0.0,
-                            constraints.maxHeight - _dockedChatMinHeight,
+                            constraints.maxHeight - minChat,
                           );
                           return Column(
                             children: [

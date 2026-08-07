@@ -8,6 +8,7 @@ import '../services/session_service.dart';
 import '../models/sk_game_state.dart';
 import '../models/player.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/host_crown.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/seat_chat_bubble.dart';
@@ -447,10 +448,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 padding: const EdgeInsets.only(top: 6),
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: wide ? 2 : 1,
+                                      // Two columns at any width, matching the
+                                      // waiting room. One per row made a
+                                      // six-seat room a column taller than the
+                                      // phone it was on.
+                                      crossAxisCount: 2,
                                       mainAxisSpacing: 10,
                                       crossAxisSpacing: 12,
-                                      childAspectRatio: wide ? 4.8 : 4.4,
+                                      // Half a phone's width is ~160dp, and at
+                                      // 4.8 that is a 33dp row — the avatar
+                                      // alone overflows it. The cells have to
+                                      // get squarer as they narrow.
+                                      childAspectRatio: wide ? 4.8 : 2.3,
                                     ),
                                 itemCount: slots.length,
                                 itemBuilder: (context, index) {
@@ -490,8 +499,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// silhouette, with the level as a corner badge. The level used to be drawn
   /// AS the avatar for photo-less players, which put a number where every other
   /// screen puts a face — and the bot tag went missing with it.
-
-
 
   /// Wraps a board seat so a chat bubble can hang above it.
   ///
@@ -642,6 +649,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     final p = player;
     final bool isReady = p.isReady;
+    // The banner someone paid for should show wherever their seat does. It
+    // reached the waiting room's seats and stopped there, so buying one and
+    // then being spectated meant it vanished. Bots have no inventory.
+    final bannerGradient = p.isBot ? null : game.bannerGradient(p.bannerKey);
+    final bannerText = p.isBot ? null : game.bannerTextColor(p.bannerKey);
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(p.name, game),
       child: Stack(
@@ -650,7 +662,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: bannerGradient == null ? Colors.white : null,
+              gradient: bannerGradient,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isReady
@@ -680,8 +693,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         p.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF3E312A),
+                        style: TextStyle(
+                          color: bannerText ?? const Color(0xFF3E312A),
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
@@ -706,12 +719,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
               ),
             ),
+          // Same marker, same offsets as every other seat in the app. This one
+          // still drew the raw 👑, which each platform paints differently and
+          // which the web has to fetch a colour-emoji font for — so the host
+          // crown here arrived late and a size larger than everywhere else.
           if (p.isHost)
-            const Positioned(
-              left: -2,
-              top: -6,
-              child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
-            ),
+            const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
           // What this player just said, for a couple of seconds.
           ?_seatChatBubble(p.name),
         ],
@@ -1175,8 +1188,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildSpectatorScoreboard(SKGameStateData state, GameService game) {
     _seatChat.consume(game);
     final isLandscape =
-        !kIsWeb &&
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
     // height, and half-seat + half-panel exceeds half the board on a 360dp
@@ -1798,8 +1810,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _buildScoreboard(SKGameStateData state, GameService game) {
     _seatChat.consume(game);
     final isLandscape =
-        !kIsWeb &&
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     // 118 wide could not clear the 180-wide trick panel: at 4 opponents the two
     // side seats sit at 172°/368°, i.e. at full X radius and at the panel's own
     // height, and half-seat + half-panel exceeds half the board on a 360dp
@@ -2377,71 +2388,69 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                              Text(
-                                '${p.totalScore}',
-                                style: TextStyle(
-                                  color: const Color(0xFF5A4038),
-                                  fontSize: scoreFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(
-                                height: bidHeight,
-                                child: p.hasBid && p.bid != null
-                                    ? Container(
-                                        margin: EdgeInsets.only(
-                                          left: compact ? 3 : 4,
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: bidHorizontalPadding,
-                                          vertical: compact ? 0 : 1,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: p.tricks == p.bid
-                                              ? const Color(0xFFE8F5E9)
-                                              : p.tricks > p.bid!
-                                              ? const Color(0xFFFFF3E0)
-                                              : const Color(0xFFF5F5F5),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${p.tricks}/${p.bid}',
-                                          style: TextStyle(
-                                            color: p.tricks == p.bid
-                                                ? const Color(0xFF4CAF50)
-                                                : p.tricks > p.bid!
-                                                ? const Color(0xFFE65100)
-                                                : const Color(0xFF8A7A72),
-                                            fontSize: bidFontSize,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      )
-                                    : p.hasBid && p.bid == null
-                                    ? Container(
-                                        margin: EdgeInsets.only(
-                                          left: compact ? 3 : 4,
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: bidHorizontalPadding,
-                                          vertical: compact ? 0 : 1,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF0EBF8),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.check,
-                                          size: compact ? 10 : 12,
-                                          color: const Color(0xFF7A6A95),
-                                        ),
-                                      )
-                                    : null,
-                              ),
+                                  Text(
+                                    '${p.totalScore}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF5A4038),
+                                      fontSize: scoreFontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: bidHeight,
+                                    child: p.hasBid && p.bid != null
+                                        ? Container(
+                                            margin: EdgeInsets.only(
+                                              left: compact ? 3 : 4,
+                                            ),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: bidHorizontalPadding,
+                                              vertical: compact ? 0 : 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: p.tricks == p.bid
+                                                  ? const Color(0xFFE8F5E9)
+                                                  : p.tricks > p.bid!
+                                                  ? const Color(0xFFFFF3E0)
+                                                  : const Color(0xFFF5F5F5),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${p.tricks}/${p.bid}',
+                                              style: TextStyle(
+                                                color: p.tricks == p.bid
+                                                    ? const Color(0xFF4CAF50)
+                                                    : p.tricks > p.bid!
+                                                    ? const Color(0xFFE65100)
+                                                    : const Color(0xFF8A7A72),
+                                                fontSize: bidFontSize,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )
+                                        : p.hasBid && p.bid == null
+                                        ? Container(
+                                            margin: EdgeInsets.only(
+                                              left: compact ? 3 : 4,
+                                            ),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: bidHorizontalPadding,
+                                              vertical: compact ? 0 : 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF0EBF8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              Icons.check,
+                                              size: compact ? 10 : 12,
+                                              color: const Color(0xFF7A6A95),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
                                 ],
                               ),
                             ],
@@ -3725,8 +3734,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Bidding UI ──
   Widget _buildBiddingUI(SKGameStateData state, GameService game) {
     final isLandscape =
-        !kIsWeb &&
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     final selfPlayer = state.players.firstWhere(
       (p) => p.position == 'self',
       orElse: () => state.players.first,
@@ -3879,8 +3887,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Hand Area ──
   Widget _buildHandArea(SKGameStateData state, GameService game) {
     final isLandscape =
-        !kIsWeb &&
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     final selfPlayer = state.players.firstWhere(
       (p) => p.position == 'self',
       orElse: () => state.players.first,
@@ -4387,8 +4394,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Round End ──
   Widget _buildRoundEndUI(SKGameStateData state) {
     final isLandscape =
-        !kIsWeb &&
-        MediaQuery.of(context).orientation == Orientation.landscape;
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     final lastHistory = state.scoreHistory.isNotEmpty
         ? state.scoreHistory.last
         : null;

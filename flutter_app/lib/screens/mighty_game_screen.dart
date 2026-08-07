@@ -9,6 +9,7 @@ import '../models/player.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
+import '../widgets/host_crown.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/seat_chat_bubble.dart';
@@ -672,10 +673,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 padding: const EdgeInsets.only(top: 6),
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: wide ? 2 : 1,
+                                      // Two columns at any width, matching the
+                                      // waiting room. One per row made a
+                                      // six-seat Mighty room a column taller
+                                      // than the phone it was on.
+                                      crossAxisCount: 2,
                                       mainAxisSpacing: 10,
                                       crossAxisSpacing: 12,
-                                      childAspectRatio: wide ? 4.8 : 4.4,
+                                      // Half a phone's width is ~160dp, and at
+                                      // 4.8 that is a 33dp row — the 44dp
+                                      // avatar alone overflows it. The cells
+                                      // have to get squarer as they narrow.
+                                      childAspectRatio: wide ? 4.8 : 2.3,
                                     ),
                                 itemCount: slots.length,
                                 itemBuilder: (context, index) {
@@ -837,19 +846,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       );
     }
     final isReady = player.isReady;
+    final isBot = player.id.startsWith('bot_');
+    // The banner someone paid for should show wherever their seat does. It
+    // reached the waiting room's seats and stopped there, so buying one and
+    // then being spectated meant it vanished. Bots have no inventory.
+    final bannerGradient = isBot ? null : game.bannerGradient(player.bannerKey);
+    final bannerText = isBot ? null : game.bannerTextColor(player.bannerKey);
     return GestureDetector(
-      onTap: () => _showPlayerProfileDialog(
-        player.name,
-        game,
-        isBot: player.id.startsWith('bot_'),
-      ),
+      onTap: () => _showPlayerProfileDialog(player.name, game, isBot: isBot),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: bannerGradient == null ? Colors.white : null,
+              gradient: bannerGradient,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isReady
@@ -870,10 +882,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Expanded(
                   child: Text(
                     player.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF3E312A),
+                      color: bannerText ?? const Color(0xFF3E312A),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -896,12 +908,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
             ),
+          // Same marker, same offsets as every other seat in the app. This one
+          // still drew the raw 👑, which each platform paints differently and
+          // which the web has to fetch a colour-emoji font for — so the host
+          // crown here arrived late and a size larger than everywhere else.
           if (player.isHost)
-            const Positioned(
-              left: -2,
-              top: -6,
-              child: Text('👑', style: TextStyle(fontSize: 18, height: 1.0)),
-            ),
+            const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
           // What this player just said, for a couple of seconds.
           ?_seatChatBubble(player.name),
         ],

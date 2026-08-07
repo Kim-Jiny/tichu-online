@@ -124,8 +124,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // Web takes the portrait layout, like every other screen: the app is
     // orientation-locked, so the landscape variants only ever run in a
     // browser and are the paths nobody exercises.
-    final isLandscape =
-        !kIsWeb && media.orientation == Orientation.landscape;
+    final isLandscape = !kIsWeb && media.orientation == Orientation.landscape;
     // Same 1.3 ceiling as the boards it mirrors. Spectating a Tichu game
     // drawn at 1.6 next to playing one at 1.3 would just look like two
     // different apps.
@@ -282,18 +281,33 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (game.currentGameType == 'tichu' &&
+                        // Teams are a Tichu-with-fixed-seating thing. Everything
+                        // else — Skull King, Mighty, Love Letter, random-seating
+                        // Tichu — gets the flat grid. This used to be a
+                        // `tichu && randomSeating` check with the team layout as
+                        // the fallback, so a Mighty room was labelled TEAM A /
+                        // TEAM B and drew players[0..3] only: seats five and six
+                        // were simply missing from the waiting screen.
+                        if (game.currentGameType != 'tichu' ||
                             game.roomRandomSeating)
-                          // Random-seating Tichu: flat SK-style list, no team
-                          // framing (teams are randomized at game start).
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              for (int i = 0; i < players.length; i++)
-                                _buildPlayerSlot(game, players[i], i),
-                            ],
+                          ConstrainedBox(
+                            // Two per row. The slots are a fixed 130 wide, so
+                            // without this the Wrap fits four across on a
+                            // tablet and two on a phone — the same room in two
+                            // shapes. Two columns is also what the waiting room
+                            // itself now uses.
+                            constraints: const BoxConstraints(
+                              maxWidth: 130 * 2 + 12,
+                            ),
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                for (int i = 0; i < players.length; i++)
+                                  _buildPlayerSlot(game, players[i], i),
+                              ],
+                            ),
                           )
                         else if (isLandscape)
                           Wrap(
@@ -465,7 +479,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-
   /// Board bubbles go on the overlay, not inside the seat's own Stack —
   /// otherwise the next seat or the card layer paints over them.
   Widget _wrapWithBubble(String nickname, Widget seat) {
@@ -496,6 +509,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final bool isEmpty = player == null;
     final String name = isEmpty ? '' : player.name;
     final bool isReady = isEmpty ? false : player.isReady;
+    // The banner someone paid for should show wherever their seat does. It
+    // reached the waiting room's seats and stopped there, so buying one and
+    // then being spectated meant it vanished. Bots have no inventory.
+    final bannerGradient = (isEmpty || player.isBot)
+        ? null
+        : game.bannerGradient(player.bannerKey);
+    final bannerText = (isEmpty || player.isBot)
+        ? null
+        : game.bannerTextColor(player.bannerKey);
 
     final content = Container(
       width: 130,
@@ -503,13 +525,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       // states. Without this the title row added ~18px so empty slots
       // looked shorter than seated ones.
       //
-      // 108, not 100: the avatar here went from a 28dp icon to a 34dp avatar, and
-      // a player who also has a title chip would have overflowed the old height
-      // by a couple of pixels.
-      height: 108,
+      // Sized for the tallest case and then some: 42dp avatar + 6 + title chip
+      // + 2 + name, inside 14dp of padding top and bottom and a border that is
+      // 2dp while ready and 1dp otherwise. This has now been raised twice by
+      // "a couple of pixels" — 100, then 108, which still overflowed by 3 for a
+      // player with a title — so the slack here is deliberate. Anything that
+      // adds a line to the column needs to raise it again rather than trust
+      // the fit.
+      height: 120,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: isEmpty ? const Color(0xFFF7F2F0) : Colors.white,
+        color: bannerGradient != null
+            ? null
+            : (isEmpty ? const Color(0xFFF7F2F0) : Colors.white),
+        gradient: bannerGradient,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isEmpty
@@ -560,8 +589,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 Flexible(
                   child: Text(
                     name,
-                    style: const TextStyle(
-                      color: Color(0xFF5A4038),
+                    style: TextStyle(
+                      color: bannerText ?? const Color(0xFF5A4038),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -753,8 +782,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // The 22% is the intent; the ceiling was a phone's. On a wide window
         // it pinned the side seats at 108 while the middle took everything
         // else, so the two flanking players stayed small no matter the room.
-        final sideWidth = (constraints.maxWidth * 0.22)
-            .clamp(76.0, kIsWeb ? 180.0 : 108.0);
+        final sideWidth = (constraints.maxWidth * 0.22).clamp(
+          76.0,
+          kIsWeb ? 180.0 : 108.0,
+        );
         return Column(
           children: [
             if (players.length > 2)
@@ -863,7 +894,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[2],
                         currentPlayer,
                         compact: compact,
-                            ),
+                      ),
                     ),
                   const SizedBox(height: 4),
                   Expanded(
@@ -892,7 +923,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[0],
                         currentPlayer,
                         compact: compact,
-                            ),
+                      ),
                     ),
                 ],
               ),
@@ -1356,192 +1387,197 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     return GestureDetector(
       onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
-      child: _wrapWithBubble(name, Container(
-        margin: EdgeInsets.all(compact ? 2 : 4),
-        padding: EdgeInsets.all(compact ? 6 : 8),
-        decoration: BoxDecoration(
-          color: slotBg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isCurrentTurn
-                ? const Color(0xFFF3C97A)
-                : const Color(0xFFE6DDD8),
-            width: isCurrentTurn ? 2 : 1,
+      child: _wrapWithBubble(
+        name,
+        Container(
+          margin: EdgeInsets.all(compact ? 2 : 4),
+          padding: EdgeInsets.all(compact ? 6 : 8),
+          decoration: BoxDecoration(
+            color: slotBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isCurrentTurn
+                  ? const Color(0xFFF3C97A)
+                  : const Color(0xFFE6DDD8),
+              width: isCurrentTurn ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Own row rather than inline before the name. The side slots are only
-            // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
-            // nickname any room — too small to make out a face.
-            Padding(
-              padding: EdgeInsets.only(bottom: compact ? 2 : 3),
-              child: ProfileAvatar(
-                photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
-                size: (compact ? 44 : 56).toDouble(),
-                blocked: game.blockedUsers.contains(name),
-                fallback: isBot
-                    ? BotAvatar(
-                        size: (compact ? 44 : 56).toDouble(),
-                        name: name,
-                        showBadge: true,
-                      )
-                    : DefaultAvatar(size: (compact ? 44 : 56).toDouble()),
-              ),
-            ),
-            // Player name and status
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!connected)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 4),
-                    child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
-                  ),
-                // Team letter, the same badge the player screen puts before a
-                // nickname. The slot's background tint alone was too quiet to map
-                // a name to the "A:" / "B:" score chips at a glance.
-                if (team == 'A' || team == 'B')
-                  Padding(
-                    padding: EdgeInsets.only(right: compact ? 3 : 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: team == 'A'
-                            ? const Color(0xFFE3F0FF)
-                            : const Color(0xFFFFE8EC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: team == 'A'
-                              ? const Color(0xFF4A90D9)
-                              : const Color(0xFFD24B4B),
-                          width: 0.7,
-                        ),
-                      ),
-                      child: Text(
-                        team,
-                        style: TextStyle(
-                          fontSize: compact ? 8 : 9,
-                          fontWeight: FontWeight.bold,
-                          color: team == 'A'
-                              ? const Color(0xFF4A90D9)
-                              : const Color(0xFFD24B4B),
-                        ),
-                      ),
-                    ),
-                  ),
-                Flexible(
-                  child: Text(
-                    name,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: connected ? const Color(0xFF4E3A34) : Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: compact ? 11 : 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Badges on their own line. Sharing the name's row meant every badge
-            // stole width from it — a finish rank (#1) was enough to ellipsize a
-            // perfectly short nickname in the ~79dp side slots.
-            if (hasLargeTichu ||
-                hasSmallTichu ||
-                (hasFinished && finishPosition > 0))
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Own row rather than inline before the name. The side slots are only
+              // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
+              // nickname any room — too small to make out a face.
               Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // "LT"/"T" at 8pt read as noise — a Tichu call is the most
-                    // consequential thing a spectator can notice about a hand.
-                    // Same wording and colours as the player screen's badge
-                    // ("라지"/"스몰", red/blue), just sized for the slot.
-                    if (hasLargeTichu)
-                      _tichuCallBadge(
-                        L10n.of(context).gameBadgeLarge,
-                        const Color(0xFFFF4444),
-                        const Color(0xFFCC0000),
-                      )
-                    else if (hasSmallTichu)
-                      _tichuCallBadge(
-                        L10n.of(context).gameBadgeSmall,
-                        const Color(0xFF2979FF),
-                        const Color(0xFF1565C0),
-                      ),
-                    if (hasFinished && finishPosition > 0) ...[
-                      if (hasLargeTichu || hasSmallTichu)
-                        const SizedBox(width: 4),
-                      Text(
-                        '#$finishPosition',
-                        style: const TextStyle(
-                          color: Color(0xFF6BBE7A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            const SizedBox(height: 4),
-            // Cards or request button
-            if (hasFinished && cardCount == 0)
-              Padding(
-                padding: EdgeInsets.all(compact ? 6 : 8),
-                child: Text(
-                  L10n.of(context).spectatorFinished,
-                  style: TextStyle(
-                    color: const Color(0xFF9A8E8A),
-                    fontSize: compact ? 9 : 10,
-                  ),
-                ),
-              )
-            else if (canSeeCards && cards.isNotEmpty)
-              // Only the card strip gives way when the slot runs out of height.
-              // Moving the avatar onto its own row cost ~28dp, and a 13-card
-              // vertical strip in a side slot overflowed the bottom by that much.
-              // Scaling the whole seat instead would shrink the avatar and name
-              // back down, which is what this change was for.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topCenter,
-                  child: vertical
-                      ? _buildRotatedCards(
-                          cards,
-                          isLeft: isLeft,
-                          compact: compact,
+                padding: EdgeInsets.only(bottom: compact ? 2 : 3),
+                child: ProfileAvatar(
+                  photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
+                  size: (compact ? 44 : 56).toDouble(),
+                  blocked: game.blockedUsers.contains(name),
+                  fallback: isBot
+                      ? BotAvatar(
+                          size: (compact ? 44 : 56).toDouble(),
+                          name: name,
+                          showBadge: true,
                         )
-                      : _buildHorizontalCards(cards, compact: compact),
+                      : DefaultAvatar(size: (compact ? 44 : 56).toDouble()),
                 ),
-              )
-            else
-              _buildCardRequestArea(
-                game,
-                playerId,
-                cardCount,
-                isPending,
-                vertical,
-                compact: compact,
               ),
-          ],
+              // Player name and status
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!connected)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
+                    ),
+                  // Team letter, the same badge the player screen puts before a
+                  // nickname. The slot's background tint alone was too quiet to map
+                  // a name to the "A:" / "B:" score chips at a glance.
+                  if (team == 'A' || team == 'B')
+                    Padding(
+                      padding: EdgeInsets.only(right: compact ? 3 : 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: team == 'A'
+                              ? const Color(0xFFE3F0FF)
+                              : const Color(0xFFFFE8EC),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: team == 'A'
+                                ? const Color(0xFF4A90D9)
+                                : const Color(0xFFD24B4B),
+                            width: 0.7,
+                          ),
+                        ),
+                        child: Text(
+                          team,
+                          style: TextStyle(
+                            fontSize: compact ? 8 : 9,
+                            fontWeight: FontWeight.bold,
+                            color: team == 'A'
+                                ? const Color(0xFF4A90D9)
+                                : const Color(0xFFD24B4B),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Flexible(
+                    child: Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: connected
+                            ? const Color(0xFF4E3A34)
+                            : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: compact ? 11 : 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Badges on their own line. Sharing the name's row meant every badge
+              // stole width from it — a finish rank (#1) was enough to ellipsize a
+              // perfectly short nickname in the ~79dp side slots.
+              if (hasLargeTichu ||
+                  hasSmallTichu ||
+                  (hasFinished && finishPosition > 0))
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // "LT"/"T" at 8pt read as noise — a Tichu call is the most
+                      // consequential thing a spectator can notice about a hand.
+                      // Same wording and colours as the player screen's badge
+                      // ("라지"/"스몰", red/blue), just sized for the slot.
+                      if (hasLargeTichu)
+                        _tichuCallBadge(
+                          L10n.of(context).gameBadgeLarge,
+                          const Color(0xFFFF4444),
+                          const Color(0xFFCC0000),
+                        )
+                      else if (hasSmallTichu)
+                        _tichuCallBadge(
+                          L10n.of(context).gameBadgeSmall,
+                          const Color(0xFF2979FF),
+                          const Color(0xFF1565C0),
+                        ),
+                      if (hasFinished && finishPosition > 0) ...[
+                        if (hasLargeTichu || hasSmallTichu)
+                          const SizedBox(width: 4),
+                        Text(
+                          '#$finishPosition',
+                          style: const TextStyle(
+                            color: Color(0xFF6BBE7A),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 4),
+              // Cards or request button
+              if (hasFinished && cardCount == 0)
+                Padding(
+                  padding: EdgeInsets.all(compact ? 6 : 8),
+                  child: Text(
+                    L10n.of(context).spectatorFinished,
+                    style: TextStyle(
+                      color: const Color(0xFF9A8E8A),
+                      fontSize: compact ? 9 : 10,
+                    ),
+                  ),
+                )
+              else if (canSeeCards && cards.isNotEmpty)
+                // Only the card strip gives way when the slot runs out of height.
+                // Moving the avatar onto its own row cost ~28dp, and a 13-card
+                // vertical strip in a side slot overflowed the bottom by that much.
+                // Scaling the whole seat instead would shrink the avatar and name
+                // back down, which is what this change was for.
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topCenter,
+                    child: vertical
+                        ? _buildRotatedCards(
+                            cards,
+                            isLeft: isLeft,
+                            compact: compact,
+                          )
+                        : _buildHorizontalCards(cards, compact: compact),
+                  ),
+                )
+              else
+                _buildCardRequestArea(
+                  game,
+                  playerId,
+                  cardCount,
+                  isPending,
+                  vertical,
+                  compact: compact,
+                ),
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 

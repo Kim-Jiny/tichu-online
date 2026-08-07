@@ -108,17 +108,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MediaQuery.of(context).viewInsets.bottom,
       view.viewInsets.bottom / ratio,
     );
-    // Re-clamp the dragged height rather than trusting it: it was clamped
-    // against the screen it was dragged on, and the same preference comes back
-    // on a phone after a tablet, or in landscape after portrait. Unclamped, a
-    // value larger than the room leaves the seats zero pixels and the only way
-    // out is guessing that the chat header still drags.
-    final room = MediaQuery.of(context).size.height;
-    final dragged = (_dockedChatHeight ?? 0).clamp(
-      0.0,
-      math.max(0.0, room - _dockedChatSeatMinHeight),
-    );
-    final base = math.max(_dockedChatMinHeight, dragged.toDouble());
+    // Returned unbounded on purpose — this is a wish, not a verdict. The seat
+    // floor can only be honoured against the box the two actually share, and
+    // that is known in the LayoutBuilder, not here.
+    final base = math.max(_dockedChatMinHeight, _dockedChatHeight ?? 0);
     if (keyboard <= 0) return base;
     final t = (keyboard / _dockedChatFloorRamp).clamp(0.0, 1.0);
     return math.max(
@@ -139,17 +132,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
   double? _dockedChatHeight;
   static const String _kRoomChatHeight = 'room_chat_height';
 
-  /// Dragging can take the seats down to this much and no further. Below it
-  /// there is no room to see who is in the room at all, which is the one
-  /// thing the waiting room is for.
+  /// The chat may never take the seats below this. Enforced where the shared
+  /// box is actually known — see _buildRoomBody. Below it there is no room to
+  /// see who is in the room at all, which is the one thing a waiting room is
+  /// for.
   static const double _dockedChatSeatMinHeight = 130;
 
+  /// Title bar plus input row, and nothing else. The chat is never drawn
+  /// shorter than the parts it cannot fold away; below this its own Column
+  /// overflows the box. Only reachable on a body too short for the seat
+  /// minimum as well — see _buildRoomBody.
+  static const double _dockedChatHardMinHeight = 96;
+
   void _setDockedChatHeight(double height) {
-    final room = MediaQuery.of(context).size.height;
+    // A coarse bound on what gets stored, so the number stays sane across
+    // devices. It is NOT the seat guarantee: the screen is taller than the box
+    // the seats and the chat share (header, safe areas, banner ad all come off
+    // first), so clamping here would promise the seats 130dp and deliver less.
+    // _buildRoomBody clamps against the real constraints.
+    final screen = MediaQuery.of(context).size.height;
     final next =
         height.clamp(
               _dockedChatMinHeight,
-              math.max(_dockedChatMinHeight, room - _dockedChatSeatMinHeight),
+              math.max(_dockedChatMinHeight, screen - _dockedChatSeatMinHeight),
             )
             as double;
     if (next == _dockedChatHeight) return;
@@ -2804,9 +2809,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final chat = _buildDockedRoomChat(game);
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Where the seat guarantee is actually made. These constraints are the
+        // box the seats and the chat share — the screen minus the header, the
+        // safe areas and the banner ad — so this is the only place that can
+        // hold 130dp back for the seats. Clamping the chat's floor against the
+        // full screen instead (as the drag handler must, not knowing this box)
+        // would let a height dragged on a tall screen swallow the entire body
+        // on a shorter one: seats zero, start button gone, chat only.
+        //
+        // Neither side may reach zero. A body too short for both minimums has
+        // to shortchange someone, and that is the seats: they scroll, so a
+        // thin strip of them is still usable, whereas a chat below its title
+        // bar plus input row just overflows and paints a stripe.
+        final chatCeiling = math.max(
+          _dockedChatHardMinHeight,
+          constraints.maxHeight - _dockedChatSeatMinHeight,
+        );
         final minChat = math.min(
           _dockedChatMinHeightNow(),
-          constraints.maxHeight,
+          math.min(chatCeiling, constraints.maxHeight),
         );
         final seatMax = math.max(0.0, constraints.maxHeight - minChat);
         return Column(

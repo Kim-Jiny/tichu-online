@@ -2502,6 +2502,7 @@
   "lobbyNoRoomsForFilter": "No rooms for the selected games",
   "lobbyAllowSpectators": "Allow spectators",
   "lobbyAllowSpectatorsDesc": "Others can watch this room. Turn off to keep it closed.",
+  "profilePhotoViewLarge": "View full size",
   "profilePhotoDelete": "Remove photo",
   "profilePhotoDeleteConfirm": "Remove your profile photo? You can upload another for the rest of your pass.",
   "profilePhotoDeleted": "Profile photo removed",

@@ -4399,6 +4399,9 @@ class L10nEn extends L10n {
       'Others can watch this room. Turn off to keep it closed.';
 
   @override
+  String get profilePhotoViewLarge => 'View full size';
+
+  @override
   String get profilePhotoDelete => 'Remove photo';
 
   @override

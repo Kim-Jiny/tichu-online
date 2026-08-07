@@ -1538,6 +1538,7 @@
   "lobbyNoRoomsForFilter": "선택한 게임의 방이 없어요",
   "lobbyAllowSpectators": "관전 허용",
   "lobbyAllowSpectatorsDesc": "다른 사람이 이 방을 관전할 수 있습니다. 끄면 아무도 들어올 수 없습니다.",
+  "profilePhotoViewLarge": "사진 크게 보기",
   "profilePhotoDelete": "사진 삭제",
   "profilePhotoDeleteConfirm": "프로필 사진을 삭제할까요? 남은 이용 기간에는 다시 올릴 수 있습니다.",
   "profilePhotoDeleted": "프로필 사진을 삭제했습니다",

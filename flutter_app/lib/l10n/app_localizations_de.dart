@@ -4435,6 +4435,9 @@ class L10nDe extends L10n {
       'Andere können diesen Raum ansehen. Aus = niemand kommt herein.';
 
   @override
+  String get profilePhotoViewLarge => 'In voller Größe ansehen';
+
+  @override
   String get profilePhotoDelete => 'Foto entfernen';
 
   @override

@@ -229,20 +229,16 @@ class PlayerProfileHeader extends StatelessWidget {
     if (!showsPhoto && !editable) return avatar;
 
     return GestureDetector(
-      // Looking comes first for everyone. When it is your own photo the
-      // enlarged view carries the overflow menu that replaces or removes it —
-      // going straight to that menu meant you could never just look at it.
-      // With no photo yet there is nothing to look at, so tapping picks one.
       onTap: () {
-        if (showsPhoto) {
-          showEnlargedProfilePhoto(
+        if (editable) {
+          changeProfilePhoto(
             context,
-            resolved,
-            nickname,
-            game: editable ? game : null,
+            game,
+            photoUrl: showsPhoto ? resolved : null,
+            nickname: nickname,
           );
         } else {
-          changeProfilePhoto(context, game);
+          showEnlargedProfilePhoto(context, resolved!, nickname);
         }
       },
       child: Stack(
@@ -379,17 +375,11 @@ class PlayerProfileHeader extends StatelessWidget {
 }
 
 /// Full-screen look at someone's profile photo. Pinch to zoom, tap to leave.
-///
-/// Pass [game] to make it your own photo's home: an overflow menu appears with
-/// replace and remove. Tapping your own avatar used to go straight to the
-/// replace sheet, which meant the owner of a photo was the one person who
-/// could never look at it full-size.
 void showEnlargedProfilePhoto(
   BuildContext context,
   String url,
-  String nickname, {
-  GameService? game,
-}) {
+  String nickname,
+) {
   showDialog(
     context: context,
     barrierColor: Colors.black87,
@@ -435,66 +425,9 @@ void showEnlargedProfilePhoto(
               ),
             ),
           ),
-          if (game != null)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: SafeArea(child: _photoOverflowMenu(ctx, game)),
-            ),
         ],
       ),
     ),
-  );
-}
-
-/// Replace / remove, for your own enlarged photo.
-///
-/// Both close the viewer before they start: each opens its own sheet or
-/// dialog, and stacking those over a full-screen photo left the photo showing
-/// through as the backdrop of a decision about itself.
-Widget _photoOverflowMenu(BuildContext viewerCtx, GameService game) {
-  final l10n = L10n.of(viewerCtx);
-  return PopupMenuButton<String>(
-    icon: const Icon(Icons.more_vert, color: Colors.white),
-    tooltip: '',
-    color: const Color(0xFF2B2B2B),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-    onSelected: (value) {
-      final host = Navigator.of(viewerCtx, rootNavigator: true).context;
-      Navigator.pop(viewerCtx);
-      if (value == 'change') {
-        changeProfilePhoto(host, game);
-      } else {
-        confirmDeleteProfilePhoto(host, game);
-      }
-    },
-    itemBuilder: (_) => [
-      PopupMenuItem(
-        value: 'change',
-        child: ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(
-            Icons.photo_camera_rounded,
-            color: Color(0xFFB4AEFF),
-          ),
-          title: Text(
-            l10n.profilePhotoSourceTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-        ),
-      ),
-      PopupMenuItem(
-        value: 'delete',
-        child: ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
-          title: Text(
-            l10n.profilePhotoDelete,
-            style: const TextStyle(color: Color(0xFFE57373), fontSize: 14),
-          ),
-        ),
-      ),
-    ],
   );
 }
 
@@ -582,7 +515,17 @@ bool _changeInFlight = false;
 /// host starting the game mid-upload left the player unable to touch their own
 /// first turn. Nothing here is worth blocking a game for — it is a cosmetic
 /// that can land whenever it lands.
-Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
+///
+/// [photoUrl] is the photo already on show, if any. Its presence adds the two
+/// entries that need one: looking at it full-size, and removing it. Without it
+/// the owner of a photo was the only person who could not enlarge it — tapping
+/// your own avatar came straight here while everyone else got the viewer.
+Future<void> changeProfilePhoto(
+  BuildContext context,
+  GameService game, {
+  String? photoUrl,
+  String nickname = '',
+}) async {
   final l10n = L10n.of(context);
   final messenger = ScaffoldMessenger.of(context);
   if (_changeInFlight) {
@@ -596,7 +539,7 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   final navigator = Navigator.of(context);
   final overlay = Overlay.of(context, rootOverlay: true);
 
-  final source = await showModalBottomSheet<ImageSource>(
+  final choice = await showModalBottomSheet<Object>(
     context: context,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -643,12 +586,47 @@ Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
             title: Text(l10n.profilePhotoFromGallery),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
           ),
+          // The two that need a photo to already exist, kept below the divider
+          // so the notice above still reads as being about uploading.
+          if (photoUrl != null) ...[
+            const Divider(height: 1, indent: 20, endIndent: 20),
+            ListTile(
+              leading: const Icon(Icons.zoom_in, color: Color(0xFF6C63FF)),
+              title: Text(l10n.profilePhotoViewLarge),
+              onTap: () => Navigator.pop(sheetCtx, 'view'),
+            ),
+            // Deleting keeps the paid pass — the server only drops the key —
+            // so another photo can be uploaded afterwards.
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFFE57373),
+              ),
+              title: Text(
+                l10n.profilePhotoDelete,
+                style: const TextStyle(color: Color(0xFFC62828)),
+              ),
+              onTap: () => Navigator.pop(sheetCtx, 'delete'),
+            ),
+          ],
           const SizedBox(height: 8),
         ],
       ),
     ),
   );
-  if (source == null) return; // dismissed the sheet
+  if (choice == null) return; // dismissed the sheet
+
+  // The sheet closed across an await; the context it was raised on may be gone.
+  if (!context.mounted) return;
+  if (choice == 'view') {
+    showEnlargedProfilePhoto(context, photoUrl!, nickname);
+    return;
+  }
+  if (choice == 'delete') {
+    await confirmDeleteProfilePhoto(context, game);
+    return;
+  }
+  final source = choice as ImageSource;
 
   // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
   // and it rides above whatever screen the player moves to while the upload

@@ -1538,6 +1538,7 @@
   "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele",
   "lobbyAllowSpectators": "Zuschauer erlauben",
   "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein.",
+  "profilePhotoViewLarge": "In voller Größe ansehen",
   "profilePhotoDelete": "Foto entfernen",
   "profilePhotoDeleteConfirm": "Profilfoto entfernen? Für den Rest deines Passes kannst du ein neues hochladen.",
   "profilePhotoDeleted": "Profilfoto entfernt",

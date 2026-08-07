@@ -7833,6 +7833,12 @@ abstract class L10n {
   /// **'Others can watch this room. Turn off to keep it closed.'**
   String get lobbyAllowSpectatorsDesc;
 
+  /// No description provided for @profilePhotoViewLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'View full size'**
+  String get profilePhotoViewLarge;
+
   /// No description provided for @profilePhotoDelete.
   ///
   /// In en, this message translates to:

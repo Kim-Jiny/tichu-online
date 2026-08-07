@@ -4296,6 +4296,9 @@ class L10nKo extends L10n {
       '다른 사람이 이 방을 관전할 수 있습니다. 끄면 아무도 들어올 수 없습니다.';
 
   @override
+  String get profilePhotoViewLarge => '사진 크게 보기';
+
+  @override
   String get profilePhotoDelete => '사진 삭제';
 
   @override

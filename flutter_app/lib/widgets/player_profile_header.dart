@@ -169,17 +169,20 @@ class PlayerProfileHeader extends StatelessWidget {
               Expanded(child: _blockButton(context, l10n, isBlockedUser)),
               Expanded(
                 child: _iconButton(
-                icon: Icons.report_outlined,
-                color: const Color(0xFFE57373),
-                tooltip: l10n.gameReport,
-                onTap: () {
-                  // Closing the profile dialog takes this widget's context
-                  // down with it, so the report dialog has to be opened on the
-                  // navigator that outlives it — same reason the friend and
-                  // block buttons grab their messenger before closing.
-                  final navigator = Navigator.of(context, rootNavigator: true);
-                  onCloseDialog();
-                  showProfileReportDialog(navigator.context, nickname, game);
+                  icon: Icons.report_outlined,
+                  color: const Color(0xFFE57373),
+                  tooltip: l10n.gameReport,
+                  onTap: () {
+                    // Closing the profile dialog takes this widget's context
+                    // down with it, so the report dialog has to be opened on the
+                    // navigator that outlives it — same reason the friend and
+                    // block buttons grab their messenger before closing.
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
+                    onCloseDialog();
+                    showProfileReportDialog(navigator.context, nickname, game);
                   },
                 ),
               ),
@@ -226,11 +229,20 @@ class PlayerProfileHeader extends StatelessWidget {
     if (!showsPhoto && !editable) return avatar;
 
     return GestureDetector(
+      // Looking comes first for everyone. When it is your own photo the
+      // enlarged view carries the overflow menu that replaces or removes it —
+      // going straight to that menu meant you could never just look at it.
+      // With no photo yet there is nothing to look at, so tapping picks one.
       onTap: () {
-        if (editable) {
-          changeProfilePhoto(context, game, canDelete: resolved != null);
+        if (showsPhoto) {
+          showEnlargedProfilePhoto(
+            context,
+            resolved,
+            nickname,
+            game: editable ? game : null,
+          );
         } else {
-          showEnlargedProfilePhoto(context, resolved!, nickname);
+          changeProfilePhoto(context, game);
         }
       },
       child: Stack(
@@ -367,11 +379,17 @@ class PlayerProfileHeader extends StatelessWidget {
 }
 
 /// Full-screen look at someone's profile photo. Pinch to zoom, tap to leave.
+///
+/// Pass [game] to make it your own photo's home: an overflow menu appears with
+/// replace and remove. Tapping your own avatar used to go straight to the
+/// replace sheet, which meant the owner of a photo was the one person who
+/// could never look at it full-size.
 void showEnlargedProfilePhoto(
   BuildContext context,
   String url,
-  String nickname,
-) {
+  String nickname, {
+  GameService? game,
+}) {
   showDialog(
     context: context,
     barrierColor: Colors.black87,
@@ -417,10 +435,138 @@ void showEnlargedProfilePhoto(
               ),
             ),
           ),
+          if (game != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SafeArea(child: _photoOverflowMenu(ctx, game)),
+            ),
         ],
       ),
     ),
   );
+}
+
+/// Replace / remove, for your own enlarged photo.
+///
+/// Both close the viewer before they start: each opens its own sheet or
+/// dialog, and stacking those over a full-screen photo left the photo showing
+/// through as the backdrop of a decision about itself.
+Widget _photoOverflowMenu(BuildContext viewerCtx, GameService game) {
+  final l10n = L10n.of(viewerCtx);
+  return PopupMenuButton<String>(
+    icon: const Icon(Icons.more_vert, color: Colors.white),
+    tooltip: '',
+    color: const Color(0xFF2B2B2B),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    onSelected: (value) {
+      final host = Navigator.of(viewerCtx, rootNavigator: true).context;
+      Navigator.pop(viewerCtx);
+      if (value == 'change') {
+        changeProfilePhoto(host, game);
+      } else {
+        confirmDeleteProfilePhoto(host, game);
+      }
+    },
+    itemBuilder: (_) => [
+      PopupMenuItem(
+        value: 'change',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(
+            Icons.photo_camera_rounded,
+            color: Color(0xFFB4AEFF),
+          ),
+          title: Text(
+            l10n.profilePhotoSourceTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+          ),
+        ),
+      ),
+      PopupMenuItem(
+        value: 'delete',
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
+          title: Text(
+            l10n.profilePhotoDelete,
+            style: const TextStyle(color: Color(0xFFE57373), fontSize: 14),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Ask, then remove the photo.
+///
+/// Removing keeps the paid pass — the server only drops the key — so another
+/// photo can go up during whatever is left of the period. The confirmation
+/// says so, because "delete" on something bought reads as forfeiting it.
+Future<void> confirmDeleteProfilePhoto(
+  BuildContext context,
+  GameService game,
+) async {
+  final l10n = L10n.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      backgroundColor: const Color(0xFFFDFBFA),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      title: Text(
+        l10n.profilePhotoDelete,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF3E312A),
+        ),
+      ),
+      content: Text(
+        l10n.profilePhotoDeleteConfirm,
+        style: const TextStyle(
+          fontSize: 15,
+          height: 1.5,
+          color: Color(0xFF5A4038),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            foregroundColor: const Color(0xFF8A7A72),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          child: Text(l10n.commonCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFC62828),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          child: Text(l10n.profilePhotoDelete),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  game.deleteProfilePhoto();
+  messenger.showSnackBar(SnackBar(content: Text(l10n.profilePhotoDeleted)));
 }
 
 /// One change at a time. The upload no longer blocks the screen, so nothing
@@ -436,11 +582,7 @@ bool _changeInFlight = false;
 /// host starting the game mid-upload left the player unable to touch their own
 /// first turn. Nothing here is worth blocking a game for — it is a cosmetic
 /// that can land whenever it lands.
-Future<void> changeProfilePhoto(
-  BuildContext context,
-  GameService game, {
-  bool canDelete = false,
-}) async {
+Future<void> changeProfilePhoto(BuildContext context, GameService game) async {
   final l10n = L10n.of(context);
   final messenger = ScaffoldMessenger.of(context);
   if (_changeInFlight) {
@@ -454,7 +596,7 @@ Future<void> changeProfilePhoto(
   final navigator = Navigator.of(context);
   final overlay = Overlay.of(context, rootOverlay: true);
 
-  final choice = await showModalBottomSheet<Object>(
+  final source = await showModalBottomSheet<ImageSource>(
     context: context,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -501,92 +643,12 @@ Future<void> changeProfilePhoto(
             title: Text(l10n.profilePhotoFromGallery),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
           ),
-          // Only when there is a photo to remove. Deleting keeps the paid
-          // pass — the server only drops the key — so another photo can be
-          // uploaded afterwards.
-          if (canDelete)
-            ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Color(0xFFE57373),
-              ),
-              title: Text(
-                l10n.profilePhotoDelete,
-                style: const TextStyle(color: Color(0xFFC62828)),
-              ),
-              onTap: () => Navigator.pop(sheetCtx, 'delete'),
-            ),
           const SizedBox(height: 8),
         ],
       ),
     ),
   );
-  if (choice == null) return; // dismissed the sheet
-
-  if (choice == 'delete') {
-    // The sheet closed across an await; the original context may be gone.
-    if (!context.mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        backgroundColor: const Color(0xFFFDFBFA),
-        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        title: Text(
-          l10n.profilePhotoDelete,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF3E312A),
-          ),
-        ),
-        content: Text(
-          l10n.profilePhotoDeleteConfirm,
-          style: const TextStyle(
-            fontSize: 15,
-            height: 1.5,
-            color: Color(0xFF5A4038),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              foregroundColor: const Color(0xFF8A7A72),
-              textStyle: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            child: Text(l10n.commonCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            child: Text(l10n.profilePhotoDelete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    game.deleteProfilePhoto();
-    messenger.showSnackBar(SnackBar(content: Text(l10n.profilePhotoDeleted)));
-    return;
-  }
-  final source = choice as ImageSource;
+  if (source == null) return; // dismissed the sheet
 
   // An OverlayEntry rather than a dialog route: insert/remove are synchronous,
   // and it rides above whatever screen the player moves to while the upload

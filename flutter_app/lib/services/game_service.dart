@@ -262,6 +262,9 @@ class GameService extends ChangeNotifier {
   /// lobby case where there's no room to broadcast to.
   void setMyPhotoUrl(String? url) {
     myPhotoUrl = url;
+    // The popup prefers this live value but falls back to the fetched profile,
+    // so a *cleared* photo would reappear from the stale snapshot.
+    _profiles.setPhotoUrl(playerName, url);
     notifyListeners();
   }
 
@@ -748,6 +751,7 @@ class GameService extends ChangeNotifier {
         // server-side).
         if (data['playerId'] == playerId) {
           myPhotoUrl = data['url'] as String?;
+          _profiles.setPhotoUrl(playerName, myPhotoUrl);
         }
         notifyListeners();
         break;

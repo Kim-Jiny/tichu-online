@@ -108,10 +108,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MediaQuery.of(context).viewInsets.bottom,
       view.viewInsets.bottom / ratio,
     );
-    if (keyboard <= 0) return _dockedChatMinHeight;
+    final base = math.max(_dockedChatMinHeight, _dockedChatHeight ?? 0);
+    if (keyboard <= 0) return base;
     final t = (keyboard / _dockedChatFloorRamp).clamp(0.0, 1.0);
-    return _dockedChatMinHeight +
-        (_dockedChatMinHeightTyping - _dockedChatMinHeight) * t;
+    return math.max(
+      base,
+      _dockedChatMinHeight +
+          (_dockedChatMinHeightTyping - _dockedChatMinHeight) * t,
+    );
+  }
+
+  /// Height the user dragged the docked chat to, if they ever have.
+  ///
+  /// Held as a floor rather than as the height: the chat already fills
+  /// whatever the seats leave, and pinning it to an exact value would open a
+  /// gap under the start button whenever that leftover was the larger of the
+  /// two. So dragging up takes space from the seats, dragging down gives it
+  /// back, and letting go all the way at the bottom lands back on the
+  /// automatic behaviour rather than on a stuck small panel.
+  double? _dockedChatHeight;
+  static const String _kRoomChatHeight = 'room_chat_height';
+
+  /// Dragging can take the seats down to this much and no further. Below it
+  /// there is no room to see who is in the room at all, which is the one
+  /// thing the waiting room is for.
+  static const double _dockedChatSeatMinHeight = 130;
+
+  void _setDockedChatHeight(double height) {
+    final room = MediaQuery.of(context).size.height;
+    final next =
+        height.clamp(
+              _dockedChatMinHeight,
+              math.max(_dockedChatMinHeight, room - _dockedChatSeatMinHeight),
+            )
+            as double;
+    if (next == _dockedChatHeight) return;
+    setState(() => _dockedChatHeight = next);
+  }
+
+  void _saveDockedChatHeight() {
+    final height = _dockedChatHeight;
+    if (height == null) return;
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setDouble(_kRoomChatHeight, height),
+    );
   }
 
   /// The last thing each player said, shown briefly over their seat so a
@@ -198,16 +238,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.addListener(_onInquiryUpdate);
       _onInquiryUpdate();
     });
-    _loadRoomChatDocked();
+    _loadRoomChatPrefs();
   }
 
   /// Resolves long before anyone reaches a waiting room (this screen is built
   /// right after login), so the docked default never visibly flips.
-  Future<void> _loadRoomChatDocked() async {
+  Future<void> _loadRoomChatPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final docked = prefs.getBool(_kRoomChatDocked);
-    if (!mounted || docked == null || docked == _roomChatDocked) return;
-    setState(() => _roomChatDocked = docked);
+    final height = prefs.getDouble(_kRoomChatHeight);
+    if (!mounted) return;
+    if (docked == null && height == null) return;
+    setState(() {
+      if (docked != null) _roomChatDocked = docked;
+      if (height != null) _dockedChatHeight = height;
+    });
   }
 
   void _setRoomChatDocked(bool docked, GameService game) {
@@ -3594,6 +3639,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       scrollController: _chatScrollController,
       onSend: () => _sendRoomChatMessage(game),
       onUndock: () => _setRoomChatDocked(false, game),
+      onResize: _setDockedChatHeight,
+      onResizeEnd: _saveDockedChatHeight,
       itemCount: game.chatMessages.length,
       itemBuilder: (context, index) => _buildRoomChatItem(game, index),
     );

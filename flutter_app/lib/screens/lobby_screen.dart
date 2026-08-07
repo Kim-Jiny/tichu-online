@@ -3320,6 +3320,51 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Seats in two columns.
+  ///
+  /// One seat per row made a six-player Skull King room a column taller than
+  /// the phone it was on, and left the docked chat nothing. The same room in
+  /// two columns is half as tall. Tichu's fixed-team view already read this
+  /// way; this is the same shape for the games with no teams to separate.
+  ///
+  /// An odd seat count leaves the last cell empty rather than stretching that
+  /// seat across both columns — full width at the bottom of a grid reads as a
+  /// different kind of thing (a button, a banner) than the seats above it.
+  Widget _buildSeatGrid(GameService game) {
+    const gap = 8.0;
+    final slots = game.roomPlayers;
+    final rows = <Widget>[];
+    for (int i = 0; i < slots.length; i += 2) {
+      final right = i + 1;
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildClickablePlayerSlot(
+                slots[i],
+                slotIndex: i,
+                game: game,
+              ),
+            ),
+            const SizedBox(width: gap),
+            Expanded(
+              child: right < slots.length
+                  ? _buildClickablePlayerSlot(
+                      slots[right],
+                      slotIndex: right,
+                      game: game,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      );
+      if (i + 2 < slots.length) rows.add(const SizedBox(height: gap));
+    }
+    return Column(children: rows);
+  }
+
   Widget _buildRoomPlayersPanel(GameService game) {
     // No card of its own: the seat rows inside already carry their own fills,
     // and wrapping them in a white panel on a tinted page just added a border to
@@ -3356,14 +3401,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            for (int i = 0; i < game.roomPlayers.length; i++) ...[
-              _buildClickablePlayerSlot(
-                game.roomPlayers[i],
-                slotIndex: i,
-                game: game,
-              ),
-              if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
-            ],
+            // Ranked Tichu stays one per row: its seats are teams (0+2 vs
+            // 1+3), and a grid would sit 0 next to 1 and say the opposite.
+            if (game.currentGameType == 'tichu')
+              for (int i = 0; i < game.roomPlayers.length; i++) ...[
+                _buildClickablePlayerSlot(
+                  game.roomPlayers[i],
+                  slotIndex: i,
+                  game: game,
+                ),
+                if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
+              ]
+            else
+              _buildSeatGrid(game),
           ] else if (game.currentGameType == 'skull_king' ||
               game.currentGameType == 'love_letter' ||
               game.currentGameType == 'mighty') ...[
@@ -3426,14 +3476,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ],
             const SizedBox(height: 12),
-            for (int i = 0; i < game.roomPlayers.length; i++) ...[
-              _buildClickablePlayerSlot(
-                game.roomPlayers[i],
-                slotIndex: i,
-                game: game,
-              ),
-              if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
-            ],
+            _buildSeatGrid(game),
           ] else ...[
             // Compact random-team chip for non-ranked Tichu. Host taps to
             // toggle; non-hosts see the current state as read-only.
@@ -3441,16 +3484,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               _buildRandomSeatingChip(game),
               const SizedBox(height: 12),
             ],
-            if (game.roomRandomSeating) ...[
-              for (int i = 0; i < game.roomPlayers.length; i++) ...[
-                _buildClickablePlayerSlot(
-                  game.roomPlayers[i],
-                  slotIndex: i,
-                  game: game,
-                ),
-                if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
-              ],
-            ] else
+            if (game.roomRandomSeating)
+              // No teams to keep apart here — they are drawn at start — so
+              // the grid is free to pair whoever is adjacent.
+              _buildSeatGrid(game)
+            else
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

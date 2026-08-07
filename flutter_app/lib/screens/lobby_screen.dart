@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
@@ -24,6 +25,7 @@ import '../widgets/bot_avatar.dart';
 import '../widgets/host_crown.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/draggable_chat_panel.dart';
+import '../widgets/docked_chat_panel.dart';
 import '../widgets/seat_chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
@@ -52,10 +54,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
   final ScrollController _chatScrollController = ScrollController();
   int _lastChatMessageCount = 0;
 
-  /// Waiting-room chat now opens from the header, like every in-game chat,
-  /// instead of living in a panel below the seats that had to be scrolled to.
+  /// Waiting-room chat, while it is floating: whether the panel is up.
+  /// Meaningless while docked — a docked chat is always there.
   bool _roomChatOpen = false;
   int _roomChatRead = 0;
+
+  /// Docked (a strip under the start/ready button) or floating (the same
+  /// draggable panel the game screens use). Docked by default: a waiting room
+  /// has nothing underneath worth hiding, and the floating panel was a chat
+  /// you had to open before you knew there was anything to read.
+  ///
+  /// Persisted, because it is a preference rather than a per-room choice.
+  bool _roomChatDocked = true;
+  static const String _kRoomChatDocked = 'room_chat_docked';
 
   /// The last thing each player said, shown briefly over their seat so a
   /// message is visible without opening the panel at all.
@@ -141,6 +152,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.addListener(_onInquiryUpdate);
       _onInquiryUpdate();
     });
+    _loadRoomChatDocked();
+  }
+
+  /// Resolves long before anyone reaches a waiting room (this screen is built
+  /// right after login), so the docked default never visibly flips.
+  Future<void> _loadRoomChatDocked() async {
+    final prefs = await SharedPreferences.getInstance();
+    final docked = prefs.getBool(_kRoomChatDocked);
+    if (!mounted || docked == null || docked == _roomChatDocked) return;
+    setState(() => _roomChatDocked = docked);
+  }
+
+  void _setRoomChatDocked(bool docked, GameService game) {
+    setState(() {
+      _roomChatDocked = docked;
+      // Popping out lands open rather than hidden — the tap that undocked it
+      // was a request to see the chat, not to dismiss it. Docking closes the
+      // floating panel so the two don't both show at once.
+      _roomChatOpen = !docked;
+      if (docked) _roomChatRead = game.chatMessages.length;
+    });
+    SharedPreferences.getInstance().then(
+      (prefs) => prefs.setBool(_kRoomChatDocked, docked),
+    );
+    _scrollChatToBottom();
   }
 
   @override
@@ -1719,9 +1755,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // (the daily reward needs a rewarded ad, and AdMob has no web build), so a
     // dot pointing at it would send players to a screen with nothing to claim.
     // Same condition as _shouldShowAttendanceBanner in shop_screen.
-    final attendanceUnclaimed = !kIsWeb &&
-        attendance != null &&
-        attendance['claimedToday'] != true;
+    final attendanceUnclaimed =
+        !kIsWeb && attendance != null && attendance['claimedToday'] != true;
     return [
       Stack(
         children: [
@@ -2618,7 +2653,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isKoreanUser =
         context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
     _seatChat.consume(game);
-    if (_roomChatOpen) _roomChatRead = game.chatMessages.length;
+    if (_roomChatDocked || _roomChatOpen) {
+      _roomChatRead = game.chatMessages.length;
+    }
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -2640,15 +2677,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 _buildErrorBanner(game.errorMessage!),
 
               // Scrollable content area
-              // Chat is a header button and an overlay panel now, the same as every
-              // in-game chat — it used to sit under the seats, so reading it meant
-              // scrolling past the whole room first.
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: _buildRoomPlayersPanel(game),
                 ),
               ),
+              // Docked chat: a sibling of the scroll area, not the last thing
+              // inside it. Inside, it would scroll away exactly when someone
+              // is typing, and its own list would be a scroller within a
+              // scroller. Out here it holds the bottom, under the start
+              // button, and the seats give up the space instead.
+              if (_roomChatDocked) _buildDockedRoomChat(game),
               if (_roomBannerAd != null && _roomBannerLoaded)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -2665,7 +2705,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
             ],
           ),
-          if (_roomChatOpen) _buildRoomChatPanel(game),
+          if (!_roomChatDocked && _roomChatOpen) _buildRoomChatPanel(game),
           if (_roomMoreOpen) _buildRoomMoreMenu(game, isKoreanUser),
         ],
       ),
@@ -3114,21 +3154,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(width: 6),
-          _roomIconButton(
-            icon: Icons.chat_bubble_outline,
-            active: _roomChatOpen,
-            badge: _roomChatOpen
-                ? 0
-                : math.max(0, game.chatMessages.length - _roomChatRead),
-            onTap: () => setState(() {
-              _roomChatOpen = !_roomChatOpen;
-              if (_roomChatOpen) {
-                _roomChatRead = game.chatMessages.length;
-                _roomMoreOpen = false;
-                _scrollChatToBottom();
-              }
-            }),
-          ),
+          // Only while the chat floats. Docked, it is always on screen, so a
+          // show/hide button would either do nothing or take the chat away
+          // with no way back that looks like a way back.
+          if (!_roomChatDocked)
+            _roomIconButton(
+              icon: Icons.chat_bubble_outline,
+              active: _roomChatOpen,
+              badge: _roomChatOpen
+                  ? 0
+                  : math.max(0, game.chatMessages.length - _roomChatRead),
+              onTap: () => setState(() {
+                _roomChatOpen = !_roomChatOpen;
+                if (_roomChatOpen) {
+                  _roomChatRead = game.chatMessages.length;
+                  _roomMoreOpen = false;
+                  _scrollChatToBottom();
+                }
+              }),
+            ),
           _roomIconButton(
             icon: Icons.person_add_alt_1,
             onTap: () => _showInviteFriendsDialog(game),
@@ -3438,10 +3482,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// The same draggable panel the game screens use, so chat sits in the same
   /// place and behaves the same way from the waiting room onwards.
   Widget _buildRoomChatPanel(GameService game) {
-    if (game.chatMessages.length != _lastChatMessageCount) {
-      _lastChatMessageCount = game.chatMessages.length;
-      _scrollChatToBottom();
-    }
+    _followNewChatMessages(game);
     final accent = _gameAccentColor(game.currentGameType);
     return DraggableChatPanel(
       accentColor: accent,
@@ -3452,22 +3493,61 @@ class _LobbyScreenState extends State<LobbyScreen> {
       scrollController: _chatScrollController,
       onSend: () => _sendRoomChatMessage(game),
       onClose: () => setState(() => _roomChatOpen = false),
+      onDock: () => _setRoomChatDocked(true, game),
       itemCount: game.chatMessages.length,
-      itemBuilder: (context, index) {
-        final msg = game.chatMessages[game.chatMessages.length - 1 - index];
-        final sender = msg['sender'] as String? ?? '';
-        String message = msg['message'] as String? ?? '';
-        if (message == 'chat_banned') {
-          final mins = msg['remainingMinutes'] as int? ?? 0;
-          message = localizeChatBanned(mins, L10n.of(context));
-        }
-        final isMe = sender == game.playerName;
-        if (sender.isNotEmpty && game.isBlocked(sender)) {
-          return const SizedBox.shrink();
-        }
-        return _buildChatMessage(sender, message, isMe, game);
-      },
+      itemBuilder: (context, index) => _buildRoomChatItem(game, index),
     );
+  }
+
+  /// The default: chat held at the bottom of the room, under the start/ready
+  /// button, rather than floating over it.
+  Widget _buildDockedRoomChat(GameService game) {
+    _followNewChatMessages(game);
+    final accent = _gameAccentColor(game.currentGameType);
+    // A third of the room, within reason. Too short and it shows one line and
+    // a text field; too tall and the seats — the thing you are actually
+    // waiting on — get squeezed off the screen on a small phone.
+    final height = (MediaQuery.of(context).size.height * 0.32).clamp(
+      160.0,
+      260.0,
+    );
+    return DockedChatPanel(
+      accentColor: accent,
+      sendIconColor: accent,
+      title: L10n.of(context).lobbyChat,
+      hintText: L10n.of(context).lobbyMessageHint,
+      controller: _chatController,
+      scrollController: _chatScrollController,
+      onSend: () => _sendRoomChatMessage(game),
+      onUndock: () => _setRoomChatDocked(false, game),
+      itemCount: game.chatMessages.length,
+      itemBuilder: (context, index) => _buildRoomChatItem(game, index),
+      height: height,
+    );
+  }
+
+  /// Keep the view pinned to the newest message. Called from whichever panel
+  /// is on screen; the count guard makes the duplicate call a no-op.
+  void _followNewChatMessages(GameService game) {
+    if (game.chatMessages.length == _lastChatMessageCount) return;
+    _lastChatMessageCount = game.chatMessages.length;
+    _scrollChatToBottom();
+  }
+
+  /// One message row, newest first (both panels run their list reversed).
+  Widget _buildRoomChatItem(GameService game, int index) {
+    final msg = game.chatMessages[game.chatMessages.length - 1 - index];
+    final sender = msg['sender'] as String? ?? '';
+    String message = msg['message'] as String? ?? '';
+    if (message == 'chat_banned') {
+      final mins = msg['remainingMinutes'] as int? ?? 0;
+      message = localizeChatBanned(mins, L10n.of(context));
+    }
+    final isMe = sender == game.playerName;
+    if (sender.isNotEmpty && game.isBlocked(sender)) {
+      return const SizedBox.shrink();
+    }
+    return _buildChatMessage(sender, message, isMe, game);
   }
 
   /// The colour that game wears everywhere else — the filter chip, the row

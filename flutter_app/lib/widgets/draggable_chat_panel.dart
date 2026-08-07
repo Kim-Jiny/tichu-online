@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'chat_panel_body.dart';
+
 /// A floating chat panel that the user can drag to reposition and resize,
 /// with its position/size persisted across app restarts via SharedPreferences.
 ///
@@ -25,6 +27,11 @@ class DraggableChatPanel extends StatefulWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
 
+  /// Put the chat back into the page layout. Supplied only where a docked
+  /// form exists (the waiting room); elsewhere the header has no pin button
+  /// because there would be nowhere to pin it to.
+  final VoidCallback? onDock;
+
   /// SharedPreferences namespace for persisted geometry. A single shared key
   /// keeps the chat in the same spot across every game screen.
   final String persistKey;
@@ -41,6 +48,7 @@ class DraggableChatPanel extends StatefulWidget {
     required this.onClose,
     required this.itemCount,
     required this.itemBuilder,
+    this.onDock,
     this.persistKey = 'chat',
   });
 
@@ -61,7 +69,13 @@ class _ChatGeometry {
   final double height;
   final double opacity;
 
-  const _ChatGeometry(this.left, this.top, this.width, this.height, this.opacity);
+  const _ChatGeometry(
+    this.left,
+    this.top,
+    this.width,
+    this.height,
+    this.opacity,
+  );
 }
 
 class _DraggableChatPanelState extends State<DraggableChatPanel> {
@@ -93,6 +107,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   static const double _minHeight = 160;
   static const double _maxHeight = 480;
   static const double _margin = 8;
+
   /// Bottom clearance while the keyboard is up.
   static const double _keyboardGap = 22;
   static const double _topGap = 42;
@@ -244,8 +259,10 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     final minLeft = _margin;
     final maxLeft = (screenW - width - _margin).clamp(_margin, double.infinity);
     final minTop = topInset + _margin;
-    final maxTop =
-        (screenH - keyboard - height - bottomGap).clamp(minTop, double.infinity);
+    final maxTop = (screenH - keyboard - height - bottomGap).clamp(
+      minTop,
+      double.infinity,
+    );
 
     final left = (_left ?? defaultLeft).clamp(minLeft, maxLeft);
     final top = (_top ?? defaultTop).clamp(minTop, maxTop);
@@ -289,67 +306,35 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
         Opacity(
           opacity: _opacity,
           child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildHeader(width, height),
-              if (_showOpacitySlider) _buildOpacitySlider(),
-              // Messages — tapping empty space dismisses the keyboard.
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: _dismissKeyboard,
-                  child: ListView.builder(
-                    controller: widget.scrollController,
-                    reverse: true,
-                    padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildHeader(width, height),
+                if (_showOpacitySlider) _buildOpacitySlider(),
+                Expanded(
+                  child: ChatPanelBody(
+                    scrollController: widget.scrollController,
+                    controller: widget.controller,
+                    hintText: widget.hintText,
+                    onSend: widget.onSend,
+                    sendIconColor: widget.sendIconColor,
                     itemCount: widget.itemCount,
                     itemBuilder: widget.itemBuilder,
+                    onTapMessages: _dismissKeyboard,
                   ),
                 ),
-              ),
-              // Input
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: widget.controller,
-                        decoration: InputDecoration(
-                          hintText: widget.hintText,
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                        style: const TextStyle(fontSize: 14),
-                        onSubmitted: (_) => widget.onSend(),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: widget.onSend,
-                      icon: Icon(Icons.send, color: widget.sendIconColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
         // Resize handle (bottom-right corner).
@@ -368,8 +353,10 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
       onPanStart: (_) => _dismissKeyboard(),
       onPanUpdate: (details) {
         final media = MediaQuery.of(context);
-        final maxLeft = (media.size.width - width - _margin)
-            .clamp(_margin, double.infinity);
+        final maxLeft = (media.size.width - width - _margin).clamp(
+          _margin,
+          double.infinity,
+        );
         final minTop = media.padding.top + _margin;
         final maxTop =
             (media.size.height -
@@ -413,6 +400,25 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
                 ),
               ),
             ),
+            // Left of the opacity button: both are "how the panel sits", and
+            // pinning is the rarer of the two, so it takes the outer slot and
+            // leaves close where the thumb already expects it.
+            if (widget.onDock != null)
+              GestureDetector(
+                onTap: widget.onDock,
+                behavior: HitTestBehavior.opaque,
+                child: const SizedBox(
+                  width: 36,
+                  height: 32,
+                  child: Center(
+                    child: Icon(
+                      Icons.push_pin_outlined,
+                      color: Colors.white70,
+                      size: 19,
+                    ),
+                  ),
+                ),
+              ),
             GestureDetector(
               onTap: () =>
                   setState(() => _showOpacitySlider = !_showOpacitySlider),
@@ -463,10 +469,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 3,
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 12),
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
               ),
               child: Slider(
                 value: _opacity,
@@ -492,7 +496,11 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   }
 
   Widget _buildResizeHandle(
-      double width, double height, double maxW, double maxH) {
+    double width,
+    double height,
+    double maxW,
+    double maxH,
+  ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onPanStart: (_) => _dismissKeyboard(),

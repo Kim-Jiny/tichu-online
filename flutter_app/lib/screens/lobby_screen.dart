@@ -75,12 +75,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// text field and about one line — which is not a chat, just a reminder
   /// that there is one. Scrolling two seats out of view costs less than that,
   /// and the seats are still a flick away.
-  static const double _dockedChatMinHeight = 220;
+  static const double _dockedChatMinHeight = 260;
 
   /// The floor while the keyboard is up. The room is short then and the seats
   /// lose either way — but what you need on screen is what you are replying
   /// to, so the chat pushes further into them.
-  static const double _dockedChatMinHeightTyping = 280;
+  static const double _dockedChatMinHeightTyping = 320;
 
   /// Which floor applies right now.
   ///

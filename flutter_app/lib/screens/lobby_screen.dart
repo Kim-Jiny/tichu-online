@@ -68,6 +68,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool _roomChatDocked = true;
   static const String _kRoomChatDocked = 'room_chat_docked';
 
+  /// The docked chat never gets less than this; past that the seats scroll.
+  /// Below it the panel is a title bar and a text field with room for one
+  /// message, which is not worth the space it costs the seats.
+  static const double _dockedChatMinHeight = 150;
+
   /// The last thing each player said, shown briefly over their seat so a
   /// message is visible without opening the panel at all.
   late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
@@ -2676,19 +2681,50 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (game.errorMessage != null)
                 _buildErrorBanner(game.errorMessage!),
 
-              // Scrollable content area
+              // Seats, and under them the docked chat.
+              //
+              // The chat is a sibling of the scroll area, not the last thing
+              // inside it: inside, it would scroll away exactly when someone
+              // is typing, and its own list would be a scroller in a scroller.
+              //
+              // The seats take only the height they need, so the chat starts
+              // right under the start button rather than at the bottom of the
+              // screen with a field of nothing between them. It then fills
+              // everything left. When the seats would need more than the room
+              // minus [_dockedChatMinHeight], they scroll instead and the chat
+              // keeps that floor.
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: _buildRoomPlayersPanel(game),
-                ),
+                child: _roomChatDocked
+                    ? LayoutBuilder(
+                        builder: (context, constraints) {
+                          final seatMax = math.max(
+                            0.0,
+                            constraints.maxHeight - _dockedChatMinHeight,
+                          );
+                          return Column(
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: seatMax),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    8,
+                                  ),
+                                  child: _buildRoomPlayersPanel(game),
+                                ),
+                              ),
+                              Expanded(child: _buildDockedRoomChat(game)),
+                            ],
+                          );
+                        },
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: _buildRoomPlayersPanel(game),
+                      ),
               ),
-              // Docked chat: a sibling of the scroll area, not the last thing
-              // inside it. Inside, it would scroll away exactly when someone
-              // is typing, and its own list would be a scroller within a
-              // scroller. Out here it holds the bottom, under the start
-              // button, and the seats give up the space instead.
-              if (_roomChatDocked) _buildDockedRoomChat(game),
               if (_roomBannerAd != null && _roomBannerLoaded)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -3499,18 +3535,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  /// The default: chat held at the bottom of the room, under the start/ready
-  /// button, rather than floating over it.
+  /// The default: chat held in the page under the start/ready button, rather
+  /// than floating over it.
   Widget _buildDockedRoomChat(GameService game) {
     _followNewChatMessages(game);
     final accent = _gameAccentColor(game.currentGameType);
-    // A third of the room, within reason. Too short and it shows one line and
-    // a text field; too tall and the seats — the thing you are actually
-    // waiting on — get squeezed off the screen on a small phone.
-    final height = (MediaQuery.of(context).size.height * 0.32).clamp(
-      160.0,
-      260.0,
-    );
     return DockedChatPanel(
       accentColor: accent,
       sendIconColor: accent,
@@ -3522,7 +3551,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onUndock: () => _setRoomChatDocked(false, game),
       itemCount: game.chatMessages.length,
       itemBuilder: (context, index) => _buildRoomChatItem(game, index),
-      height: height,
     );
   }
 

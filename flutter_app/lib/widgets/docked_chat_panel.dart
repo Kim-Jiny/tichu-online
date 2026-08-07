@@ -29,10 +29,6 @@ class DockedChatPanel extends StatelessWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
 
-  /// Total height of the strip, header included. The caller decides, since
-  /// only it knows how much room the seats above still need.
-  final double height;
-
   const DockedChatPanel({
     super.key,
     required this.accentColor,
@@ -45,44 +41,42 @@ class DockedChatPanel extends StatelessWidget {
     required this.onUndock,
     required this.itemCount,
     required this.itemBuilder,
-    required this.height,
   });
 
+  /// Fills whatever box it is given — the caller decides how much is left
+  /// after the seats.
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.10),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: ChatPanelBody(
+              scrollController: scrollController,
+              controller: controller,
+              hintText: hintText,
+              onSend: onSend,
+              sendIconColor: sendIconColor,
+              itemCount: itemCount,
+              itemBuilder: itemBuilder,
+              onTapMessages: () => FocusScope.of(context).unfocus(),
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: ChatPanelBody(
-                scrollController: scrollController,
-                controller: controller,
-                hintText: hintText,
-                onSend: onSend,
-                sendIconColor: sendIconColor,
-                itemCount: itemCount,
-                itemBuilder: itemBuilder,
-                onTapMessages: () => FocusScope.of(context).unfocus(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1640,7 +1640,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
         !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
     return ConnectionOverlay(
       child: PopScope(
+        // Never let the pop through: on the web that would walk the browser
+        // off the site mid-session, and on Android it would drop to the home
+        // screen. What back MEANS is decided below instead.
         canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          // In a waiting room, back is the header's ← — the one thing on this
+          // screen there is to back out of. Anywhere else (the lobby itself,
+          // the login form) there is nothing behind, so it stays a no-op
+          // rather than doing something surprising.
+          //
+          // Games and the spectator view are other screens with their own
+          // PopScope; they still swallow it, so nobody leaves a live hand by
+          // reaching for the back button.
+          final game = context.read<GameService>();
+          if (!_inRoom && game.currentDestination == AppDestination.lobby) {
+            return;
+          }
+          _leaveRoom(game);
+        },
         child: Scaffold(
           // On the web the engine has already shrunk its canvas to the visual
           // viewport by the time the keyboard is up, so letting the Scaffold
@@ -2803,6 +2822,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Leave the waiting room. Shared by the header's ← and the back button, so
+  /// the two can't drift into meaning different things.
+  void _leaveRoom(GameService game) {
+    game.leaveRoom();
+    setState(() => _inRoom = false);
+    // No immediate re-check here: _inRoom flips to false before the server
+    // confirms, so the strengthened _onInquiryUpdate guard would defer
+    // anyway. The server-confirm notify re-fires the listener once truly on
+    // the lobby.
+  }
+
   Widget _buildRoomView(GameService game, {required bool isLandscape}) {
     final isKoreanUser =
         context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
@@ -3210,14 +3240,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () {
-              game.leaveRoom();
-              setState(() => _inRoom = false);
-              // No immediate re-check here: _inRoom flips to false before the
-              // server confirms, so the strengthened _onInquiryUpdate guard
-              // would defer anyway. The server-confirm notify re-fires the
-              // listener once truly on the lobby.
-            },
+            onPressed: () => _leaveRoom(game),
             icon: const Icon(Icons.arrow_back),
             color: const Color(0xFF8A7A72),
             padding: EdgeInsets.zero,

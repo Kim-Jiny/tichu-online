@@ -88,7 +88,21 @@ class InviteLinkService {
     debugPrint('[InviteLinkService] Invite token from web URL');
   }
 
+  /// Custom-scheme fallback: `tichuonline://invite?t=…`.
+  ///
+  /// App links are the primary path, but some in-app browsers (KakaoTalk,
+  /// Instagram) render an https link themselves instead of handing it to the
+  /// app. A scheme URL they cannot render gets passed through. Nothing mints
+  /// these yet — the registration exists so a future link can use it without
+  /// waiting on another store release.
+  static const String inviteScheme = 'tichuonline';
+
   bool _matchesInviteUri(Uri uri) {
+    // In a scheme URL the authority carries what would be the path:
+    // tichuonline://invite?t=… parses as host 'invite', path ''.
+    if (uri.scheme.toLowerCase() == inviteScheme) {
+      return uri.host.toLowerCase() == 'invite';
+    }
     final host = uri.host.toLowerCase();
     if (!inviteHosts.contains(host)) return false;
     return uri.path == invitePath || uri.path.startsWith('$invitePath/');

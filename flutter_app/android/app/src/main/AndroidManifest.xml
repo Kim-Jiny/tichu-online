@@ -44,6 +44,26 @@
                 <data android:scheme="https" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
                 <data android:scheme="http" android:host="tichu.jiny.shop" android:pathPrefix="/invite" />
             </intent-filter>
+            <!-- Custom scheme, kept as a fallback for contexts where app links
+                 do not fire — an in-app browser (KakaoTalk, Instagram) will
+                 happily open tichuonline:// but often swallows an https app
+                 link and renders the page itself.
+
+                 A SEPARATE filter on purpose: autoVerify applies to the whole
+                 filter, and a custom scheme has nothing to verify against.
+                 Putting it in the block above would make Android fail
+                 verification for the https hosts too, silently turning off
+                 app links.
+
+                 'tichuonline', not plain 'tichu': custom schemes are first
+                 come first served with no registry, and a one-word scheme is
+                 easy for another app to claim. Nothing uses this yet. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tichuonline" />
+            </intent-filter>
         </activity>
         <!-- Kakao Login Redirect -->
         <activity

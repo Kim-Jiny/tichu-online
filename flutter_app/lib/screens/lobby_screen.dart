@@ -79,11 +79,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// chat, so the seats are served first and the chat takes the rest.
   static const double _dockedChatMinHeight = 140;
 
-  /// The floor while the keyboard is up. The seats are not what you are
+  /// The floor once the keyboard is fully up. The seats are not what you are
   /// looking at mid-sentence, so here the chat does push into them.
   static const double _dockedChatMinHeightTyping = 240;
 
-  /// Which floor applies right now.
+  /// Keyboard travel over which the floor moves between the two values.
+  /// Shorter than any real keyboard, so the floor has settled before the
+  /// keyboard finishes and nothing is still moving at the end of the slide.
+  static const double _dockedChatFloorRamp = 180;
+
+  /// The floor right now, blended by how far the keyboard is out.
+  ///
+  /// Blended rather than switched: `keyboard > 0 ? typing : normal` changes by
+  /// 100dp in the single frame the inset reaches zero, and since the floor is
+  /// what the seats are measured against, that frame moved the chat and the
+  /// seats at once — the visible hitch at the end of the keyboard sliding
+  /// away. Ramping it against the inset makes the last frame of the slide
+  /// look like every other one.
   ///
   /// The keyboard height has to come off the window rather than off
   /// MediaQuery: the Scaffold resizes its body for the inset and strips it
@@ -96,7 +108,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MediaQuery.of(context).viewInsets.bottom,
       view.viewInsets.bottom / ratio,
     );
-    return keyboard > 0 ? _dockedChatMinHeightTyping : _dockedChatMinHeight;
+    if (keyboard <= 0) return _dockedChatMinHeight;
+    final t = (keyboard / _dockedChatFloorRamp).clamp(0.0, 1.0);
+    return _dockedChatMinHeight +
+        (_dockedChatMinHeightTyping - _dockedChatMinHeight) * t;
   }
 
   /// The last thing each player said, shown briefly over their seat so a
@@ -2680,6 +2695,53 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Seats, and under them the docked chat.
+  ///
+  /// The chat is a sibling of the scroll area, not the last thing inside it:
+  /// inside, it would scroll away exactly when someone is typing, and its own
+  /// list would be a scroller in a scroller.
+  ///
+  /// The seats take only the height they need, so the chat starts right under
+  /// the start button rather than at the bottom of the screen with a field of
+  /// nothing between them, and then fills everything left. Only when the seats
+  /// would need more than that leaves do they scroll, and the chat keeps its
+  /// floor — which rises while the keyboard is up.
+  Widget _buildRoomBody(GameService game) {
+    if (!_roomChatDocked) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: _buildRoomPlayersPanel(game),
+      );
+    }
+    // Built here rather than inside the builder below. LayoutBuilder runs its
+    // builder on every constraint change, which during the keyboard slide is
+    // every frame; handing it the same widget instances lets updateChild take
+    // its identity fast path instead of rebuilding six seats per frame.
+    final seats = SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: _buildRoomPlayersPanel(game),
+    );
+    final chat = _buildDockedRoomChat(game);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minChat = math.min(
+          _dockedChatMinHeightNow(),
+          constraints.maxHeight,
+        );
+        final seatMax = math.max(0.0, constraints.maxHeight - minChat);
+        return Column(
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: seatMax),
+              child: seats,
+            ),
+            Expanded(child: chat),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildRoomView(GameService game, {required bool isLandscape}) {
     final isKoreanUser =
         context.read<LocaleService>().effectiveLocale.languageCode == 'ko';
@@ -2707,54 +2769,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (game.errorMessage != null)
                 _buildErrorBanner(game.errorMessage!),
 
-              // Seats, and under them the docked chat.
-              //
-              // The chat is a sibling of the scroll area, not the last thing
-              // inside it: inside, it would scroll away exactly when someone
-              // is typing, and its own list would be a scroller in a scroller.
-              //
-              // The seats take only the height they need, so the chat starts
-              // right under the start button rather than at the bottom of the
-              // screen with a field of nothing between them. It then fills
-              // everything left. When the seats would need more than that
-              // leaves, they scroll instead and the chat keeps its floor —
-              // which is higher while the keyboard is up.
-              Expanded(
-                child: _roomChatDocked
-                    ? LayoutBuilder(
-                        builder: (context, constraints) {
-                          final minChat = math.min(
-                            _dockedChatMinHeightNow(),
-                            constraints.maxHeight,
-                          );
-                          final seatMax = math.max(
-                            0.0,
-                            constraints.maxHeight - minChat,
-                          );
-                          return Column(
-                            children: [
-                              ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: seatMax),
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    0,
-                                    16,
-                                    8,
-                                  ),
-                                  child: _buildRoomPlayersPanel(game),
-                                ),
-                              ),
-                              Expanded(child: _buildDockedRoomChat(game)),
-                            ],
-                          );
-                        },
-                      )
-                    : SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: _buildRoomPlayersPanel(game),
-                      ),
-              ),
+              Expanded(child: _buildRoomBody(game)),
               if (_roomBannerAd != null && _roomBannerLoaded)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

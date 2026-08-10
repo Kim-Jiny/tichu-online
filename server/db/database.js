@@ -4975,7 +4975,10 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       paramIdx++;
     }
     if (options.minGames) {
-      conditions.push(`total_games >= $${paramIdx}`);
+      conditions.push(
+        `(COALESCE(total_games,0) + COALESCE(sk_total_games,0)`
+        + ` + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) >= $${paramIdx}`,
+      );
       countParams.push(parseInt(options.minGames));
       paramIdx++;
     }
@@ -5001,7 +5004,8 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const sortOptions = {
       'rating_desc': 'rating DESC',
       'rating_asc': 'rating ASC',
-      'games_desc': 'total_games DESC',
+      'games_desc': '(COALESCE(total_games,0) + COALESCE(sk_total_games,0)'
+        + ' + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) DESC',
       'gold_desc': 'gold DESC',
       'level_desc': 'level DESC',
       'leaves_desc': 'leave_count DESC',
@@ -5016,7 +5020,12 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     const total = parseInt(countResult.rows[0].count);
 
     const dataParams = [...countParams, limit, offset];
-    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, last_ip, is_admin, is_deleted
+    // total_games is the Tichu counter. The admin list wants "how much has
+    // this person played", which is all four games — computed here so the
+    // sort can use it too.
+    const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, last_ip, is_admin, is_deleted,
+                          (COALESCE(total_games,0) + COALESCE(sk_total_games,0)
+                           + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) AS games_all
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);

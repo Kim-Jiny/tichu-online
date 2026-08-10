@@ -3886,9 +3886,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>IP</th><th>앱 버전</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>승/패</th><th>이탈</th><th>최근 접속</th><th></th></tr>
+        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>IP</th><th>앱 버전</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>이탈</th><th>최근 접속</th><th></th></tr>
         ${data.rows.map(u => {
-          const winRate = u.total_games > 0 ? Math.round(u.wins / u.total_games * 100) : 0;
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
           return `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
@@ -3906,8 +3905,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             </form>
           </td>
           <td style="font-weight:600">${u.rating}</td>
-          <td>${u.total_games}</td>
-          <td>${u.wins}승/${u.losses}패 <span style="color:#888;font-size:11px">(${winRate}%)</span></td>
+          <!-- Every game type, not just Tichu. Per-game W/L lives on the
+               detail page, where the four rows can be read side by side; in
+               this list a single Tichu-only ratio was misleading. -->
+          <td>${(u.games_all ?? u.total_games ?? 0).toLocaleString()}</td>
           <td style="${leaveStyle}">${u.leave_count || 0}</td>
           <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>

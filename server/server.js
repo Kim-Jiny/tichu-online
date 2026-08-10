@@ -8683,10 +8683,22 @@ async function handleVerifyIapPurchase(ws, data) {
   if (anyNewlyGranted) {
     const label = (product.label_ko && product.label_ko.trim()) || productId;
     const envTag = environment === 'sandbox' ? ' [샌드박스]' : '';
+    // Money first — how much came in is the thing you want at a glance; the
+    // gold is an implementation detail of what they got for it.
+    //
+    // Marked 정가 rather than presented as what they actually paid, because we
+    // don't know that: the store owns the real price, and a foreign-currency
+    // buyer, a store promo or local tax all move it. price_krw is the KRW list
+    // price an admin entered. It is also BEFORE the store's cut, so it is not
+    // revenue either.
+    const priceKrw = Number(product.price_krw) || 0;
+    const priceTag = priceKrw > 0
+      ? `₩${priceKrw.toLocaleString()} (정가)`
+      : '가격 미설정';
     notifyAdminUsers(
       'payment',
       '💰 결제 발생',
-      `${ws.nickname} 님 · ${label} · +${totalNewGold.toLocaleString()}G (${platform})${envTag}`,
+      `${ws.nickname} 님 · ${label} · ${priceTag} · +${totalNewGold.toLocaleString()}G (${platform})${envTag}`,
     ).catch(() => {});
   }
 }

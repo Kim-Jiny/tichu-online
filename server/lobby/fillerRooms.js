@@ -99,6 +99,7 @@ function list() {
       spectators: room ? room.spectators.length : 0,
       // Read from the room, not a stored copy — the admin can flip it live.
       allowSpectators: room ? room.allowSpectators !== false : false,
+      isPrivate: room ? !!room.isPrivate : false,
     };
   });
 }
@@ -112,6 +113,7 @@ function create({
   botSpeed = 'normal',
   roomName,
   allowSpectators = true,
+  password = '',
 }) {
   if (!deps) return { success: false, message: 'filler rooms not initialised' };
   const name = (nickname || '').trim();
@@ -124,6 +126,8 @@ function create({
   if (!['fast', 'normal', 'slow'].includes(botSpeed)) {
     return { success: false, message: `알 수 없는 봇 속도: ${botSpeed}` };
   }
+  // Same cap the room-create path applies. Empty means a public room.
+  const roomPassword = (password || '').trim().slice(0, 20);
 
   const hostId = `filler_${nextId++}`;
   const maxPlayers = MAX_PLAYERS[gameType];
@@ -131,7 +135,10 @@ function create({
     (roomName || name).slice(0, 20),
     hostId,
     name,
-    '',      // no password: spectators must be able to walk in
+    // A password makes the room private. Spectators are then asked for it too
+    // (addSpectator validates it), which is the point — a locked filler room
+    // is one only people who were given the password can watch or enter.
+    roomPassword,
     false,   // never ranked
     30,
     1000,
@@ -174,7 +181,8 @@ function create({
   ensureTicker();
   console.log(
     `[filler] created ${room.id} "${name}" type=${gameType} bots=${botSpeed}`
-    + ` spectators=${allowSpectators !== false ? 'on' : 'off'}`,
+    + ` spectators=${allowSpectators !== false ? 'on' : 'off'}`
+    + (roomPassword ? ' private' : ''),
   );
   return { success: true, roomId: room.id };
 }

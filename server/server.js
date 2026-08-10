@@ -6659,6 +6659,18 @@ function turnTimeLimitMs(room, playerId, multiplier = 1) {
   return room.turnTimeLimit * multiplier * 1000;
 }
 
+/**
+ * Does this seat play itself? Bots do, and so does a filler room's host — its
+ * turns come from lobby/fillerRooms.js, not from a person.
+ *
+ * Used to decide whether to arm a turn clock. Without the filler case a clock
+ * was armed for a seat that never needed one, fired after fillerRooms had
+ * already moved, and landed in handleTurnTimeout's spurious-timer guard — no
+ * harm done, but a warn line every round for every filler room.
+ */
+function seatIsAutoPlayed(room, playerId) {
+  return room.isBot(playerId) || fillerRooms.isFillerHost(playerId);
+}
 function startTurnTimer(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
@@ -6671,7 +6683,7 @@ function startTurnTimer(roomId) {
     clearTurnTimer(roomId);
     // 라지 티츄 선언: 2배 시간, 응답 안 한 사람 대상
     const pending = room.game.playerIds.filter(
-      pid => room.game.largeTichuResponses[pid] === undefined && !room.isBot(pid)
+      pid => room.game.largeTichuResponses[pid] === undefined && !seatIsAutoPlayed(room, pid)
     );
     if (pending.length === 0) return;
     const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
@@ -6691,7 +6703,7 @@ function startTurnTimer(roomId) {
     clearTurnTimer(roomId);
     // 카드 교환: 2배 시간, 교환 안 한 사람 대상
     const pending = room.game.playerIds.filter(
-      pid => !room.game.exchangeDone[pid] && !room.isBot(pid)
+      pid => !room.game.exchangeDone[pid] && !seatIsAutoPlayed(room, pid)
     );
     if (pending.length === 0) return;
     const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
@@ -6710,7 +6722,7 @@ function startTurnTimer(roomId) {
     if (turnTimerPhases[roomId] === 'sk_bidding') return;
     clearTurnTimer(roomId);
     const pending = room.game.playerIds.filter(
-      pid => room.game.bids[pid] === null && !room.isBot(pid)
+      pid => room.game.bids[pid] === null && !seatIsAutoPlayed(room, pid)
     );
     if (pending.length === 0) return;
     const timeLimit = pending.every((pid) => isAbsentDuringDrain(room, pid))
@@ -6728,7 +6740,7 @@ function startTurnTimer(roomId) {
   if (room.gameType === 'mighty' && gameState === 'bidding') {
     clearTurnTimer(roomId);
     const currentPlayer = room.game.currentPlayer;
-    if (!currentPlayer || room.isBot(currentPlayer)) return;
+    if (!currentPlayer || seatIsAutoPlayed(room, currentPlayer)) return;
     const timeLimit = turnTimeLimitMs(room, currentPlayer);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
@@ -6741,7 +6753,7 @@ function startTurnTimer(roomId) {
   if (room.gameType === 'mighty' && gameState === 'kitty_exchange') {
     clearTurnTimer(roomId);
     const declarer = room.game.declarer;
-    if (!declarer || room.isBot(declarer)) return;
+    if (!declarer || seatIsAutoPlayed(room, declarer)) return;
     const timeLimit = turnTimeLimitMs(room, declarer, 2);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
@@ -6755,7 +6767,7 @@ function startTurnTimer(roomId) {
   if (room.gameType === 'mighty' && gameState === 'kill_select') {
     clearTurnTimer(roomId);
     const declarer = room.game.declarer;
-    if (!declarer || room.isBot(declarer)) return;
+    if (!declarer || seatIsAutoPlayed(room, declarer)) return;
     const timeLimit = turnTimeLimitMs(room, declarer);
     room.turnDeadline = Date.now() + timeLimit;
     turnTimers[roomId] = setTimeout(() => {
@@ -6770,7 +6782,7 @@ function startTurnTimer(roomId) {
     const eff = room.game.pendingEffect;
     if (eff && !eff.resolved) {
       const targetPlayer = eff.playerId;
-      if (!targetPlayer || room.isBot(targetPlayer)) return;
+      if (!targetPlayer || seatIsAutoPlayed(room, targetPlayer)) return;
       const timeLimit = turnTimeLimitMs(room, targetPlayer);
       room.turnDeadline = Date.now() + timeLimit;
       turnTimers[roomId] = setTimeout(() => {
@@ -6801,7 +6813,7 @@ function startTurnTimer(roomId) {
     targetPlayer = room.game.dragonDecider;
   }
   if (!targetPlayer) return;
-  if (room.isBot(targetPlayer)) return; // Bots don't need timers
+  if (seatIsAutoPlayed(room, targetPlayer)) return; // Bots don't need timers
 
   const timeLimit = turnTimeLimitMs(room, targetPlayer);
   room.turnDeadline = Date.now() + timeLimit;

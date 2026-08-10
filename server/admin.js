@@ -3464,6 +3464,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         botSpeed: body.botSpeed || 'normal',
         roomName: body.roomName || '',
         allowSpectators: body.allowSpectators !== '0',
+        password: body.password || '',
       });
       if (!result.success) {
         return html(res, layout('봇방', `
@@ -3488,7 +3489,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const list = rows.map((r) => `
       <tr>
-        <td><strong>${escapeHtml(r.nickname)}</strong></td>
+        <td><strong>${escapeHtml(r.nickname)}</strong>${r.isPrivate ? ' <span title="비공개 방">🔒</span>' : ''}</td>
         <td>${escapeHtml(GAME_LABEL[r.gameType] || r.gameType)}</td>
         <td>${escapeHtml(SPEED_LABEL[r.botSpeed] || r.botSpeed)}</td>
         <td>${r.inGame ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32">게임 중</span> <span class="muted">${escapeHtml(String(r.phase || ''))}</span>` : '<span class="badge">대기</span>'}</td>
@@ -3524,7 +3525,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         때까지 스스로 게임을 반복합니다. 실제 유저가 없는 방이므로 전적·랭킹에는 아무것도
         기록되지 않습니다. 서버를 재시작하면 사라지니 다시 추가해야 합니다.<br>
         관전 열의 버튼을 누르면 허용/차단이 즉시 바뀝니다(이미 보고 있는 사람은 그대로
-        남고, 새로 들어오려는 사람만 막힙니다). 차단하면 방 목록에서 관전 버튼도 사라집니다.
+        남고, 새로 들어오려는 사람만 막힙니다). 차단하면 방 목록에서 관전 버튼도 사라집니다.<br>
+        비밀번호를 넣으면 비공개 방이 됩니다. 관전에도 같은 비밀번호를 물어보므로,
+        아는 사람만 들여다볼 수 있는 방이 됩니다.
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -3563,6 +3566,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="1" selected>허용</option>
               <option value="0">차단</option>
             </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">비밀번호 (비우면 공개)</span>
+            <input name="password" maxlength="20" placeholder="예: 1234"
+                   style="padding:8px;border:1px solid #ddd;border-radius:8px">
           </label>
           <button type="submit" class="btn">추가</button>
         </form>

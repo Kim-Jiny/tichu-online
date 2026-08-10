@@ -1577,6 +1577,10 @@ const trickEndTimers = {}; // roomId -> setTimeout handle for skull king trick r
 // instead of stranding the room. Idempotent — see autoAckResolvedLLEffect.
 const llAckBackupTimers = {}; // roomId -> setTimeout handle
 const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer reset)
+// roomId -> the playerId a per-turn timer is armed for. Needed to re-arm the
+// same timeout after a reconnect without restarting the clock; the id is not
+// recoverable from the handle. Only set for per-turn timers, never phase ones.
+const turnTimerTargets = {};
 const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
 
 function seasonNameFromDate(date) {
@@ -4026,7 +4030,18 @@ async function handleReconnection(ws) {
         // no-ops (id != currentPlayer) while the timeout count climbs, deserting
         // the just-returned player. Clear it so sendGameStateToAll re-arms fresh
         // for the remapped current player.
+        // Carry the remaining time across the re-arm. Clearing drops the
+        // deadline, and startTurnTimer would then hand out a full fresh turn —
+        // so backgrounding the app and coming back reset the clock, and doing
+        // it repeatedly meant never having to move.
+        const carriedDeadline = room.turnDeadline;
         clearTurnTimer(room.id);
+        // Re-arm and fix the deadline BEFORE broadcasting. sendGameStateToAll
+        // arms the timer itself, so restoring afterwards left the server right
+        // and every client wrong — they had already been handed the fresh
+        // deadline and nothing sent them another.
+        startTurnTimer(room.id);
+        restoreTurnDeadline(room.id, carriedDeadline);
         // Send current room and game state
         broadcastRoomState(room.id);
         sendGameStateToAll(room.id);
@@ -6830,9 +6845,50 @@ function startTurnTimer(roomId) {
   const timeLimit = turnTimeLimitMs(room, targetPlayer);
   room.turnDeadline = Date.now() + timeLimit;
 
+  turnTimerTargets[roomId] = targetPlayer;
   turnTimers[roomId] = setTimeout(() => {
     handleTurnTimeout(roomId, targetPlayer);
   }, timeLimit);
+}
+
+/**
+ * Re-point a just-re-armed timer at the deadline it had before.
+ *
+ * A reconnect has to clear the running timer — it is armed for a playerId that
+ * no longer exists — and let the state broadcast arm a new one. That new one
+ * starts from scratch, which turns "background the app" into a free time
+ * extension, repeatable for as long as you like. Put the old deadline back and
+ * fire on what is left of it.
+ *
+ * Covers phase timers (grand tichu, exchange, SK bidding) as well as per-turn
+ * ones. A phase clock belongs to everyone still to act, so resetting it hands
+ * the extension to the whole table rather than just the returning player —
+ * the same exploit, wider.
+ */
+function restoreTurnDeadline(roomId, deadline) {
+  if (!deadline) return;
+  const room = lobby.getRoom(roomId);
+  if (!room || !turnTimers[roomId]) return;
+  const remaining = deadline - Date.now();
+  // Already past it: let the fresh timer run rather than firing instantly on
+  // someone who has only just got their screen back.
+  if (remaining <= 0) return;
+  // The new timer is already the shorter of the two — leave it be.
+  if (room.turnDeadline && room.turnDeadline <= deadline) return;
+
+  const phase = turnTimerPhases[roomId];
+  const armedFor = turnTimerTargets[roomId];
+  if (!phase && !armedFor) return;
+
+  clearTimeout(turnTimers[roomId]);
+  room.turnDeadline = deadline;
+  turnTimers[roomId] = setTimeout(() => {
+    if (phase) {
+      handlePhaseTimeout(roomId, phase);
+    } else {
+      handleTurnTimeout(roomId, armedFor);
+    }
+  }, remaining);
 }
 
 function clearTurnTimer(roomId) {
@@ -6841,6 +6897,7 @@ function clearTurnTimer(roomId) {
     delete turnTimers[roomId];
   }
   delete turnTimerPhases[roomId];
+  delete turnTimerTargets[roomId];
   const room = lobby.getRoom(roomId);
   if (room) room.turnDeadline = null;
 }

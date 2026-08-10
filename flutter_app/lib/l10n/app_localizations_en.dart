@@ -3386,11 +3386,6 @@ class L10nEn extends L10n {
   String get shopHowToEarn => 'How to Earn';
 
   @override
-  String shopDesertionCount(int count) {
-    return 'Left $count';
-  }
-
-  @override
   String get shopGoldHistory => 'Gold History';
 
   @override

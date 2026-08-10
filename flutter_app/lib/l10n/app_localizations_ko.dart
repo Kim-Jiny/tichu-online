@@ -3313,11 +3313,6 @@ class L10nKo extends L10n {
   String get shopHowToEarn => '획득 방법';
 
   @override
-  String shopDesertionCount(int count) {
-    return '탈주 $count';
-  }
-
-  @override
   String get shopGoldHistory => '골드 내역';
 
   @override

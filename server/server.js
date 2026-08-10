@@ -7611,7 +7611,15 @@ function roomSeatInfo(room) {
     photoByPid,
     isBotById,
     timeouts: timeoutCounts[room.id] || {},
-    spectators: room.spectators.map((sp) => ({ id: sp.id, nickname: sp.nickname })),
+    // Photo included: the in-game spectator list is built from HERE, not from
+    // GameRoom.getState(), so dropping it made the same list show faces in the
+    // lobby and initials once a game was running. Filtered per viewer below,
+    // the same way seats are.
+    spectators: room.spectators.map((sp) => ({
+      id: sp.id,
+      nickname: sp.nickname,
+      photoUrl: sp.photoUrl || null,
+    })),
   };
 }
 
@@ -7630,7 +7638,11 @@ function decorateSeats(ws, state, seats) {
       ...(hideTitle ? { titleName: null, titleKey: null } : {}),
     };
   });
-  state.spectators = seats.spectators;
+  state.spectators = seats.spectators.map((sp) => (
+    sp.photoUrl
+      ? { ...sp, photoUrl: visiblePhoto(ws, sp.nickname, sp.photoUrl) }
+      : sp
+  ));
   state.spectatorCount = seats.spectators.length;
   return state;
 }

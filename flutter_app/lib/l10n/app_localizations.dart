@@ -6105,12 +6105,6 @@ abstract class L10n {
   /// **'How to Earn'**
   String get shopHowToEarn;
 
-  /// No description provided for @shopDesertionCount.
-  ///
-  /// In en, this message translates to:
-  /// **'Left {count}'**
-  String shopDesertionCount(int count);
-
   /// No description provided for @shopGoldHistory.
   ///
   /// In en, this message translates to:

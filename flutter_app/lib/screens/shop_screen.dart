@@ -292,32 +292,12 @@ class _ShopScreenState extends State<ShopScreen> {
               // Everything in here is bought for one's own profile, and until
               // now there was no way to look at it from the shop — you had to
               // leave, find a seat with your name on it and tap that.
+              // The desertion count and the refresh button used to sit here,
+              // squeezing the avatar into a 26px dot. Neither earned the
+              // space: the count is on the profile this button opens, and the
+              // shop refetches itself on open and after every purchase — the
+              // button existed for a staleness that does not happen.
               _buildMyProfileButton(game),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Color(0xFFE57373),
-                size: 16,
-              ),
-              const SizedBox(width: 3),
-              Text(
-                l10n.shopDesertionCount(game.leaveCount),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF9A6A6A),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  game.requestWallet();
-                  game.requestShopItems();
-                  game.requestInventory();
-                },
-                icon: const Icon(Icons.refresh, size: 20),
-                color: const Color(0xFF8A7A72),
-                visualDensity: VisualDensity.compact,
-              ),
             ],
           ),
           Padding(
@@ -426,7 +406,7 @@ class _ShopScreenState extends State<ShopScreen> {
         borderRadius: BorderRadius.circular(999),
         onTap: () => showPlayerProfileDialog(context, nickname, game),
         child: Padding(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(2),
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -434,10 +414,10 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
             child: ProfileAvatar(
               photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
-              size: 26,
+              size: 40,
               fallback: Container(
-                width: 26,
-                height: 26,
+                width: 40,
+                height: 40,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF0E7E3),
                   shape: BoxShape.circle,
@@ -445,7 +425,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 alignment: Alignment.center,
                 child: const Icon(
                   Icons.person,
-                  size: 16,
+                  size: 24,
                   color: Color(0xFF9C8B84),
                 ),
               ),

@@ -1069,7 +1069,6 @@
   "shopTitle": "Shop",
   "shopGoldAmount": "{gold} Gold",
   "shopHowToEarn": "So verdienst du",
-  "shopDesertionCount": "Verlassen {count}",
   "shopGoldHistory": "Gold-Verlauf",
   "shopGoldCurrent": "Aktuelles Gold: {gold}",
   "shopGoldHistoryDesc": "Zeigt Spielergebnisse, Werbebelohnungen, Shop-Käufe und Saisonbelohnungen in chronologischer Reihenfolge.",

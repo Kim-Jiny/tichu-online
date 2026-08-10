@@ -1812,14 +1812,6 @@
     }
   },
   "shopHowToEarn": "How to Earn",
-  "shopDesertionCount": "Left {count}",
-  "@shopDesertionCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "shopGoldHistory": "Gold History",
   "shopGoldCurrent": "Current gold: {gold}",
   "@shopGoldCurrent": {

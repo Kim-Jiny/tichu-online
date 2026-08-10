@@ -1059,7 +1059,6 @@
   "shopTitle": "상점",
   "shopGoldAmount": "{gold} 골드",
   "shopHowToEarn": "획득 방법",
-  "shopDesertionCount": "탈주 {count}",
   "shopGoldHistory": "골드 내역",
   "shopGoldCurrent": "현재 보유 골드 {gold}",
   "shopGoldHistoryDesc": "게임 결과, 광고 보상, 상점 구매, 시즌 보상 내역을 최근 순으로 보여줍니다.",

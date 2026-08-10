@@ -787,10 +787,28 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           76.0,
           kIsWeb ? 180.0 : 108.0,
         );
+        // Every seat goes through the scaling wrapper, including the top and
+        // bottom ones. They used to be built at natural size and dropped
+        // straight into the Column: fine on a tall phone, but on a screen that
+        // is wide and short — a fold opened flat — the seat is taller than the
+        // band left for it and the card-view button spilled out the bottom
+        // ("BOTTOM OVERFLOWED BY 69 PIXELS"). scaleDown is a no-op when the
+        // seat already fits, so nothing changes on a phone.
+        //
+        // The band is capped too. Given free height these seats would eat the
+        // screen and leave the trick area nothing.
+        final endSeatHeight = (constraints.maxHeight * 0.30).clamp(96.0, 190.0);
         return Column(
           children: [
             if (players.length > 2)
-              _buildPlayerSection(game, players[2], currentPlayer),
+              SizedBox(
+                height: endSeatHeight,
+                child: _buildScaledPlayerSection(
+                  game,
+                  players[2],
+                  currentPlayer,
+                ),
+              ),
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -798,7 +816,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   if (players.length > 3)
                     SizedBox(
                       width: sideWidth,
-                      child: _buildPlayerSection(
+                      child: _buildScaledPlayerSection(
                         game,
                         players[3],
                         currentPlayer,
@@ -815,7 +833,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   if (players.length > 1)
                     SizedBox(
                       width: sideWidth,
-                      child: _buildPlayerSection(
+                      child: _buildScaledPlayerSection(
                         game,
                         players[1],
                         currentPlayer,
@@ -826,7 +844,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ),
             ),
             if (players.isNotEmpty)
-              _buildPlayerSection(game, players[0], currentPlayer),
+              SizedBox(
+                height: endSeatHeight,
+                child: _buildScaledPlayerSection(
+                  game,
+                  players[0],
+                  currentPlayer,
+                ),
+              ),
           ],
         );
       },
@@ -844,8 +869,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       builder: (context, constraints) {
         final cramped = constraints.maxHeight < 390;
         final compact = constraints.maxHeight < 520;
+        // A fold opened flat measures about 841x600 logical: barely taller
+        // than a phone in landscape, but nearly twice as wide. Sizing the
+        // seats off height alone spent none of that — the side seats stayed at
+        // 86pt and the top and bottom ones were squeezed into a 92pt band, so
+        // a ~190pt seat was scaled to half size on the roomiest screen we
+        // support. Let a wide board buy width for the seats.
+        final wideBoard = constraints.maxWidth > 700;
         final sideWidth = cramped
             ? 72.0
+            : wideBoard
+            ? 150.0
             : (constraints.maxHeight > 620 ? 104.0 : 86.0);
         // A full-size seat (56px avatar + name + badges + the card-view button)
         // wants roughly 170px. The old ceiling stopped at 108 even when the
@@ -854,8 +888,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // profile box, and the bottom seat ran off the viewport. Phone
         // landscape is unaffected — it stays under the 700px threshold and keeps
         // the tighter caps.
+        // Same idea for the top and bottom bands. They cannot grow as freely —
+        // the trick area needs the middle — but 92pt was punishing on a board
+        // with 600pt to divide.
         final slotCeiling = constraints.maxHeight > 700
             ? 240.0
+            : wideBoard
+            ? 150.0
             : (constraints.maxHeight > 620 ? 108.0 : 92.0);
         final playerSlotHeight =
             (constraints.maxHeight * (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
@@ -957,11 +996,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Width only. A maxHeight here defeated the FittedBox below: the seat
+        // was forced into the band's height and overflowed *inside* that clamp
+        // ("BOTTOM OVERFLOWED BY 69 PIXELS"), leaving FittedBox no natural
+        // height to measure and nothing to scale. Unbounded vertically, the
+        // seat lays out at its true size and the FittedBox shrinks it to fit.
         final child = ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: constraints.maxWidth,
-            maxHeight: constraints.maxHeight,
-          ),
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
           child: _buildPlayerSection(
             game,
             player,
@@ -981,7 +1022,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         return Align(
           alignment: Alignment.center,
           child: FittedBox(
-            fit: BoxFit.scaleDown,
+            // contain, not scaleDown: scaleDown only ever shrinks, so on a
+            // tablet or an unfolded phone the seat stayed at its phone size in
+            // the middle of a band twice as tall. Shrinking behaves the same as
+            // before, which is what phones do.
+            fit: BoxFit.contain,
             alignment: Alignment.center,
             child: child,
           ),
@@ -1149,6 +1194,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     ],
                   ),
                 ),
+                // The landscape bar is a single row, so this goes inline —
+                // the portrait branch puts it on its own line instead. It was
+                // only ever added there, which is why a fold (landscape by
+                // default) had no way to break into a match at all.
+                if (game.canJoinInProgress) ...[
+                  const SizedBox(width: 6),
+                  MidGameJoinButton(game: game),
+                ],
                 const SizedBox(width: 6),
                 _buildSpectatorButton(game),
                 const SizedBox(width: 4),

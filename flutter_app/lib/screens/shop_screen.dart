@@ -18,10 +18,11 @@ import 'gold_shop_screen.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import '../widgets/store_link.dart';
 
-/// Width at which the shop list splits into two columns. Chosen so a phone in
-/// landscape stays single-column (its rows are still short) and a desktop
-/// browser window does not.
-const double _kShopTwoColumnWidth = 720;
+/// Below this the list stays single-column whatever the shape.
+///
+/// Landscape alone is not enough — a small phone turned sideways is wider than
+/// it is tall but each half would be too narrow to hold a row.
+const double _kShopTwoColumnMinWidth = 560;
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
@@ -1176,7 +1177,13 @@ class _ShopScreenState extends State<ShopScreen> {
     );
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < _kShopTwoColumnWidth) {
+        // Shape, not just width. A fold opened flat is around 2200x1768 —
+        // wider than tall, but under the old 720px cut-off, so it kept the
+        // one-column list a phone gets and wasted the second half of the
+        // screen. Landscape-ish AND wide enough is the test.
+        final wideEnough = constraints.maxWidth >= _kShopTwoColumnMinWidth;
+        final landscapeish = constraints.maxWidth > constraints.maxHeight;
+        if (!wideEnough || !landscapeish) {
           return ListView.separated(
             padding: const EdgeInsets.only(bottom: 24),
             itemCount: entries.length,

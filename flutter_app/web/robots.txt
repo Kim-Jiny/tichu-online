@@ -1,0 +1,5 @@
+# Everything here is one page; there is nothing to keep out.
+User-agent: *
+Allow: /
+
+Sitemap: https://tichu.kr/sitemap.xml

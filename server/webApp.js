@@ -35,6 +35,10 @@ const CONTENT_TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
+  // robots.txt and sitemap.xml. Without these two a crawler is handed the
+  // fallback type and may not treat the sitemap as a sitemap at all.
+  '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',

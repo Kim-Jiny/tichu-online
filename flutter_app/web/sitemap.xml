@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One entry, because the app is one page: the client routes in the browser and
+  never asks the server for another URL. /support, /privacy and /terms are
+  server-rendered pages that do exist as their own documents, so they are
+  listed too — they are also the only pages on this domain with real prose in
+  the HTML, which makes them worth crawling.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://tichu.kr/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/support?lang=ko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/privacy?lang=ko</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/terms?lang=ko</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

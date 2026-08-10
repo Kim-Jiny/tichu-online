@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,7 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임. 설치 없이 브라우저에서 바로 시작하세요.">
+  <meta name="description" content="티츄(Tichu), 마이티(Mighty), 스컬킹(Skull King), 러브레터(Love Letter)를 친구들과 온라인으로. 설치 없이 브라우저에서 바로 시작하는 멀티플레이 카드게임.">
 
   <!-- Safari's Smart App Banner. A meta tag, NOT a universal link: it draws a
        dismissible bar at the top of the page offering to open the app, and
@@ -63,6 +63,14 @@
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png"/>
 
   <title>Tichu Online — 티츄 · 마이티 · 스컬킹 · 러브레터 멀티플레이 카드게임</title>
+
+  <!-- One address for one page. tichu.jiny.shop answers with this same app
+       (it has to: older app binaries have that host compiled in — see
+       docs/DOMAIN_MIGRATION.md), so without this a search engine sees two
+       competing copies and splits whatever ranking they earn between them.
+       tichu.kr is the one to keep. -->
+  <link rel="canonical" href="https://tichu.kr/">
+  <meta property="og:url" content="https://tichu.kr/">
   <link rel="manifest" href="manifest.json">
 
   <!-- Structured data, so a search result can show the game rather than a
@@ -72,11 +80,22 @@
     "@context": "https://schema.org",
     "@type": "VideoGame",
     "name": "Tichu Online",
+    "alternateName": ["티츄 온라인", "티츄", "Tichu"],
+    "url": "https://tichu.kr/",
     "inLanguage": "ko",
     "genre": "카드게임",
     "gamePlatform": ["Web", "Android", "iOS"],
     "playMode": "MultiPlayer",
-    "description": "티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임."
+    "applicationCategory": "Game",
+    "operatingSystem": "Web, Android, iOS",
+    "description": "티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임.",
+    "keywords": "티츄, 티츄 온라인, Tichu, 마이티, 마이티 게임, 스컬킹, Skull King, 러브레터, Love Letter, 온라인 카드게임, 멀티플레이 카드게임",
+    "gameItem": [
+      { "@type": "Thing", "name": "티츄", "alternateName": "Tichu" },
+      { "@type": "Thing", "name": "마이티", "alternateName": "Mighty" },
+      { "@type": "Thing", "name": "스컬킹", "alternateName": "Skull King" },
+      { "@type": "Thing", "name": "러브레터", "alternateName": "Love Letter" }
+    ]
   }
   </script>
 
@@ -108,6 +127,27 @@
   </style>
 </head>
 <body>
+  <!-- The only text on this page. Everything else is drawn into a canvas by
+       Flutter, which a crawler can render but cannot read as prose, so a
+       search for 티츄 had no words here to match. Hidden from sight, not from
+       crawlers — it duplicates what the game itself says on screen. -->
+  <div id="seo-copy" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">
+    <h1>티츄 온라인 (Tichu Online)</h1>
+    <p>
+      티츄(Tichu), 마이티(Mighty), 스컬킹(Skull King), 러브레터(Love Letter)를
+      친구들과 함께 즐기는 온라인 멀티플레이 카드게임입니다. 설치 없이
+      브라우저에서 바로 플레이할 수 있고, 안드로이드와 iOS 앱도 있습니다.
+      랭크전, 봇 대전, 관전, 채팅을 지원합니다.
+    </p>
+    <h2>지원 게임</h2>
+    <ul>
+      <li>티츄 — 4인 2:2 팀 카드게임</li>
+      <li>마이티 — 5인 트릭테이킹 카드게임</li>
+      <li>스컬킹 — 최대 6인 예측 트릭테이킹 게임</li>
+      <li>러브레터 — 2~4인 추리 카드게임</li>
+    </ul>
+  </div>
+
   <script>
     // Built with --pwa-strategy=none, but a browser that visited an earlier
     // build still has that service worker registered and will keep serving its

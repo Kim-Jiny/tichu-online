@@ -31,7 +31,7 @@ const {
   createBankDeposit, countPendingBankDeposits,
   getConsumptionSnapshot, recordConsumptionRequest, listConsumptionRequests,
   getAttendanceState, claimAttendance,
-  incrementLeaveCount, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
+  incrementLeaveCount, logMidGameLeave, setRankedBan, getRankedBan, setChatBan, getChatBan, grantSeasonRewards,
   getActiveSeason, createSeason, getSeasons, getConfig, getLocalizedConfig, updateConfig,
   getCurrentSeasonRankings, getSeasonRankings, resetSeasonStats,
   loginSocial, registerSocial,
@@ -1530,7 +1530,16 @@ const pendingArrivals = new Map();
 // another one. Rate-limits both directions of the mid-game seat swap: without
 // it, walking out and re-entering is free (dodge a bad hand, come back on the
 // next deal) and seat-hopping between rooms costs nothing.
-const MID_GAME_JOIN_COOLDOWN_MS = 5 * 60 * 1000;
+//
+// Overridable so a local test can shorten it (MID_GAME_JOIN_COOLDOWN_MS=20000
+// node server.js) without editing a constant that then has to be remembered
+// and put back before a deploy. Production sets nothing and gets 5 minutes.
+// Note the client's warning text says "5분" from its own constant, so a
+// shortened window will read wrong in the dialog — expected while testing.
+const MID_GAME_JOIN_COOLDOWN_MS = diagNumberEnv(
+  'MID_GAME_JOIN_COOLDOWN_MS',
+  5 * 60 * 1000,
+);
 // nickname -> epoch ms at which they may join a match in progress again. Keyed
 // by nickname, not playerId: ids are reminted on every reconnect, so a
 // playerId key would be a cooldown you clear by pulling the network cable.
@@ -7167,6 +7176,23 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
       // Recording is the same as any desertion — see the note there. Awaited
       // after the seat is already a bot's, so a DB blip can't strand the room.
       await recordDesertionAgainst(room, playerId, handedOff.nickname, options);
+      // And leave a trace in their history. The match carries on, so no match
+      // row will ever mention them: when it finally ends, the roster saved is
+      // the one that finished, with a bot in this seat. Without this the
+      // departure is invisible in the profile — only the bare leave_count
+      // moves, and nothing says which game it came from.
+      if (options.penalize !== false && handedOff.nickname) {
+        try {
+          await logMidGameLeave({
+            nickname: handedOff.nickname,
+            gameType: room.gameType,
+            reason,
+            roomName: room.name,
+          });
+        } catch (e) {
+          console.error(`[MIDLEAVE] history log failed for ${handedOff.nickname}:`, e);
+        }
+      }
       return;
     }
     // Fell through: they were the last human. A table of bots playing to an

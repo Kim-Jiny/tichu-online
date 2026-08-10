@@ -8384,6 +8384,42 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'{player} walked out — {bot} is taking over'**
   String midJoinNoticeLeft(String player, String bot);
+
+  /// No description provided for @midLeaveHistoryBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Walked out'**
+  String get midLeaveHistoryBadge;
+
+  /// No description provided for @midLeaveByTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed out'**
+  String get midLeaveByTimeout;
+
+  /// No description provided for @midLeaveByChoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get midLeaveByChoice;
+
+  /// No description provided for @lobbyRoomRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Room rules'**
+  String get lobbyRoomRules;
+
+  /// No description provided for @lobbyAppliesImmediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies immediately'**
+  String get lobbyAppliesImmediately;
+
+  /// No description provided for @lobbyRoomWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get lobbyRoomWaiting;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

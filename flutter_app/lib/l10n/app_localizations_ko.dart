@@ -4601,4 +4601,22 @@ class L10nKo extends L10n {
   String midJoinNoticeLeft(String player, String bot) {
     return '$player님이 중도탈주하여 $bot이(가) 대신합니다';
   }
+
+  @override
+  String get midLeaveHistoryBadge => '중도탈주';
+
+  @override
+  String get midLeaveByTimeout => '시간 초과';
+
+  @override
+  String get midLeaveByChoice => '직접 나감';
+
+  @override
+  String get lobbyRoomRules => '방 규칙';
+
+  @override
+  String get lobbyAppliesImmediately => '바로 적용됩니다';
+
+  @override
+  String get lobbyRoomWaiting => '대기 중';
 }

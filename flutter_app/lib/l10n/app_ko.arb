@@ -1653,5 +1653,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "midLeaveHistoryBadge": "중도탈주",
+  "midLeaveByTimeout": "시간 초과",
+  "midLeaveByChoice": "직접 나감",
+  "lobbyRoomRules": "방 규칙",
+  "lobbyAppliesImmediately": "바로 적용됩니다",
+  "lobbyRoomWaiting": "대기 중"
 }

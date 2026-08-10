@@ -4748,4 +4748,22 @@ class L10nDe extends L10n {
   String midJoinNoticeLeft(String player, String bot) {
     return '$player ist ausgestiegen — $bot übernimmt';
   }
+
+  @override
+  String get midLeaveHistoryBadge => 'Ausgestiegen';
+
+  @override
+  String get midLeaveByTimeout => 'Zeit abgelaufen';
+
+  @override
+  String get midLeaveByChoice => 'Selbst verlassen';
+
+  @override
+  String get lobbyRoomRules => 'Raumregeln';
+
+  @override
+  String get lobbyAppliesImmediately => 'Wird sofort übernommen';
+
+  @override
+  String get lobbyRoomWaiting => 'Wartet';
 }

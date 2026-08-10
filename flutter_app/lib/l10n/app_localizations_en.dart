@@ -4712,4 +4712,22 @@ class L10nEn extends L10n {
   String midJoinNoticeLeft(String player, String bot) {
     return '$player walked out — $bot is taking over';
   }
+
+  @override
+  String get midLeaveHistoryBadge => 'Walked out';
+
+  @override
+  String get midLeaveByTimeout => 'Timed out';
+
+  @override
+  String get midLeaveByChoice => 'Left';
+
+  @override
+  String get lobbyRoomRules => 'Room rules';
+
+  @override
+  String get lobbyAppliesImmediately => 'Applies immediately';
+
+  @override
+  String get lobbyRoomWaiting => 'Waiting';
 }

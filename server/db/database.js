@@ -219,6 +219,29 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_match_history ADD COLUMN IF NOT EXISTS end_reason VARCHAR(20) DEFAULT 'normal'`);
     await client.query(`ALTER TABLE tc_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50) DEFAULT NULL`);
 
+    // Walking out of a match that KEEPS RUNNING (mid-game-join rooms: a bot
+    // inherits the seat). None of the per-game match tables can hold this:
+    // they get one row when a match ends, carry a single deserter_nickname,
+    // and list the roster as it stood at the end — which no longer includes
+    // whoever left. So the departure had no home and simply vanished from the
+    // leaver's history. One row per departure, written the moment it happens,
+    // which is also what makes leaving three times in one match show up three
+    // times instead of collapsing into the match's single deserter slot.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_midleave_log (
+        id SERIAL PRIMARY KEY,
+        nickname VARCHAR(50) NOT NULL,
+        game_type VARCHAR(20) NOT NULL,
+        reason VARCHAR(20) NOT NULL DEFAULT 'leave',
+        room_name VARCHAR(60),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_tc_midleave_log_nickname_created
+         ON tc_midleave_log (nickname, created_at DESC)`,
+    );
+
     // User stats columns
     // Snapshot of the target's profile photo at the moment of the report.
     // Report-side hiding keys off this (a NEW photo shows again), and the
@@ -2739,7 +2762,37 @@ async function getRecentMatches(nickname, limit = 5) {
     // profile popup filters by the selected game tab, and a global slice
     // would let the most-played mode crowd out other modes' recent matches
     // (making less-played tabs look empty / "wiped"). Per-type cap stands.
-    const all = [...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches];
+    // Walk-outs from matches that kept running. They have no match row of
+    // their own — the match may still be in progress, and when it does end the
+    // leaver is not on the roster — so they come from their own log and are
+    // merged in by time like any other entry. Marked isMidGameLeave so the
+    // client renders them as an event ("walked out of a Tichu game") rather
+    // than trying to read a score off them.
+    const midLeaveResult = await client.query(
+      `SELECT id, game_type, reason, room_name, created_at
+         FROM tc_midleave_log
+        WHERE nickname = $1 AND created_at >= $3
+        ORDER BY created_at DESC
+        LIMIT $2`,
+      [nickname, limit, since],
+    );
+    const midLeaves = midLeaveResult.rows.map((row) => ({
+      id: row.id,
+      gameType: row.game_type,
+      isMidGameLeave: true,
+      // It is a desertion on your record; it just didn't decide a match.
+      isDesertionLoss: true,
+      won: false,
+      isDraw: false,
+      endReason: row.reason === 'timeout' ? 'mid_leave_timeout' : 'mid_leave',
+      deserterNickname: nickname,
+      roomName: row.room_name,
+      createdAt: row.created_at,
+    }));
+
+    const all = [
+      ...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches, ...midLeaves,
+    ];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     return all;
   } catch (err) {
@@ -3987,6 +4040,31 @@ async function getChatBan(nickname) {
 }
 
 // Increment leave count (ranked quit)
+/**
+ * Log a walk-out from a match that carried on without the leaver.
+ *
+ * Separate from incrementLeaveCount (the running tally) because this is the
+ * evidence behind the tally — the tally alone can't say which game, when, or
+ * whether it was a deliberate exit or three timeouts.
+ */
+async function logMidGameLeave({ nickname, gameType, reason, roomName }) {
+  if (!nickname) return { success: false };
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO tc_midleave_log (nickname, game_type, reason, room_name)
+       VALUES ($1, $2, $3, $4)`,
+      [nickname, gameType || 'tichu', reason || 'leave', roomName || null],
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Log mid-game leave error:', err);
+    return { success: false };
+  } finally {
+    client.release();
+  }
+}
+
 async function incrementLeaveCount(nickname) {
   const client = await pool.connect();
   try {
@@ -9099,6 +9177,7 @@ module.exports = {
   useItem,
   changeNickname,
   incrementLeaveCount,
+  logMidGameLeave,
   getReportedNicknames,
   setRankedBan,
   getRankedBan,

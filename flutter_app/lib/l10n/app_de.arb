@@ -1655,5 +1655,11 @@
         "type": "String"
       }
     }
-  }
+  },
+  "midLeaveHistoryBadge": "Ausgestiegen",
+  "midLeaveByTimeout": "Zeit abgelaufen",
+  "midLeaveByChoice": "Selbst verlassen",
+  "lobbyRoomRules": "Raumregeln",
+  "lobbyAppliesImmediately": "Wird sofort übernommen",
+  "lobbyRoomWaiting": "Wartet"
 }

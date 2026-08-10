@@ -812,9 +812,21 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
 
+    // A walk-out from a match that kept running. It has no score and no final
+    // roster — the match may not even be over — so it is an event in the
+    // history, not a result. Checked before the win/loss badges because those
+    // would otherwise label it a plain loss.
+    final isMidGameLeave = match['isMidGameLeave'] == true;
+
     final Color badgeColor;
     final String badgeText;
-    if (isDesertionLoss) {
+    if (isMidGameLeave) {
+      // Same single glyph as a desertion — it IS one — with orange standing in
+      // for the difference. The badge is a 24px circle, so the distinction has
+      // to be carried by colour; the word itself is on the detail line.
+      badgeColor = const Color(0xFFFF8A65);
+      badgeText = l10n.lobbyMatchDesertion;
+    } else if (isDesertionLoss) {
       badgeColor = const Color(0xFFFFB74D);
       badgeText = l10n.lobbyMatchDesertion;
     } else if (isDraw) {
@@ -832,7 +844,23 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final isMighty = gameType == 'mighty';
     final String scoreText;
     final String playerText;
-    if (isMighty || isSK || isLL) {
+    if (isMidGameLeave) {
+      // No score exists. The useful detail is which room, and whether they
+      // chose to go or ran out the clock three times.
+      scoreText = '';
+      final reason = match['endReason'] == 'mid_leave_timeout'
+          ? l10n.midLeaveByTimeout
+          : l10n.midLeaveByChoice;
+      final roomName = match['roomName']?.toString() ?? '';
+      // Leads with the word the orange circle can't spell, then how it
+      // happened, then which room — least identifying part last, since this
+      // line ellipsizes.
+      playerText = [
+        l10n.midLeaveHistoryBadge,
+        reason,
+        if (roomName.isNotEmpty) roomName,
+      ].join(' · ');
+    } else if (isMighty || isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;

@@ -4754,12 +4754,5 @@ class L10nDe extends L10n {
   String get lobbyRoomWaiting => 'Wartet';
 
   @override
-  String get getTheAppTitle => 'In der App verfügbar';
-
-  @override
-  String get attendanceAppOnlySubtitle => 'In der App verfügbar';
-
-  @override
-  String get attendanceAppOnlyBody =>
-      'Der tägliche Check-in gibt es nur in der App. Die Belohnung wird durch das Ansehen einer Werbung finanziert, und die Web-Version hat keine Werbung. Installieren Sie die App, um täglich Gold zu erhalten.';
+  String get attendanceAppOnlyCta => 'In der App verfügbar';
 }

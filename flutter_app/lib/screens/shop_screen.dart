@@ -15,6 +15,7 @@ import '../widgets/title_chip.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import '../widgets/store_link.dart';
 
 /// Width at which the shop list splits into two columns. Chosen so a phone in
@@ -1149,28 +1150,38 @@ class _ShopScreenState extends State<ShopScreen> {
     // Hairline separators, not gaps between cards: on the sheet these read as
     // one list, and dropping the per-item border + margin fits ~2 more rows on
     // a phone screen.
-    Widget tile(List<Map<String, dynamic>> g) => g.length == 1
-        ? _buildShopRow(context, game, g.first)
-        : _buildGroupedFeatureCard(context, game, g);
+    return _buildResponsiveItemList<List<Map<String, dynamic>>>(
+      ordered,
+      (g) => g.length == 1
+          ? _buildShopRow(context, game, g.first)
+          : _buildGroupedFeatureCard(context, game, g),
+    );
+  }
 
+  /// One column on a phone, two once the window is wide enough.
+  ///
+  /// A landscape browser window gave each row the full width of the screen, so
+  /// a one-line item stretched a metre wide with its price marooned at the far
+  /// edge — and the list still needed scrolling for what would have fit.
+  ///
+  /// Shared by the shop and the inventory: they are the same list with
+  /// different rows, and the split has to look identical in both.
+  Widget _buildResponsiveItemList<T>(List<T> entries, Widget Function(T) tile) {
+    const separator = Divider(
+      height: 1,
+      thickness: 1,
+      indent: 16,
+      endIndent: 16,
+      color: Color(0xFFF2ECE9),
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
-        // A landscape browser window gave each row the full width of the
-        // screen, so a one-line item stretched a metre wide with its price
-        // marooned at the far edge — and the list needed scrolling for what
-        // would have fit. Past this width, two columns.
         if (constraints.maxWidth < _kShopTwoColumnWidth) {
           return ListView.separated(
             padding: const EdgeInsets.only(bottom: 24),
-            itemCount: ordered.length,
-            separatorBuilder: (_, _) => const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 16,
-              endIndent: 16,
-              color: Color(0xFFF2ECE9),
-            ),
-            itemBuilder: (context, index) => tile(ordered[index]),
+            itemCount: entries.length,
+            separatorBuilder: (_, _) => separator,
+            itemBuilder: (context, index) => tile(entries[index]),
           );
         }
 
@@ -1178,25 +1189,18 @@ class _ShopScreenState extends State<ShopScreen> {
         // height (a grouped feature card is several times a plain row), and
         // halving the list by count leaves one column much longer than the
         // other. Alternating keeps the two ends roughly level.
-        final left = <List<Map<String, dynamic>>>[];
-        final right = <List<Map<String, dynamic>>>[];
-        for (var i = 0; i < ordered.length; i++) {
-          (i.isEven ? left : right).add(ordered[i]);
+        final left = <T>[];
+        final right = <T>[];
+        for (var i = 0; i < entries.length; i++) {
+          (i.isEven ? left : right).add(entries[i]);
         }
 
-        Widget column(List<List<Map<String, dynamic>>> groups) => Column(
+        Widget column(List<T> group) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (var i = 0; i < groups.length; i++) ...[
-              if (i > 0)
-                const Divider(
-                  height: 1,
-                  thickness: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Color(0xFFF2ECE9),
-                ),
-              tile(groups[i]),
+            for (var i = 0; i < group.length; i++) ...[
+              if (i > 0) separator,
+              tile(group[i]),
             ],
           ],
         );
@@ -1208,8 +1212,8 @@ class _ShopScreenState extends State<ShopScreen> {
             children: [
               Expanded(child: column(left)),
               // A plain gap, not a VerticalDivider: the Row sits in a scroll
-              // view so its height is unbounded, and the divider's
-              // full-height rule has nothing to measure against.
+              // view so its height is unbounded, and the divider's full-height
+              // rule has nothing to measure against.
               const SizedBox(width: 20),
               Expanded(child: column(right)),
             ],
@@ -1753,18 +1757,9 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 24),
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const Divider(
-        height: 1,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: Color(0xFFF2ECE9),
-      ),
-      itemBuilder: (context, index) =>
-          _buildInventoryItem(context, items[index]),
+    return _buildResponsiveItemList<Map<String, dynamic>>(
+      items,
+      (item) => _buildInventoryItem(context, item),
     );
   }
 
@@ -4080,19 +4075,6 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildAttendanceTile(GameService game) {
     final s = game.attendanceState!;
-    final l10nWeb = L10n.of(context);
-    if (kIsWeb) {
-      return _buildRewardTile(
-        gradient: const [Color(0xFFB9AEE0), Color(0xFF7E6FBF)],
-        icon: Icons.phone_iphone,
-        title: l10nWeb.attendanceBannerTitle((s['todayDay'] as int?) ?? 1),
-        subtitle: l10nWeb.attendanceAppOnlySubtitle,
-        onTap: () => showGetTheAppDialog(
-          context,
-          body: l10nWeb.attendanceAppOnlyBody,
-        ),
-      );
-    }
     final claimed = s['claimedToday'] == true;
     final reward = (s['todayRewardGold'] as int?) ?? 50;
     final day = (s['todayDay'] as int?) ?? 1;
@@ -4160,137 +4142,167 @@ class _ShopScreenState extends State<ShopScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.event_available,
-                        color: Color(0xFFFFA000),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l.attendanceDialogTitle,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF5A4038),
-                          ),
+            // Capped, not free-sizing. Dialog lets its child take whatever
+            // width is on offer, and the rows inside are Expanded — so on a
+            // desktop browser the seven-day strip stretched across the whole
+            // window. A phone is narrower than this cap, so nothing about the
+            // app layout changes.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.event_available,
+                          color: Color(0xFFFFA000),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(dialogCtx),
-                        icon: const Icon(Icons.close),
-                        color: const Color(0xFF8A7A72),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l.attendanceResetInfo(resetClock),
-                    style: const TextStyle(
-                      color: Color(0xFF8A7A72),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  // 7-day grid (4 + 3)
-                  GridView.count(
-                    crossAxisCount: 4,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 0.82,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    children: List.generate(7, (i) {
-                      final day = i + 1;
-                      final reward = rewards.length > i ? rewards[i] : 50;
-                      final isClaimed = day <= cycleClaimed;
-                      final isToday = !claimedToday && day == todayDay;
-                      final isFinale = day == 7;
-                      return _attendanceDayCell(
-                        day,
-                        reward,
-                        isClaimed,
-                        isToday,
-                        isFinale,
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  if (claimedToday)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        l.attendanceDoneToday,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF2E7D32),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    )
-                  else
-                    // Reacts to the attendance ad becoming ready (ValueNotifier)
-                    // so the button stays DISABLED — showing a loading state —
-                    // until the rewarded ad has loaded, then enables. Avoids the
-                    // old "tap → ad not ready" dead-end.
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _attendanceAdReady,
-                      builder: (context, adReady, _) {
-                        // Disable on: claim in flight, state refresh in flight
-                        // (avoid wasting the ad on a stale claimedToday about to
-                        // flip), already claimed, or the ad not yet loaded.
-                        final busy =
-                            g.attendanceClaiming || g.attendanceLoading;
-                        final claimed =
-                            g.attendanceState?['claimedToday'] == true;
-                        final enabled = adReady && !busy && !claimed;
-                        return ElevatedButton.icon(
-                          onPressed: enabled ? () => _attendanceClaim(g) : null,
-                          icon: (!adReady && !busy && !claimed)
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.play_circle_outline),
-                          label: Text(
-                            busy
-                                ? l.attendanceClaiming
-                                : !adReady
-                                ? l.attendanceAdLoading
-                                : l.attendanceWatchAdAndClaim(
-                                    (s['todayRewardGold'] as int?) ?? 50,
-                                  ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFB300),
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0xFFFFD180),
-                            disabledForegroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(48),
-                            textStyle: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l.attendanceDialogTitle,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF5A4038),
                             ),
                           ),
-                        );
-                      },
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(dialogCtx),
+                          icon: const Icon(Icons.close),
+                          color: const Color(0xFF8A7A72),
+                        ),
+                      ],
                     ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      l.attendanceResetInfo(resetClock),
+                      style: const TextStyle(
+                        color: Color(0xFF8A7A72),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    // 7-day grid (4 + 3)
+                    GridView.count(
+                      crossAxisCount: 4,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 0.82,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      children: List.generate(7, (i) {
+                        final day = i + 1;
+                        final reward = rewards.length > i ? rewards[i] : 50;
+                        final isClaimed = day <= cycleClaimed;
+                        final isToday = !claimedToday && day == todayDay;
+                        final isFinale = day == 7;
+                        return _attendanceDayCell(
+                          day,
+                          reward,
+                          isClaimed,
+                          isToday,
+                          isFinale,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 16),
+                    if (claimedToday)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          l.attendanceDoneToday,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFF2E7D32),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      )
+                    else if (kIsWeb)
+                      // Everything above is the same as in the app — which day,
+                      // what today pays, the week's rewards. Only the action
+                      // changes, because claiming happens in the app.
+                      ElevatedButton.icon(
+                        onPressed: () => openStoreUrl(
+                          storeChoicesFor(defaultTargetPlatform).first.url,
+                        ),
+                        icon: const Icon(Icons.phone_iphone),
+                        label: Text(l.attendanceAppOnlyCta),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFB300),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(48),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    else
+                      // Reacts to the attendance ad becoming ready (ValueNotifier)
+                      // so the button stays DISABLED — showing a loading state —
+                      // until the rewarded ad has loaded, then enables. Avoids the
+                      // old "tap → ad not ready" dead-end.
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _attendanceAdReady,
+                        builder: (context, adReady, _) {
+                          // Disable on: claim in flight, state refresh in flight
+                          // (avoid wasting the ad on a stale claimedToday about to
+                          // flip), already claimed, or the ad not yet loaded.
+                          final busy =
+                              g.attendanceClaiming || g.attendanceLoading;
+                          final claimed =
+                              g.attendanceState?['claimedToday'] == true;
+                          final enabled = adReady && !busy && !claimed;
+                          return ElevatedButton.icon(
+                            onPressed: enabled
+                                ? () => _attendanceClaim(g)
+                                : null,
+                            icon: (!adReady && !busy && !claimed)
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.play_circle_outline),
+                            label: Text(
+                              busy
+                                  ? l.attendanceClaiming
+                                  : !adReady
+                                  ? l.attendanceAdLoading
+                                  : l.attendanceWatchAdAndClaim(
+                                      (s['todayRewardGold'] as int?) ?? 50,
+                                    ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFB300),
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFFFD180),
+                              disabledForegroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(48),
+                              textStyle: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           );

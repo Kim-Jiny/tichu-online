@@ -1,14 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../l10n/app_localizations.dart';
 
-/// Getting someone from the web build into the app.
+/// Sending someone from the web build to the store.
 ///
-/// Some things only exist in the app — the daily attendance reward is claimed
-/// by watching a rewarded ad, and AdMob has no web implementation. Rather than
-/// hiding those features on the web and leaving a hole where they should be,
-/// show them and offer the store.
+/// A few things can only happen in the app. The web build shows them the same
+/// way it always did and swaps the action for one of these links, so nobody
+/// has to be told a feature exists somewhere else — they can see it and go.
 
 const String kAppStoreUrl =
     'https://apps.apple.com/app/tichu-online/id6759035151';
@@ -42,53 +39,4 @@ Future<void> openStoreUrl(String url) async {
     // the one that works there.
     await launchUrl(uri);
   }
-}
-
-/// "This one is in the app" — with the way to get it.
-///
-/// [body] says which feature they reached for, so the dialog explains the
-/// thing they just tapped rather than advertising in the abstract.
-void showGetTheAppDialog(BuildContext context, {required String body}) {
-  final l10n = L10n.of(context);
-  final choices = storeChoicesFor(defaultTargetPlatform);
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
-        children: [
-          const Icon(Icons.phone_iphone, size: 20, color: Color(0xFF4A4080)),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              l10n.getTheAppTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: 300,
-        child: Text(
-          body,
-          style: const TextStyle(fontSize: 13, height: 1.45),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(l10n.commonClose),
-        ),
-        for (final c in choices)
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openStoreUrl(c.url);
-            },
-            child: Text(c.label),
-          ),
-      ],
-    ),
-  );
 }

@@ -8397,23 +8397,11 @@ abstract class L10n {
   /// **'Waiting'**
   String get lobbyRoomWaiting;
 
-  /// No description provided for @getTheAppTitle.
+  /// No description provided for @attendanceAppOnlyCta.
   ///
   /// In en, this message translates to:
   /// **'Available in the app'**
-  String get getTheAppTitle;
-
-  /// No description provided for @attendanceAppOnlySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Available in the app'**
-  String get attendanceAppOnlySubtitle;
-
-  /// No description provided for @attendanceAppOnlyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily check-in is app-only. The reward is paid for by watching an ad, and the web build has no ads. Install the app to collect gold every day.'**
-  String get attendanceAppOnlyBody;
+  String get attendanceAppOnlyCta;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

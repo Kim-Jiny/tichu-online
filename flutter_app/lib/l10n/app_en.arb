@@ -2658,7 +2658,5 @@
   "lobbyRoomRules": "Room rules",
   "lobbyAppliesImmediately": "Applies immediately",
   "lobbyRoomWaiting": "Waiting",
-  "getTheAppTitle": "Available in the app",
-  "attendanceAppOnlySubtitle": "Available in the app",
-  "attendanceAppOnlyBody": "Daily check-in is app-only. The reward is paid for by watching an ad, and the web build has no ads. Install the app to collect gold every day."
+  "attendanceAppOnlyCta": "Available in the app"
 }

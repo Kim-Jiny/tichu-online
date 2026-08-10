@@ -65,8 +65,15 @@ class MidGameJoinButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.login, size: 13, color: Colors.white),
-            const SizedBox(width: 4),
+            // The artwork, matching the mark on this room's lobby card and
+            // the switch that turned the option on.
+            Image.asset(
+              'assets/icons/allowBotReplacement.webp',
+              width: 18,
+              height: 14,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 5),
             Text(
               l10n.midJoinButton,
               style: const TextStyle(

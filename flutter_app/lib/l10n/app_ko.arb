@@ -1617,7 +1617,7 @@
   "loginGetTheApp": "앱으로도 즐길 수 있어요",
   "goldHistoryBankDeposit": "입금 확인",
   "goldBankContactChannel": "입금 문의 (카카오 채널)",
-  "midJoinButton": "중도참여",
+  "midJoinButton": "게임 참여하기",
   "midJoinConfirmTitle": "중도참여할까요?",
   "midJoinConfirmBody": "봇 자리 중 하나를 무작위로 이어받아 지금 진행 중인 판에 바로 참여합니다. 봇이 이미 선언하거나 낸 것은 되돌릴 수 없습니다.",
   "midJoinConfirmOk": "참여하기",

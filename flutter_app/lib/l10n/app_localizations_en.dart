@@ -4667,7 +4667,7 @@ class L10nEn extends L10n {
   String get goldBankContactChannel => 'Deposit help (KakaoTalk channel)';
 
   @override
-  String get midJoinButton => 'Join in progress';
+  String get midJoinButton => 'Join the game';
 
   @override
   String get midJoinConfirmTitle => 'Join this match?';

@@ -8310,7 +8310,7 @@ abstract class L10n {
   /// No description provided for @midJoinButton.
   ///
   /// In en, this message translates to:
-  /// **'Join in progress'**
+  /// **'Join the game'**
   String get midJoinButton;
 
   /// No description provided for @midJoinConfirmTitle.

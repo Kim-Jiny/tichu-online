@@ -4556,7 +4556,7 @@ class L10nKo extends L10n {
   String get goldBankContactChannel => '입금 문의 (카카오 채널)';
 
   @override
-  String get midJoinButton => '중도참여';
+  String get midJoinButton => '게임 참여하기';
 
   @override
   String get midJoinConfirmTitle => '중도참여할까요?';

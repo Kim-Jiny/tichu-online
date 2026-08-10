@@ -778,16 +778,22 @@ class SpectatorHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              // Mounted here rather than passed in by each screen: all four
-              // spectator views share this header, and the button is
-              // self-hiding when the room doesn't allow breaking in.
-              if (game.canJoinInProgress) ...[
-                MidGameJoinButton(game: game),
-                const SizedBox(width: 6),
-              ],
               ?statusTrailing,
             ],
           ),
+          // On its own line, not squeezed into the status row. The badge, the
+          // status text and the score chip already fill that row on a narrow
+          // phone; adding a labelled button pushed it past the edge. Mounted
+          // here rather than passed in by each screen — all four spectator
+          // views share this header, and it hides itself when the room does
+          // not allow breaking in.
+          if (game.canJoinInProgress) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: MidGameJoinButton(game: game),
+            ),
+          ],
         ],
       ),
     );

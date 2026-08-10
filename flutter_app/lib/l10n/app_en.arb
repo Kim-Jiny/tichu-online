@@ -2626,7 +2626,7 @@
   "loginGetTheApp": "Also available as an app",
   "goldHistoryBankDeposit": "Bank transfer confirmed",
   "goldBankContactChannel": "Deposit help (KakaoTalk channel)",
-  "midJoinButton": "Join in progress",
+  "midJoinButton": "Join the game",
   "midJoinConfirmTitle": "Join this match?",
   "midJoinConfirmBody": "You take over one of the bot seats at random and start playing the current hand immediately. Anything the bot already declared or played stands.",
   "midJoinConfirmOk": "Join",

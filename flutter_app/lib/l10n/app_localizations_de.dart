@@ -4703,7 +4703,7 @@ class L10nDe extends L10n {
   String get goldBankContactChannel => 'Hilfe zur Zahlung (KakaoTalk)';
 
   @override
-  String get midJoinButton => 'Einsteigen';
+  String get midJoinButton => 'Mitspielen';
 
   @override
   String get midJoinConfirmTitle => 'In diese Partie einsteigen?';

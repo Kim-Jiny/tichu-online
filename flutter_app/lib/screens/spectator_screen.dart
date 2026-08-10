@@ -1249,13 +1249,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ],
                     const Spacer(),
-                    // Tichu keeps its own top bar rather than SpectatorHeader,
-                    // so the break-in button has to be mounted here too. It
-                    // hides itself when the room doesn't allow it.
-                    if (game.canJoinInProgress) ...[
-                      MidGameJoinButton(game: game),
-                      const SizedBox(width: 6),
-                    ],
                     // The score itself opens the history — it is what you are
                     // already looking at when you wonder how it got there, and
                     // it saves a slot in the bar.
@@ -1282,6 +1275,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     ),
                   ],
                 ),
+                // Its own line under the status row, matching SpectatorHeader.
+                // Sharing that row with the badge, the phase text and both
+                // score chips overflowed a narrow phone once the button
+                // carried a label.
+                if (game.canJoinInProgress) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: MidGameJoinButton(game: game),
+                  ),
+                ],
               ],
             ),
     );

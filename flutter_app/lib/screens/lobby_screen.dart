@@ -810,58 +810,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Suggested room name, e.g. "행운의 카드판".
+  ///
+  /// Words come from `|`-joined lists in the ARB rather than numbered keys, so
+  /// adding one is a string edit instead of a new key in three locale files
+  /// plus a codegen run. Each game gets its own pair of lists — Mighty and
+  /// Love Letter used to borrow Tichu's, which is why a Love Letter room was
+  /// called "무적 티츄방".
+  final math.Random _nameRandom = math.Random();
+
   String _generateRandomRoomName({String gameType = 'tichu', L10n? l10n}) {
-    final random = DateTime.now().millisecondsSinceEpoch;
     final l = l10n ?? L10n.of(context);
-    if (gameType == 'skull_king') {
-      final adjectives = [
-        l.lobbyRandomAdjSk1,
-        l.lobbyRandomAdjSk2,
-        l.lobbyRandomAdjSk3,
-        l.lobbyRandomAdjSk4,
-        l.lobbyRandomAdjSk5,
-        l.lobbyRandomAdjSk6,
-        l.lobbyRandomAdjSk7,
-        l.lobbyRandomAdjSk8,
-      ];
-      final nouns = [
-        l.lobbyRandomNounSk1,
-        l.lobbyRandomNounSk2,
-        l.lobbyRandomNounSk3,
-        l.lobbyRandomNounSk4,
-        l.lobbyRandomNounSk5,
-        l.lobbyRandomNounSk6,
-        l.lobbyRandomNounSk7,
-        l.lobbyRandomNounSk8,
-      ];
-      final adj = adjectives[random % adjectives.length];
-      final noun = nouns[(random ~/ 8) % nouns.length];
-      return '$adj $noun';
-    } else {
-      final adjectives = [
-        l.lobbyRandomAdjTichu1,
-        l.lobbyRandomAdjTichu2,
-        l.lobbyRandomAdjTichu3,
-        l.lobbyRandomAdjTichu4,
-        l.lobbyRandomAdjTichu5,
-        l.lobbyRandomAdjTichu6,
-        l.lobbyRandomAdjTichu7,
-        l.lobbyRandomAdjTichu8,
-      ];
-      final nouns = [
-        l.lobbyRandomNounTichu1,
-        l.lobbyRandomNounTichu2,
-        l.lobbyRandomNounTichu3,
-        l.lobbyRandomNounTichu4,
-        l.lobbyRandomNounTichu5,
-        l.lobbyRandomNounTichu6,
-        l.lobbyRandomNounTichu7,
-        l.lobbyRandomNounTichu8,
-      ];
-      final adj = adjectives[random % adjectives.length];
-      final noun = nouns[(random ~/ 8) % nouns.length];
-      return '$adj $noun';
-    }
+    final (adjectives, nouns) = switch (gameType) {
+      'skull_king' => (l.lobbyRandomAdjSk, l.lobbyRandomNounSk),
+      'mighty' => (l.lobbyRandomAdjMighty, l.lobbyRandomNounMighty),
+      'love_letter' => (l.lobbyRandomAdjLl, l.lobbyRandomNounLl),
+      _ => (l.lobbyRandomAdjTichu, l.lobbyRandomNounTichu),
+    };
+    // Random, not the clock. Both halves used to be derived from
+    // millisecondsSinceEpoch — the adjective simply walked forward one step
+    // per tap, and the noun barely moved at all, so re-rolling felt broken.
+    final adj = adjectives.split('|');
+    final noun = nouns.split('|');
+    return '${adj[_nameRandom.nextInt(adj.length)]} '
+        '${noun[_nameRandom.nextInt(noun.length)]}';
   }
 
   void _showCreateRoomDialog() {

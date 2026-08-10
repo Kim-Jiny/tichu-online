@@ -983,102 +983,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get lobbyRandomAdjTichu1 => '즐거운';
-
-  @override
-  String get lobbyRandomAdjTichu2 => '신나는';
-
-  @override
-  String get lobbyRandomAdjTichu3 => '열정의';
-
-  @override
-  String get lobbyRandomAdjTichu4 => '화끈한';
-
-  @override
-  String get lobbyRandomAdjTichu5 => '행운의';
-
-  @override
-  String get lobbyRandomAdjTichu6 => '전설의';
-
-  @override
-  String get lobbyRandomAdjTichu7 => '최강';
-
-  @override
-  String get lobbyRandomAdjTichu8 => '무적';
-
-  @override
-  String get lobbyRandomNounTichu1 => '티츄방';
-
-  @override
-  String get lobbyRandomNounTichu2 => '카드판';
-
-  @override
-  String get lobbyRandomNounTichu3 => '승부';
-
-  @override
-  String get lobbyRandomNounTichu4 => '한판';
-
-  @override
-  String get lobbyRandomNounTichu5 => '게임';
-
-  @override
-  String get lobbyRandomNounTichu6 => '대결';
-
-  @override
-  String get lobbyRandomNounTichu7 => '도전';
-
-  @override
-  String get lobbyRandomNounTichu8 => '파티';
-
-  @override
-  String get lobbyRandomAdjSk1 => '무시무시한';
-
-  @override
-  String get lobbyRandomAdjSk2 => '전설의';
-
-  @override
-  String get lobbyRandomAdjSk3 => '무적의';
-
-  @override
-  String get lobbyRandomAdjSk4 => '잔혹한';
-
-  @override
-  String get lobbyRandomAdjSk5 => '탐욕의';
-
-  @override
-  String get lobbyRandomAdjSk6 => '최강';
-
-  @override
-  String get lobbyRandomAdjSk7 => '폭풍의';
-
-  @override
-  String get lobbyRandomAdjSk8 => '대담한';
-
-  @override
-  String get lobbyRandomNounSk1 => '해적선';
-
-  @override
-  String get lobbyRandomNounSk2 => '보물섬';
-
-  @override
-  String get lobbyRandomNounSk3 => '항해';
-
-  @override
-  String get lobbyRandomNounSk4 => '약탈';
-
-  @override
-  String get lobbyRandomNounSk5 => '선장';
-
-  @override
-  String get lobbyRandomNounSk6 => '해전';
-
-  @override
-  String get lobbyRandomNounSk7 => '모험';
-
-  @override
-  String get lobbyRandomNounSk8 => '크라켄';
-
-  @override
   String get skGameRecoveringGame => '게임 복구 중...';
 
   @override
@@ -4611,4 +4515,36 @@ class L10nKo extends L10n {
 
   @override
   String get attendanceAppOnlyCta => '앱에서 참여 가능';
+
+  @override
+  String get lobbyRandomAdjTichu =>
+      '즐거운|신나는|열정의|화끈한|행운의|전설의|최강|무적|느긋한|치열한|우아한|짜릿한|은밀한|눈부신|용감한|고요한|기묘한|황금빛';
+
+  @override
+  String get lobbyRandomNounTichu =>
+      '티츄방|카드판|승부|한판|게임|대결|도전|파티|모임|무대|자리|결전|한마당|카드놀이|테이블|리그';
+
+  @override
+  String get lobbyRandomAdjSk =>
+      '무시무시한|전설의|무적의|잔혹한|탐욕의|최강|폭풍의|대담한|안개낀|저주받은|황금빛|칠흑의|파도치는|무모한|굶주린|떠도는';
+
+  @override
+  String get lobbyRandomNounSk =>
+      '해적선|보물섬|항해|약탈|선장|해전|모험|크라켄|난파선|나침반|등대|물보라|해적기|심해|선착장|폭풍우';
+
+  @override
+  String get lobbyRandomAdjMighty =>
+      '기세등등한|비장한|치밀한|화려한|과감한|고독한|영리한|담대한|불꽃같은|냉철한|호쾌한|은밀한|당당한|노련한|무모한|우직한';
+
+  @override
+  String get lobbyRandomNounMighty =>
+      '마이티방|기루다|주공|한판|공약|대결|승부|프렌드|판돈|명승부|한마당|대전|자리|무대|결전|테이블';
+
+  @override
+  String get lobbyRandomAdjLl =>
+      '은밀한|달콤한|수줍은|설레는|다정한|우아한|비밀의|조용한|간질간질한|애틋한|사랑스런|살며시|아련한|포근한|귀여운|반짝이는';
+
+  @override
+  String get lobbyRandomNounLl =>
+      '연애편지|밀회|고백|편지함|장미|비밀|속삭임|찻집|정원|무도회|왕궁|초대장|봉투|약속|산책|쪽지';
 }

@@ -1019,102 +1019,6 @@ class L10nDe extends L10n {
   }
 
   @override
-  String get lobbyRandomAdjTichu1 => 'Fröhlich';
-
-  @override
-  String get lobbyRandomAdjTichu2 => 'Spannend';
-
-  @override
-  String get lobbyRandomAdjTichu3 => 'Leidenschaftlich';
-
-  @override
-  String get lobbyRandomAdjTichu4 => 'Feurig';
-
-  @override
-  String get lobbyRandomAdjTichu5 => 'Glücklich';
-
-  @override
-  String get lobbyRandomAdjTichu6 => 'Legendär';
-
-  @override
-  String get lobbyRandomAdjTichu7 => 'Unschlagbar';
-
-  @override
-  String get lobbyRandomAdjTichu8 => 'Unbesiegbar';
-
-  @override
-  String get lobbyRandomNounTichu1 => 'Tichu-Raum';
-
-  @override
-  String get lobbyRandomNounTichu2 => 'Kartenspiel';
-
-  @override
-  String get lobbyRandomNounTichu3 => 'Duell';
-
-  @override
-  String get lobbyRandomNounTichu4 => 'Runde';
-
-  @override
-  String get lobbyRandomNounTichu5 => 'Spiel';
-
-  @override
-  String get lobbyRandomNounTichu6 => 'Kampf';
-
-  @override
-  String get lobbyRandomNounTichu7 => 'Herausforderung';
-
-  @override
-  String get lobbyRandomNounTichu8 => 'Party';
-
-  @override
-  String get lobbyRandomAdjSk1 => 'Furchteinflößend';
-
-  @override
-  String get lobbyRandomAdjSk2 => 'Legendär';
-
-  @override
-  String get lobbyRandomAdjSk3 => 'Unbesiegbar';
-
-  @override
-  String get lobbyRandomAdjSk4 => 'Gnadenlos';
-
-  @override
-  String get lobbyRandomAdjSk5 => 'Gierig';
-
-  @override
-  String get lobbyRandomAdjSk6 => 'Unschlagbar';
-
-  @override
-  String get lobbyRandomAdjSk7 => 'Stürmisch';
-
-  @override
-  String get lobbyRandomAdjSk8 => 'Kühn';
-
-  @override
-  String get lobbyRandomNounSk1 => 'Piratenschiff';
-
-  @override
-  String get lobbyRandomNounSk2 => 'Schatzinsel';
-
-  @override
-  String get lobbyRandomNounSk3 => 'Reise';
-
-  @override
-  String get lobbyRandomNounSk4 => 'Plünderung';
-
-  @override
-  String get lobbyRandomNounSk5 => 'Kapitän';
-
-  @override
-  String get lobbyRandomNounSk6 => 'Seeschlacht';
-
-  @override
-  String get lobbyRandomNounSk7 => 'Abenteuer';
-
-  @override
-  String get lobbyRandomNounSk8 => 'Kraken';
-
-  @override
   String get skGameRecoveringGame => 'Spiel wird wiederhergestellt...';
 
   @override
@@ -4758,4 +4662,36 @@ class L10nDe extends L10n {
 
   @override
   String get attendanceAppOnlyCta => 'In der App verfügbar';
+
+  @override
+  String get lobbyRandomAdjTichu =>
+      'Fröhlich|Lebhaft|Feurig|Lodernd|Glücklich|Legendär|Höchst|Ungeschlagen|Gelassen|Erbittert|Elegant|Elektrisch|Heimlich|Strahlend|Tapfer|Still|Seltsam|Golden';
+
+  @override
+  String get lobbyRandomNounTichu =>
+      'Tichu-Raum|Kartentisch|Showdown|Runde|Spiel|Duell|Herausforderung|Party|Treffen|Bühne|Platz|Finale|Fest|Kartenabend|Tisch|Liga';
+
+  @override
+  String get lobbyRandomAdjSk =>
+      'Furchtbar|Legendär|Unbesiegbar|Erbarmungslos|Gierig|Höchst|Stürmisch|Verwegen|Neblig|Verflucht|Golden|Pechschwarz|Wogend|Waghalsig|Hungrig|Treibend';
+
+  @override
+  String get lobbyRandomNounSk =>
+      'Piratenschiff|Schatzinsel|Seereise|Beutezug|Kapitän|Seeschlacht|Abenteuer|Krake|Wrack|Kompass|Leuchtturm|Gischt|Piratenflagge|Tiefsee|Hafen|Sturm';
+
+  @override
+  String get lobbyRandomAdjMighty =>
+      'Beherzt|Entschlossen|Listig|Prächtig|Kühn|Einsam|Klug|Furchtlos|Lodernd|Kühl|Mitreißend|Heimlich|Stolz|Erfahren|Waghalsig|Standhaft';
+
+  @override
+  String get lobbyRandomNounMighty =>
+      'Mighty-Raum|Giruda|Alleinspieler|Runde|Ansage|Duell|Showdown|Freund|Einsatz|Klassiker|Fest|Partie|Platz|Bühne|Finale|Tisch';
+
+  @override
+  String get lobbyRandomAdjLl =>
+      'Heimlich|Süß|Schüchtern|Flatternd|Zärtlich|Elegant|Verborgen|Still|Beschwingt|Wehmütig|Reizend|Sachte|Fern|Behaglich|Niedlich|Funkelnd';
+
+  @override
+  String get lobbyRandomNounLl =>
+      'Liebesbrief|Rendezvous|Geständnis|Briefkasten|Rose|Geheimnis|Flüstern|Teestube|Garten|Ball|Palast|Einladung|Umschlag|Versprechen|Spaziergang|Zettel';
 }

@@ -1947,198 +1947,6 @@ abstract class L10n {
   /// **'{seconds}s · {score}pts'**
   String lobbyRoomInfoTichu(int seconds, int score);
 
-  /// No description provided for @lobbyRandomAdjTichu1.
-  ///
-  /// In en, this message translates to:
-  /// **'Joyful'**
-  String get lobbyRandomAdjTichu1;
-
-  /// No description provided for @lobbyRandomAdjTichu2.
-  ///
-  /// In en, this message translates to:
-  /// **'Exciting'**
-  String get lobbyRandomAdjTichu2;
-
-  /// No description provided for @lobbyRandomAdjTichu3.
-  ///
-  /// In en, this message translates to:
-  /// **'Passionate'**
-  String get lobbyRandomAdjTichu3;
-
-  /// No description provided for @lobbyRandomAdjTichu4.
-  ///
-  /// In en, this message translates to:
-  /// **'Fiery'**
-  String get lobbyRandomAdjTichu4;
-
-  /// No description provided for @lobbyRandomAdjTichu5.
-  ///
-  /// In en, this message translates to:
-  /// **'Lucky'**
-  String get lobbyRandomAdjTichu5;
-
-  /// No description provided for @lobbyRandomAdjTichu6.
-  ///
-  /// In en, this message translates to:
-  /// **'Legendary'**
-  String get lobbyRandomAdjTichu6;
-
-  /// No description provided for @lobbyRandomAdjTichu7.
-  ///
-  /// In en, this message translates to:
-  /// **'Supreme'**
-  String get lobbyRandomAdjTichu7;
-
-  /// No description provided for @lobbyRandomAdjTichu8.
-  ///
-  /// In en, this message translates to:
-  /// **'Invincible'**
-  String get lobbyRandomAdjTichu8;
-
-  /// No description provided for @lobbyRandomNounTichu1.
-  ///
-  /// In en, this message translates to:
-  /// **'Tichu Room'**
-  String get lobbyRandomNounTichu1;
-
-  /// No description provided for @lobbyRandomNounTichu2.
-  ///
-  /// In en, this message translates to:
-  /// **'Card Game'**
-  String get lobbyRandomNounTichu2;
-
-  /// No description provided for @lobbyRandomNounTichu3.
-  ///
-  /// In en, this message translates to:
-  /// **'Showdown'**
-  String get lobbyRandomNounTichu3;
-
-  /// No description provided for @lobbyRandomNounTichu4.
-  ///
-  /// In en, this message translates to:
-  /// **'Round'**
-  String get lobbyRandomNounTichu4;
-
-  /// No description provided for @lobbyRandomNounTichu5.
-  ///
-  /// In en, this message translates to:
-  /// **'Game'**
-  String get lobbyRandomNounTichu5;
-
-  /// No description provided for @lobbyRandomNounTichu6.
-  ///
-  /// In en, this message translates to:
-  /// **'Battle'**
-  String get lobbyRandomNounTichu6;
-
-  /// No description provided for @lobbyRandomNounTichu7.
-  ///
-  /// In en, this message translates to:
-  /// **'Challenge'**
-  String get lobbyRandomNounTichu7;
-
-  /// No description provided for @lobbyRandomNounTichu8.
-  ///
-  /// In en, this message translates to:
-  /// **'Party'**
-  String get lobbyRandomNounTichu8;
-
-  /// No description provided for @lobbyRandomAdjSk1.
-  ///
-  /// In en, this message translates to:
-  /// **'Fearsome'**
-  String get lobbyRandomAdjSk1;
-
-  /// No description provided for @lobbyRandomAdjSk2.
-  ///
-  /// In en, this message translates to:
-  /// **'Legendary'**
-  String get lobbyRandomAdjSk2;
-
-  /// No description provided for @lobbyRandomAdjSk3.
-  ///
-  /// In en, this message translates to:
-  /// **'Invincible'**
-  String get lobbyRandomAdjSk3;
-
-  /// No description provided for @lobbyRandomAdjSk4.
-  ///
-  /// In en, this message translates to:
-  /// **'Ruthless'**
-  String get lobbyRandomAdjSk4;
-
-  /// No description provided for @lobbyRandomAdjSk5.
-  ///
-  /// In en, this message translates to:
-  /// **'Greedy'**
-  String get lobbyRandomAdjSk5;
-
-  /// No description provided for @lobbyRandomAdjSk6.
-  ///
-  /// In en, this message translates to:
-  /// **'Supreme'**
-  String get lobbyRandomAdjSk6;
-
-  /// No description provided for @lobbyRandomAdjSk7.
-  ///
-  /// In en, this message translates to:
-  /// **'Stormy'**
-  String get lobbyRandomAdjSk7;
-
-  /// No description provided for @lobbyRandomAdjSk8.
-  ///
-  /// In en, this message translates to:
-  /// **'Bold'**
-  String get lobbyRandomAdjSk8;
-
-  /// No description provided for @lobbyRandomNounSk1.
-  ///
-  /// In en, this message translates to:
-  /// **'Pirate Ship'**
-  String get lobbyRandomNounSk1;
-
-  /// No description provided for @lobbyRandomNounSk2.
-  ///
-  /// In en, this message translates to:
-  /// **'Treasure Island'**
-  String get lobbyRandomNounSk2;
-
-  /// No description provided for @lobbyRandomNounSk3.
-  ///
-  /// In en, this message translates to:
-  /// **'Voyage'**
-  String get lobbyRandomNounSk3;
-
-  /// No description provided for @lobbyRandomNounSk4.
-  ///
-  /// In en, this message translates to:
-  /// **'Plunder'**
-  String get lobbyRandomNounSk4;
-
-  /// No description provided for @lobbyRandomNounSk5.
-  ///
-  /// In en, this message translates to:
-  /// **'Captain'**
-  String get lobbyRandomNounSk5;
-
-  /// No description provided for @lobbyRandomNounSk6.
-  ///
-  /// In en, this message translates to:
-  /// **'Sea Battle'**
-  String get lobbyRandomNounSk6;
-
-  /// No description provided for @lobbyRandomNounSk7.
-  ///
-  /// In en, this message translates to:
-  /// **'Adventure'**
-  String get lobbyRandomNounSk7;
-
-  /// No description provided for @lobbyRandomNounSk8.
-  ///
-  /// In en, this message translates to:
-  /// **'Kraken'**
-  String get lobbyRandomNounSk8;
-
   /// No description provided for @skGameRecoveringGame.
   ///
   /// In en, this message translates to:
@@ -8408,6 +8216,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Available in the app'**
   String get attendanceAppOnlyCta;
+
+  /// No description provided for @lobbyRandomAdjTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Merry|Lively|Fiery|Blazing|Lucky|Legendary|Supreme|Unbeaten|Easygoing|Fierce|Elegant|Electric|Sneaky|Dazzling|Brave|Quiet|Curious|Golden'**
+  String get lobbyRandomAdjTichu;
+
+  /// No description provided for @lobbyRandomNounTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Tichu Room|Card Table|Showdown|Round|Game|Duel|Challenge|Party|Gathering|Stage|Seat|Finale|Fair|Card Night|Table|League'**
+  String get lobbyRandomNounTichu;
+
+  /// No description provided for @lobbyRandomAdjSk.
+  ///
+  /// In en, this message translates to:
+  /// **'Fearsome|Legendary|Invincible|Ruthless|Greedy|Supreme|Storming|Daring|Foggy|Cursed|Golden|Pitch-black|Surging|Reckless|Starving|Drifting'**
+  String get lobbyRandomAdjSk;
+
+  /// No description provided for @lobbyRandomNounSk.
+  ///
+  /// In en, this message translates to:
+  /// **'Pirate Ship|Treasure Isle|Voyage|Plunder|Captain|Sea Battle|Adventure|Kraken|Shipwreck|Compass|Lighthouse|Sea Spray|Jolly Roger|The Deep|Harbour|Tempest'**
+  String get lobbyRandomNounSk;
+
+  /// No description provided for @lobbyRandomAdjMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Spirited|Resolute|Cunning|Splendid|Bold|Lone|Clever|Fearless|Blazing|Cool-headed|Rousing|Sneaky|Proud|Seasoned|Reckless|Steadfast'**
+  String get lobbyRandomAdjMighty;
+
+  /// No description provided for @lobbyRandomNounMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty Room|Giruda|Declarer|Round|Contract|Duel|Showdown|Friend|Stakes|Classic|Fair|Match|Seat|Stage|Finale|Table'**
+  String get lobbyRandomNounMighty;
+
+  /// No description provided for @lobbyRandomAdjLl.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret|Sweet|Shy|Fluttering|Tender|Elegant|Hidden|Quiet|Giddy|Wistful|Lovely|Softly|Distant|Cosy|Cute|Sparkling'**
+  String get lobbyRandomAdjLl;
+
+  /// No description provided for @lobbyRandomNounLl.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter|Rendezvous|Confession|Mailbox|Rose|Secret|Whisper|Tearoom|Garden|Ball|Palace|Invitation|Envelope|Promise|Stroll|Note'**
+  String get lobbyRandomNounLl;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

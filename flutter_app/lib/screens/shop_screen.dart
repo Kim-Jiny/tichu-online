@@ -15,6 +15,7 @@ import '../widgets/title_chip.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
+import '../widgets/store_link.dart';
 
 /// Width at which the shop list splits into two columns. Chosen so a phone in
 /// landscape stays single-column (its rows are still short) and a desktop
@@ -4069,14 +4070,29 @@ class _ShopScreenState extends State<ShopScreen> {
   // Banner stays visible all day — even after claim. After claim it just
   // switches to a "completed" look so users can still tap it to see the
   // 7-day grid in the dialog (claim button there is disabled).
+  // Shown on the web too, but as an invitation rather than a control: the
+  // reward is claimed by watching a rewarded ad and AdMob has no web
+  // implementation, so the claim button there can never work. Hiding it left
+  // web users unaware the daily gold exists at all; tapping it now explains
+  // that and offers the store.
   bool _shouldShowAttendanceBanner(GameService game) =>
-      // Not on the web. The daily reward is claimed by watching a rewarded ad,
-      // and AdMob has no web implementation — AdService returns null there, so
-      // the banner would open a dialog whose claim button can never work.
-      !kIsWeb && game.attendanceState != null;
+      game.attendanceState != null;
 
   Widget _buildAttendanceTile(GameService game) {
     final s = game.attendanceState!;
+    final l10nWeb = L10n.of(context);
+    if (kIsWeb) {
+      return _buildRewardTile(
+        gradient: const [Color(0xFFB9AEE0), Color(0xFF7E6FBF)],
+        icon: Icons.phone_iphone,
+        title: l10nWeb.attendanceBannerTitle((s['todayDay'] as int?) ?? 1),
+        subtitle: l10nWeb.attendanceAppOnlySubtitle,
+        onTap: () => showGetTheAppDialog(
+          context,
+          body: l10nWeb.attendanceAppOnlyBody,
+        ),
+      );
+    }
     final claimed = s['claimedToday'] == true;
     final reward = (s['todayRewardGold'] as int?) ?? 50;
     final day = (s['todayDay'] as int?) ?? 1;

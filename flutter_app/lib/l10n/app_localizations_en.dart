@@ -4716,4 +4716,14 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyRoomWaiting => 'Waiting';
+
+  @override
+  String get getTheAppTitle => 'Available in the app';
+
+  @override
+  String get attendanceAppOnlySubtitle => 'Available in the app';
+
+  @override
+  String get attendanceAppOnlyBody =>
+      'Daily check-in is app-only. The reward is paid for by watching an ad, and the web build has no ads. Install the app to collect gold every day.';
 }

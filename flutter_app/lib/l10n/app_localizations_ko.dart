@@ -4605,4 +4605,14 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRoomWaiting => '대기 중';
+
+  @override
+  String get getTheAppTitle => '앱에서 이용할 수 있어요';
+
+  @override
+  String get attendanceAppOnlySubtitle => '앱에서 참여할 수 있어요';
+
+  @override
+  String get attendanceAppOnlyBody =>
+      '출석 체크는 앱 전용입니다. 보상이 광고 시청으로 지급되는데 웹에는 광고가 없어요. 앱을 설치하면 매일 골드를 받을 수 있습니다.';
 }

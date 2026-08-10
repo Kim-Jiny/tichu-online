@@ -30,9 +30,6 @@ class MidGameJoinButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
-        // Captured before the first await: after one, this context may be gone
-        // and looking the messenger up then is what the lint is about.
-        final messenger = ScaffoldMessenger.maybeOf(context);
         final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -57,21 +54,10 @@ class MidGameJoinButton extends StatelessWidget {
         // a dialog is open. The server refuses anyway; this avoids the error
         // toast for the common race.
         if (!game.canJoinInProgress) return;
-
-        // Report our own failures. A refusal comes back as a plain `error`,
-        // and whether that is drawn depends on the screen — the Tichu
-        // spectator view has a banner, Love Letter has none — so a rejected
-        // join looked like a dead button. The button asked, so the button
-        // answers.
-        final before = game.errorMessage;
+        // A refusal arrives as a plain `error` and every game screen draws
+        // that in its own banner — no toast from here, or the same sentence
+        // lands twice in two different colours.
         game.joinInProgress();
-        await Future.delayed(const Duration(milliseconds: 1200));
-        final err = game.errorMessage;
-        if (game.isSpectator && err != null && err != before) {
-          messenger?.showSnackBar(
-            SnackBar(content: Text(err), duration: const Duration(seconds: 4)),
-          );
-        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

@@ -254,6 +254,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
         child: SafeArea(
           child: Stack(
             children: [
+              // Errors were silent on this screen — every other game draws the
+              // service's errorMessage in a banner and Love Letter drew
+              // nothing, so a refused action looked like a dead control.
+              if (gs.errorMessage != null) _buildLLErrorBanner(gs.errorMessage!),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                 child: Column(
@@ -407,6 +411,55 @@ class _LLGameScreenState extends State<LLGameScreen> {
               ),
               if (_soundPanelOpen) _buildSoundPanel(gs),
               if (_chatOpen) _buildChatPanel(context, gs),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The service's errorMessage, shown the way the other games show it.
+  /// Non-interactive and self-clearing — GameService wipes it a few seconds
+  /// after it lands.
+  Widget _buildLLErrorBanner(String message) {
+    return Positioned(
+      bottom: 80,
+      left: 20,
+      right: 20,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE57373)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 18,
+                color: Color(0xFFC62828),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFC62828),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

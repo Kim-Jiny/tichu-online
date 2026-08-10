@@ -2979,7 +2979,19 @@ function isMigratedResumeRoom(room) {
 
 async function handleMessage(ws, data) {
   if (isDraining && DRAIN_FROZEN_ACTIONS.has(data.type)) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'server_restarting') });
+    // Breaking into a match gets its own wording. The generic notice reads as
+    // "the server is going away", which is the wrong thing to tell someone
+    // sitting in a running game — the match is fine and lands on the peer at
+    // the next round boundary, so what they need to know is to try again then.
+    sendTo(ws, {
+      type: 'error',
+      message: t(
+        ws.locale,
+        data.type === 'join_in_progress'
+          ? 'midjoin_wait_for_next_round'
+          : 'server_restarting',
+      ),
+    });
     return;
   }
   // Leaving frees the seat (removePlayer), which fails the roster check at

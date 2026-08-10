@@ -212,6 +212,7 @@
   "room_no_switch_in_game": "Während des Spiels kann nicht gewechselt werden",
   "room_only_human_player": "Sie können nicht zuschauen, wenn Sie der einzige Spieler sind",
   "midjoin_not_allowed": "In diesem Raum ist der Einstieg in eine laufende Partie nicht erlaubt",
+  "midjoin_wait_for_next_round": "Der Raum wechselt gerade den Server. Versuchen Sie es in der nächsten Runde erneut",
   "midjoin_no_game": "Es läuft keine Partie",
   "midjoin_no_bot_seat": "Es gibt keinen Bot-Platz zum Übernehmen",
   "midjoin_cooldown": "Sie können in {minutes} Min. wieder in eine laufende Partie einsteigen",

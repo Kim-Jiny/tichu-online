@@ -2713,8 +2713,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     if (room.isPrivate) ...[
                                       Image.asset(
                                         'assets/icons/private.webp',
-                                        width: 13,
-                                        height: 16,
+                                        // Taller than wide (113x144), so it
+                                        // ran past the cap height of the room
+                                        // name beside it at the old 16.
+                                        width: 11,
+                                        height: 13,
                                         fit: BoxFit.contain,
                                       ),
                                       const SizedBox(width: 4),

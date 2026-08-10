@@ -32,6 +32,7 @@ import '../widgets/title_chip.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../widgets/spectator_controls.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -601,87 +602,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  void _showSpectatorListDialog(GameService game) {
-    final spectators = game.spectators;
-    final l10n = L10n.of(context);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.visibility, color: Color(0xFF4A4080)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                l10n.lobbySpectatorListTitle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: spectators.isEmpty
-            ? SizedBox(
-                height: 60,
-                child: Center(
-                  child: Text(
-                    l10n.lobbyNoSpectators,
-                    style: const TextStyle(color: Color(0xFF9A8E8A)),
-                  ),
-                ),
-              )
-            : SizedBox(
-                width: double.maxFinite,
-                height: 220,
-                child: ListView.separated(
-                  itemCount: spectators.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, index) {
-                    final nickname = spectators[index]['nickname'] ?? '';
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEDE7F6),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFD1C4E9)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: Color(0xFF6A5A52),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              nickname,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF5A4038),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Small caps-ish heading that separates the settings dialog into "what the
   /// room is called" and "how it plays" — without it the switch read as an
@@ -3404,7 +3324,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   icon: Icons.people_outline,
                   label: l10n.lobbySpectatorListTitle,
                   badgeCount: game.spectators.length,
-                  onTap: () => _showSpectatorListDialog(game),
+                  onTap: () => showSpectatorListDialog(context, game),
                 ),
               ],
             ),

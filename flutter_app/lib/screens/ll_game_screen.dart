@@ -962,7 +962,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 badgeCount: gs.spectators.length,
                 onTap: () {
                   setState(() => _moreOpen = false);
-                  showSpectatorListDialog(context, gs.spectators);
+                  showSpectatorListDialog(context, gs);
                 },
               )
             else

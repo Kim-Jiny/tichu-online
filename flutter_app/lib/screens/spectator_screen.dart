@@ -1799,7 +1799,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       icon: Icons.people_alt,
       active: false,
       badgeCount: game.spectators.length,
-      onTap: () => showSpectatorListDialog(context, game.spectators),
+      onTap: () => showSpectatorListDialog(context, game),
     );
   }
 

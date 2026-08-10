@@ -1267,7 +1267,7 @@ class _GameScreenState extends State<GameScreen> {
     final count = game.spectators.length;
     final hasViewers = game.cardViewers.isNotEmpty;
     return GestureDetector(
-      onTap: () => _showSpectatorListDialog(game),
+      onTap: () => showSpectatorListDialog(context, game),
       // Always allow long-press so users (especially those set to
       // always_deny — who have no viewers and thus no in-game UI to
       // change the policy back) can still access the pref toggle.
@@ -1387,81 +1387,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  void _showSpectatorListDialog(GameService game) {
-    final spectators = game.spectators;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.people_alt, color: Color(0xFF5A4038)),
-            const SizedBox(width: 8),
-            Text(L10n.of(context).gameSpectatorList),
-          ],
-        ),
-        content: spectators.isEmpty
-            ? SizedBox(
-                height: 60,
-                child: Center(
-                  child: Text(
-                    L10n.of(context).gameNoSpectators,
-                    style: const TextStyle(color: Color(0xFF9A8E8A)),
-                  ),
-                ),
-              )
-            : SizedBox(
-                width: double.maxFinite,
-                height: 220,
-                child: ListView.separated(
-                  itemCount: spectators.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, index) {
-                    final nickname = spectators[index]['nickname'] ?? '';
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F1F1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE0D8D4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: Color(0xFF6A5A52),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              nickname,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF5A4038),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).gameClose),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildViewersPanel(GameService game, {double topOffset = 48}) {
     return Positioned(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/ll_game_state.dart';
+import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'mid_game_join.dart';
+import 'player_profile_dialog.dart';
 
 /// Shared spectator control widgets used across all four game spectator
 /// screens (Tichu / Skull King / Love Letter / Mighty) so the top-bar
@@ -176,62 +178,142 @@ class SpectatorSoundPanel extends StatelessWidget {
   }
 }
 
-/// Shared spectator-list dialog. [spectators] is the `game.spectators` list of
-/// `{id, nickname}` maps.
-void showSpectatorListDialog(
-  BuildContext context,
-  List<Map<String, dynamic>> spectators,
-) {
+/// Who is watching, and who they are.
+///
+/// Takes the [GameService] rather than a plain list so a row can open the
+/// viewer's profile — the list used to be four near-identical copies across
+/// the game screens, each rendering a nickname you could not do anything with.
+///
+/// The rows show an initial, not a photo: the roster the server sends for
+/// spectators carries only `{id, nickname}`, and the photo (with its privacy
+/// rules applied) arrives with the profile itself when you open one.
+void showSpectatorListDialog(BuildContext context, GameService game) {
   showDialog(
     context: context,
-    builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
-        children: [
-          const Icon(Icons.people_alt, color: _kTextPrimary),
-          const SizedBox(width: 8),
-          Text(L10n.of(context).spectatorListTitle),
-        ],
-      ),
-      content: spectators.isEmpty
-          ? SizedBox(
-              height: 60,
-              child: Center(
-                child: Text(
-                  L10n.of(context).spectatorNoSpectators,
-                  style: const TextStyle(color: Color(0xFF9A8E8A)),
-                ),
-              ),
-            )
-          : SizedBox(
-              width: 240,
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: spectators.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final name = spectators[i]['nickname'] ?? '';
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      '$name',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: _kTextPrimary,
-                      ),
-                    ),
-                  );
-                },
+    builder: (ctx) {
+      final l10n = L10n.of(ctx);
+      // Watched, not snapshotted: people arrive and leave while this is open.
+      final spectators = context.select<GameService, List<Map<String, dynamic>>>(
+        (g) => g.spectators,
+      );
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+        contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        title: Row(
+          children: [
+            const Icon(Icons.visibility, size: 20, color: Color(0xFF4A4080)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                spectators.isEmpty
+                    ? l10n.spectatorListTitle
+                    : '${l10n.spectatorListTitle} ${spectators.length}',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
             ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text(L10n.of(context).spectatorClose),
+          ],
         ),
-      ],
-    ),
+        content: spectators.isEmpty
+            ? SizedBox(
+                width: 260,
+                height: 72,
+                child: Center(
+                  child: Text(
+                    l10n.spectatorNoSpectators,
+                    style: const TextStyle(color: Color(0xFF9A8E8A), fontSize: 13),
+                  ),
+                ),
+              )
+            : SizedBox(
+                width: 280,
+                // Grows with the list up to five rows, then scrolls — a fixed
+                // 220 left a lot of white space under a single watcher.
+                height: (spectators.length.clamp(1, 5)) * 52.0,
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: spectators.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
+                  itemBuilder: (_, i) {
+                    final nickname = (spectators[i]['nickname'] ?? '').toString();
+                    return _SpectatorRow(nickname: nickname, game: game);
+                  },
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.spectatorClose),
+          ),
+        ],
+      );
+    },
   );
+}
+
+class _SpectatorRow extends StatelessWidget {
+  final String nickname;
+  final GameService game;
+
+  const _SpectatorRow({required this.nickname, required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = nickname.isEmpty ? '?' : nickname.characters.first;
+    return Material(
+      color: const Color(0xFFF7F5FB),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: nickname.isEmpty
+            ? null
+            : () => showPlayerProfileDialog(context, nickname, game),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE0D8F5),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF4A4080),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _kTextPrimary,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Color(0xFFB5A9A3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Widget _tichuScoreTotal({

@@ -4603,15 +4603,6 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get midLeaveHistoryBadge => '중도탈주';
-
-  @override
-  String get midLeaveByTimeout => '시간 초과';
-
-  @override
-  String get midLeaveByChoice => '직접 나감';
-
-  @override
   String get lobbyRoomRules => '방 규칙';
 
   @override

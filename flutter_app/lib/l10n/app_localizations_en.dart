@@ -4714,15 +4714,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get midLeaveHistoryBadge => 'Walked out';
-
-  @override
-  String get midLeaveByTimeout => 'Timed out';
-
-  @override
-  String get midLeaveByChoice => 'Left';
-
-  @override
   String get lobbyRoomRules => 'Room rules';
 
   @override

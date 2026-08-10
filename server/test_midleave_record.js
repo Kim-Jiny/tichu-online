@@ -62,9 +62,13 @@ async function main() {
   const mover = new Client('mover');
   await Promise.all([host.connect(), mover.connect()]);
 
+  // Fresh accounts every run. Reusing fixed ones meant the server still held a
+  // reconnect pointer from the last run and pulled them straight back into a
+  // dead room, so create_room had nowhere to go.
+  const run = Date.now().toString(36).slice(-5);
   const accounts = [
-    [host, { username: 'rec_host', password: 'smoke1234!', nickname: '기록호스트' }],
-    [mover, { username: 'rec_mover', password: 'smoke1234!', nickname: '기록탈주자' }],
+    [host, { username: `rec_h_${run}`, password: 'smoke1234!', nickname: `기록호스트${run}` }],
+    [mover, { username: `rec_m_${run}`, password: 'smoke1234!', nickname: `기록탈주자${run}` }],
   ];
   for (const [c, a] of accounts) { c.nickname = a.nickname; c.send({ type: 'register', ...a }); }
   await sleep(1200);
@@ -83,7 +87,10 @@ async function main() {
     type: 'create_room', roomName: '기록 테스트', turnTimeLimit: 10,
     allowSpectators: true, allowMidGameJoin: true,
   });
-  const roomId = (await host.waitFor('room_joined', 5000)).roomId;
+  const created = await host.waitFor('room_joined', 5000).catch((e) => {
+    throw new Error(`${e.message} (server said: ${host.last['error']?.message ?? 'nothing'})`);
+  });
+  const roomId = created.roomId;
   mover.send({ type: 'join_room', roomId });
   await mover.waitFor('room_joined', 5000);
   host.send({ type: 'add_bot' });
@@ -134,6 +141,20 @@ async function main() {
       after2 === before + 2, `${before} -> ${after2}`);
   }
 
+  // The history row has to name who was at the table, the way every other
+  // game type's row does — that is what makes it recognisable as a game.
+  const logged = await pool.query(
+    `SELECT players FROM tc_midleave_log WHERE nickname = $1
+      ORDER BY id DESC LIMIT 1`, [mover.nickname],
+  );
+  const roster = JSON.parse(logged.rows[0]?.players || '[]');
+  check('the row records who was at the table', roster.length > 0,
+    JSON.stringify(roster));
+  check('the host is among them', roster.includes(host.nickname),
+    JSON.stringify(roster));
+  check('the leaver is not listed as their own opponent',
+    !roster.includes(mover.nickname), JSON.stringify(roster));
+
   host.close();
   mover.close();
 }
@@ -145,7 +166,7 @@ main()
     process.exit(failures === 0 ? 0 : 1);
   })
   .catch(async (e) => {
-    console.error('\nERROR', e.message);
+    console.error('\nERROR', e && (e.stack || e.message || e));
     await pool.end().catch(() => {});
     process.exit(1);
   });

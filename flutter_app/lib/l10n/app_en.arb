@@ -2663,9 +2663,6 @@
       }
     }
   },
-  "midLeaveHistoryBadge": "Walked out",
-  "midLeaveByTimeout": "Timed out",
-  "midLeaveByChoice": "Left",
   "lobbyRoomRules": "Room rules",
   "lobbyAppliesImmediately": "Applies immediately",
   "lobbyRoomWaiting": "Waiting"

@@ -4750,15 +4750,6 @@ class L10nDe extends L10n {
   }
 
   @override
-  String get midLeaveHistoryBadge => 'Ausgestiegen';
-
-  @override
-  String get midLeaveByTimeout => 'Zeit abgelaufen';
-
-  @override
-  String get midLeaveByChoice => 'Selbst verlassen';
-
-  @override
   String get lobbyRoomRules => 'Raumregeln';
 
   @override

@@ -847,19 +847,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     if (isMidGameLeave) {
       // No score exists. The useful detail is which room, and whether they
       // chose to go or ran out the clock three times.
+      // No score exists, and the row reads like every other one: who you were
+      // playing with. The room name and how it ended said nothing you'd
+      // recognise the game by; the names do.
       scoreText = '';
-      final reason = match['endReason'] == 'mid_leave_timeout'
-          ? l10n.midLeaveByTimeout
-          : l10n.midLeaveByChoice;
-      final roomName = match['roomName']?.toString() ?? '';
-      // Leads with the word the orange circle can't spell, then how it
-      // happened, then which room — least identifying part last, since this
-      // line ellipsizes.
-      playerText = [
-        l10n.midLeaveHistoryBadge,
-        reason,
-        if (roomName.isNotEmpty) roomName,
-      ].join(' · ');
+      final players = match['players'] as List<dynamic>? ?? [];
+      playerText = players.map((p) => p.toString()).join(', ');
     } else if (isMighty || isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';

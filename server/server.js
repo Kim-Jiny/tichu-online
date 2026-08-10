@@ -7094,6 +7094,14 @@ async function recordDesertionAgainst(room, playerId, nickname, options = {}) {
 function handOffSeatToBot(room, playerId, reason, options = {}) {
   const roomId = room.id;
   const nickname = room.game.playerNames[playerId];
+  // Snapshot the table BEFORE the swap: a moment later this seat holds a bot,
+  // and the match keeps running so the roster carries on changing. Everyone
+  // but the leaver, in seat order — the same "who you were playing with" the
+  // other game types record.
+  const tableAtDeparture = room.players
+    .filter((p) => p !== null && p.id !== playerId)
+    .map((p) => p.nickname)
+    .filter(Boolean);
   const leaverWs = findWsByPlayerId(playerId);
   const locale = leaverWs?.locale
     || findWsByPlayerId(room.hostId)?.locale
@@ -7149,7 +7157,7 @@ function handOffSeatToBot(room, playerId, reason, options = {}) {
   broadcastRoomList();
 
   console.log(`[MIDLEAVE] ${nickname} (${reason}) left room ${room.name}; ${result.botNickname} took the seat`);
-  return { nickname, ...result };
+  return { nickname, players: tableAtDeparture, ...result };
 }
 
 async function handleDesertion(roomId, playerId, reason = 'leave', options = {}) {
@@ -7188,6 +7196,7 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
             gameType: room.gameType,
             reason,
             roomName: room.name,
+            players: handedOff.players,
           });
         } catch (e) {
           console.error(`[MIDLEAVE] history log failed for ${handedOff.nickname}:`, e);

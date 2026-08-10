@@ -241,6 +241,12 @@ async function runMigrations() {
       `CREATE INDEX IF NOT EXISTS idx_tc_midleave_log_nickname_created
          ON tc_midleave_log (nickname, created_at DESC)`,
     );
+    // Who was at the table when they walked. Stored on the row rather than
+    // looked up later: the match keeps running and the seats keep changing, so
+    // by the time anyone reads this the roster is a different one. JSON text,
+    // not a comma-joined string — nicknames are user input and may contain
+    // commas.
+    await client.query(`ALTER TABLE tc_midleave_log ADD COLUMN IF NOT EXISTS players TEXT`);
 
     // User stats columns
     // Snapshot of the target's profile photo at the moment of the report.
@@ -2769,7 +2775,7 @@ async function getRecentMatches(nickname, limit = 5) {
     // client renders them as an event ("walked out of a Tichu game") rather
     // than trying to read a score off them.
     const midLeaveResult = await client.query(
-      `SELECT id, game_type, reason, room_name, created_at
+      `SELECT id, game_type, reason, room_name, players, created_at
          FROM tc_midleave_log
         WHERE nickname = $1 AND created_at >= $3
         ORDER BY created_at DESC
@@ -2787,6 +2793,9 @@ async function getRecentMatches(nickname, limit = 5) {
       endReason: row.reason === 'timeout' ? 'mid_leave_timeout' : 'mid_leave',
       deserterNickname: nickname,
       roomName: row.room_name,
+      // Shaped like the other game types' rosters so the history row can be
+      // rendered the same way: a list of who you were playing with.
+      players: parseMidLeavePlayers(row.players),
       createdAt: row.created_at,
     }));
 
@@ -4040,6 +4049,17 @@ async function getChatBan(nickname) {
 }
 
 // Increment leave count (ranked quit)
+/** Roster stored on a mid-leave row; [] for rows written before the column. */
+function parseMidLeavePlayers(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Log a walk-out from a match that carried on without the leaver.
  *
@@ -4047,14 +4067,19 @@ async function getChatBan(nickname) {
  * evidence behind the tally — the tally alone can't say which game, when, or
  * whether it was a deliberate exit or three timeouts.
  */
-async function logMidGameLeave({ nickname, gameType, reason, roomName }) {
+async function logMidGameLeave({ nickname, gameType, reason, roomName, players }) {
   if (!nickname) return { success: false };
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO tc_midleave_log (nickname, game_type, reason, room_name)
-       VALUES ($1, $2, $3, $4)`,
-      [nickname, gameType || 'tichu', reason || 'leave', roomName || null],
+      `INSERT INTO tc_midleave_log (nickname, game_type, reason, room_name, players)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        nickname, gameType || 'tichu', reason || 'leave', roomName || null,
+        Array.isArray(players) && players.length > 0
+          ? JSON.stringify(players)
+          : null,
+      ],
     );
     return { success: true };
   } catch (err) {

@@ -16,6 +16,11 @@ import '../widgets/player_profile_dialog.dart';
 import '../widgets/gold_icon.dart';
 import 'gold_shop_screen.dart';
 
+/// Width at which the shop list splits into two columns. Chosen so a phone in
+/// landscape stays single-column (its rows are still short) and a desktop
+/// browser window does not.
+const double _kShopTwoColumnWidth = 720;
+
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
 
@@ -1143,21 +1148,72 @@ class _ShopScreenState extends State<ShopScreen> {
     // Hairline separators, not gaps between cards: on the sheet these read as
     // one list, and dropping the per-item border + margin fits ~2 more rows on
     // a phone screen.
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 24),
-      itemCount: ordered.length,
-      separatorBuilder: (_, _) => const Divider(
-        height: 1,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: Color(0xFFF2ECE9),
-      ),
-      itemBuilder: (context, index) {
-        final g = ordered[index];
-        return g.length == 1
-            ? _buildShopRow(context, game, g.first)
-            : _buildGroupedFeatureCard(context, game, g);
+    Widget tile(List<Map<String, dynamic>> g) => g.length == 1
+        ? _buildShopRow(context, game, g.first)
+        : _buildGroupedFeatureCard(context, game, g);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // A landscape browser window gave each row the full width of the
+        // screen, so a one-line item stretched a metre wide with its price
+        // marooned at the far edge — and the list needed scrolling for what
+        // would have fit. Past this width, two columns.
+        if (constraints.maxWidth < _kShopTwoColumnWidth) {
+          return ListView.separated(
+            padding: const EdgeInsets.only(bottom: 24),
+            itemCount: ordered.length,
+            separatorBuilder: (_, _) => const Divider(
+              height: 1,
+              thickness: 1,
+              indent: 16,
+              endIndent: 16,
+              color: Color(0xFFF2ECE9),
+            ),
+            itemBuilder: (context, index) => tile(ordered[index]),
+          );
+        }
+
+        // Dealt alternately rather than split down the middle: rows differ in
+        // height (a grouped feature card is several times a plain row), and
+        // halving the list by count leaves one column much longer than the
+        // other. Alternating keeps the two ends roughly level.
+        final left = <List<Map<String, dynamic>>>[];
+        final right = <List<Map<String, dynamic>>>[];
+        for (var i = 0; i < ordered.length; i++) {
+          (i.isEven ? left : right).add(ordered[i]);
+        }
+
+        Widget column(List<List<Map<String, dynamic>>> groups) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < groups.length; i++) ...[
+              if (i > 0)
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: Color(0xFFF2ECE9),
+                ),
+              tile(groups[i]),
+            ],
+          ],
+        );
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: column(left)),
+              // A plain gap, not a VerticalDivider: the Row sits in a scroll
+              // view so its height is unbounded, and the divider's
+              // full-height rule has nothing to measure against.
+              const SizedBox(width: 20),
+              Expanded(child: column(right)),
+            ],
+          ),
+        );
       },
     );
   }

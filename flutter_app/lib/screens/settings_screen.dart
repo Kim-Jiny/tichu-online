@@ -123,6 +123,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   bool _isOutdated(String? latestVersion) {
+    // Never on the web. What is being served IS the current build — a reload
+    // is all it takes — so "not the latest version" with a store button below
+    // it was telling people to fix something that isn't broken. latestVersion
+    // tracks the store release, which the web build has no reason to match.
+    if (kIsWeb) return false;
     if (_appVersion.isEmpty) return false;
     if (latestVersion == null || latestVersion.isEmpty) return false;
     return _compareVersions(_appVersion, latestVersion) < 0;

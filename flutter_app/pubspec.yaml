@@ -100,6 +100,14 @@ flutter_launcher_icons:
   android: true
   image_path: "assets/icon.png"
   remove_alpha_ios: true
+  # Adaptive icon (Android 8+). Without these the launcher had only the square
+  # ic_launcher.png to work with and drew it inside its mask — a square picture
+  # in a circle, with the corners cut. Android also guarantees just the middle
+  # 72 of 108dp, so the full-bleed art lost the wordmark entirely; the
+  # foreground here is that art scaled into the safe zone, over the sky colour
+  # sampled from it. Regenerate with:  dart run flutter_launcher_icons
+  adaptive_icon_background: "#2F6FD0"
+  adaptive_icon_foreground: "assets_src/icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

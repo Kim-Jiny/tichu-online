@@ -4,4 +4,5 @@
          portion of assets/splash.png so the centered bitmap blends into
          margin space on tall phones. -->
     <color name="splash_bg">#AEDDF1</color>
+	<color name="ic_launcher_background">#2F6FD0</color>
 </resources>

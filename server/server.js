@@ -8851,11 +8851,25 @@ async function notifyAdminUsers(kind, title, body, payload = {}) {
 // onRefunded callback for autoRefundByTransaction: alerts opted-in admins when
 // a store (Apple/Google) refund/cancel is applied to a user's grant. Only
 // fires on a NEW refund (idempotent re-detection won't call this).
-function notifyAdminRefund({ nickname, productId, goldGranted, source }) {
+async function notifyAdminRefund({ nickname, productId, goldGranted, source }) {
+  // Same 정가 caveat as the purchase notice: this is the KRW list price an
+  // admin entered, not what the buyer was actually charged or refunded — the
+  // store owns both numbers. Shown anyway because "how big was this one" is
+  // the first thing you want from a refund alert, and the gold figure only
+  // answers it if you happen to know the product.
+  let priceTag = '';
+  try {
+    const product = await getGoldProductByProductId(productId);
+    const priceKrw = Number(product?.price_krw) || 0;
+    if (priceKrw > 0) priceTag = ` · ₩${priceKrw.toLocaleString()} (정가)`;
+  } catch {
+    // A lookup failure must not swallow the alert — send it without the price.
+  }
   return notifyAdminUsers(
     'payment',
     '↩️ 결제 취소/환불',
-    `${nickname || '?'} 님 · ${productId} · -${Number(goldGranted || 0).toLocaleString()}G 회수 (${source || 'store'})`,
+    `${nickname || '?'} 님 · ${productId}${priceTag}`
+      + ` · -${Number(goldGranted || 0).toLocaleString()}G 회수 (${source || 'store'})`,
   ).catch(() => {});
 }
 

@@ -1027,23 +1027,21 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(L10n.of(context).gameLeaveTitle),
-        content: Text(L10n.of(context).gameLeaveConfirm),
+        // In a mid-game-join room leaving does not end the match — a bot
+        // takes the seat — but it is still recorded, so the warning has to say
+        // which of the two is about to happen.
+        content: Text(
+          game.canLeaveInProgress
+              ? L10n.of(context).midLeaveConfirmBody(
+                  kMidGameJoinCooldownMinutes,
+                )
+              : L10n.of(context).gameLeaveConfirm,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).gameCancel),
           ),
-          // The softer exit, offered only where the room allows it: the match
-          // keeps running with a bot in your seat. Its own confirm states the
-          // cost, so this is just the fork.
-          if (game.canLeaveInProgress)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                confirmMidGameLeave(context, game);
-              },
-              child: Text(L10n.of(context).midLeaveButton),
-            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

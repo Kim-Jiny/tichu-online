@@ -1779,8 +1779,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
             color: Color(0xFF3E312A),
           ),
         ),
+        // A mid-game-join room hands the seat to a bot instead of ending
+        // the match; say so rather than warning about the wrong outcome.
         content: Text(
-          L10n.of(context).skGameLeaveConfirm,
+          game.canLeaveInProgress
+              ? L10n.of(context).midLeaveConfirmBody(
+                  kMidGameJoinCooldownMinutes,
+                )
+              : L10n.of(context).skGameLeaveConfirm,
           style: const TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
         ),
         actions: [
@@ -1788,16 +1794,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).commonCancel),
           ),
-          // Leaves the match running with a bot in your seat, where the room
-          // allows it. Its own confirm states the cost.
-          if (game.canLeaveInProgress)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                confirmMidGameLeave(context, game);
-              },
-              child: Text(L10n.of(context).midLeaveButton),
-            ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);

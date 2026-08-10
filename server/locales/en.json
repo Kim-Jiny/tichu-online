@@ -216,6 +216,7 @@
   "midjoin_needs_spectators": "Turn on spectating first — mid-game join needs it",
   "midjoin_last_human": "You cannot walk out when no other player is left — use Leave Room instead",
   "midjoin_left_self": "Recorded as a desertion",
+  "midjoin_left_timeout": "You timed out and a bot took your seat. Recorded as a desertion",
   "room_spectator_not_found": "Spectator not found",
   "sk_not_bidding_phase": "Not in the bidding phase",
   "sk_bid_already_submitted": "You have already submitted a bid",

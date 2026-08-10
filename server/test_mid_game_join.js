@@ -124,5 +124,45 @@ const noSpec = new GameRoom(
 );
 check('spectator-less room forces the option off', noSpec.allowMidGameJoin === false);
 
+// A room that migrates between instances during a deploy must land with the
+// same rules it left with. Both flags used to be dropped by adoptRoom, so a
+// spectator-free room came back with an audience.
+console.log('\n[migration round-trip]');
+{
+  const LobbyManager = require('./lobby/LobbyManager');
+  const lobby = new LobbyManager();
+  const base = (extra) => ({
+    id: `room_adopt_${Math.floor(failures + Object.keys(extra).length + 1)}_${extra.tag}`,
+    name: 'migrated', hostId: 'player_h', hostNickname: '호스트',
+    gameType: 'tichu', maxPlayers: 4, players: [], ...extra,
+  });
+
+  const kept = lobby.adoptRoom(base({
+    tag: 'a', allowSpectators: true, allowMidGameJoin: true,
+  }));
+  check('option survives migration', kept?.allowMidGameJoin === true);
+  check('spectating survives migration', kept?.allowSpectators === true);
+
+  const noSpec = lobby.adoptRoom(base({
+    tag: 'b', allowSpectators: false, allowMidGameJoin: true,
+  }));
+  check('spectators-off survives migration', noSpec?.allowSpectators === false);
+  check('option dropped when spectating is off',
+    noSpec?.allowMidGameJoin === false);
+
+  // A peer old enough not to send the field predates it being carried, and
+  // its rooms allowed spectating — absent must read as true, not false.
+  const legacy = lobby.adoptRoom(base({ tag: 'c' }));
+  check('missing allowSpectators defaults to on', legacy?.allowSpectators === true);
+  check('missing allowMidGameJoin defaults to off',
+    legacy?.allowMidGameJoin === false);
+
+  const ranked = lobby.adoptRoom(base({
+    tag: 'd', isRanked: true, allowSpectators: true, allowMidGameJoin: true,
+  }));
+  check('ranked migration still forces the option off',
+    ranked?.allowMidGameJoin === false);
+}
+
 console.log(failures === 0 ? '\nPASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

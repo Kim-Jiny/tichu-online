@@ -3756,22 +3756,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.skGameLeaveTitle),
-        content: Text(l10n.skGameLeaveConfirm),
+        // A mid-game-join room hands the seat to a bot instead of ending
+        // the match; say so rather than warning about the wrong outcome.
+        content: Text(
+          gs.canLeaveInProgress
+              ? l10n.midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
+              : l10n.skGameLeaveConfirm,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),
           ),
-          // Leaves the match running with a bot in your seat, where the room
-          // allows it. Its own confirm states the cost.
-          if (gs.canLeaveInProgress)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                confirmMidGameLeave(context, gs);
-              },
-              child: Text(l10n.midLeaveButton),
-            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

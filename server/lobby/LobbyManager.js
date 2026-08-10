@@ -144,9 +144,15 @@ class LobbyManager {
     room.blockedSlots = new Set(Array.isArray(data.blockedSlots) ? data.blockedSlots : []);
     room.autoBlockedSlots = new Set(Array.isArray(data.autoBlockedSlots) ? data.autoBlockedSlots : []);
     room.randomSeating = !!data.randomSeating;
-    // Assigned after construction: the constructor gates this on isRanked and
-    // allowSpectators, and the adopt path passes neither in a form it can see.
-    room.allowMidGameJoin = !data.isRanked && !!data.allowMidGameJoin;
+    // Both assigned after construction rather than through the constructor,
+    // which takes them positionally behind arguments the adopt path doesn't
+    // reconstruct. A peer too old to send allowSpectators predates the field
+    // being carried at all, and its rooms allowed spectating by default —
+    // so absent means true, matching the constructor.
+    room.allowSpectators = data.allowSpectators !== false;
+    room.allowMidGameJoin = !data.isRanked
+      && room.allowSpectators
+      && !!data.allowMidGameJoin;
     // Mid-match migration: the peer was at a round boundary and handed us
     // the cumulative score + seating. startGame consumes this to resume
     // the match rather than start a new one.

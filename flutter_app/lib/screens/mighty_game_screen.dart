@@ -1787,22 +1787,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(L10n.of(context).mtLeaveGame),
-        content: Text(L10n.of(context).mtLeaveConfirm),
+        // A mid-game-join room hands the seat to a bot instead of ending
+        // the match; say so rather than warning about the wrong outcome.
+        content: Text(
+          game.canLeaveInProgress
+              ? L10n.of(context).midLeaveConfirmBody(
+                  kMidGameJoinCooldownMinutes,
+                )
+              : L10n.of(context).mtLeaveConfirm,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).mtCancel),
           ),
-          // Leaves the match running with a bot in your seat, where the room
-          // allows it. Its own confirm states the cost.
-          if (game.canLeaveInProgress)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                confirmMidGameLeave(context, game);
-              },
-              child: Text(L10n.of(context).midLeaveButton),
-            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

@@ -1991,6 +1991,11 @@ function serializeRoom(room) {
     blockedSlots: matchProgress ? emptySlots(room) : [...(room.blockedSlots || [])],
     autoBlockedSlots: matchProgress ? [] : [...(room.autoBlockedSlots || [])],
     randomSeating: !!room.randomSeating,
+    // Host privacy choice. Was missing from the payload, so a room created
+    // with spectating off came back from a migration with it ON (the GameRoom
+    // constructor defaults to true) — an audience the host had explicitly
+    // refused, appearing after a deploy.
+    allowSpectators: room.allowSpectators !== false,
     // Carried so a match that migrates mid-round keeps its exits open — a
     // player who joined on the promise of being able to walk out must not
     // find the option gone after a deploy moved the room.
@@ -2939,9 +2944,9 @@ const DRAIN_FROZEN_ACTIONS = new Set([
   'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
   'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
   'switch_to_spectator', 'switch_to_player',
-  // Taking a seat here while the room is about to move to the peer would strand
-  // the joiner. leave_in_progress is deliberately absent for the same reason
-  // leave_room is: never trap someone in a room.
+  // Taking a seat here while the room is about to move to the peer would
+  // strand the joiner. Leaving is not frozen — leave_room/leave_game already
+  // carry the walk-out, and those must never trap someone in a room.
   'set_mid_game_join', 'join_in_progress',
   'start_game', 'next_round',
 ]);
@@ -3106,9 +3111,6 @@ async function handleMessage(ws, data) {
       break;
     case 'join_in_progress':
       handleJoinInProgress(ws);
-      break;
-    case 'leave_in_progress':
-      await handleLeaveInProgress(ws);
       break;
     case 'get_profile':
       await handleGetProfile(ws, data);
@@ -5455,81 +5457,6 @@ function handleJoinInProgress(ws) {
 }
 
 /**
- * A seated player walks out of a live match and a bot finishes their game.
- *
- * Unlike handleDesertion this does NOT end the match — that is the whole point
- * of the option. It still records against the leaver: from the table's side
- * they left mid-game, and the fact that a bot covered for them doesn't change
- * that.
- */
-async function handleLeaveInProgress(ws) {
-  if (!ws.roomId || ws.isSpectator) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_player_in_room') });
-    return;
-  }
-  const room = lobby.getRoom(ws.roomId);
-  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
-  if (!room.allowMidGameJoin) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_not_allowed') });
-    return;
-  }
-  const game = room.game;
-  if (!game || game.state === 'game_end' || game.deserted) {
-    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_no_game') });
-    return;
-  }
-
-  const roomId = room.id;
-  const nickname = ws.nickname;
-  const playerId = ws.playerId;
-  // Rejects when this is the last human — a table of bots playing to an empty
-  // room is not a match anyone is in. They can still use plain leave, which
-  // ends it.
-  const result = room.replaceWithBot(playerId, ws.locale);
-  if (!result.success) {
-    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
-    return;
-  }
-
-  // Recorded like any other desertion. No ranked ban to apply — ranked rooms
-  // can't enable this option (they can't hold bots), so isRanked is false here.
-  try {
-    await incrementLeaveCount(nickname);
-  } catch (e) {
-    console.error(`[MIDLEAVE] leave-count update failed for ${nickname}:`, e);
-  }
-  midGameJoinCooldowns.set(nickname, Date.now() + MID_GAME_JOIN_COOLDOWN_MS);
-
-  // No seat to come back to — the bot has it. Drop the reconnect pointer so a
-  // later reconnect lands in the lobby instead of a room they walked out of.
-  playerSessions.delete(nickname);
-  if (timeoutCounts[roomId]) delete timeoutCounts[roomId][nickname];
-  ws.roomId = null;
-  ws.isSpectator = false;
-  sendTo(ws, {
-    type: 'left_in_progress',
-    message: t(ws.locale, 'midjoin_left_self'),
-  });
-  broadcastGameEvent(roomId, {
-    type: 'player_left_in_progress',
-    player: playerId,
-    playerName: nickname,
-    slot: result.slot,
-    replacedBy: result.botId,
-    botName: result.botNickname,
-  });
-
-  // The vacated seat is a bot's now: if it was their turn, the bot has to be
-  // told to move and the human turn timer has to come down.
-  clearTurnTimer(roomId);
-  scheduleBotActions(roomId, true);
-  startTurnTimer(roomId);
-  sendGameStateToAll(roomId);
-  broadcastRoomState(roomId);
-  broadcastRoomList();
-}
-
-/**
  * Owner switching a feature pass on or off.
  *
  * The days keep running either way — this decides whether the pass applies.
@@ -7105,16 +7032,152 @@ function handleResetTimeout(ws) {
 // options.penalize=false records the desertion normally — event, result,
 // game end — but skips the leave-count bump and ranked ban. For desertions
 // this instance decided on someone's behalf rather than ones they chose.
+/**
+ * Bump the leave count (and ranked ban) for someone who left a live match.
+ *
+ * Shared by both desertion outcomes — the one that ends the match and the one
+ * where a bot takes the seat — so "what counts against you" has a single
+ * definition. From the table's side both are the same act; that a bot covered
+ * for you doesn't undo it.
+ *
+ * Skipped for bots, for the solo-vs-bots case (nobody was harmed), and when
+ * the caller passes penalize:false for a desertion this instance decided on
+ * someone's behalf rather than one they chose.
+ *
+ * Counts humans EXCLUDING the deserter, so it is correct whether or not they
+ * have already been taken out of room.players by the time we get here.
+ */
+async function recordDesertionAgainst(room, playerId, nickname, options = {}) {
+  const otherHumans = room.players.filter(
+    (p) => p !== null && !p.isBot && p.id !== playerId,
+  ).length;
+  if (options.penalize === false
+      || !nickname
+      || playerId.startsWith('bot_')
+      || otherHumans === 0) {
+    return;
+  }
+  // Non-critical side effects. They MUST NOT abort the caller: the seat change
+  // (or the terminal desertion claim) has already happened, so throwing out of
+  // here would leave the room half-updated — in the desertion case, bricked at
+  // state='playing' forever. Swallow and continue.
+  try {
+    await incrementLeaveCount(nickname);
+    if (room.isRanked) {
+      await setRankedBan(nickname);
+    }
+  } catch (e) {
+    console.error(`[DESERTION] leave-count/ban update failed for ${nickname}:`, e);
+  }
+}
+
+/**
+ * Put a bot in a leaving player's seat and keep the match running.
+ *
+ * Returns the handoff details, or null when it can't be done — which today
+ * means they were the last human, and the caller must fall back to ending the
+ * match. Fully synchronous so callers can test it before claiming a game
+ * terminally without opening a race.
+ *
+ * `reason` is 'leave' or 'timeout'; it only changes what the table and the
+ * departing player are told, not what is recorded.
+ */
+function handOffSeatToBot(room, playerId, reason, options = {}) {
+  const roomId = room.id;
+  const nickname = room.game.playerNames[playerId];
+  const leaverWs = findWsByPlayerId(playerId);
+  const locale = leaverWs?.locale
+    || findWsByPlayerId(room.hostId)?.locale
+    || null;
+
+  const result = room.replaceWithBot(playerId, locale);
+  if (!result.success) return null;
+
+  releasePeerPending(nickname);
+  // No seat to return to — the bot has it. Drop the reconnect pointer so a
+  // later reconnect lands in the lobby rather than a room they are no longer
+  // part of, and clear the timeout tally so it can't follow a rejoin.
+  playerSessions.delete(nickname);
+  if (timeoutCounts[roomId]) delete timeoutCounts[roomId][nickname];
+  // Same cooldown as a deliberate walk-out. Timing out of one match then
+  // immediately dropping into another is exactly what it is there to stop.
+  // Skipped for desertions we decided on their behalf (penalize:false).
+  if (options.penalize !== false && nickname) {
+    midGameJoinCooldowns.set(nickname, Date.now() + MID_GAME_JOIN_COOLDOWN_MS);
+  }
+
+  if (leaverWs) {
+    sendTo(leaverWs, {
+      type: 'left_in_progress',
+      message: t(
+        leaverWs.locale,
+        reason === 'timeout' ? 'midjoin_left_timeout' : 'midjoin_left_self',
+      ),
+    });
+    if (leaverWs.roomId === roomId) {
+      leaverWs.roomId = null;
+      leaverWs.isSpectator = false;
+    }
+  }
+
+  broadcastGameEvent(roomId, {
+    type: 'player_left_in_progress',
+    player: playerId,
+    playerName: nickname,
+    slot: result.slot,
+    replacedBy: result.botId,
+    botName: result.botNickname,
+    reason,
+  });
+
+  // The seat is a bot's now: if it was their turn, the bot has to be told to
+  // move and the human clock has to come down.
+  clearTurnTimer(roomId);
+  scheduleBotActions(roomId, true);
+  startTurnTimer(roomId);
+  sendGameStateToAll(roomId);
+  broadcastRoomState(roomId);
+  broadcastRoomList();
+
+  console.log(`[MIDLEAVE] ${nickname} (${reason}) left room ${room.name}; ${result.botNickname} took the seat`);
+  return { nickname, ...result };
+}
+
 async function handleDesertion(roomId, playerId, reason = 'leave', options = {}) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
 
   const game = room.game;
+  // Someone else already claimed this game terminally.
+  if (game.deserted) return;
+
+  // Rooms that allow mid-match seat changes don't end the match when one
+  // person goes — a bot inherits the seat and everyone else plays on. This
+  // sits ahead of the terminal claim below and covers EVERY route into
+  // desertion (leave room, leave game, account deletion, 3 timeouts), not
+  // just the deliberate walk-out: if plain "leave" still killed the table,
+  // it would be the loophole that makes the whole option pointless.
+  //
+  // Safe to test before claiming the game: handOffSeatToBot's decision is
+  // synchronous, so nothing can interleave between here and `deserted = true`
+  // on the fall-through path.
+  if (room.allowMidGameJoin && game.state !== 'game_end') {
+    const handedOff = handOffSeatToBot(room, playerId, reason, options);
+    if (handedOff) {
+      // Recording is the same as any desertion — see the note there. Awaited
+      // after the seat is already a bot's, so a DB blip can't strand the room.
+      await recordDesertionAgainst(room, playerId, handedOff.nickname, options);
+      return;
+    }
+    // Fell through: they were the last human. A table of bots playing to an
+    // empty room is not a match, so this ends it like a normal desertion.
+  }
+
   // Claim the game terminally BEFORE any await/broadcast. This closes two
   // race windows:
-  //  (a) a concurrent leave/timeout that also reaches handleDesertion bails
-  //      here (its outer !deserted guard passed before we ran) — no double
-  //      desertion save; and
+  //  (a) a concurrent leave/timeout that also reaches handleDesertion bails at
+  //      the `deserted` check above (its outer guard passed before we ran) —
+  //      no double desertion save; and
   //  (b) an offloaded bot decision awaiting a worker can resolve mid-desertion
   //      while state is still 'playing' (we set state='game_end' only at the
   //      end, after the DB awaits). resultSaved claims the shared idempotency
@@ -7122,7 +7185,8 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
   //      callback's `deserted` check stops it from applying a move at all.
   //      Prevents a single match being written twice (normal result + desertion
   //      draw), which would corrupt ranked stats / bans.
-  if (game.deserted) return;
+  // Nothing above this point awaits, so the seat-handoff test cannot widen
+  // either window.
   game.deserted = true;
   game.resultSaved = true;
   const deserterNick = game.playerNames[playerId];
@@ -7136,31 +7200,9 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
     reason, // 'leave' or 'timeout'
   });
 
-  // Increment leave_count + ranked ban (skip bots). Also skip when the deserter
-  // is the ONLY human in the room (solo vs bots): there is no other player to
-  // harm, so leaving a practice-with-bots game must not count as desertion.
-  // Count humans EXCLUDING the deserter, so it's correct whether or not the
-  // deserter has already been removed from room.players by this point.
-  const otherHumans = room.players.filter(
-    (p) => p !== null && !p.isBot && p.id !== playerId,
-  ).length;
-  if (options.penalize !== false
-      && deserterNick && !playerId.startsWith('bot_') && otherHumans > 0) {
-    // These are non-critical side effects. They MUST NOT abort desertion: we
-    // already claimed the game terminally (deserted/resultSaved above), so if a
-    // DB blip (e.g. pool.connect() failure) threw out of here, we'd skip the
-    // result save AND the cleanup below — leaving the room permanently bricked
-    // (state='playing' forever; bots and the watchdog both bail on `deserted`,
-    // and re-desertion/normal-save are blocked). Swallow and continue.
-    try {
-      await incrementLeaveCount(deserterNick);
-      if (room.isRanked) {
-        await setRankedBan(deserterNick);
-      }
-    } catch (e) {
-      console.error(`[DESERTION] leave-count/ban update failed for ${deserterNick}:`, e);
-    }
-  }
+  // Increment leave_count + ranked ban. See recordDesertionAgainst for the
+  // exclusions and for why a failure here must not abort the desertion.
+  await recordDesertionAgainst(room, playerId, deserterNick, options);
 
   try {
     if (room.gameType === 'love_letter') {

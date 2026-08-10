@@ -106,9 +106,14 @@ class GameService extends ChangeNotifier {
       roomGameInProgress &&
       roomBotSeatCount > 0;
 
-  /// A seated player here can hand their seat to a bot and walk. Blocked when
-  /// nobody else human is at the table — the server refuses that too, since
-  /// it would leave bots playing to an empty room.
+  /// Leaving right now would hand this seat to a bot and let the match carry
+  /// on, rather than ending it for everyone.
+  ///
+  /// Not a separate action — the ordinary leave does this by itself in a room
+  /// with the option on (the server converts every desertion route, including
+  /// a 3-timeout kick). Screens read it to word the leave warning correctly.
+  /// False when nobody else human is at the table, where the server ends the
+  /// match instead rather than leave bots playing to an empty room.
   bool get canLeaveInProgress {
     if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress) return false;
     final otherHumans = roomPlayers
@@ -3242,12 +3247,6 @@ class GameService extends ChangeNotifier {
   /// view and then claims the winning hand.
   void joinInProgress() {
     _network.send({'type': 'join_in_progress'});
-  }
-
-  /// Hand your seat to a bot and walk out of a running match. Counts as a
-  /// desertion on your record; the match carries on for everyone else.
-  void leaveInProgress() {
-    _network.send({'type': 'leave_in_progress'});
   }
 
   void requestCardView(String playerId) {

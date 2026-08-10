@@ -2796,6 +2796,12 @@ async function getRecentMatches(nickname, limit = 5) {
       // Shaped like the other game types' rosters so the history row can be
       // rendered the same way: a list of who you were playing with.
       players: parseMidLeavePlayers(row.players),
+      // For already-shipped clients only. They pick a renderer by gameType,
+      // and the Tichu one reads these four seats plus two scores — absent,
+      // they draw "0 : 0" and "-·- : -·-". Filling them from the roster makes
+      // an old app show the table it actually was. New clients take the
+      // isMidGameLeave branch and never look at these.
+      ...tichuSeatsForMidLeave(nickname, parseMidLeavePlayers(row.players)),
       createdAt: row.created_at,
     }));
 
@@ -4049,12 +4055,49 @@ async function getChatBan(nickname) {
 }
 
 // Increment leave count (ranked quit)
-/** Roster stored on a mid-leave row; [] for rows written before the column. */
+/**
+ * Tichu seat fields for a mid-leave row, for the benefit of older clients.
+ *
+ * Their Tichu renderer reads playerA1/A2/B1/B2 and the two team scores. There
+ * are no scores to report — the match was still running — so those stay 0 and
+ * the seats carry the four names, leaver first. Purely cosmetic: it turns
+ * "0 : 0  -·- : -·-" into the names of the people who were there.
+ */
+function tichuSeatsForMidLeave(leaver, roster) {
+  const names = [leaver, ...roster.map((p) => p.nickname)].filter(Boolean);
+  return {
+    teamAScore: 0,
+    teamBScore: 0,
+    playerA1: names[0] ?? null,
+    playerA2: names[1] ?? null,
+    playerB1: names[2] ?? null,
+    playerB2: names[3] ?? null,
+  };
+}
+
+/**
+ * Roster stored on a mid-leave row, in the shape every other game type sends.
+ *
+ * Stored as bare nicknames, but emitted as `[{ nickname }]` — clients already
+ * in the wild render a Skull King / Love Letter / Mighty row with
+ * `players.map((p) => p['nickname'])`, and indexing a String with a String
+ * throws in Dart ("type 'String' is not a subtype of type 'int'"), taking the
+ * whole profile popup down. They cannot be updated, so the payload matches
+ * what they expect.
+ *
+ * [] for rows written before the column existed.
+ */
 function parseMidLeavePlayers(raw) {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry) => (
+        // Tolerate either shape on the way in: older rows hold plain strings.
+        typeof entry === 'string' ? { nickname: entry } : entry
+      ))
+      .filter((entry) => entry && typeof entry.nickname === 'string');
   } catch {
     return [];
   }

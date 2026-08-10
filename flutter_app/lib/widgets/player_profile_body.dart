@@ -851,8 +851,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       // playing with. The room name and how it ended said nothing you'd
       // recognise the game by; the names do.
       scoreText = '';
+      // Same shape as every other game type: [{nickname: ...}]. The server
+      // sends it that way on purpose — clients already shipped read
+      // p['nickname'] here, and bare strings would throw on them.
       final players = match['players'] as List<dynamic>? ?? [];
-      playerText = players.map((p) => p.toString()).join(', ');
+      playerText = players
+          .map((p) => (p is Map ? p['nickname'] : p)?.toString() ?? '?')
+          .join(', ');
     } else if (isMighty || isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';

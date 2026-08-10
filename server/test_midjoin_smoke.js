@@ -5,14 +5,19 @@
  * unit test can't reach — the desertion branch in server.js, the turn timer,
  * and the spectator break-in — by driving a real server over WebSocket.
  *
- * Two humans sit down with two bots and then both go silent. What should
- * happen, in order:
+ * Two humans sit down with two bots. What should happen, in order:
  *
- *   1. Whoever hits 3 turn timeouts first loses their seat to a bot, and the
- *      match KEEPS RUNNING for the other human. (The thing that was broken.)
- *   2. A spectator can then break into a bot seat mid-match.
+ *   1. A spectator breaks into one of the bot seats, and the cooldown then
+ *      refuses a second break-in.
+ *   2. Both seated humans go silent. Whoever hits 3 turn timeouts first loses
+ *      their seat to a bot, and the match KEEPS RUNNING for the other human.
+ *      (The thing that was broken.)
  *   3. When the last remaining human times out too, there is nobody left to
  *      play for, so it falls back to ending the match.
+ *
+ * The spectator step comes FIRST on purpose. Run the other way round, both
+ * humans time out within a turn of each other, the second one ends the match,
+ * and the spectator arrives at a room that no longer exists.
  *
  * Nobody plays a card — every move comes from a timeout or a bot, which is
  * what makes the script short and the timing predictable.
@@ -63,6 +68,8 @@ class Client {
 
   send(msg) { this.ws.send(JSON.stringify(msg)); }
   saw(type) { return this.seen.includes(type); }
+  /** Drop a remembered message so waitFor/last see only what comes next. */
+  forget(type) { delete this.last[type]; }
   close() { try { this.ws.close(); } catch { /* already gone */ } }
 
   /** Resolve once `type` arrives, or reject on timeout. */
@@ -146,7 +153,43 @@ async function main() {
   ]);
   console.log('  ..  game started, both humans going silent');
 
-  // ── 1. first human to burn 3 timeouts loses the seat, match continues ──
+  // ── 1. a spectator breaks into a bot seat ─────────────────────────────
+  console.log('\n[spectator breaks in]');
+  carol.send({ type: 'spectate_room', roomId });
+  // spectate_joined is the ack; the board state follows on its own and is not
+  // a precondition for breaking in.
+  const watching = await carol.waitFor('spectate_joined', 8000).catch(() => null);
+  check('spectator got into the room', !!watching, carol.last['error']?.message);
+  carol.send({ type: 'join_in_progress' });
+  const joined = await carol.waitFor('joined_in_progress', 8000).catch(() => null);
+  check('spectator took a bot seat', !!joined, JSON.stringify(carol.last['error']));
+  check('joiner was dealt into the live hand',
+    (await carol.waitFor('game_state', 8000).catch(() => null)) != null);
+  check('table was told someone joined',
+    alice.last['player_joined_in_progress']?.playerName === carol.nickname,
+    alice.last['player_joined_in_progress']?.playerName);
+
+  // Walk straight back out, then try to break in again. Seat-hopping has to
+  // cost something; without a cooldown, leaving a bad hand and re-entering on
+  // the next deal is free.
+  //
+  // The re-spectate matters: having taken a seat, carol is a PLAYER, and a
+  // second join_in_progress would be refused for not spectating — which says
+  // nothing about the cooldown. Only a spectator reaches that check.
+  carol.send({ type: 'leave_room' });
+  await carol.waitFor('room_left', 8000).catch(() => null);
+  await sleep(800);
+  carol.forget('error');
+  carol.forget('spectate_joined');
+  carol.send({ type: 'spectate_room', roomId });
+  await carol.waitFor('spectate_joined', 8000).catch(() => null);
+  carol.send({ type: 'join_in_progress' });
+  await sleep(600);
+  check('an immediate re-entry is refused, and says how long',
+    /\d/.test(carol.last['error']?.message || ''),
+    carol.last['error']?.message);
+
+  // ── 2. first human to burn 3 timeouts loses the seat, match continues ──
   console.log('\n[timeout → bot takes the seat]');
   const handoff = await Promise.race([
     alice.waitFor('left_in_progress', OVERALL_TIMEOUT_MS),
@@ -168,47 +211,20 @@ async function main() {
 
   // The point of the whole feature: the other human's game is still alive.
   check('match did not end for the remaining human',
-    !stayed.saw('game_ended') && stayed.last['game_state']?.state?.phase !== 'game_end',
+    !stayed.saw('game_ended')
+      && stayed.last['game_state']?.state?.phase != 'game_end',
     stayed.last['game_state']?.state?.phase);
   const before = stayed.gameStates;
   await sleep(TURN_LIMIT_SEC * 1000 + 4000);
   check('match is still progressing', stayed.gameStates > before,
     `states ${before} -> ${stayed.gameStates}`);
 
-  // ── 2. a spectator breaks into a bot seat ─────────────────────────────
-  console.log('\n[spectator breaks in]');
-  carol.send({ type: 'spectate_room', roomId });
-  // spectate_joined is the ack; the board state follows on its own and is not
-  // a precondition for breaking in. Waiting on the state message instead let a
-  // failed spectate slide through and surface as a confusing "not spectating"
-  // error one step later.
-  const watching = await carol.waitFor('spectate_joined', 8000).catch(() => null);
-  check('spectator got into the room', !!watching,
-    carol.last['error']?.message);
-  carol.send({ type: 'join_in_progress' });
-  const joined = await carol.waitFor('joined_in_progress', 8000).catch(() => null);
-  check('spectator took a bot seat', !!joined, JSON.stringify(carol.last['error']));
-  check('joiner was dealt into the live hand',
-    (await carol.waitFor('game_state', 8000).catch(() => null)) != null);
-  check('table was told someone joined',
-    stayed.last['player_joined_in_progress']?.playerName === carol.nickname,
-    stayed.last['player_joined_in_progress']?.playerName);
-
-  // Cooldown must bite immediately — otherwise seat-hopping is free.
-  carol.send({ type: 'join_in_progress' });
-  await sleep(600);
-  check('a second break-in is refused while on cooldown',
-    /\d/.test(carol.last['error']?.message || ''),
-    carol.last['error']?.message);
-
   // ── 3. last human out ends the match ──────────────────────────────────
-  // Carol just joined, so two humans are seated again. Both stay silent;
-  // the second one to run out of timeouts has nobody left to play for.
   console.log('\n[last human out ends it]');
-  const ended = await Promise.race([
-    stayed.waitFor('kicked', OVERALL_TIMEOUT_MS).then(() => 'kicked'),
-    carol.waitFor('kicked', OVERALL_TIMEOUT_MS).then(() => 'kicked'),
-  ]).catch((e) => e.message);
+  const ended = await stayed
+    .waitFor('kicked', OVERALL_TIMEOUT_MS)
+    .then(() => 'kicked')
+    .catch((e) => e.message);
   check('the final departure ends the match as a desertion',
     ended === 'kicked', String(ended));
 

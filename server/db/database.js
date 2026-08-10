@@ -2575,9 +2575,18 @@ async function getRecentMatches(nickname, limit = 5) {
     // a stranger's games sitting in it. Bound every lookup to this account's
     // own lifetime; a nickname with no live account (someone inspecting a
     // deleted user) keeps the old, unbounded behaviour.
-    const since = (await client.query(
+    //
+    // Sent as a text timestamp, not a JS Date. These columns are `timestamp
+    // without time zone` holding UTC, and node-pg serializes a Date using the
+    // *process* timezone — `...T12:02+09:00` for a 03:02 UTC value — which the
+    // cast to timestamp then truncates to 12:02, moving the bound nine hours
+    // forward and hiding every match newer than it. Invisible on a UTC host,
+    // which is why it survived; anything east of Greenwich loses its history.
+    // toISOString() is already UTC and carries no offset for the cast to eat.
+    const sinceDate = (await client.query(
       `SELECT created_at FROM tc_users WHERE nickname = $1`, [nickname]
     )).rows[0]?.created_at || new Date(0);
+    const since = new Date(sinceDate).toISOString().replace('T', ' ').replace('Z', '');
 
     // Tichu matches
     const tichuResult = await client.query(
@@ -2766,10 +2775,13 @@ async function getGoldHistory(nickname, limit = 30) {
   try {
     // Same nickname-recycling guard as getRecentMatches: match rows and
     // tc_gold_history survive an account deletion under the original nickname,
-    // so the next owner of that nickname must not inherit the ledger.
-    const since = (await client.query(
+    // so the next owner of that nickname must not inherit the ledger. Passed
+    // as UTC text for the same reason as there — a JS Date would be sent with
+    // the process's offset and lose nine hours to the timestamp cast.
+    const sinceDate = (await client.query(
       `SELECT created_at FROM tc_users WHERE nickname = $1`, [nickname]
     )).rows[0]?.created_at || new Date(0);
+    const since = new Date(sinceDate).toISOString().replace('T', ' ').replace('Z', '');
     const result = await client.query(
       `
       SELECT *

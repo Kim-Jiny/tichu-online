@@ -425,8 +425,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
               child: Row(
                 children: [
-                  if (isRanked)
-                    const Text('🏆 ', style: TextStyle(fontSize: 14)),
+                  if (isRanked) ...[
+                    Image.asset(
+                      'assets/icons/lankIcon.webp',
+                      width: 18,
+                      height: 15,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 5),
+                  ],
                   Expanded(
                     child: Text(
                       roomName,
@@ -676,6 +683,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// Small caps-ish heading that separates the settings dialog into "what the
+  /// room is called" and "how it plays" — without it the switch read as an
+  /// afterthought glued under the name field.
+  Widget _settingsSectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.4,
+        color: Color(0xFF9C8B84),
+      ),
+    );
+  }
+
   void _showRoomSettingsDialog(GameService game) {
     final controller = TextEditingController(text: game.currentRoomName);
     final l10n = L10n.of(context);
@@ -695,13 +717,113 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ],
         ),
-        content: TextField(
-          controller: controller,
-          maxLength: 20,
-          decoration: InputDecoration(
-            hintText: l10n.lobbyEnterRoomTitle,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+        // Consumer, not StatefulBuilder: the switch reflects room state that
+        // the SERVER owns, and it only changes when the room_state broadcast
+        // comes back. A local setState repainted with the old value, so the
+        // switch visibly snapped back before flicking across a moment later.
+        content: Consumer<GameService>(
+          builder: (ctx, gs, _) {
+            // Ranked rooms can't hold bots, so there is never a seat to take
+            // over and the server refuses the toggle — don't offer it.
+            final canOfferMidJoin = !gs.isRankedRoom;
+            return SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _settingsSectionLabel(l10n.lobbyRoomName),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: controller,
+                    maxLength: 20,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      // The 0/20 counter added a whole line of chrome under a
+                      // field nobody is at risk of overrunning.
+                      counterText: '',
+                      hintText: l10n.lobbyEnterRoomTitle,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  if (canOfferMidJoin) ...[
+                    const SizedBox(height: 18),
+                    _settingsSectionLabel(l10n.lobbyRoomRules),
+                    const SizedBox(height: 6),
+                    // Applied on the spot rather than on "변경", which only
+                    // commits the name. A switch that silently needed a second
+                    // button to take effect is the kind of thing you find out
+                    // about after the game has already started — so the row
+                    // says as much, right where the switch is.
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+                      decoration: BoxDecoration(
+                        color: gs.roomAllowMidGameJoin
+                            ? const Color(0xFFF3EFFC)
+                            : const Color(0xFFF7F5F4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'assets/icons/allowBotReplacement.webp',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.midJoinCreateOption,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF4B3C35),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.midJoinCreateOptionHint,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    height: 1.35,
+                                    color: Color(0xFF8A7A72),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  l10n.lobbyAppliesImmediately,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF9A90BC),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: gs.roomAllowMidGameJoin,
+                            onChanged: (v) => gs.setMidGameJoin(v),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -899,11 +1021,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
             required bool value,
             required ValueChanged<bool> onChanged,
             bool enabled = true,
+            IconData? icon,
+            Color? iconColor,
+
+            /// Artwork instead of a glyph, for options that ship their own.
+            String? iconAsset,
           }) {
             // A row with a divider, not a card. Each option used to be its own
             // bordered box whose border colour also encoded the value — a card
             // per switch inside a card inside the dialog, saying with a border
             // what the switch already says.
+            //
+            // The glyph is the same one the option produces out in the lobby
+            // (the eye on a room card, the arrow on a mid-join room), so the
+            // switch and its consequence are recognisably the same thing —
+            // four near-identical text rows were easy to mix up.
             return Opacity(
               opacity: enabled ? 1 : 0.5,
               child: Container(
@@ -913,6 +1045,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 child: Row(
                   children: [
+                    if (icon != null || iconAsset != null) ...[
+                      // No plate behind them. The artwork carries its own
+                      // colour, and a tinted square under it read as a button
+                      // — which these rows are not; the switch on the right is.
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: iconAsset != null
+                            ? Image.asset(iconAsset, fit: BoxFit.contain)
+                            : Icon(
+                                icon,
+                                size: 20,
+                                color: iconColor ?? const Color(0xFF7A6A62),
+                              ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,6 +1430,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                               const SizedBox(height: 8),
                               optionCard(
+                                iconAsset: 'assets/icons/private.webp',
+                                iconColor: const Color(0xFF7A6A62),
                                 title: l10n.lobbyPrivateRoom,
                                 description: isRanked
                                     ? l10n.lobbyPrivateRoomDescRanked
@@ -1300,6 +1451,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 ),
                               ],
                               optionCard(
+                                iconAsset: 'assets/icons/allowSpectators.webp',
                                 title: l10n.lobbyAllowSpectators,
                                 value: allowSpectators,
                                 onChanged: (v) => setState(() {
@@ -1313,6 +1465,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 }),
                               ),
                               optionCard(
+                                iconAsset:
+                                    'assets/icons/allowBotReplacement.webp',
+                                iconColor: const Color(0xFF4A4080),
                                 title: l10n.midJoinCreateOption,
                                 description: isRanked
                                     ? null
@@ -1328,6 +1483,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   context.read<GameService>().authProvider !=
                                       'local') ...[
                                 optionCard(
+                                  iconAsset: 'assets/icons/lankIcon.webp',
+                                  iconColor: const Color(0xFFD9A036),
                                   title: l10n.lobbyRanked,
                                   description: selectedGameType == 'skull_king'
                                       ? l10n.lobbyRankedDescSk
@@ -2465,7 +2622,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
     const subTextColor = Color(0xFF9C8B84);
 
     return Material(
-      color: Colors.white.withValues(alpha: 0.72),
+      // A match already running greys the whole cell instead of wearing a
+      // "게임 중" chip. The state belongs to the room, not to one corner of
+      // it, and saying it with the surface costs no width — which is what the
+      // row had run out of.
+      color: isInProgress
+          ? const Color(0xFFEFECEA).withValues(alpha: 0.85)
+          : Colors.white.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2491,238 +2654,281 @@ class _LobbyScreenState extends State<LobbyScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE6DDD8)),
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left color strip — stretches to cell height.
-                Container(
-                  width: 6,
-                  decoration: BoxDecoration(
-                    color: stripColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 14, 16, 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 3,
-                                    ),
-                                    margin: const EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      color: badgeBgColor,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      badgeText,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: badgeTextColor,
+          // Clip the contents to the card's INNER curve instead of asking the
+          // strip to round itself. A 16px radius on a 6px-wide box is not a
+          // shape Flutter can draw — it scales the corners down to fit, so the
+          // strip's curve came out tighter than the card's and read as
+          // misaligned. And the radius here is 15, not 16: the border is 1px
+          // wide and the strip sits inside it.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Left color strip — stretches to cell height. Square-cornered
+                  // on purpose; the ClipRRect above gives it the card's curve.
+                  Container(width: 6, color: stripColor),
+                  Expanded(
+                    child: Padding(
+                      // Tightened from 12/14/16/14. The row's tallest item is a
+                      // 30px action box, so 14 top and bottom was padding the
+                      // card out well past what its content needed, and the
+                      // right inset stacked on top of the last chip's own
+                      // margin.
+                      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 3,
                                       ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      '${room.isPrivate ? '🔒 ' : ''}${room.isRanked ? '🏆 ' : ''}${room.name}',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: nameColor,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        color: badgeBgColor,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 2,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 2),
-                                    child: Text(
-                                      (isSK || isLL)
-                                          ? l10n.lobbyRoomTimeSec(
-                                              room.turnTimeLimit,
-                                            )
-                                          : l10n.lobbyRoomTimeAndScore(
-                                              room.turnTimeLimit,
-                                              room.targetScore,
-                                            ),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: subTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isSK && room.skExpansions.isNotEmpty)
-                                    for (final exp in room.skExpansions)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2D2D3D),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(
-                                              0xFFFFD54F,
-                                            ).withValues(alpha: 0.5),
-                                            width: 0.8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _skExpansionShortLabel(exp, l10n),
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            color: Color(0xFFFFD54F),
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
+                                      child: Text(
+                                        badgeText,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: badgeTextColor,
                                         ),
                                       ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // The eye used to mean two different things: a button
-                        // that takes you into spectating (waiting rooms) and a
-                        // read-out of how many people are already watching
-                        // (running games). Now the button is always the button,
-                        // and the count only appears when there is one.
-                        if (isInProgress)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            margin: const EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0EBE8),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              l10n.lobbyRoomPlaying,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF8A7A72),
-                              ),
-                            ),
-                          ),
-                        // A running game you can actually get into, not just
-                        // watch. Sits next to the "playing" chip because that
-                        // is the chip it qualifies — without it, a match in
-                        // progress reads as closed.
-                        if (room.canJoinInProgress)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            margin: const EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8E0F8),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              l10n.midJoinRoomBadge,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF4A4080),
-                              ),
-                            ),
-                          ),
-                        if (room.allowSpectators)
-                          GestureDetector(
-                            onTap: () => _spectateWithPasswordCheck(room),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 7,
-                              ),
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: const Color(0xFFE6DDD8),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.visibility,
-                                    size: 16,
-                                    color: Color(0xFF7A6A62),
-                                  ),
-                                  if (room.spectatorCount > 0) ...[
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${room.spectatorCount}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF7A6A62),
+                                    ),
+                                    // Was emoji glued onto the front of the name
+                                    // string ('🔒 🏆 이름'). Real widgets instead:
+                                    // the trophy is now the same artwork as the
+                                    // ranked switch in the create dialog, and an
+                                    // emoji rendered next to it would read as a
+                                    // different badge from a different set.
+                                    if (room.isPrivate) ...[
+                                      Image.asset(
+                                        'assets/icons/private.webp',
+                                        width: 13,
+                                        height: 16,
+                                        fit: BoxFit.contain,
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    if (room.isRanked) ...[
+                                      Image.asset(
+                                        'assets/icons/lankIcon.webp',
+                                        width: 18,
+                                        height: 16,
+                                        fit: BoxFit.contain,
+                                      ),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        room.name,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: nameColor,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
-                                ],
+                                ),
+                                const SizedBox(height: 2),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 2,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 2),
+                                      child: Text(
+                                        (isSK || isLL)
+                                            ? l10n.lobbyRoomTimeSec(
+                                                room.turnTimeLimit,
+                                              )
+                                            : l10n.lobbyRoomTimeAndScore(
+                                                room.turnTimeLimit,
+                                                room.targetScore,
+                                              ),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: subTextColor,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSK && room.skExpansions.isNotEmpty)
+                                      for (final exp in room.skExpansions)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2D2D3D),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFFFFD54F,
+                                              ).withValues(alpha: 0.5),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _skExpansionShortLabel(exp, l10n),
+                                            style: const TextStyle(
+                                              fontSize: 9,
+                                              color: Color(0xFFFFD54F),
+                                              fontWeight: FontWeight.bold,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // The eye used to mean two different things: a button
+                          // that takes you into spectating (waiting rooms) and a
+                          // read-out of how many people are already watching
+                          // (running games). Now the button is always the button,
+                          // and the count only appears when there is one.
+                          // A running game you can actually get into, not just
+                          // watch. Sits next to the "playing" chip because that
+                          // is the chip it qualifies — without it, a match in
+                          // progress reads as closed.
+                          // Marks every room running this rule, not only the ones
+                          // you could jump into this second — it is what the room
+                          // IS, and it decides whether you want to sit down here
+                          // at all (leaving hands your seat to a bot and counts
+                          // against you). Filled when a seat is actually free to
+                          // take right now, outlined when it is just the rule:
+                          // same fact, two different invitations.
+                          // Glyph only. Spelled out it was the widest thing in a
+                          // row that already carries the playing chip, the eye
+                          // and the seat count — and it was pushing the room name
+                          // out of a card whose whole job is showing the name.
+                          // The label lives on the tooltip and on the badge in
+                          // the waiting room, where there is space for it.
+                          // Shown whatever the room is doing: it is a property of
+                          // the room, and it decides whether you want to sit down
+                          // here at all — leaving hands your seat to a bot and
+                          // counts against you. Filled when a seat is free to take
+                          // this second, outlined when it is only the rule.
+                          if (room.allowMidGameJoin)
+                            Tooltip(
+                              message: l10n.midJoinRoomBadge,
+                              // Geometry copied from the spectate button beside
+                              // it (8/7 padding, 16px glyph, radius 10) so the
+                              // two read as one pair of room actions rather than
+                              // two unrelated marks. Only the colour differs, and
+                              // that difference is the whole message: purple =
+                              // you can get in, not just watch.
+                              child: Container(
+                                // Tighter than the eye button's 8/7 because this
+                                // glyph is wider than tall: same outer box, more
+                                // of it spent on the artwork.
+                                // Bare artwork — no plate, no border. Four
+                                // boxed chips in a row read as a toolbar; the
+                                // icons alone read as what the room is.
+                                padding: const EdgeInsets.only(right: 10),
+                                // Availability rides on opacity, since artwork
+                                // can't be recoloured and a second symbol would
+                                // undo the point of using this one: full when a
+                                // seat is free right now, faded when it is only
+                                // the room's rule.
+                                child: Opacity(
+                                  opacity: room.canJoinInProgress ? 1.0 : 0.4,
+                                  child: Image.asset(
+                                    'assets/icons/allowBotReplacement.webp',
+                                    width: 26,
+                                    height: 21,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (room.allowSpectators)
+                            GestureDetector(
+                              onTap: () => _spectateWithPasswordCheck(room),
+                              child: Container(
+                                // Still the tap target that opens spectating —
+                                // the padding keeps it thumb-sized without a
+                                // border drawing a button around it.
+                                padding: const EdgeInsets.fromLTRB(2, 4, 10, 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.asset(
+                                      'assets/icons/allowSpectators.webp',
+                                      width: 26,
+                                      height: 20,
+                                      fit: BoxFit.contain,
+                                    ),
+                                    if (room.spectatorCount > 0) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${room.spectatorCount}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF7A6A62),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          // Seats only. Whether the match is running is carried
+                          // by the cell's own background now, so nothing here
+                          // has to spend width repeating it.
+                          Tooltip(
+                            message: isInProgress
+                                ? l10n.lobbyRoomPlaying
+                                : l10n.lobbyRoomWaiting,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF6F3F2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${room.playerCount}/${room.effectiveMaxPlayers}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  // Green when there is no seat left, amber
+                                  // while there is.
+                                  color:
+                                      room.playerCount >=
+                                          room.effectiveMaxPlayers
+                                      ? const Color(0xFF4CAF50)
+                                      : const Color(0xFFFF9800),
+                                ),
                               ),
                             ),
                           ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF6F3F2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${room.playerCount}/${room.effectiveMaxPlayers}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              // Same reading as the waiting room's header: green
-                              // when there is no seat left, amber while there is.
-                              color:
-                                  room.playerCount >= room.effectiveMaxPlayers
-                                  ? const Color(0xFF4CAF50)
-                                  : const Color(0xFFFF9800),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -3488,7 +3694,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('🏆', style: TextStyle(fontSize: 14)),
+                  // The artwork, not the emoji — same trophy the create
+                  // dialog's ranked switch shows, so the room you are sitting
+                  // in is recognisably the option you turned on.
+                  Image.asset(
+                    'assets/icons/lankIcon.webp',
+                    width: 20,
+                    height: 17,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'skull_king'
@@ -3580,9 +3794,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ],
-            if (!game.isRankedRoom) ...[
+            if (game.roomAllowMidGameJoin) ...[
               const SizedBox(height: 8),
-              _buildMidGameJoinChip(game),
+              _buildMidGameJoinBadge(game),
             ],
             const SizedBox(height: 12),
             _buildSeatGrid(game),
@@ -3591,8 +3805,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // toggle; non-hosts see the current state as read-only.
             if (game.currentGameType == 'tichu' && !game.isRankedRoom) ...[
               _buildRandomSeatingChip(game),
-              const SizedBox(height: 8),
-              _buildMidGameJoinChip(game),
+              const SizedBox(height: 12),
+            ],
+            if (game.roomAllowMidGameJoin) ...[
+              _buildMidGameJoinBadge(game),
               const SizedBox(height: 12),
             ],
             if (game.roomRandomSeating)
@@ -4060,60 +4276,44 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  /// Whether this room lets people break into (and out of) a running match.
+  /// Marks the waiting room as one you can be broken into — and walk out of.
   ///
-  /// Set at room creation, but shown here as a live toggle so a host who
-  /// changes their mind doesn't have to remake the room — and so everyone else
-  /// can see the rule they are about to play under. Read-only for non-hosts,
-  /// and absent entirely from ranked rooms, which can't hold bots.
-  Widget _buildMidGameJoinChip(GameService game) {
-    if (game.isRankedRoom) return const SizedBox.shrink();
-    final on = game.roomAllowMidGameJoin;
-    final l10n = L10n.of(context);
-    final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+  /// A mark, not a control: the switch lives in the host's room settings. But
+  /// everyone at the table needs to see this, because it changes what leaving
+  /// means for them (their seat goes to a bot and it is recorded) and what a
+  /// missing player means (a bot may quietly take over mid-hand). Same wording
+  /// and colours as the badge on the room list, so it reads as the same fact.
+  ///
+  /// Only rendered when the option is on — there is nothing to say about a
+  /// room that behaves the way every other room does.
+  Widget _buildMidGameJoinBadge(GameService game) {
+    if (!game.roomAllowMidGameJoin) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: on ? const Color(0xFFE8E0F8) : const Color(0xFFF6F3F2),
-        borderRadius: BorderRadius.circular(12),
-        border: game.isHost
-            ? Border.all(
-                color: on ? const Color(0xFFB9AEE0) : const Color(0xFFE2DAD6),
-              )
-            : null,
+        color: const Color(0xFFE8E0F8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            on ? Icons.login : Icons.lock_outline,
-            size: 14,
-            color: on ? const Color(0xFF4A4080) : const Color(0xFF9C8B84),
+          Image.asset(
+            'assets/icons/allowBotReplacement.webp',
+            width: 20,
+            height: 16,
+            fit: BoxFit.contain,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Text(
-            l10n.midJoinCreateOption,
-            style: TextStyle(
-              fontSize: 12,
+            L10n.of(context).midJoinRoomBadge,
+            style: const TextStyle(
+              fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: on ? const Color(0xFF4A4080) : const Color(0xFF9C8B84),
+              color: Color(0xFF4A4080),
             ),
           ),
-          if (game.isHost) ...[
-            const SizedBox(width: 6),
-            Icon(
-              on ? Icons.toggle_on : Icons.toggle_off,
-              size: 18,
-              color: on ? const Color(0xFF4A4080) : const Color(0xFFB5A9A3),
-            ),
-          ],
         ],
       ),
-    );
-    if (!game.isHost) return chip;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => game.setMidGameJoin(!on),
-      child: chip,
     );
   }
 

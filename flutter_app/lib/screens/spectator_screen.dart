@@ -17,6 +17,7 @@ import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/seat_chat_bubble.dart';
 import '../widgets/title_chip.dart';
+import '../widgets/mid_game_join.dart';
 import '../widgets/spectator_controls.dart';
 
 class SpectatorScreen extends StatefulWidget {
@@ -1248,6 +1249,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                     ],
                     const Spacer(),
+                    // Tichu keeps its own top bar rather than SpectatorHeader,
+                    // so the break-in button has to be mounted here too. It
+                    // hides itself when the room doesn't allow it.
+                    if (game.canJoinInProgress) ...[
+                      MidGameJoinButton(game: game),
+                      const SizedBox(width: 6),
+                    ],
                     // The score itself opens the history — it is what you are
                     // already looking at when you wonder how it got there, and
                     // it saves a slot in the bar.

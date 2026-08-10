@@ -9,13 +9,24 @@ let nextBotNum = 1;
 
 
 class GameRoom {
-  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = [], allowSpectators = true) {
+  constructor(id, name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = [], allowSpectators = true, allowMidGameJoin = false) {
     this.id = id;
     this.name = name;
     this.hostId = hostId;
     // Host can shut spectating off entirely. Some people do not want an audience
     // for their cards, and card-view requests only cover consent per-hand.
     this.allowSpectators = allowSpectators !== false;
+    // Opt-in: a spectator may take over a bot seat mid-match, and a seated
+    // player may hand their seat to a bot and walk. Both directions ride on
+    // the same switch — allowing entry without exit strands whoever came in.
+    // Ranked rooms can't have bots at all (handleAddBot rejects them), so
+    // there is never a seat to take over; keep the flag off there so the
+    // client doesn't advertise a button that can never do anything. Same for
+    // a room with spectating off: the joiner has to be watching before they
+    // can break in, so with no spectators the option can never fire.
+    this.allowMidGameJoin = !isRanked
+      && this.allowSpectators
+      && allowMidGameJoin === true;
     this.hostNickname = hostNickname;
     this.password = password;
     this.isPrivate = !!password;
@@ -443,6 +454,19 @@ class GameRoom {
     if (slot === -1) {
       return { success: false, messageKey: 'room_no_empty_slot' };
     }
+    const { botId } = this._seatBot(slot, locale, speed, strategy);
+    return { success: true, botId };
+  }
+
+  /**
+   * Put a fresh bot in `slot`, overwriting whatever is there. Shared by the
+   * waiting-room addBot and the mid-game walkout, which needs the same bot
+   * exactly but must bypass addBot's `if (this.game)` guard.
+   *
+   * Callers own the game-side id rewrite (updatePlayerId) — this only touches
+   * the room roster.
+   */
+  _seatBot(slot, locale, speed, strategy) {
     // Validate speed
     const validSpeeds = ['fast', 'normal', 'slow'];
     const botSpeed = validSpeeds.includes(speed) ? speed : 'normal';
@@ -468,7 +492,93 @@ class GameRoom {
     this.bots.set(botId, bot);
     this.players[slot] = { id: botId, nickname: botNickname, connected: true, isBot: true, ready: true, botSpeed };
     console.log(`Bot ${botNickname} (speed: ${botSpeed}, strategy: ${bot.strategy}) added to room ${this.name} (slot ${slot})`);
-    return { success: true, botId };
+    return { botId, botNickname, botSpeed };
+  }
+
+  /** Seats currently held by a bot — what a mid-game joiner can take over. */
+  getBotSeatCount() {
+    return this.players.filter((p) => p !== null && p.isBot).length;
+  }
+
+  /** Bot-held seat indexes, in slot order. */
+  getBotSeatSlots() {
+    const slots = [];
+    for (let i = 0; i < this.players.length; i++) {
+      const p = this.players[i];
+      if (p !== null && p.isBot) slots.push(i);
+    }
+    return slots;
+  }
+
+  /**
+   * Hand a bot's seat — hand, score, turn and all — to a spectator, mid-match.
+   *
+   * The engine identifies a seat purely by playerId, so the whole transfer is
+   * the same id rewrite a reconnect does (updatePlayerId). The one thing that
+   * rewrite deliberately preserves is the display name (a reconnecting player
+   * keeps theirs), so the new occupant's nickname is stamped afterwards.
+   */
+  takeOverBotSeat(botId, newPlayerId, nickname) {
+    if (!this.game) return { success: false, messageKey: 'midjoin_no_game' };
+    const slot = this.players.findIndex((p) => p !== null && p.id === botId && p.isBot);
+    if (slot === -1) return { success: false, messageKey: 'room_slot_taken' };
+
+    this.bots.delete(botId);
+    this.players[slot] = {
+      id: newPlayerId, nickname, connected: true, isBot: false, ready: true,
+    };
+    this.game.updatePlayerId(botId, newPlayerId);
+    this.game.playerNames[newPlayerId] = nickname;
+
+    // They are a player now, not an onlooker. Dropping them from `spectators`
+    // and pruning clears the card-view grants and pending requests they held
+    // while watching — otherwise a joiner keeps peeking at a rival's hand.
+    this.spectators = this.spectators.filter((s) => s.id !== newPlayerId);
+    this.pruneCardViewPermissions();
+
+    console.log(`Mid-game join: ${nickname} took over ${botId} in room ${this.name} (slot ${slot})`);
+    return { success: true, slot };
+  }
+
+  /**
+   * Inverse of takeOverBotSeat: a seated human walks and a bot inherits the
+   * seat so the match can carry on for everyone else.
+   *
+   * Refuses when no other human is left — the alternative is a table of bots
+   * playing to nobody.
+   */
+  replaceWithBot(playerId, locale, speed = 'fast', strategy = null) {
+    if (!this.game) return { success: false, messageKey: 'midjoin_no_game' };
+    const slot = this.players.findIndex((p) => p !== null && p.id === playerId && !p.isBot);
+    if (slot === -1) return { success: false, messageKey: 'player_not_found' };
+    const otherHumans = this.players.filter(
+      (p, i) => p !== null && !p.isBot && i !== slot,
+    ).length;
+    if (otherHumans === 0) return { success: false, messageKey: 'midjoin_last_human' };
+
+    // Match the table: a room whose bots are all `winrate` shouldn't suddenly
+    // grow a `heuristic` one. Falls back to the per-game default.
+    const sibling = this.bots.values().next().value;
+    const botStrategy = strategy
+      || (sibling && sibling.strategy)
+      || (this.gameType === 'mighty' ? 'mixoracle' : 'heuristic');
+    const botSpeed = sibling && sibling.speed ? sibling.speed : speed;
+
+    const { botId, botNickname } = this._seatBot(slot, locale, botSpeed, botStrategy);
+    this.game.updatePlayerId(playerId, botId);
+    this.game.playerNames[botId] = botNickname;
+
+    // Hosting can't stay with someone who left the room.
+    if (this.hostId === playerId) {
+      const nextHost = this.players.find((p) => p !== null && !p.isBot);
+      if (nextHost) {
+        this.hostId = nextHost.id;
+        this.hostNickname = nextHost.nickname;
+      }
+    }
+
+    console.log(`Mid-game leave: slot ${slot} of room ${this.name} handed to ${botId}`);
+    return { success: true, botId, botNickname, slot };
   }
 
   removeBots() {
@@ -859,6 +969,8 @@ class GameRoom {
       isPrivate: this.isPrivate,
       isRanked: this.isRanked,
       allowSpectators: this.allowSpectators !== false,
+      allowMidGameJoin: this.allowMidGameJoin === true,
+      botSeatCount: this.getBotSeatCount(),
       gameType: this.gameType,
       maxPlayers: this.maxPlayers,
       hostId: this.hostId,

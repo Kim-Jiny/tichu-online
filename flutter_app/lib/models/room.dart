@@ -28,6 +28,19 @@ class Room {
   /// free-seat UX.
   final bool randomSeating;
 
+  /// Host allows a spectator to take over a bot seat in a running match, and
+  /// a seated player to hand their seat to a bot and walk. Never true for
+  /// ranked rooms (they hold no bots) or rooms with spectating off.
+  final bool allowMidGameJoin;
+
+  /// Seats a bot currently holds. A mid-game-join room is only actually
+  /// enterable while this is above zero.
+  final int botSeatCount;
+
+  /// Whether the spectate view should offer the break-in button at all.
+  bool get canJoinInProgress =>
+      allowMidGameJoin && gameInProgress && botSeatCount > 0;
+
   Room({
     required this.id,
     required this.name,
@@ -46,6 +59,8 @@ class Room {
     int? effectiveMaxPlayers,
     this.skExpansions = const [],
     this.randomSeating = false,
+    this.allowMidGameJoin = false,
+    this.botSeatCount = 0,
   }) : effectiveMaxPlayers = effectiveMaxPlayers ?? maxPlayers;
 
   bool get isSkullKing => gameType == 'skull_king';
@@ -87,6 +102,14 @@ class Room {
               : null),
       skExpansions: expansions,
       randomSeating: json['randomSeating'] == true,
+      allowMidGameJoin: json['allowMidGameJoin'] == true,
+      // Absent from an older server's payload — treat as "no bot seats known"
+      // so the break-in button stays hidden rather than failing on tap.
+      botSeatCount: json['botSeatCount'] is int
+          ? json['botSeatCount'] as int
+          : (json['botSeatCount'] is num
+              ? (json['botSeatCount'] as num).toInt()
+              : 0),
     );
   }
 }

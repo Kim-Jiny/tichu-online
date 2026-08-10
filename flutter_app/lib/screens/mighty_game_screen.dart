@@ -19,6 +19,7 @@ import '../widgets/player_profile_dialog.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../widgets/mid_game_join.dart';
 
 class MightyGameScreen extends StatefulWidget {
   const MightyGameScreen({super.key});
@@ -1792,6 +1793,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).mtCancel),
           ),
+          // Leaves the match running with a bot in your seat, where the room
+          // allows it. Its own confirm states the cost.
+          if (game.canLeaveInProgress)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                confirmMidGameLeave(context, game);
+              },
+              child: Text(L10n.of(context).midLeaveButton),
+            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

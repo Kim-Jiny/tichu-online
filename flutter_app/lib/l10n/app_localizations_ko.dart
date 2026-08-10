@@ -4554,4 +4554,51 @@ class L10nKo extends L10n {
 
   @override
   String get goldBankContactChannel => '입금 문의 (카카오 채널)';
+
+  @override
+  String get midJoinButton => '중도참여';
+
+  @override
+  String get midJoinConfirmTitle => '중도참여할까요?';
+
+  @override
+  String get midJoinConfirmBody =>
+      '봇 자리 중 하나를 무작위로 이어받아 지금 진행 중인 판에 바로 참여합니다. 봇이 이미 선언하거나 낸 것은 되돌릴 수 없습니다.';
+
+  @override
+  String get midJoinConfirmOk => '참여하기';
+
+  @override
+  String get midLeaveButton => '중도탈주';
+
+  @override
+  String get midLeaveConfirmTitle => '중도탈주할까요?';
+
+  @override
+  String midLeaveConfirmBody(int minutes) {
+    return '내 자리를 봇이 이어받고 게임은 계속됩니다. 전적에는 탈주로 기록되며, $minutes분 동안 다른 판에 중도참여할 수 없습니다.';
+  }
+
+  @override
+  String get midLeaveConfirmOk => '탈주하기';
+
+  @override
+  String get midJoinRoomBadge => '중도참여 가능';
+
+  @override
+  String get midJoinCreateOption => '중도참여 허용';
+
+  @override
+  String get midJoinCreateOptionHint =>
+      '관전자가 봇 자리를 이어받아 진행 중인 판에 들어올 수 있습니다. 참여한 사람은 중도탈주도 할 수 있습니다.';
+
+  @override
+  String midJoinNoticeJoined(String player) {
+    return '$player님이 중도참여했습니다';
+  }
+
+  @override
+  String midJoinNoticeLeft(String player, String bot) {
+    return '$player님이 중도탈주하여 $bot이(가) 대신합니다';
+  }
 }

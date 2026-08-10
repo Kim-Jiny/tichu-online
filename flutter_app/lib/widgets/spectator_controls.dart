@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/ll_game_state.dart';
 import '../services/game_service.dart';
+import 'mid_game_join.dart';
 
 /// Shared spectator control widgets used across all four game spectator
 /// screens (Tichu / Skull King / Love Letter / Mighty) so the top-bar
@@ -777,6 +778,13 @@ class SpectatorHeader extends StatelessWidget {
                   ),
                 ),
               ),
+              // Mounted here rather than passed in by each screen: all four
+              // spectator views share this header, and the button is
+              // self-hiding when the room doesn't allow breaking in.
+              if (game.canJoinInProgress) ...[
+                MidGameJoinButton(game: game),
+                const SizedBox(width: 6),
+              ],
               ?statusTrailing,
             ],
           ),

@@ -4701,4 +4701,51 @@ class L10nDe extends L10n {
 
   @override
   String get goldBankContactChannel => 'Hilfe zur Zahlung (KakaoTalk)';
+
+  @override
+  String get midJoinButton => 'Einsteigen';
+
+  @override
+  String get midJoinConfirmTitle => 'In diese Partie einsteigen?';
+
+  @override
+  String get midJoinConfirmBody =>
+      'Sie übernehmen zufällig einen der Bot-Plätze und spielen die laufende Hand sofort weiter. Was der Bot bereits angesagt oder gespielt hat, bleibt bestehen.';
+
+  @override
+  String get midJoinConfirmOk => 'Einsteigen';
+
+  @override
+  String get midLeaveButton => 'Aussteigen';
+
+  @override
+  String get midLeaveConfirmTitle => 'Aus dieser Partie aussteigen?';
+
+  @override
+  String midLeaveConfirmBody(int minutes) {
+    return 'Ein Bot übernimmt Ihren Platz und die Partie läuft weiter. Dies wird als Spielabbruch gewertet, und Sie können $minutes Min. lang in keine laufende Partie einsteigen.';
+  }
+
+  @override
+  String get midLeaveConfirmOk => 'Aussteigen';
+
+  @override
+  String get midJoinRoomBadge => 'Einstieg möglich';
+
+  @override
+  String get midJoinCreateOption => 'Einstieg in laufende Partie erlauben';
+
+  @override
+  String get midJoinCreateOptionHint =>
+      'Zuschauer können einen Bot-Platz in einer laufenden Partie übernehmen. Wer eingestiegen ist, kann auch wieder aussteigen.';
+
+  @override
+  String midJoinNoticeJoined(String player) {
+    return '$player ist eingestiegen';
+  }
+
+  @override
+  String midJoinNoticeLeft(String player, String bot) {
+    return '$player ist ausgestiegen — $bot übernimmt';
+  }
 }

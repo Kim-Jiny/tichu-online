@@ -8306,6 +8306,84 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Deposit help (KakaoTalk channel)'**
   String get goldBankContactChannel;
+
+  /// No description provided for @midJoinButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Join in progress'**
+  String get midJoinButton;
+
+  /// No description provided for @midJoinConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join this match?'**
+  String get midJoinConfirmTitle;
+
+  /// No description provided for @midJoinConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You take over one of the bot seats at random and start playing the current hand immediately. Anything the bot already declared or played stands.'**
+  String get midJoinConfirmBody;
+
+  /// No description provided for @midJoinConfirmOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get midJoinConfirmOk;
+
+  /// No description provided for @midLeaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk out'**
+  String get midLeaveButton;
+
+  /// No description provided for @midLeaveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk out of this match?'**
+  String get midLeaveConfirmTitle;
+
+  /// No description provided for @midLeaveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A bot takes your seat and the match continues. This is recorded as a desertion, and you cannot join another match in progress for {minutes} min.'**
+  String midLeaveConfirmBody(int minutes);
+
+  /// No description provided for @midLeaveConfirmOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk out'**
+  String get midLeaveConfirmOk;
+
+  /// No description provided for @midJoinRoomBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Join in progress'**
+  String get midJoinRoomBadge;
+
+  /// No description provided for @midJoinCreateOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow joining in progress'**
+  String get midJoinCreateOption;
+
+  /// No description provided for @midJoinCreateOptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectators can take over a bot seat in a running match. Anyone who joined can also walk out.'**
+  String get midJoinCreateOptionHint;
+
+  /// No description provided for @midJoinNoticeJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'{player} joined the match'**
+  String midJoinNoticeJoined(String player);
+
+  /// No description provided for @midJoinNoticeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{player} walked out — {bot} is taking over'**
+  String midJoinNoticeLeft(String player, String bot);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

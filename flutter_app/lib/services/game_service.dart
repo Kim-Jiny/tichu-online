@@ -28,6 +28,25 @@ enum AppDestination {
   mightyGame,
 }
 
+/// A seat changing hands mid-match, for the announcement banner.
+class SeatHandoff {
+  /// True when a human took a bot's seat, false when a human handed theirs
+  /// to a bot and left.
+  final bool joined;
+  final String playerName;
+
+  /// Name of the bot now holding the seat. Empty on a join.
+  final String botName;
+  final int slot;
+
+  const SeatHandoff({
+    required this.joined,
+    required this.playerName,
+    required this.botName,
+    required this.slot,
+  });
+}
+
 class GameService extends ChangeNotifier {
   final NetworkService _network;
   StreamSubscription? _subscription;
@@ -68,6 +87,35 @@ class GameService extends ChangeNotifier {
   /// Tichu-only: host opted to randomize team assignment at startGame
   /// instead of using the fixed (0,2) vs (1,3) seat-to-team mapping.
   bool roomRandomSeating = false;
+
+  /// Current room allows breaking into / walking out of a running match.
+  bool roomAllowMidGameJoin = false;
+
+  /// Bot-held seats in the current room — what a spectator could take over.
+  int roomBotSeatCount = 0;
+
+  /// The current room has a match running. Read from room state rather than
+  /// [hasActiveGame], which is keyed on the player-side game state a spectator
+  /// never receives — for them the hand lives in [spectatorGameState].
+  bool roomGameInProgress = false;
+
+  /// A spectator here can break into the running match right now.
+  bool get canJoinInProgress =>
+      isSpectator &&
+      roomAllowMidGameJoin &&
+      roomGameInProgress &&
+      roomBotSeatCount > 0;
+
+  /// A seated player here can hand their seat to a bot and walk. Blocked when
+  /// nobody else human is at the table — the server refuses that too, since
+  /// it would leave bots playing to an empty room.
+  bool get canLeaveInProgress {
+    if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress) return false;
+    final otherHumans = roomPlayers
+        .where((p) => p != null && !p.isBot && p.id != playerId)
+        .length;
+    return otherHumans > 0;
+  }
 
   /// Skull King expansions active in the current room. Subset of
   /// `['kraken', 'white_whale', 'loot']`. Only meaningful when
@@ -434,6 +482,10 @@ class GameService extends ChangeNotifier {
   String? timeoutPlayerName; // show "시간 초과!" banner
   String? desertedPlayerName; // show desertion message
   String? desertedReason; // 'leave' or 'timeout'
+
+  /// Most recent mid-match seat change (human took a bot's seat, or vice
+  /// versa), or null when there is nothing to announce. Self-clearing.
+  SeatHandoff? seatHandoff;
 
   // A deploy is moving our match between servers. We reconnected here before
   // the room did, so we're in the lobby; the server pulls us in once it
@@ -874,6 +926,65 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      // Took over a bot seat in a live match. The game screens are shared
+      // between watching and playing and branch on [isSpectator], so flipping
+      // the flag is the whole transition — the player-side `game_state` the
+      // server sends right after fills in the hand.
+      case 'joined_in_progress':
+        isSpectator = false;
+        spectatorGameState = null;
+        pendingCardViewRequests = {};
+        approvedCardViews = {};
+        incomingCardViewRequests = [];
+        cardViewers = [];
+        notifyListeners();
+        break;
+
+      // Walked out of a live match. The seat is a bot's now and there is
+      // nothing to come back to, so tear down room state the way a kick does.
+      case 'left_in_progress':
+        currentRoomId = '';
+        currentRoomName = '';
+        roomPlayers = List.filled(roomMaxPlayers, null);
+        isHost = false;
+        isRankedRoom = false;
+        roomTurnTimeLimit = 30;
+        roomTargetScore = 1000;
+        isSpectator = false;
+        gameState = null;
+        _prevGameState = null;
+        skGameState = null;
+        _prevSKGameState = null;
+        _prevLLGameState = null;
+        llGameState = null;
+        mightyGameState = null;
+        _prevMightyGameState = null;
+        spectatorGameState = null;
+        currentGameType = 'tichu';
+        roomMaxPlayers = 4;
+        roomBlockedSlots = <int>{};
+        roomRandomSeating = false;
+        roomAllowMidGameJoin = false;
+        roomBotSeatCount = 0;
+        roomGameInProgress = false;
+        roomSkExpansions = const [];
+        chatMessages = [];
+        errorMessage = data['message'] as String?;
+        notifyListeners();
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_disposed) return;
+          errorMessage = null;
+          notifyListeners();
+        });
+        break;
+
+      // Someone else took over a bot seat / handed theirs to a bot. Purely
+      // informational — the roster and game state arrive on their own.
+      case 'player_joined_in_progress':
+      case 'player_left_in_progress':
+        _handleSeatHandoff(data);
+        break;
+
       case 'spectatable_rooms':
         spectatableRooms =
             (data['rooms'] as List?)?.map((r) => Room.fromJson(r)).toList() ??
@@ -1019,6 +1130,9 @@ class GameService extends ChangeNotifier {
         roomMaxPlayers = 4;
         roomBlockedSlots = <int>{};
         roomRandomSeating = false;
+        roomAllowMidGameJoin = false;
+        roomBotSeatCount = 0;
+        roomGameInProgress = false;
         roomSkExpansions = const [];
         roomSkExpansions = const [];
         chatMessages = [];
@@ -1045,6 +1159,9 @@ class GameService extends ChangeNotifier {
         isHost = false;
         isRankedRoom = false;
         roomRandomSeating = false;
+        roomAllowMidGameJoin = false;
+        roomBotSeatCount = 0;
+        roomGameInProgress = false;
         roomSkExpansions = const [];
         roomSkExpansions = const [];
         roomTurnTimeLimit = 30;
@@ -1115,12 +1232,17 @@ class GameService extends ChangeNotifier {
           );
           isRankedRoom = room['isRanked'] == true;
           roomRandomSeating = room['randomSeating'] == true;
+          roomAllowMidGameJoin = room['allowMidGameJoin'] == true;
+          roomBotSeatCount = room['botSeatCount'] is int
+              ? room['botSeatCount'] as int
+              : 0;
           final expansionsList = room['skExpansions'];
           roomSkExpansions = expansionsList is List
               ? expansionsList.whereType<String>().toList(growable: false)
               : const [];
           roomTurnTimeLimit = room['turnTimeLimit'] ?? 30;
           roomTargetScore = room['targetScore'] ?? 1000;
+          roomGameInProgress = room['gameInProgress'] == true;
           if (room['gameInProgress'] != true) {
             pendingCardViewRequests = {};
             approvedCardViews = {};
@@ -2432,6 +2554,28 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Someone at the table changed between human and bot mid-match.
+  ///
+  /// Kept separate from [desertedPlayerName]: that one means the match is
+  /// over, and reusing it here would pop the game-over UI on a game that is
+  /// still running. Screens read [seatHandoff] to show a passing banner.
+  void _handleSeatHandoff(Map<String, dynamic> data) {
+    final joined = data['type'] == 'player_joined_in_progress';
+    seatHandoff = SeatHandoff(
+      joined: joined,
+      playerName: (data['playerName'] as String?) ?? '',
+      botName: (data['botName'] as String?) ?? '',
+      slot: data['slot'] is int ? data['slot'] as int : -1,
+    );
+    notifyListeners();
+    // The banner is a transient notice, not state the screens have to clear.
+    Future.delayed(const Duration(seconds: 4), () {
+      if (_disposed) return;
+      seatHandoff = null;
+      notifyListeners();
+    });
+  }
+
   void _handleSfxTransitions(GameStateData? prev, GameStateData next) {
     if (prev == null) {
       if (next.isMyTurn) {
@@ -2774,6 +2918,9 @@ class GameService extends ChangeNotifier {
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
     roomRandomSeating = false;
+    roomAllowMidGameJoin = false;
+    roomBotSeatCount = 0;
+    roomGameInProgress = false;
     roomSkExpansions = const [];
     currentGameType = 'tichu';
     roomList = [];
@@ -3090,6 +3237,19 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'switch_to_player', 'targetSlot': targetSlot});
   }
 
+  /// Break into a running match by taking over a bot seat. The server picks
+  /// which seat — deliberately, so nobody scouts the table from the spectate
+  /// view and then claims the winning hand.
+  void joinInProgress() {
+    _network.send({'type': 'join_in_progress'});
+  }
+
+  /// Hand your seat to a bot and walk out of a running match. Counts as a
+  /// desertion on your record; the match carries on for everyone else.
+  void leaveInProgress() {
+    _network.send({'type': 'leave_in_progress'});
+  }
+
   void requestCardView(String playerId) {
     _network.send({'type': 'request_card_view', 'playerId': playerId});
   }
@@ -3147,6 +3307,7 @@ class GameService extends ChangeNotifier {
     int maxPlayers = 4,
     List<String> skExpansions = const [],
     bool allowSpectators = true,
+    bool allowMidGameJoin = false,
   }) {
     final msg = <String, dynamic>{
       'type': 'create_room',
@@ -3156,6 +3317,7 @@ class GameService extends ChangeNotifier {
       'turnTimeLimit': turnTimeLimit,
       'targetScore': targetScore,
       'allowSpectators': allowSpectators,
+      'allowMidGameJoin': allowMidGameJoin,
     };
     if (gameType == 'skull_king') {
       msg['gameType'] = 'skull_king';
@@ -3219,6 +3381,9 @@ class GameService extends ChangeNotifier {
     roomMaxPlayers = 4;
     roomBlockedSlots = <int>{};
     roomRandomSeating = false;
+    roomAllowMidGameJoin = false;
+    roomBotSeatCount = 0;
+    roomGameInProgress = false;
     roomSkExpansions = const [];
     currentGameType = 'tichu';
     isSpectator = false;
@@ -3270,6 +3435,10 @@ class GameService extends ChangeNotifier {
 
   void setRandomSeating(bool enabled) {
     _network.send({'type': 'set_random_seating', 'enabled': enabled});
+  }
+
+  void setMidGameJoin(bool enabled) {
+    _network.send({'type': 'set_mid_game_join', 'enabled': enabled});
   }
 
   void toggleReady() {

@@ -1618,5 +1618,42 @@
   "appForceUpdateButtonWeb": "Neu laden",
   "loginGetTheApp": "Auch als App verfügbar",
   "goldHistoryBankDeposit": "Überweisung bestätigt",
-  "goldBankContactChannel": "Hilfe zur Zahlung (KakaoTalk)"
+  "goldBankContactChannel": "Hilfe zur Zahlung (KakaoTalk)",
+  "midJoinButton": "Einsteigen",
+  "midJoinConfirmTitle": "In diese Partie einsteigen?",
+  "midJoinConfirmBody": "Sie übernehmen zufällig einen der Bot-Plätze und spielen die laufende Hand sofort weiter. Was der Bot bereits angesagt oder gespielt hat, bleibt bestehen.",
+  "midJoinConfirmOk": "Einsteigen",
+  "midLeaveButton": "Aussteigen",
+  "midLeaveConfirmTitle": "Aus dieser Partie aussteigen?",
+  "midLeaveConfirmBody": "Ein Bot übernimmt Ihren Platz und die Partie läuft weiter. Dies wird als Spielabbruch gewertet, und Sie können {minutes} Min. lang in keine laufende Partie einsteigen.",
+  "@midLeaveConfirmBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "midLeaveConfirmOk": "Aussteigen",
+  "midJoinRoomBadge": "Einstieg möglich",
+  "midJoinCreateOption": "Einstieg in laufende Partie erlauben",
+  "midJoinCreateOptionHint": "Zuschauer können einen Bot-Platz in einer laufenden Partie übernehmen. Wer eingestiegen ist, kann auch wieder aussteigen.",
+  "midJoinNoticeJoined": "{player} ist eingestiegen",
+  "@midJoinNoticeJoined": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      }
+    }
+  },
+  "midJoinNoticeLeft": "{player} ist ausgestiegen — {bot} übernimmt",
+  "@midJoinNoticeLeft": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      },
+      "bot": {
+        "type": "String"
+      }
+    }
+  }
 }

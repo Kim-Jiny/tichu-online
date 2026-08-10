@@ -1616,5 +1616,42 @@
   "appForceUpdateButtonWeb": "새로고침",
   "loginGetTheApp": "앱으로도 즐길 수 있어요",
   "goldHistoryBankDeposit": "입금 확인",
-  "goldBankContactChannel": "입금 문의 (카카오 채널)"
+  "goldBankContactChannel": "입금 문의 (카카오 채널)",
+  "midJoinButton": "중도참여",
+  "midJoinConfirmTitle": "중도참여할까요?",
+  "midJoinConfirmBody": "봇 자리 중 하나를 무작위로 이어받아 지금 진행 중인 판에 바로 참여합니다. 봇이 이미 선언하거나 낸 것은 되돌릴 수 없습니다.",
+  "midJoinConfirmOk": "참여하기",
+  "midLeaveButton": "중도탈주",
+  "midLeaveConfirmTitle": "중도탈주할까요?",
+  "midLeaveConfirmBody": "내 자리를 봇이 이어받고 게임은 계속됩니다. 전적에는 탈주로 기록되며, {minutes}분 동안 다른 판에 중도참여할 수 없습니다.",
+  "@midLeaveConfirmBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "midLeaveConfirmOk": "탈주하기",
+  "midJoinRoomBadge": "중도참여 가능",
+  "midJoinCreateOption": "중도참여 허용",
+  "midJoinCreateOptionHint": "관전자가 봇 자리를 이어받아 진행 중인 판에 들어올 수 있습니다. 참여한 사람은 중도탈주도 할 수 있습니다.",
+  "midJoinNoticeJoined": "{player}님이 중도참여했습니다",
+  "@midJoinNoticeJoined": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      }
+    }
+  },
+  "midJoinNoticeLeft": "{player}님이 중도탈주하여 {bot}이(가) 대신합니다",
+  "@midJoinNoticeLeft": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      },
+      "bot": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -830,6 +830,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     bool isPrivate = false;
     bool isRanked = false;
     bool allowSpectators = true;
+    bool allowMidGameJoin = false;
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
@@ -1301,8 +1302,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               optionCard(
                                 title: l10n.lobbyAllowSpectators,
                                 value: allowSpectators,
+                                onChanged: (v) => setState(() {
+                                  allowSpectators = v;
+                                  // Breaking in means breaking in from the
+                                  // spectator seat, so the option below cannot
+                                  // outlive spectating. The server enforces the
+                                  // same dependency; dropping it here keeps the
+                                  // switch from reading as on when it isn't.
+                                  if (!v) allowMidGameJoin = false;
+                                }),
+                              ),
+                              optionCard(
+                                title: l10n.midJoinCreateOption,
+                                description: isRanked
+                                    ? null
+                                    : l10n.midJoinCreateOptionHint,
+                                value: allowMidGameJoin,
+                                // Ranked rooms hold no bots, so there is never
+                                // a seat to take over.
+                                enabled: !isRanked && allowSpectators,
                                 onChanged: (v) =>
-                                    setState(() => allowSpectators = v),
+                                    setState(() => allowMidGameJoin = v),
                               ),
                               if (selectedGameType != 'love_letter' &&
                                   context.read<GameService>().authProvider !=
@@ -1601,6 +1621,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ? skExpansionsSelected.toList()
                             : const [],
                         allowSpectators: allowSpectators,
+                        allowMidGameJoin: allowMidGameJoin,
                       );
                       Navigator.pop(context);
                       setState(() => _inRoom = true);
@@ -2611,6 +2632,30 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ),
                             ),
                           ),
+                        // A running game you can actually get into, not just
+                        // watch. Sits next to the "playing" chip because that
+                        // is the chip it qualifies — without it, a match in
+                        // progress reads as closed.
+                        if (room.canJoinInProgress)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8E0F8),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              l10n.midJoinRoomBadge,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF4A4080),
+                              ),
+                            ),
+                          ),
                         if (room.allowSpectators)
                           GestureDetector(
                             onTap: () => _spectateWithPasswordCheck(room),
@@ -3535,6 +3580,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ],
+            if (!game.isRankedRoom) ...[
+              const SizedBox(height: 8),
+              _buildMidGameJoinChip(game),
+            ],
             const SizedBox(height: 12),
             _buildSeatGrid(game),
           ] else ...[
@@ -3542,6 +3591,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // toggle; non-hosts see the current state as read-only.
             if (game.currentGameType == 'tichu' && !game.isRankedRoom) ...[
               _buildRandomSeatingChip(game),
+              const SizedBox(height: 8),
+              _buildMidGameJoinChip(game),
               const SizedBox(height: 12),
             ],
             if (game.roomRandomSeating)
@@ -4006,6 +4057,63 @@ class _LobbyScreenState extends State<LobbyScreen> {
         label,
         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
       ),
+    );
+  }
+
+  /// Whether this room lets people break into (and out of) a running match.
+  ///
+  /// Set at room creation, but shown here as a live toggle so a host who
+  /// changes their mind doesn't have to remake the room — and so everyone else
+  /// can see the rule they are about to play under. Read-only for non-hosts,
+  /// and absent entirely from ranked rooms, which can't hold bots.
+  Widget _buildMidGameJoinChip(GameService game) {
+    if (game.isRankedRoom) return const SizedBox.shrink();
+    final on = game.roomAllowMidGameJoin;
+    final l10n = L10n.of(context);
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: on ? const Color(0xFFE8E0F8) : const Color(0xFFF6F3F2),
+        borderRadius: BorderRadius.circular(12),
+        border: game.isHost
+            ? Border.all(
+                color: on ? const Color(0xFFB9AEE0) : const Color(0xFFE2DAD6),
+              )
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            on ? Icons.login : Icons.lock_outline,
+            size: 14,
+            color: on ? const Color(0xFF4A4080) : const Color(0xFF9C8B84),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            l10n.midJoinCreateOption,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: on ? const Color(0xFF4A4080) : const Color(0xFF9C8B84),
+            ),
+          ),
+          if (game.isHost) ...[
+            const SizedBox(width: 6),
+            Icon(
+              on ? Icons.toggle_on : Icons.toggle_off,
+              size: 18,
+              color: on ? const Color(0xFF4A4080) : const Color(0xFFB5A9A3),
+            ),
+          ],
+        ],
+      ),
+    );
+    if (!game.isHost) return chip;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => game.setMidGameJoin(!on),
+      child: chip,
     );
   }
 

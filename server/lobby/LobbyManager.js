@@ -26,9 +26,9 @@ class LobbyManager {
     this.rooms = new Map();
   }
 
-  createRoom(name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = [], allowSpectators = true) {
+  createRoom(name, hostId, hostNickname, password = '', isRanked = false, turnTimeLimit = 30, targetScore = 1000, gameType = 'tichu', maxPlayers = 4, skExpansions = [], allowSpectators = true, allowMidGameJoin = false) {
     const roomId = `room_${BOOT_TOKEN}_${nextRoomId++}`;
-    const room = new GameRoom(roomId, name, hostId, hostNickname, password, isRanked, turnTimeLimit, targetScore, gameType, maxPlayers, skExpansions, allowSpectators);
+    const room = new GameRoom(roomId, name, hostId, hostNickname, password, isRanked, turnTimeLimit, targetScore, gameType, maxPlayers, skExpansions, allowSpectators, allowMidGameJoin);
     this.rooms.set(roomId, room);
     console.log(`Room created: ${name} (${roomId}) by ${hostNickname}`);
     return room;
@@ -59,6 +59,12 @@ class LobbyManager {
         isPrivate: room.isPrivate,
         isRanked: room.isRanked,
         allowSpectators: room.allowSpectators !== false,
+        // The lobby needs this to badge rooms a spectator can still break into.
+        allowMidGameJoin: room.allowMidGameJoin === true,
+        // A mid-game-join room is only actually enterable while a bot holds a
+        // seat, so surface the count rather than making the client infer it
+        // from a player list the lobby view doesn't carry.
+        botSeatCount: room.getBotSeatCount(),
         gameInProgress: !!room.game,
         spectatorCount: room.spectators.length,
         turnTimeLimit: room.turnTimeLimit,
@@ -138,6 +144,9 @@ class LobbyManager {
     room.blockedSlots = new Set(Array.isArray(data.blockedSlots) ? data.blockedSlots : []);
     room.autoBlockedSlots = new Set(Array.isArray(data.autoBlockedSlots) ? data.autoBlockedSlots : []);
     room.randomSeating = !!data.randomSeating;
+    // Assigned after construction: the constructor gates this on isRanked and
+    // allowSpectators, and the adopt path passes neither in a form it can see.
+    room.allowMidGameJoin = !data.isRanked && !!data.allowMidGameJoin;
     // Mid-match migration: the peer was at a round boundary and handed us
     // the cumulative score + seating. startGame consumes this to resume
     // the match rather than start a new one.

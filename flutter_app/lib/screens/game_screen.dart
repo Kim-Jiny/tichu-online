@@ -17,6 +17,7 @@ import '../widgets/draggable_chat_panel.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../widgets/mid_game_join.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -1032,6 +1033,17 @@ class _GameScreenState extends State<GameScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(L10n.of(context).gameCancel),
           ),
+          // The softer exit, offered only where the room allows it: the match
+          // keeps running with a bot in your seat. Its own confirm states the
+          // cost, so this is just the fork.
+          if (game.canLeaveInProgress)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                confirmMidGameLeave(context, game);
+              },
+              child: Text(L10n.of(context).midLeaveButton),
+            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

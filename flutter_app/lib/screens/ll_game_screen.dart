@@ -18,6 +18,7 @@ import '../widgets/player_profile_dialog.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../widgets/mid_game_join.dart';
 
 class LLGameScreen extends StatefulWidget {
   const LLGameScreen({super.key});
@@ -3761,6 +3762,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),
           ),
+          // Leaves the match running with a bot in your seat, where the room
+          // allows it. Its own confirm states the cost.
+          if (gs.canLeaveInProgress)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                confirmMidGameLeave(context, gs);
+              },
+              child: Text(l10n.midLeaveButton),
+            ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);

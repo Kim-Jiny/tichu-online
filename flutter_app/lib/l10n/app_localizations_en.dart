@@ -4665,4 +4665,51 @@ class L10nEn extends L10n {
 
   @override
   String get goldBankContactChannel => 'Deposit help (KakaoTalk channel)';
+
+  @override
+  String get midJoinButton => 'Join in progress';
+
+  @override
+  String get midJoinConfirmTitle => 'Join this match?';
+
+  @override
+  String get midJoinConfirmBody =>
+      'You take over one of the bot seats at random and start playing the current hand immediately. Anything the bot already declared or played stands.';
+
+  @override
+  String get midJoinConfirmOk => 'Join';
+
+  @override
+  String get midLeaveButton => 'Walk out';
+
+  @override
+  String get midLeaveConfirmTitle => 'Walk out of this match?';
+
+  @override
+  String midLeaveConfirmBody(int minutes) {
+    return 'A bot takes your seat and the match continues. This is recorded as a desertion, and you cannot join another match in progress for $minutes min.';
+  }
+
+  @override
+  String get midLeaveConfirmOk => 'Walk out';
+
+  @override
+  String get midJoinRoomBadge => 'Join in progress';
+
+  @override
+  String get midJoinCreateOption => 'Allow joining in progress';
+
+  @override
+  String get midJoinCreateOptionHint =>
+      'Spectators can take over a bot seat in a running match. Anyone who joined can also walk out.';
+
+  @override
+  String midJoinNoticeJoined(String player) {
+    return '$player joined the match';
+  }
+
+  @override
+  String midJoinNoticeLeft(String player, String bot) {
+    return '$player walked out — $bot is taking over';
+  }
 }

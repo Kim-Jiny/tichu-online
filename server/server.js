@@ -1526,6 +1526,30 @@ const spectatorSessions = new Map(); // nickname -> { roomId, disconnectedAt }
 // nickname -> { roomId, roomName, since }
 const pendingArrivals = new Map();
 
+// How long after touching a live match you have to wait before dropping into
+// another one. Rate-limits both directions of the mid-game seat swap: without
+// it, walking out and re-entering is free (dodge a bad hand, come back on the
+// next deal) and seat-hopping between rooms costs nothing.
+const MID_GAME_JOIN_COOLDOWN_MS = 5 * 60 * 1000;
+// nickname -> epoch ms at which they may join a match in progress again. Keyed
+// by nickname, not playerId: ids are reminted on every reconnect, so a
+// playerId key would be a cooldown you clear by pulling the network cable.
+// Swept with the other expiring maps below; in memory, so a server restart or
+// an instance handoff forgives it — acceptable for an anti-annoyance timer.
+const midGameJoinCooldowns = new Map();
+
+/** Milliseconds left on someone's mid-game-join cooldown, 0 when clear. */
+function midGameJoinCooldownLeft(nickname) {
+  const until = midGameJoinCooldowns.get(nickname);
+  if (!until) return 0;
+  const left = until - Date.now();
+  if (left <= 0) {
+    midGameJoinCooldowns.delete(nickname);
+    return 0;
+  }
+  return left;
+}
+
 // Turn timer system
 const turnTimers = {};    // roomId -> setTimeout handle
 const timeoutCounts = {}; // roomId -> { playerId: count }
@@ -1605,6 +1629,9 @@ setInterval(() => {
     if (now - payload.createdAt > 7 * 24 * 60 * 60 * 1000) {
       inviteLinkTokens.delete(token);
     }
+  }
+  for (const [nickname, until] of midGameJoinCooldowns) {
+    if (now >= until) midGameJoinCooldowns.delete(nickname);
   }
   // Clean up abandoned rooms — including ones with a game still in progress,
   // which have no other exit path. See lobby/zombieSweep.js.
@@ -1964,6 +1991,10 @@ function serializeRoom(room) {
     blockedSlots: matchProgress ? emptySlots(room) : [...(room.blockedSlots || [])],
     autoBlockedSlots: matchProgress ? [] : [...(room.autoBlockedSlots || [])],
     randomSeating: !!room.randomSeating,
+    // Carried so a match that migrates mid-round keeps its exits open — a
+    // player who joined on the promise of being able to walk out must not
+    // find the option gone after a deploy moved the room.
+    allowMidGameJoin: !!room.allowMidGameJoin,
     players: room.players.map((p, slot) => {
       if (!p) return null;
       return {
@@ -2908,6 +2939,10 @@ const DRAIN_FROZEN_ACTIONS = new Set([
   'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
   'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
   'switch_to_spectator', 'switch_to_player',
+  // Taking a seat here while the room is about to move to the peer would strand
+  // the joiner. leave_in_progress is deliberately absent for the same reason
+  // leave_room is: never trap someone in a room.
+  'set_mid_game_join', 'join_in_progress',
   'start_game', 'next_round',
 ]);
 
@@ -2921,6 +2956,7 @@ const MIGRATED_RESUME_FROZEN_ACTIONS = new Set([
   'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
   'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
   'switch_to_spectator', 'switch_to_player',
+  'set_mid_game_join', 'join_in_progress',
 ]);
 
 function isMigratedResumeRoom(room) {
@@ -3064,6 +3100,15 @@ async function handleMessage(ws, data) {
       break;
     case 'switch_to_player':
       handleSwitchToPlayer(ws, data);
+      break;
+    case 'set_mid_game_join':
+      handleSetMidGameJoin(ws, data);
+      break;
+    case 'join_in_progress':
+      handleJoinInProgress(ws);
+      break;
+    case 'leave_in_progress':
+      await handleLeaveInProgress(ws);
       break;
     case 'get_profile':
       await handleGetProfile(ws, data);
@@ -4297,7 +4342,9 @@ function handleCreateRoom(ws, data) {
     gameType,
     maxPlayers,
     skExpansions,
-    data.allowSpectators !== false
+    data.allowSpectators !== false,
+    // Opt-in, and the GameRoom constructor drops it for ranked rooms.
+    data.allowMidGameJoin === true
   );
   ws.roomId = room.id;
   // Set title + level + season-rating on host player
@@ -5262,6 +5309,223 @@ function handleSwitchToPlayer(ws, data) {
   sendTo(ws, { type: 'switched_to_player', roomId: room.id, roomName: room.name });
   notifyLegacyRandomSeatingClient(room, ws);
   broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+/** Host toggling mid-game join for the room. Waiting room only. */
+function handleSetMidGameJoin(ws, data) {
+  if (!ws.roomId) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_in_room') });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (room.hostId !== ws.playerId) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'host_only_add_bot') });
+    return;
+  }
+  if (room.isRanked) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_ranked_blocked') });
+    return;
+  }
+  if (data.enabled === true && room.allowSpectators === false) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_needs_spectators') });
+    return;
+  }
+  // Flipping this mid-match would change the rules under people who already
+  // sat down — someone counting on being able to walk out could find the exit
+  // gone. Waiting room only.
+  if (room.game) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'room_no_switch_in_game') });
+    return;
+  }
+  room.allowMidGameJoin = data.enabled === true;
+  broadcastRoomState(ws.roomId);
+  broadcastRoomList();
+}
+
+/**
+ * A spectator drops into a live match by taking over a bot's seat.
+ *
+ * The seat is picked at random among the bot-held ones rather than chosen:
+ * letting people pick would mean scouting the table from the spectator view
+ * (whose hand is strong, which team is ahead) and then claiming the good seat.
+ */
+function handleJoinInProgress(ws) {
+  if (!ws.roomId || !ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_spectating') });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (!room.allowMidGameJoin) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_not_allowed') });
+    return;
+  }
+  if (room.isRanked) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_ranked_blocked') });
+    return;
+  }
+  if (!clientCanAccessRoom(ws, room)) {
+    sendTo(ws, { type: 'error', message: roomAccessUpdateMessage(ws.locale, room, 'join') });
+    return;
+  }
+  // A game that is over, or one being torn down by a desertion, has no seat
+  // worth inheriting — and grabbing one mid-teardown would race the result
+  // save that handleDesertion already claimed.
+  const game = room.game;
+  if (!game || game.state === 'game_end' || game.deserted) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_no_game') });
+    return;
+  }
+  const cooldownLeft = midGameJoinCooldownLeft(ws.nickname);
+  if (cooldownLeft > 0) {
+    sendTo(ws, {
+      type: 'error',
+      message: t(ws.locale, 'midjoin_cooldown', { minutes: Math.ceil(cooldownLeft / 60000) }),
+      retryAfterMs: cooldownLeft,
+    });
+    return;
+  }
+  const botSlots = room.getBotSeatSlots();
+  if (botSlots.length === 0) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_no_bot_seat') });
+    return;
+  }
+  const slot = botSlots[Math.floor(Math.random() * botSlots.length)];
+  const botId = room.players[slot].id;
+  const result = room.takeOverBotSeat(botId, ws.playerId, ws.nickname);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
+    return;
+  }
+
+  ws.isSpectator = false;
+  // Drop the spectator reconnect pointer; the disconnect handler writes the
+  // player one if and when they actually drop. playerSessions is a record of
+  // who is *away*, not who is seated — writing it here would have the 30-min
+  // sweeper expiring the session of a player sitting at the table.
+  spectatorSessions.delete(ws.nickname);
+  // Carry the cosmetics the seat should now display, same as switchToPlayer.
+  {
+    const p = room.players[slot];
+    if (p) {
+      if (ws.titleKey) {
+        p.titleKey = ws.titleKey;
+        p.titleName = ws.titleName;
+      }
+      p.level = ws.level || 1;
+      p.bannerKey = ws.bannerKey;
+      p.photoUrl = ws.photoUrl || null;
+      p.seasonRating = ws.seasonRating;
+      p.skSeasonRating = ws.skSeasonRating;
+      p.mightySeasonRating = ws.mightySeasonRating;
+    }
+  }
+  // The bot that held this seat may have burned timeouts; the newcomer must
+  // not inherit a count that deserts them on their first slow turn.
+  if (timeoutCounts[room.id]) delete timeoutCounts[room.id][ws.nickname];
+  midGameJoinCooldowns.set(ws.nickname, Date.now() + MID_GAME_JOIN_COOLDOWN_MS);
+
+  sendTo(ws, {
+    type: 'joined_in_progress',
+    roomId: room.id,
+    roomName: room.name,
+    slot,
+  });
+  broadcastGameEvent(room.id, {
+    type: 'player_joined_in_progress',
+    player: ws.playerId,
+    playerName: ws.nickname,
+    slot,
+    replacedBot: botId,
+  });
+
+  // The seat's identity changed, which is exactly what botStateSig keys on —
+  // any bot decision already in flight for the old id lands stale and is
+  // discarded. Re-derive the schedule and the turn timer from the new roster:
+  // if it is this seat's turn, the timer must now be a human clock, and the
+  // bot loop must stop treating the seat as its own.
+  clearTurnTimer(room.id);
+  scheduleBotActions(room.id, true);
+  startTurnTimer(room.id);
+  sendGameStateToAll(room.id);
+  broadcastRoomState(room.id);
+  broadcastRoomList();
+}
+
+/**
+ * A seated player walks out of a live match and a bot finishes their game.
+ *
+ * Unlike handleDesertion this does NOT end the match — that is the whole point
+ * of the option. It still records against the leaver: from the table's side
+ * they left mid-game, and the fact that a bot covered for them doesn't change
+ * that.
+ */
+async function handleLeaveInProgress(ws) {
+  if (!ws.roomId || ws.isSpectator) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'not_player_in_room') });
+    return;
+  }
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (!room.allowMidGameJoin) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_not_allowed') });
+    return;
+  }
+  const game = room.game;
+  if (!game || game.state === 'game_end' || game.deserted) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'midjoin_no_game') });
+    return;
+  }
+
+  const roomId = room.id;
+  const nickname = ws.nickname;
+  const playerId = ws.playerId;
+  // Rejects when this is the last human — a table of bots playing to an empty
+  // room is not a match anyone is in. They can still use plain leave, which
+  // ends it.
+  const result = room.replaceWithBot(playerId, ws.locale);
+  if (!result.success) {
+    sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
+    return;
+  }
+
+  // Recorded like any other desertion. No ranked ban to apply — ranked rooms
+  // can't enable this option (they can't hold bots), so isRanked is false here.
+  try {
+    await incrementLeaveCount(nickname);
+  } catch (e) {
+    console.error(`[MIDLEAVE] leave-count update failed for ${nickname}:`, e);
+  }
+  midGameJoinCooldowns.set(nickname, Date.now() + MID_GAME_JOIN_COOLDOWN_MS);
+
+  // No seat to come back to — the bot has it. Drop the reconnect pointer so a
+  // later reconnect lands in the lobby instead of a room they walked out of.
+  playerSessions.delete(nickname);
+  if (timeoutCounts[roomId]) delete timeoutCounts[roomId][nickname];
+  ws.roomId = null;
+  ws.isSpectator = false;
+  sendTo(ws, {
+    type: 'left_in_progress',
+    message: t(ws.locale, 'midjoin_left_self'),
+  });
+  broadcastGameEvent(roomId, {
+    type: 'player_left_in_progress',
+    player: playerId,
+    playerName: nickname,
+    slot: result.slot,
+    replacedBy: result.botId,
+    botName: result.botNickname,
+  });
+
+  // The vacated seat is a bot's now: if it was their turn, the bot has to be
+  // told to move and the human turn timer has to come down.
+  clearTurnTimer(roomId);
+  scheduleBotActions(roomId, true);
+  startTurnTimer(roomId);
+  sendGameStateToAll(roomId);
+  broadcastRoomState(roomId);
   broadcastRoomList();
 }
 

@@ -179,6 +179,10 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
           // in a tab it mostly marks noise. The reconnect itself is unchanged,
           // it just no longer announces itself.
           if (reconnecting && !kIsWeb) _buildDimmed(context),
+          // Mid-match seat changes are announced here because this overlay is
+          // the one thing every screen already wraps — lobby, all four game
+          // screens, spectator. Anywhere else it would be four more copies.
+          const _SeatHandoffBanner(),
         ],
       ),
     );
@@ -218,6 +222,78 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Transient notice that a seat changed hands mid-match: someone took over a
+/// bot, or handed their seat to one and walked.
+///
+/// Watches [GameService.seatHandoff], which the service clears on a timer, so
+/// this renders nothing almost all of the time. Deliberately non-blocking —
+/// unlike a desertion, the match is still running and the player may be mid-turn.
+class _SeatHandoffBanner extends StatelessWidget {
+  const _SeatHandoffBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final handoff = context.select<GameService, SeatHandoff?>(
+      (g) => g.seatHandoff,
+    );
+    if (handoff == null) return const SizedBox.shrink();
+    final l10n = L10n.of(context);
+    final text = handoff.joined
+        ? l10n.midJoinNoticeJoined(handoff.playerName)
+        : l10n.midJoinNoticeLeft(handoff.playerName, handoff.botName);
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 0,
+      right: 0,
+      child: IgnorePointer(
+        child: Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4A4080).withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    handoff.joined ? Icons.login : Icons.smart_toy,
+                    size: 15,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text(
+                      text,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -2625,5 +2625,42 @@
   "appForceUpdateButtonWeb": "Reload",
   "loginGetTheApp": "Also available as an app",
   "goldHistoryBankDeposit": "Bank transfer confirmed",
-  "goldBankContactChannel": "Deposit help (KakaoTalk channel)"
+  "goldBankContactChannel": "Deposit help (KakaoTalk channel)",
+  "midJoinButton": "Join in progress",
+  "midJoinConfirmTitle": "Join this match?",
+  "midJoinConfirmBody": "You take over one of the bot seats at random and start playing the current hand immediately. Anything the bot already declared or played stands.",
+  "midJoinConfirmOk": "Join",
+  "midLeaveButton": "Walk out",
+  "midLeaveConfirmTitle": "Walk out of this match?",
+  "midLeaveConfirmBody": "A bot takes your seat and the match continues. This is recorded as a desertion, and you cannot join another match in progress for {minutes} min.",
+  "@midLeaveConfirmBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "midLeaveConfirmOk": "Walk out",
+  "midJoinRoomBadge": "Join in progress",
+  "midJoinCreateOption": "Allow joining in progress",
+  "midJoinCreateOptionHint": "Spectators can take over a bot seat in a running match. Anyone who joined can also walk out.",
+  "midJoinNoticeJoined": "{player} joined the match",
+  "@midJoinNoticeJoined": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      }
+    }
+  },
+  "midJoinNoticeLeft": "{player} walked out — {bot} is taking over",
+  "@midJoinNoticeLeft": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      },
+      "bot": {
+        "type": "String"
+      }
+    }
+  }
 }

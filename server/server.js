@@ -4730,7 +4730,7 @@ function handleSpectateRoom(ws, data) {
     return;
   }
   const password = typeof data.password === 'string' ? data.password.trim() : '';
-  const result = room.addSpectator(ws.playerId, ws.nickname, password);
+  const result = room.addSpectator(ws.playerId, ws.nickname, password, ws.photoUrl);
   if (!result.success) {
     sendTo(ws, { type: 'error', message: resultMessage(result, ws.locale) });
     return;
@@ -7671,6 +7671,15 @@ function personalizeRoomState(state, ws) {
   const locale = ws?.locale || 'ko';
   return {
     ...state,
+    // Watchers get the same treatment as seats: someone you blocked or
+    // reported must not have their photo turn up in the spectator list.
+    spectators: Array.isArray(state.spectators)
+      ? state.spectators.map((sp) => (
+          sp && sp.photoUrl
+            ? { ...sp, photoUrl: visiblePhoto(ws, sp.nickname, sp.photoUrl) }
+            : sp
+        ))
+      : state.spectators,
     players: state.players.map((p) => {
       if (p === null) return null;
       const retitle = !!p.titleKey;

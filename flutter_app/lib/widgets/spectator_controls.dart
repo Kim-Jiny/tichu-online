@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'mid_game_join.dart';
 import 'player_profile_dialog.dart';
+import 'profile_avatar.dart';
 
 /// Shared spectator control widgets used across all four game spectator
 /// screens (Tichu / Skull King / Love Letter / Mighty) so the top-bar
@@ -184,9 +185,9 @@ class SpectatorSoundPanel extends StatelessWidget {
 /// viewer's profile — the list used to be four near-identical copies across
 /// the game screens, each rendering a nickname you could not do anything with.
 ///
-/// The rows show an initial, not a photo: the roster the server sends for
-/// spectators carries only `{id, nickname}`, and the photo (with its privacy
-/// rules applied) arrives with the profile itself when you open one.
+/// Photos come from the room state with the viewer's block/report filter
+/// already applied server-side; an initial stands in when someone has no
+/// photo or the viewer may not see it.
 void showSpectatorListDialog(BuildContext context, GameService game) {
   showDialog(
     context: context,
@@ -236,8 +237,12 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
                   itemCount: spectators.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (_, i) {
-                    final nickname = (spectators[i]['nickname'] ?? '').toString();
-                    return _SpectatorRow(nickname: nickname, game: game);
+                    final sp = spectators[i];
+                    return _SpectatorRow(
+                      nickname: (sp['nickname'] ?? '').toString(),
+                      photoUrl: (sp['photoUrl'] ?? '').toString(),
+                      game: game,
+                    );
                   },
                 ),
               ),
@@ -254,9 +259,14 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
 
 class _SpectatorRow extends StatelessWidget {
   final String nickname;
+  final String photoUrl;
   final GameService game;
 
-  const _SpectatorRow({required this.nickname, required this.game});
+  const _SpectatorRow({
+    required this.nickname,
+    required this.photoUrl,
+    required this.game,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -273,20 +283,24 @@ class _SpectatorRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE0D8F5),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF4A4080),
+              ProfileAvatar(
+                photoUrl: photoUrl.isEmpty
+                    ? null
+                    : game.resolvePhotoUrl(photoUrl),
+                size: 30,
+                fallback: Container(
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE0D8F5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF4A4080),
+                    ),
                   ),
                 ),
               ),

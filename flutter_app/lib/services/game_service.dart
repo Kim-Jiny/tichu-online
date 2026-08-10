@@ -1047,6 +1047,9 @@ class GameService extends ChangeNotifier {
                   (s) => {
                     'id': (s['id'] ?? '').toString(),
                     'nickname': (s['nickname'] ?? '').toString(),
+                    // Already filtered server-side for blocks/reports; empty
+                    // when they have no photo or the viewer may not see it.
+                    'photoUrl': (s['photoUrl'] ?? '').toString(),
                   },
                 )
                 .toList();
@@ -1226,6 +1229,9 @@ class GameService extends ChangeNotifier {
                   (s) => {
                     'id': (s['id'] ?? '').toString(),
                     'nickname': (s['nickname'] ?? '').toString(),
+                    // Already filtered server-side for blocks/reports; empty
+                    // when they have no photo or the viewer may not see it.
+                    'photoUrl': (s['photoUrl'] ?? '').toString(),
                   },
                 )
                 .toList();
@@ -1338,6 +1344,9 @@ class GameService extends ChangeNotifier {
                     (s) => {
                       'id': (s['id'] ?? '').toString(),
                       'nickname': (s['nickname'] ?? '').toString(),
+                      // Already filtered server-side for blocks/reports; empty
+                      // when they have no photo or the viewer may not see it.
+                      'photoUrl': (s['photoUrl'] ?? '').toString(),
                     },
                   )
                   .toList();
@@ -1391,6 +1400,9 @@ class GameService extends ChangeNotifier {
                     (s) => {
                       'id': (s['id'] ?? '').toString(),
                       'nickname': (s['nickname'] ?? '').toString(),
+                      // Already filtered server-side for blocks/reports; empty
+                      // when they have no photo or the viewer may not see it.
+                      'photoUrl': (s['photoUrl'] ?? '').toString(),
                     },
                   )
                   .toList();
@@ -1440,6 +1452,9 @@ class GameService extends ChangeNotifier {
                     (s) => {
                       'id': (s['id'] ?? '').toString(),
                       'nickname': (s['nickname'] ?? '').toString(),
+                      // Already filtered server-side for blocks/reports; empty
+                      // when they have no photo or the viewer may not see it.
+                      'photoUrl': (s['photoUrl'] ?? '').toString(),
                     },
                   )
                   .toList();
@@ -1485,6 +1500,9 @@ class GameService extends ChangeNotifier {
                     (s) => {
                       'id': (s['id'] ?? '').toString(),
                       'nickname': (s['nickname'] ?? '').toString(),
+                      // Already filtered server-side for blocks/reports; empty
+                      // when they have no photo or the viewer may not see it.
+                      'photoUrl': (s['photoUrl'] ?? '').toString(),
                     },
                   )
                   .toList();

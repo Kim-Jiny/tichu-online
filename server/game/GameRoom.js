@@ -231,14 +231,18 @@ class GameRoom {
     return this.players.some(p => p !== null && p.nickname === nickname && !p.connected);
   }
 
-  addSpectator(odId, nickname, password = '') {
+  addSpectator(odId, nickname, password = '', photoUrl = null) {
     if (this.isPrivate && this.password !== password) {
       return { success: false, messageKey: 'room_wrong_password' };
     }
     if (this.spectators.find((s) => s.id === odId)) {
       return { success: false, message: 'Already spectating' };
     }
-    this.spectators.push({ id: odId, nickname });
+    // Photo stored on the entry the same way a seated player's is, so the
+    // spectator list can show a face. Still filtered per viewer on the way out
+    // (personalizeRoomState) — a blocked or reported photo must not reappear
+    // just because its owner is watching rather than playing.
+    this.spectators.push({ id: odId, nickname, photoUrl: photoUrl || null });
     logVerboseConnection(`${nickname} is now spectating room ${this.name}`);
     return { success: true };
   }
@@ -977,6 +981,7 @@ class GameRoom {
       spectators: this.spectators.map((s) => ({
         id: s.id,
         nickname: s.nickname,
+        photoUrl: s.photoUrl || null,
       })),
       spectatorCount: this.spectators.length,
       // Send all slots including nulls

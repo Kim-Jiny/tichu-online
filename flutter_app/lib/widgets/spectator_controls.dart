@@ -71,53 +71,53 @@ class SpectatorActionSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(11),
-            decoration: BoxDecoration(
-              color: active
-                  ? _kTextPrimary.withValues(alpha: 0.92)
-                  : Colors.white.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 19,
-              color: active ? Colors.white : (iconColor ?? _kTextPrimary),
-            ),
+      clipBehavior: Clip.none,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: active
+                ? _kTextPrimary.withValues(alpha: 0.92)
+                : Colors.white.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 6,
+              ),
+            ],
           ),
-          if (badgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 18),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white, width: 1.2),
-                ),
-                child: Text(
-                  badgeCount > 99 ? '99+' : '$badgeCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
+          child: Icon(
+            icon,
+            size: 19,
+            color: active ? Colors.white : (iconColor ?? _kTextPrimary),
+          ),
+        ),
+        if (badgeCount > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE53935),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white, width: 1.2),
+              ),
+              child: Text(
+                badgeCount > 99 ? '99+' : '$badgeCount',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-        ],
+          ),
+      ],
     );
   }
 }
@@ -129,17 +129,14 @@ class SpectatorSoundPanel extends StatelessWidget {
   final GameService game;
   final double width;
 
-  const SpectatorSoundPanel({
-    super.key,
-    required this.game,
-    this.width = 190,
-  });
+  const SpectatorSoundPanel({super.key, required this.game, this.width = 190});
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final title =
-        game.isSpectator ? l10n.spectatorSoundEffects : l10n.gameSoundEffects;
+    final title = game.isSpectator
+        ? l10n.spectatorSoundEffects
+        : l10n.gameSoundEffects;
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -193,65 +190,83 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
     context: context,
     builder: (ctx) {
       final l10n = L10n.of(ctx);
-      // Watched, not snapshotted: people arrive and leave while this is open.
-      final spectators = context.select<GameService, List<Map<String, dynamic>>>(
-        (g) => g.spectators,
-      );
-      return AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-        contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-        title: Row(
-          children: [
-            const Icon(Icons.visibility, size: 20, color: Color(0xFF4A4080)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                spectators.isEmpty
-                    ? l10n.spectatorListTitle
-                    : '${l10n.spectatorListTitle} ${spectators.length}',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
+      // Consumer, not context.select. select() has to run inside a build, and
+      // a dialog builder is not one — reaching for the *calling* context here
+      // tripped 'widget is LayoutBuilder || debugDoingBuild' and took the
+      // screen down. Consumer gives the subtree its own element to rebuild,
+      // which is what keeps the list live while the dialog is open.
+      return Consumer<GameService>(
+        builder: (ctx, gs, _) {
+          final spectators = gs.spectators;
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-          ],
-        ),
-        content: spectators.isEmpty
-            ? SizedBox(
-                width: 260,
-                height: 72,
-                child: Center(
+            titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+            contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.visibility,
+                  size: 20,
+                  color: Color(0xFF4A4080),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
                   child: Text(
-                    l10n.spectatorNoSpectators,
-                    style: const TextStyle(color: Color(0xFF9A8E8A), fontSize: 13),
+                    spectators.isEmpty
+                        ? l10n.spectatorListTitle
+                        : '${l10n.spectatorListTitle} ${spectators.length}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              )
-            : SizedBox(
-                width: 280,
-                // Grows with the list up to five rows, then scrolls — a fixed
-                // 220 left a lot of white space under a single watcher.
-                height: (spectators.length.clamp(1, 5)) * 52.0,
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: spectators.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 4),
-                  itemBuilder: (_, i) {
-                    final sp = spectators[i];
-                    return _SpectatorRow(
-                      nickname: (sp['nickname'] ?? '').toString(),
-                      photoUrl: (sp['photoUrl'] ?? '').toString(),
-                      game: game,
-                    );
-                  },
-                ),
+              ],
+            ),
+            content: spectators.isEmpty
+                ? SizedBox(
+                    width: 260,
+                    height: 72,
+                    child: Center(
+                      child: Text(
+                        l10n.spectatorNoSpectators,
+                        style: const TextStyle(
+                          color: Color(0xFF9A8E8A),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    width: 280,
+                    // Grows with the list up to five rows, then scrolls — a fixed
+                    // 220 left a lot of white space under a single watcher.
+                    height: (spectators.length.clamp(1, 5)) * 52.0,
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: spectators.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 4),
+                      itemBuilder: (_, i) {
+                        final sp = spectators[i];
+                        return _SpectatorRow(
+                          nickname: (sp['nickname'] ?? '').toString(),
+                          photoUrl: (sp['photoUrl'] ?? '').toString(),
+                          game: game,
+                        );
+                      },
+                    ),
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.spectatorClose),
               ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.spectatorClose),
-          ),
-        ],
+            ],
+          );
+        },
       );
     },
   );
@@ -490,7 +505,11 @@ void showTichuScoreHistoryDialog(
                     ],
                   ),
                 ),
-                const Divider(height: 12, thickness: 1, color: Color(0xFFEDE5E0)),
+                const Divider(
+                  height: 12,
+                  thickness: 1,
+                  color: Color(0xFFEDE5E0),
+                ),
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
@@ -809,8 +828,10 @@ class SpectatorHeader extends StatelessWidget {
                 onPressed: () => game.leaveRoom(),
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
                 padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints.tightFor(width: 36, height: 36),
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 36,
+                ),
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -836,8 +857,7 @@ class SpectatorHeader extends StatelessWidget {
               // action buttons plus the badge left the room name a few
               // characters ("러...") on Love Letter.
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8E0F8),
                   borderRadius: BorderRadius.circular(10),

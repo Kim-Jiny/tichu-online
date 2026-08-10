@@ -632,8 +632,15 @@ class GameRoom {
     // Remove from player slot
     this.players[idx] = null;
 
-    // Add to spectators
-    this.spectators.push({ id: playerId, nickname });
+    // Add to spectators, carrying the photo off the seat. Without this a
+    // player who stepped back to watch lost their face in the spectator list
+    // while someone who arrived as a spectator kept theirs — same person, two
+    // different answers depending on which door they came through.
+    this.spectators.push({
+      id: playerId,
+      nickname,
+      photoUrl: player.photoUrl || null,
+    });
 
     // If host left, assign new host
     if (this.hostId === playerId) {

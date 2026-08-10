@@ -36,6 +36,9 @@ class L10nKo extends L10n {
   String get settingsAppVersion => '앱 버전';
 
   @override
+  String get settingsCurrentVersion => '현재 버전';
+
+  @override
   String get settingsNotLatestVersion => '최신 버전이 아닙니다';
 
   @override

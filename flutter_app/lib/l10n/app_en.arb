@@ -9,6 +9,7 @@
   "settingsLanguage": "Language",
   "settingsAppInfo": "App Info",
   "settingsAppVersion": "App Version",
+  "settingsCurrentVersion": "Current version",
   "settingsNotLatestVersion": "Not the latest version",
   "settingsUpdate": "Update",
   "settingsLogout": "Logout",

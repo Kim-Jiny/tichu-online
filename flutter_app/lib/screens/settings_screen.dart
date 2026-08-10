@@ -1367,7 +1367,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       iconColor: outdated
                                           ? const Color(0xFFE53935)
                                           : const Color(0xFF7E57C2),
-                                      title: l10n.settingsAppVersion,
+                                      // "앱 버전" is wrong in a browser — there
+                                      // is no app to have a version, just the
+                                      // build being served.
+                                      title: kIsWeb
+                                          ? l10n.settingsCurrentVersion
+                                          : l10n.settingsAppVersion,
                                       subtitle: _appVersion.isEmpty
                                           ? '-'
                                           : (outdated

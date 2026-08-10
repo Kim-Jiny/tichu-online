@@ -153,6 +153,12 @@ abstract class L10n {
   /// **'App Version'**
   String get settingsAppVersion;
 
+  /// No description provided for @settingsCurrentVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version'**
+  String get settingsCurrentVersion;
+
   /// No description provided for @settingsNotLatestVersion.
   ///
   /// In en, this message translates to:

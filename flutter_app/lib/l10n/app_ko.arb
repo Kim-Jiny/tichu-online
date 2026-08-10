@@ -9,6 +9,7 @@
   "settingsLanguage": "언어",
   "settingsAppInfo": "앱 정보",
   "settingsAppVersion": "앱 버전",
+  "settingsCurrentVersion": "현재 버전",
   "settingsNotLatestVersion": "최신 버전이 아닙니다",
   "settingsUpdate": "업데이트",
   "settingsLogout": "로그아웃",

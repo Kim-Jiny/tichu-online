@@ -36,6 +36,9 @@ class L10nDe extends L10n {
   String get settingsAppVersion => 'App-Version';
 
   @override
+  String get settingsCurrentVersion => 'Aktuelle Version';
+
+  @override
   String get settingsNotLatestVersion => 'Nicht die neueste Version';
 
   @override

@@ -1713,6 +1713,12 @@ abstract class L10n {
   /// **'D'**
   String get lobbyMatchDesertion;
 
+  /// No description provided for @lobbyMatchMidLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'ML'**
+  String get lobbyMatchMidLeave;
+
   /// No description provided for @lobbyMatchDraw.
   ///
   /// In en, this message translates to:

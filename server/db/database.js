@@ -2575,7 +2575,36 @@ async function setProfilePrivateHidePhoto(nickname, hide) {
 }
 
 // Get recent matches for a player
-async function getRecentMatches(nickname, limit = 5) {
+// Depth guard. Each source is asked for offset+limit rows, so a caller that
+// keeps paging would eventually ask every table for its whole history.
+const MATCH_HISTORY_MAX_DEPTH = 300;
+
+/**
+ * Recent matches for a profile.
+ *
+ * Two shapes, on purpose:
+ *
+ * - No `opts` — the profile popup's first load. Every game type is capped at
+ *   `limit` and the results merge WITHOUT a global slice, because the popup
+ *   filters by the selected tab and a global slice would let the most-played
+ *   mode crowd every other tab out.
+ * - With `opts` — one page of the full history, for the "더보기" list. That
+ *   list shows one tab at a time, so the starvation problem does not apply and
+ *   a real page can be cut: every relevant source is asked for offset+limit
+ *   rows, merged by time, then sliced. Anything inside the global top N is
+ *   inside its own source's top N, so the page is exact.
+ */
+async function getRecentMatches(nickname, limit = 5, opts = null) {
+  const paged = opts != null;
+  const offset = paged ? Math.max(0, opts.offset || 0) : 0;
+  // 'all' and null both mean every game type.
+  const onlyGame =
+    paged && opts.gameType && opts.gameType !== 'all' ? opts.gameType : null;
+  const wants = (gameType) => onlyGame == null || onlyGame === gameType;
+  // How deep each source has to reach for this page to be correct.
+  const need = paged
+    ? Math.min(offset + limit, MATCH_HISTORY_MAX_DEPTH)
+    : limit;
   const client = await pool.connect();
   // One batched players fetch per game type instead of one query per match
   // (was N+1). `table` is a hardcoded internal constant, never user input.
@@ -2618,13 +2647,15 @@ async function getRecentMatches(nickname, limit = 5) {
     const since = new Date(sinceDate).toISOString().replace('T', ' ').replace('Z', '');
 
     // Tichu matches
-    const tichuResult = await client.query(
+    const tichuResult = !wants('tichu')
+      ? { rows: [] }
+      : await client.query(
       `SELECT *, 'tichu'::text as game_type FROM tc_match_history
        WHERE (player_a1 = $1 OR player_a2 = $1 OR player_b1 = $1 OR player_b2 = $1)
          AND created_at >= $3
        ORDER BY created_at DESC
        LIMIT $2`,
-      [nickname, limit, since]
+      [nickname, need, since]
     );
     const tichuMatches = tichuResult.rows.map(row => {
       const isTeamA = row.player_a1 === nickname || row.player_a2 === nickname;
@@ -2652,14 +2683,16 @@ async function getRecentMatches(nickname, limit = 5) {
     });
 
     // Skull King matches
-    const skResult = await client.query(
+    const skResult = !wants('skull_king')
+      ? { rows: [] }
+      : await client.query(
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_sk_match_history h
        JOIN tc_sk_match_players p ON p.match_id = h.id AND p.nickname = $1
        WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit, since]
+      [nickname, need, since]
     );
     const skPlayers = await fetchPlayersByMatch(
       'tc_sk_match_players', skResult.rows.map(r => r.id));
@@ -2686,14 +2719,16 @@ async function getRecentMatches(nickname, limit = 5) {
     }
 
     // Love Letter matches
-    const llResult = await client.query(
+    const llResult = !wants('love_letter')
+      ? { rows: [] }
+      : await client.query(
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_ll_match_history h
        JOIN tc_ll_match_players p ON p.match_id = h.id AND p.nickname = $1
        WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit, since]
+      [nickname, need, since]
     );
     const llPlayers = await fetchPlayersByMatch(
       'tc_ll_match_players', llResult.rows.map(r => r.id));
@@ -2720,14 +2755,16 @@ async function getRecentMatches(nickname, limit = 5) {
     }
 
     // Mighty matches
-    const mightyResult = await client.query(
+    const mightyResult = !wants('mighty')
+      ? { rows: [] }
+      : await client.query(
       `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
        FROM tc_mighty_match_history h
        JOIN tc_mighty_match_players p ON p.match_id = h.id AND p.nickname = $1
        WHERE h.created_at >= $3
        ORDER BY h.created_at DESC
        LIMIT $2`,
-      [nickname, limit, since]
+      [nickname, need, since]
     );
     const mightyPlayers = await fetchPlayersByMatch(
       'tc_mighty_match_players', mightyResult.rows.map(r => r.id));
@@ -2763,24 +2800,25 @@ async function getRecentMatches(nickname, limit = 5) {
       });
     }
 
-    // Merge and sort by date. Each game type is already capped at `limit` by
-    // its SQL LIMIT, so we DON'T globally slice to `limit` here: the client
-    // profile popup filters by the selected game tab, and a global slice
-    // would let the most-played mode crowd out other modes' recent matches
-    // (making less-played tabs look empty / "wiped"). Per-type cap stands.
+    // Merge and sort by date. Whether a global slice follows depends on the
+    // caller — see the header: the popup's first load must not be sliced, a
+    // page of one tab's history must.
     // Walk-outs from matches that kept running. They have no match row of
     // their own — the match may still be in progress, and when it does end the
     // leaver is not on the roster — so they come from their own log and are
     // merged in by time like any other entry. Marked isMidGameLeave so the
     // client renders them as an event ("walked out of a Tichu game") rather
     // than trying to read a score off them.
+    // A walk-out is filed under the game it happened in, so a page for one
+    // game keeps its own and drops the rest.
     const midLeaveResult = await client.query(
       `SELECT id, game_type, reason, room_name, players, created_at
          FROM tc_midleave_log
         WHERE nickname = $1 AND created_at >= $3
+          AND ($4::text IS NULL OR game_type = $4)
         ORDER BY created_at DESC
         LIMIT $2`,
-      [nickname, limit, since],
+      [nickname, need, since, onlyGame],
     );
     const midLeaves = midLeaveResult.rows.map((row) => ({
       id: row.id,
@@ -2809,10 +2847,26 @@ async function getRecentMatches(nickname, limit = 5) {
       ...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches, ...midLeaves,
     ];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    return all;
+    if (!paged) return all;
+    // `hasMore` cannot be read off the slice alone: when the merged list ends
+    // exactly at the page boundary it may still be a source that filled its
+    // own LIMIT and has more behind it.
+    const sourceFilled = [
+      tichuResult, skResult, llResult, mightyResult, midLeaveResult,
+    ].some((r) => r.rows.length >= need);
+    // Ends at `need`, not at offset+limit: those differ only on the page that
+    // runs into MATCH_HISTORY_MAX_DEPTH, and there the cap has to win or the
+    // last page reads past the depth every source was fetched to.
+    const page = all.slice(offset, need);
+    return {
+      matches: page,
+      hasMore:
+        need < MATCH_HISTORY_MAX_DEPTH &&
+        (all.length > offset + limit || (page.length === limit && sourceFilled)),
+    };
   } catch (err) {
     console.error('Get recent matches error:', err);
-    return [];
+    return paged ? { matches: [], hasMore: false } : [];
   } finally {
     client.release();
   }
@@ -9243,6 +9297,7 @@ module.exports = {
   getUserProfile,
   loadTitleTranslations,
   getRecentMatches,
+  MATCH_HISTORY_MAX_DEPTH,
   getWallet,
   getGoldHistory,
   getAdminGoldHistory,

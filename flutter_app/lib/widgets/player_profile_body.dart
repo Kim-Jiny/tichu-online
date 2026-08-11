@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -16,11 +17,16 @@ const String kProfileAllGamesTab = 'all';
 /// How a match ended for the person whose profile this is.
 enum _MatchOutcome { win, loss, draw, desertion, midLeave }
 
+/// The player whose profile this is, and whoever was on their side.
+///
+/// Dark enough to read at 13px on white — a paler sky blue is the colour of a
+/// disabled control, which is the opposite of what this marks.
+const Color _kMineColor = Color(0xFF0288D1);
+
 /// One game's line in the combined view.
 class _GameTally {
   final String key;
   final String label;
-  final Color color;
   final int games;
   final int wins;
   final int losses;
@@ -28,7 +34,6 @@ class _GameTally {
   const _GameTally({
     required this.key,
     required this.label,
-    required this.color,
     required this.games,
     required this.wins,
     required this.losses,
@@ -169,37 +174,21 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         // Game selector button
         Builder(
           builder: (_) {
-            String gameLabel;
-            Color gameBgColor;
-            Color gameFgColor;
-            IconData gameIcon = gameTypeIcon(selectedTab);
-            switch (selectedTab) {
-              case kProfileAllGamesTab:
-                gameLabel = l10n.profileAllGames;
-                gameBgColor = const Color(0xFF5A4038);
-                gameFgColor = Colors.white;
-                gameIcon = Icons.apps_rounded;
-                break;
-              case 'skull_king':
-                gameLabel = l10n.lobbySkullKing;
-                gameBgColor = const Color(0xFF2D2D3D);
-                gameFgColor = const Color(0xFFFFD54F);
-                break;
-              case 'mighty':
-                gameLabel = l10n.rankingMighty;
-                gameBgColor = const Color(0xFF2E7D32);
-                gameFgColor = Colors.white;
-                break;
-              case 'love_letter':
-                gameLabel = l10n.lobbyLoveLetter;
-                gameBgColor = const Color(0xFFE91E63);
-                gameFgColor = Colors.white;
-                break;
-              default:
-                gameLabel = l10n.lobbyTichu;
-                gameBgColor = const Color(0xFF7E57C2);
-                gameFgColor = Colors.white;
-            }
+            // One palette with the room-creation picker: that is where people
+            // learn which colour means which game.
+            final isAllTab = selectedTab == kProfileAllGamesTab;
+            final gameLabel = isAllTab
+                ? l10n.profileAllGames
+                : gameTypeLabel(l10n, selectedTab);
+            final gameBgColor = isAllTab
+                ? const Color(0xFF5A4038)
+                : gameTypeColor(selectedTab);
+            final gameFgColor = isAllTab
+                ? Colors.white
+                : gameTypeOnColor(selectedTab);
+            final gameIcon = isAllTab
+                ? Icons.apps_rounded
+                : gameTypeIcon(selectedTab);
             return InkWell(
               onTap: () {
                 showModalBottomSheet(
@@ -246,14 +235,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           leading: Icon(
                             gameTypeIcon('tichu'),
                             size: 20,
-                            color: const Color(0xFF7E57C2),
+                            color: gameTypeColor('tichu'),
                           ),
                           title: Text(l10n.lobbyTichu),
                           trailing: selectedTab == 'tichu'
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Color(0xFF7E57C2),
-                                )
+                              ? Icon(Icons.check, color: gameTypeColor('tichu'))
                               : null,
                           onTap: () {
                             Navigator.pop(bCtx);
@@ -264,13 +250,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           leading: Icon(
                             gameTypeIcon('skull_king'),
                             size: 20,
-                            color: const Color(0xFF2D2D3D),
+                            color: gameTypeColor('skull_king'),
                           ),
                           title: Text(l10n.lobbySkullKing),
                           trailing: selectedTab == 'skull_king'
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check,
-                                  color: Color(0xFF2D2D3D),
+                                  color: gameTypeColor('skull_king'),
                                 )
                               : null,
                           onTap: () {
@@ -282,13 +268,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           leading: Icon(
                             gameTypeIcon('mighty'),
                             size: 20,
-                            color: const Color(0xFF2E7D32),
+                            color: gameTypeColor('mighty'),
                           ),
                           title: Text(l10n.rankingMighty),
                           trailing: selectedTab == 'mighty'
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check,
-                                  color: Color(0xFF2E7D32),
+                                  color: gameTypeColor('mighty'),
                                 )
                               : null,
                           onTap: () {
@@ -300,13 +286,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           leading: Icon(
                             gameTypeIcon('love_letter'),
                             size: 20,
-                            color: const Color(0xFFE91E63),
+                            color: gameTypeColor('love_letter'),
                           ),
                           title: Text(l10n.lobbyLoveLetter),
                           trailing: selectedTab == 'love_letter'
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check,
-                                  color: Color(0xFFE91E63),
+                                  color: gameTypeColor('love_letter'),
                                 )
                               : null,
                           onTap: () {
@@ -358,8 +344,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         ] else if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
             title: l10n.lobbyTichuSeasonRanked,
-            accent: const Color(0xFF3A3058),
-            background: const Color(0xFFF6F4FA),
+            accent: _cardAccent('tichu'),
+            background: _cardTint('tichu'),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),
             mainText: '$seasonRating',
@@ -378,10 +364,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           const SizedBox(height: 10),
           _buildProfileSectionCard(
             title: l10n.lobbyTichuRecord,
-            accent: const Color(0xFF3A3058),
-            background: const Color(0xFFF6F4FA),
+            accent: _cardAccent('tichu'),
+            background: _cardTint('tichu'),
             icon: Icons.style,
-            iconColor: const Color(0xFF6C63FF),
+            iconColor: gameTypeColor('tichu'),
             mainText: '',
             chips: [
               _buildStatChip(
@@ -394,8 +380,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         ] else if (selectedTab == 'skull_king') ...[
           _buildProfileSectionCard(
             title: l10n.lobbySkullKingSeasonRanked,
-            accent: const Color(0xFF2D2D3D),
-            background: const Color(0xFFECEFF6),
+            accent: _cardAccent('skull_king'),
+            background: _cardTint('skull_king'),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),
             mainText: '$skSeasonRating',
@@ -414,10 +400,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           const SizedBox(height: 10),
           _buildProfileSectionCard(
             title: l10n.lobbySkullKingRecord,
-            accent: const Color(0xFF2D2D3D),
-            background: const Color(0xFFECEFF6),
+            accent: _cardAccent('skull_king'),
+            background: _cardTint('skull_king'),
             icon: Icons.anchor,
-            iconColor: const Color(0xFF2D2D3D),
+            iconColor: gameTypeColor('skull_king'),
             mainText: '',
             chips: [
               _buildStatChip(
@@ -430,8 +416,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         ] else if (selectedTab == 'mighty') ...[
           _buildProfileSectionCard(
             title: l10n.rankingMightySeasonRanked,
-            accent: const Color(0xFF2E7D32),
-            background: const Color(0xFFE8F5E9),
+            accent: _cardAccent('mighty'),
+            background: _cardTint('mighty'),
             icon: Icons.emoji_events,
             iconColor: const Color(0xFFFFD54F),
             mainText: '${profile['mightySeasonRating'] ?? 1000}',
@@ -453,10 +439,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           const SizedBox(height: 10),
           _buildProfileSectionCard(
             title: l10n.rankingMightyRecord,
-            accent: const Color(0xFF1B5E20),
-            background: const Color(0xFFF1F8E9),
+            accent: _cardAccent('mighty'),
+            background: _cardTint('mighty'),
             icon: Icons.military_tech,
-            iconColor: const Color(0xFF4CAF50),
+            iconColor: gameTypeColor('mighty'),
             mainText: '',
             chips: [
               _buildStatChip(
@@ -476,10 +462,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         ] else ...[
           _buildProfileSectionCard(
             title: l10n.lobbyLoveLetterRecord,
-            accent: const Color(0xFFAD1457),
-            background: const Color(0xFFFCE4EC),
+            accent: _cardAccent('love_letter'),
+            background: _cardTint('love_letter'),
             icon: Icons.favorite,
-            iconColor: const Color(0xFFE91E63),
+            iconColor: gameTypeColor('love_letter'),
             mainText: '',
             chips: [
               _buildStatChip(
@@ -507,7 +493,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       _GameTally(
         key: 'tichu',
         label: l10n.lobbyTichu,
-        color: const Color(0xFF7E57C2),
         games: n('totalGames'),
         wins: n('wins'),
         losses: n('losses'),
@@ -515,7 +500,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       _GameTally(
         key: 'skull_king',
         label: l10n.lobbySkullKing,
-        color: const Color(0xFF2D2D3D),
         games: n('skTotalGames'),
         wins: n('skWins'),
         losses: n('skLosses'),
@@ -523,7 +507,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       _GameTally(
         key: 'mighty',
         label: l10n.rankingMighty,
-        color: const Color(0xFF2E7D32),
         games: n('mightyTotalGames'),
         wins: n('mightyWins'),
         losses: n('mightyLosses'),
@@ -531,7 +514,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       _GameTally(
         key: 'love_letter',
         label: l10n.lobbyLoveLetter,
-        color: const Color(0xFFE91E63),
         games: n('llTotalGames'),
         wins: n('llWins'),
         losses: n('llLosses'),
@@ -540,7 +522,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final total = _GameTally(
       key: kProfileAllGamesTab,
       label: l10n.profileAllGames,
-      color: const Color(0xFF5A4038),
       games: tallies.fold(0, (a, t) => a + t.games),
       wins: tallies.fold(0, (a, t) => a + t.wins),
       losses: tallies.fold(0, (a, t) => a + t.losses),
@@ -591,7 +572,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           Icon(
             gameTypeIcon(t.key),
             size: 18,
-            color: faded ? const Color(0xFFBDB3AE) : t.color,
+            color: faded ? const Color(0xFFBDB3AE) : gameTypeColor(t.key),
           ),
           const SizedBox(width: 8),
           SizedBox(
@@ -801,20 +782,15 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     return Icons.sentiment_very_dissatisfied;
   }
 
-  /// The colour each game is known by across the popup — selector, tally rows
-  /// and the mark on a mixed match list all have to agree.
-  static Color _gameTypeColor(String gameType) {
-    switch (gameType) {
-      case 'skull_king':
-        return const Color(0xFF2D2D3D);
-      case 'mighty':
-        return const Color(0xFF2E7D32);
-      case 'love_letter':
-        return const Color(0xFFE91E63);
-      default:
-        return const Color(0xFF7E57C2);
-    }
-  }
+  /// A game's colour, dark enough to be read as text on its own tint.
+  static Color _cardAccent(String gameType) =>
+      Color.lerp(gameTypeColor(gameType), Colors.black, 0.45)!;
+
+  /// The same colour as a wash behind the card.
+  static Color _cardTint(String gameType) => Color.alphaBlend(
+    gameTypeColor(gameType).withValues(alpha: 0.10),
+    Colors.white,
+  );
 
   Widget _buildProfileSectionCard({
     required String title,
@@ -954,123 +930,38 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   ///
   /// The popup's five rows are a glance; this is the list you actually read, so
   /// it gets the width and the height the screen can give it, a tally across
-  /// the top, and one card per match instead of rows running together.
+  /// the top, one card per match, and the rest of the history as you scroll.
   void _showRecentMatchesDialog(
     List<dynamic> recentMatches,
     String profileNickname, {
     required bool mixed,
   }) {
-    final l10n = L10n.of(context);
     showDialog(
       context: context,
-      builder: (ctx) {
-        final media = MediaQuery.of(ctx).size;
-        final width = math.max(240.0, math.min(media.width - 64, 520.0));
-        final height = (media.height * 0.66).clamp(240.0, 620.0);
-        final tally = <_MatchOutcome, int>{};
-        for (final m in recentMatches) {
-          final o = _outcomeOf(m, profileNickname);
-          tally[o] = (tally[o] ?? 0) + 1;
-        }
-        return AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 24,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          actionsPadding: const EdgeInsets.fromLTRB(8, 0, 14, 10),
-          // No card around the title. It sat inside the dialog's own frame —
-          // a border drawn just inside a border — the same thing the profile
-          // popup's header had before it was taken off.
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF2EBE7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.history,
-                  size: 20,
-                  color: Color(0xFF6A5A52),
-                ),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.lobbyRecentMatchesTitle,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF3E312A),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.lobbyRecentMatchesDesc(recentMatches.length),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF84766E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: width,
-            height: height,
-            child: Column(
-              children: [
-                _buildOutcomeTally(l10n, tally),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: recentMatches.isEmpty
-                      ? Center(
-                          child: Text(
-                            l10n.lobbyNoRecentMatches,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF9A8E8A),
-                            ),
-                          ),
-                        )
-                      // No explicit Scrollbar: Material already puts one on
-                      // desktop and the web through its ScrollBehavior, and
-                      // wrapping one here without owning a ScrollController is
-                      // how you get "no ScrollPosition attached" at runtime.
-                      : ListView.separated(
-                          padding: const EdgeInsets.only(right: 2),
-                          itemCount: recentMatches.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (_, index) => _buildMatchCard(
-                            recentMatches[index],
-                            profileNickname,
-                            mixed: mixed,
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.commonClose),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => _MatchHistoryDialog(
+        nickname: profileNickname,
+        gameType: _tab,
+        game: widget.game,
+        initial: recentMatches,
+        mixed: mixed,
+        cardBuilder: (match) =>
+            _buildMatchCard(match, profileNickname, mixed: mixed),
+        tallyBuilder: (l10n, matches) =>
+            _buildOutcomeTally(l10n, _tallyOf(matches, profileNickname)),
+      ),
     );
+  }
+
+  static Map<_MatchOutcome, int> _tallyOf(
+    List<dynamic> matches,
+    String profileNickname,
+  ) {
+    final tally = <_MatchOutcome, int>{};
+    for (final m in matches) {
+      final o = _outcomeOf(m, profileNickname);
+      tally[o] = (tally[o] ?? 0) + 1;
+    }
+    return tally;
   }
 
   /// The list in one line: how many of each result it holds.
@@ -1138,6 +1029,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   }) {
     final color = _outcomeColor(_outcomeOf(match, profileNickname));
     return Container(
+      // Clipped, or the stripe paints over the rounded corner and the card
+      // looks like it has a square notch cut out of its left edge.
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(14),
@@ -1151,15 +1045,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(14),
-                ),
-              ),
-            ),
+            Container(width: 4, color: color),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
@@ -1218,7 +1104,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     }
   }
 
-  static String _outcomeLabel(L10n l10n, _MatchOutcome outcome) {
+  /// The glyph inside the round badge on a row. One character, because that is
+  /// all a 27px circle holds — a walk-out and a desertion share it and are told
+  /// apart by colour.
+  static String _outcomeBadge(L10n l10n, _MatchOutcome outcome) {
     switch (outcome) {
       case _MatchOutcome.midLeave:
       case _MatchOutcome.desertion:
@@ -1230,6 +1119,15 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       case _MatchOutcome.loss:
         return l10n.lobbyMatchLoss;
     }
+  }
+
+  /// The word under a tally chip. Here the two kinds of walk-out sit side by
+  /// side, so they cannot both be "탈" — two identical counters reading
+  /// different numbers is a puzzle, not a summary.
+  static String _outcomeLabel(L10n l10n, _MatchOutcome outcome) {
+    return outcome == _MatchOutcome.midLeave
+        ? l10n.lobbyMatchMidLeave
+        : _outcomeBadge(l10n, outcome);
   }
 
   /// [mixed] — the list spans more than one game, so each row has to say which
@@ -1257,12 +1155,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final isRanked = match['isRanked'] == true;
 
     final badgeColor = _outcomeColor(outcome);
-    final badgeText = _outcomeLabel(l10n, outcome);
+    final badgeText = _outcomeBadge(l10n, outcome);
 
     // Score / player info
     final isMighty = gameType == 'mighty';
     final String scoreText;
-    final String playerText;
+    final List<InlineSpan> playerSpans;
     if (isMidGameLeave) {
       // No score exists. The useful detail is which room, and whether they
       // chose to go or ran out the clock three times.
@@ -1274,9 +1172,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       // sends it that way on purpose — clients already shipped read
       // p['nickname'] here, and bare strings would throw on them.
       final players = match['players'] as List<dynamic>? ?? [];
-      playerText = players
-          .map((p) => (p is Map ? p['nickname'] : p)?.toString() ?? '?')
-          .join(', ');
+      playerSpans = _nameSpans(
+        players
+            .map((p) => (p is Map ? p['nickname'] : p)?.toString() ?? '?')
+            .toList(),
+        profileNickname,
+        // A walk-out has no sides: it is simply who was at the table.
+        mine: const {},
+      );
     } else if (isMighty || isSK || isLL) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
@@ -1284,14 +1187,30 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       scoreText = isDesertionLoss
           ? ''
           : l10n.lobbyRankAndScore(myRank.toString(), myScore as int);
-      playerText = players.map((p) => p['nickname'] ?? '?').join(', ');
+      // Free-for-all: no fixed teams, so only the profile's own name is on
+      // "my side".
+      playerSpans = _nameSpans(
+        players.map((p) => (p['nickname'] ?? '?').toString()).toList(),
+        profileNickname,
+        mine: const {},
+      );
     } else {
       final teamAScore = match['teamAScore'] ?? 0;
       final teamBScore = match['teamBScore'] ?? 0;
       scoreText = '$teamAScore : $teamBScore';
-      final teamA = _formatTeam(match['playerA1'], match['playerA2']);
-      final teamB = _formatTeam(match['playerB1'], match['playerB2']);
-      playerText = '$teamA : $teamB';
+      final a1 = match['playerA1']?.toString() ?? '-';
+      final a2 = match['playerA2']?.toString() ?? '-';
+      final b1 = match['playerB1']?.toString() ?? '-';
+      final b2 = match['playerB2']?.toString() ?? '-';
+      // Fixed partnerships, so the partner is coloured too — the point of the
+      // colour is "this side was mine", which one name cannot say.
+      final onA = a1 == profileNickname || a2 == profileNickname;
+      final mine = onA ? {a1, a2} : {b1, b2};
+      playerSpans = [
+        ..._nameSpans([a1, a2], profileNickname, mine: mine, separator: '·'),
+        const TextSpan(text: ' : '),
+        ..._nameSpans([b1, b2], profileNickname, mine: mine, separator: '·'),
+      ];
     }
 
     return Padding(
@@ -1322,13 +1241,19 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               children: [
                 Row(
                   children: [
+                    // Spelled out, not an icon: four small glyphs all in the
+                    // same weight are something you decode, and the name is
+                    // shorter to read than the icon is to recognise.
                     if (mixed) ...[
-                      Icon(
-                        gameTypeIcon(gameType),
-                        size: 14,
-                        color: _gameTypeColor(gameType),
+                      Text(
+                        gameTypeLabel(l10n, gameType),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: gameTypeColor(gameType),
+                        ),
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 7),
                     ],
                     Text(
                       date,
@@ -1366,29 +1291,65 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  playerText,
+                Text.rich(
+                  TextSpan(children: playerSpans),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF5A4038),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
           ),
           Text(
             scoreText,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              // Won or lost, readable without finding the badge first. Draws
+              // and walk-outs keep the neutral ink: there is nothing to win.
+              color: switch (outcome) {
+                _MatchOutcome.win => _kMineColor,
+                _MatchOutcome.loss => const Color(0xFFE53935),
+                _ => const Color(0xFF5A4038),
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Names for one side of a match row.
+  ///
+  /// The profile's owner is bold, and everyone on their side — themselves
+  /// included — takes the sky blue. Reading a row used to mean finding your own
+  /// name in a run of four before the score meant anything.
+  List<InlineSpan> _nameSpans(
+    List<String> names,
+    String profileNickname, {
+    required Set<String> mine,
+    String separator = ', ',
+  }) {
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < names.length; i++) {
+      if (i > 0) spans.add(TextSpan(text: separator));
+      final name = names[i];
+      final isMe = name == profileNickname;
+      spans.add(
+        TextSpan(
+          text: name,
+          style: TextStyle(
+            color: isMe || mine.contains(name) ? _kMineColor : null,
+            fontWeight: isMe ? FontWeight.w900 : null,
+          ),
+        ),
+      );
+    }
+    return spans;
   }
 
   /// What a stranger sees instead of the records.
@@ -1456,12 +1417,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
-  String _formatTeam(dynamic p1, dynamic p2) {
-    final a = p1?.toString() ?? '-';
-    final b = p2?.toString() ?? '-';
-    return '$a·$b';
-  }
-
   String _formatShortDate(dynamic value) {
     try {
       final dt = DateTime.parse(value.toString()).toLocal();
@@ -1470,4 +1425,243 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       return '-';
     }
   }
+}
+
+/// The full match history, a page at a time.
+///
+/// The profile popup is handed a capped list — twenty per game, so no tab looks
+/// wiped — and that list is not a prefix of the history in time order: a Tichu
+/// regular's 21st Tichu game can be newer than another mode's 20th. So this
+/// shows the popup's rows for an instant, then asks the server for page zero
+/// and replaces them. Everything after that appends as you reach the bottom.
+class _MatchHistoryDialog extends StatefulWidget {
+  final String nickname;
+
+  /// The tab being read, or [kProfileAllGamesTab].
+  final String gameType;
+  final GameService game;
+
+  /// What the popup already had, shown until the first page lands.
+  final List<dynamic> initial;
+  final bool mixed;
+  final Widget Function(dynamic match) cardBuilder;
+  final Widget Function(L10n l10n, List<dynamic> matches) tallyBuilder;
+
+  const _MatchHistoryDialog({
+    required this.nickname,
+    required this.gameType,
+    required this.game,
+    required this.initial,
+    required this.mixed,
+    required this.cardBuilder,
+    required this.tallyBuilder,
+  });
+
+  @override
+  State<_MatchHistoryDialog> createState() => _MatchHistoryDialogState();
+}
+
+class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
+  static const int _pageSize = 20;
+
+  /// Start fetching this far from the bottom, so the next page is usually
+  /// already there when the last card scrolls into view.
+  static const double _prefetchGap = 400;
+
+  final ScrollController _scroll = ScrollController();
+  late List<dynamic> _matches = List<dynamic>.from(widget.initial);
+
+  /// How many rows the server has actually given us. Not `_matches.length`
+  /// until the first page replaces the popup's capped list.
+  int _fromServer = 0;
+  bool _loading = false;
+  bool _hasMore = true;
+
+  /// A request that never comes back must not wedge the list. The socket can
+  /// drop mid-page, and without this `_loading` would stay true forever and
+  /// every later scroll would decline to ask again.
+  Timer? _requestTimeout;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.game.addListener(_onServiceChanged);
+    _scroll.addListener(_onScroll);
+    // Page zero replaces the capped list rather than adding to it.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _requestTimeout?.cancel();
+    widget.game.removeListener(_onServiceChanged);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients || _loading || !_hasMore) return;
+    final position = _scroll.position;
+    if (position.pixels >= position.maxScrollExtent - _prefetchGap) _load();
+  }
+
+  void _load() {
+    if (_loading || !_hasMore) return;
+    setState(() => _loading = true);
+    _requestTimeout?.cancel();
+    _requestTimeout = Timer(const Duration(seconds: 8), () {
+      if (mounted && _loading) setState(() => _loading = false);
+    });
+    widget.game.requestMatchHistory(
+      widget.nickname,
+      gameType: widget.gameType,
+      offset: _fromServer,
+      limit: _pageSize,
+    );
+  }
+
+  void _onServiceChanged() {
+    if (!mounted || !_loading) return;
+    final page = widget.game.lastMatchHistoryPage;
+    if (page == null) return;
+    // A page for another profile, another tab, or an offset we are no longer
+    // waiting on is one that arrived late.
+    if (page['nickname'] != widget.nickname ||
+        page['gameType'] != widget.gameType ||
+        page['offset'] != _fromServer) {
+      return;
+    }
+    _requestTimeout?.cancel();
+    final rows = (page['matches'] as List<dynamic>? ?? []);
+    setState(() {
+      if (_fromServer == 0) {
+        _matches = List<dynamic>.from(rows);
+      } else {
+        _matches.addAll(rows);
+      }
+      _fromServer += rows.length;
+      _hasMore = page['hasMore'] == true && rows.isNotEmpty;
+      _loading = false;
+    });
+    // Consumed, so a rebuild for some unrelated reason cannot replay it.
+    widget.game.lastMatchHistoryPage = null;
+    // A page that did not fill the viewport leaves nothing to scroll, and the
+    // scroll listener would never ask for the next one.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hasMore || _loading) return;
+      if (_scroll.hasClients && _scroll.position.maxScrollExtent <= 0) _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final media = MediaQuery.of(context).size;
+    final width = math.max(240.0, math.min(media.width - 64, 520.0));
+    final height = (media.height * 0.66).clamp(240.0, 620.0);
+    return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(8, 0, 14, 10),
+      // No card around the title. It sat inside the dialog's own frame — a
+      // border drawn just inside a border — the same thing the profile popup's
+      // header had before it was taken off.
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF2EBE7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.history,
+              size: 20,
+              color: Color(0xFF6A5A52),
+            ),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.lobbyRecentMatchesTitle,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF3E312A),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.lobbyRecentMatchesDesc(_matches.length),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF84766E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: width,
+        height: height,
+        child: Column(
+          children: [
+            widget.tallyBuilder(l10n, _matches),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _matches.isEmpty
+                  ? Center(
+                      child: _loading
+                          ? const CircularProgressIndicator()
+                          : Text(
+                              l10n.lobbyNoRecentMatches,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF9A8E8A),
+                              ),
+                            ),
+                    )
+                  // No explicit Scrollbar: Material already puts one on desktop
+                  // and the web through its ScrollBehavior.
+                  : ListView.separated(
+                      controller: _scroll,
+                      padding: const EdgeInsets.only(right: 2),
+                      itemCount: _matches.length + (_hasMore ? 1 : 0),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (_, index) {
+                        if (index >= _matches.length) return _buildFooter();
+                        return widget.cardBuilder(_matches[index]);
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonClose),
+        ),
+      ],
+    );
+  }
+
+  /// The row under the last card while the next page is on its way.
+  Widget _buildFooter() => const Padding(
+    padding: EdgeInsets.symmetric(vertical: 14),
+    child: Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    ),
+  );
 }

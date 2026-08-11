@@ -854,6 +854,9 @@ class L10nKo extends L10n {
   String get lobbyMatchDesertion => '탈';
 
   @override
+  String get lobbyMatchMidLeave => '중탈';
+
+  @override
   String get lobbyMatchDraw => '무';
 
   @override

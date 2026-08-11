@@ -3140,6 +3140,9 @@ async function handleMessage(ws, data) {
     case 'get_profile':
       await handleGetProfile(ws, data);
       break;
+    case 'get_match_history':
+      await handleGetMatchHistory(ws, data);
+      break;
     case 'set_profile_private_photo':
       await handleSetProfilePrivatePhoto(ws, data);
       break;
@@ -5667,6 +5670,55 @@ async function handleGetProfile(ws, data) {
     profile,
     recentMatches,
     isBlocked,
+  });
+}
+
+// One page of a profile's full match history, for the "더보기" list.
+//
+// Separate from handleGetProfile because the popup's own list must keep its
+// per-game cap — see getRecentMatches — while this one pages a single tab. The
+// privacy checks are the same ones, deliberately repeated rather than shared by
+// flag: a history endpoint that forgets them leaks exactly what the pass is for.
+const MATCH_HISTORY_PAGE_MAX = 30;
+
+async function handleGetMatchHistory(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const targetNickname = data.nickname;
+  if (!targetNickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'nickname_required') });
+    return;
+  }
+  const gameType = typeof data.gameType === 'string' ? data.gameType : 'all';
+  const offset = Math.max(0, Math.min(1000, Number(data.offset) || 0));
+  const limit = Math.max(
+    1,
+    Math.min(MATCH_HISTORY_PAGE_MAX, Number(data.limit) || 20),
+  );
+  const empty = () => sendTo(ws, {
+    type: 'match_history_page',
+    nickname: targetNickname,
+    gameType,
+    offset,
+    matches: [],
+    hasMore: false,
+  });
+  if (fillerRooms.isFillerNickname(targetNickname)) return empty();
+  if (profileHiddenFrom(ws, targetNickname)) return empty();
+
+  const { matches, hasMore } = await getRecentMatches(targetNickname, limit, {
+    gameType,
+    offset,
+  });
+  sendTo(ws, {
+    type: 'match_history_page',
+    nickname: targetNickname,
+    gameType,
+    offset,
+    matches,
+    hasMore,
   });
 }
 

@@ -279,6 +279,7 @@
   "lobbySeeMore": "Mehr anzeigen",
   "lobbyNoRecentMatches": "Keine aktuellen Spiele",
   "lobbyMatchDesertion": "A",
+  "lobbyMatchMidLeave": "MA",
   "lobbyMatchDraw": "U",
   "lobbyMatchWin": "S",
   "lobbyMatchLoss": "N",

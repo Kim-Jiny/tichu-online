@@ -1895,6 +1895,11 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'match_history_page':
+        lastMatchHistoryPage = Map<String, dynamic>.from(data);
+        notifyListeners();
+        break;
+
       case 'profile_result':
         _profiles.store(data);
         // My own profile carries the privacy setting; someone else's never does
@@ -3643,6 +3648,34 @@ class GameService extends ChangeNotifier {
   void requestProfile(String nickname) {
     _profiles.beginRequest(nickname);
     _network.send({'type': 'get_profile', 'nickname': nickname});
+  }
+
+  /// The last page of match history the server sent, for whoever asked.
+  ///
+  /// The full-history list is the only thing that reads it, and it only ever
+  /// has one open at a time, so a single slot beats a cache keyed by request.
+  /// Consumers check the nickname and offset before taking it — a page for a
+  /// different profile is one that arrived late.
+  Map<String, dynamic>? lastMatchHistoryPage;
+
+  /// Ask for `limit` matches starting at `offset`.
+  ///
+  /// [gameType] is the tab being read, or `'all'`. The server pages one tab at
+  /// a time on purpose: the profile popup's own list is capped per game so no
+  /// tab starves, which is the opposite of what a paged list needs.
+  void requestMatchHistory(
+    String nickname, {
+    required String gameType,
+    required int offset,
+    int limit = 20,
+  }) {
+    _network.send({
+      'type': 'get_match_history',
+      'nickname': nickname,
+      'gameType': gameType,
+      'offset': offset,
+      'limit': limit,
+    });
   }
 
   void fallbackToLobbyAfterRestoreFailure() {

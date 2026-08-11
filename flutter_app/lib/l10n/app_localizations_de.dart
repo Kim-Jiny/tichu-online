@@ -890,6 +890,9 @@ class L10nDe extends L10n {
   String get lobbyMatchDesertion => 'A';
 
   @override
+  String get lobbyMatchMidLeave => 'MA';
+
+  @override
   String get lobbyMatchDraw => 'U';
 
   @override

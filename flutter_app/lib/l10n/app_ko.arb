@@ -269,6 +269,7 @@
   "lobbySeeMore": "더보기",
   "lobbyNoRecentMatches": "최근 전적이 없습니다",
   "lobbyMatchDesertion": "탈",
+  "lobbyMatchMidLeave": "중탈",
   "lobbyMatchDraw": "무",
   "lobbyMatchWin": "승",
   "lobbyMatchLoss": "패",

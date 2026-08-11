@@ -1545,26 +1545,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       for (final (type, label, color) in [
-                                        (
+                                        for (final t in const [
                                           'tichu',
-                                          l10n.lobbyTichu,
-                                          const Color(0xFF64B5F6),
-                                        ),
-                                        (
                                           'mighty',
-                                          l10n.lobbyMighty,
-                                          const Color(0xFF5C6BC0),
-                                        ),
-                                        (
                                           'skull_king',
-                                          l10n.lobbySkullKing,
-                                          const Color(0xFF21455F),
-                                        ),
-                                        (
                                           'love_letter',
-                                          l10n.lobbyLoveLetter,
-                                          const Color(0xFFE91E63),
-                                        ),
+                                        ])
+                                          (
+                                            t,
+                                            gameTypeLabel(l10n, t),
+                                            gameTypeColor(t),
+                                          ),
                                       ])
                                         InkWell(
                                           onTap: () {
@@ -3934,18 +3925,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// strip, the badge. The waiting-room chat was painted Tichu blue whatever
   /// game the room was, so a Skull King room had a bright blue send button
   /// sitting on its navy screen.
-  Color _gameAccentColor(String? gameType) {
-    switch (gameType) {
-      case 'love_letter':
-        return const Color(0xFFE91E63);
-      case 'mighty':
-        return const Color(0xFF5C6BC0);
-      case 'skull_king':
-        return const Color(0xFF21455F);
-      default:
-        return const Color(0xFF64B5F6);
-    }
-  }
+  // The palette lives in game_type_icon.dart so the room-creation picker, this
+  // screen and the profile popup cannot drift to different colours for the
+  // same game — which is exactly what had happened.
+  Color _gameAccentColor(String? gameType) => gameTypeColor(gameType ?? '');
 
   Widget _buildChatMessage(
     String sender,

@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -25,6 +27,120 @@ class SpectatorScreen extends StatefulWidget {
 
   @override
   State<SpectatorScreen> createState() => _SpectatorScreenState();
+}
+
+/// The size a spectator seat wants, worked out ahead of laying it out.
+///
+/// The four seats are the same widget, but the left and right ones are built
+/// into a narrow column and the top and bottom ones into a wide, short band.
+/// Each was then fitted to its own slot independently, and the two fits landed
+/// nowhere near each other: a side seat is laid out AT the column width, so its
+/// width ratio is always exactly 1 and it can never be scaled up, while a
+/// top seat's hand is far narrower than its band and grows to fill it. On a
+/// phone that put the side hands at about three quarters the size of the top
+/// and bottom ones, and on a desktop browser at two thirds.
+///
+/// So the board works out one scale that every seat can afford, and hands each
+/// slot the room that scale needs. The numbers below mirror the seat widget —
+/// they have to, or the budget is for a seat nobody builds. The FittedBox in
+/// [_SpectatorScreenState._buildScaledPlayerSection] stays as the safety net:
+/// if this is optimistic, the seat shrinks rather than overflowing.
+class _SeatMetrics {
+  _SeatMetrics({
+    required this.compact,
+    required this.s,
+    required this.cardBudget,
+  });
+
+  final bool compact;
+
+  /// The screen-size factor the card art is drawn at.
+  final double s;
+
+  /// Cards to leave room for, or 0 when no hand is on show and the seat holds
+  /// the card-request button instead.
+  final int cardBudget;
+
+  double get _avatar => compact ? 44 : 56;
+  double get _cardWidth => (compact ? 24.0 : 30.0) * s;
+  double get _cardHeight => (compact ? 36.0 : 45.0) * s;
+  double get _overlapAcross => (compact ? 16.0 : 20.0) * s;
+  double get _overlapDown => (compact ? 14.0 : 20.0) * s;
+
+  /// Avatar, name line, the gap under it, the container padding and the margin.
+  double get _chromeHeight =>
+      _avatar +
+      (compact ? 2 : 3) + // gap under the avatar
+      (compact ? 15 : 16) + // the name line
+      4 + // gap above the hand
+      2 * (compact ? 6 : 8) + // container padding
+      2 * (compact ? 2 : 4); // outer margin
+  /// Container padding and outer margin, both sides.
+  double get _chromeWidth => 2 * (compact ? 6 : 8) + 2 * (compact ? 2 : 4);
+
+  /// Height of the button that stands in for a hand nobody may see.
+  static const double _requestAreaHeight = 40;
+
+  double get _handAcross =>
+      cardBudget == 0 ? 90 : _cardWidth + (cardBudget - 1) * _overlapAcross;
+  double get _handDown => cardBudget == 0
+      ? _requestAreaHeight
+      : _cardHeight + (cardBudget - 1) * _overlapDown;
+
+  /// A top or bottom seat: the hand lies across, so it is wide and short.
+  Size get topNatural => Size(
+    _handAcross + _chromeWidth,
+    _chromeHeight + (cardBudget == 0 ? _requestAreaHeight : _cardHeight),
+  );
+
+  /// A side seat: the hand stands on end, so it is narrow and tall. The width
+  /// is the avatar's, which is wider than a rotated card.
+  Size get sideNatural => Size(
+    math.max(_avatar, _cardHeight + 4) + _chromeWidth,
+    _chromeHeight + _handDown,
+  );
+
+  /// Everything stacks: two bands plus the side column, all in one height.
+  double portraitScale(Size board) {
+    final byHeight =
+        board.height / (2 * topNatural.height + sideNatural.height);
+    final byWidth = math.min(
+      board.width / topNatural.width,
+      // The side columns may take under a third of the width between them,
+      // or the trick in the middle has nothing left.
+      board.width * 0.30 / sideNatural.width,
+    );
+    return math.min(byHeight, byWidth).clamp(0.55, 2.0);
+  }
+
+  /// The sides run the full height; the bands share it with the trick, which
+  /// keeps the middle third.
+  double landscapeScale(Size board) {
+    final byHeight = math.min(
+      board.height * 0.33 / topNatural.height,
+      board.height / sideNatural.height,
+    );
+    final byWidth = math.min(
+      (board.width - 2 * sideNatural.width) / topNatural.width,
+      board.width * 0.22 / sideNatural.width,
+    );
+    return math.min(byHeight, byWidth).clamp(0.55, 2.0);
+  }
+}
+
+/// Cards to budget a seat for.
+///
+/// A hand shrinks as it is played, and sizing the board off the current count
+/// would have every seat breathe between tricks. A full hand for as long as
+/// anyone's cards are on show holds the layout still.
+int _seatCardBudget(List players) {
+  final anyVisible = players.any(
+    (p) =>
+        p is Map &&
+        p['canSeeCards'] == true &&
+        (p['cards'] as List?)?.isNotEmpty == true,
+  );
+  return anyVisible ? 14 : 0;
 }
 
 class _SpectatorScreenState extends State<SpectatorScreen> {
@@ -777,27 +893,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Lock the left/right slot widths so a long nickname can't widen
-        // the side column and pull the trick area off-center. Mirrors the
-        // sideWidth pattern used in the landscape board.
-        // The 22% is the intent; the ceiling was a phone's. On a wide window
-        // it pinned the side seats at 108 while the middle took everything
-        // else, so the two flanking players stayed small no matter the room.
-        final sideWidth = (constraints.maxWidth * 0.22).clamp(
-          76.0,
-          kIsWeb ? 180.0 : 108.0,
-        );
-        // Every seat goes through the scaling wrapper, including the top and
-        // bottom ones. They used to be built at natural size and dropped
-        // straight into the Column: fine on a tall phone, but on a screen that
-        // is wide and short — a fold opened flat — the seat is taller than the
-        // band left for it and the card-view button spilled out the bottom
-        // ("BOTTOM OVERFLOWED BY 69 PIXELS"). scaleDown is a no-op when the
-        // seat already fits, so nothing changes on a phone.
+        // One scale for all four seats, and each slot sized to what that scale
+        // needs — see _SeatMetrics for why fitting each seat to its own slot
+        // left the side hands markedly smaller than the top and bottom ones.
         //
-        // The band is capped too. Given free height these seats would eat the
-        // screen and leave the trick area nothing.
-        final endSeatHeight = (constraints.maxHeight * 0.30).clamp(96.0, 190.0);
+        // Every seat still goes through the scaling wrapper. Nothing here is
+        // measured, only predicted, and a prediction that runs long has to
+        // shrink rather than overflow ("BOTTOM OVERFLOWED BY 69 PIXELS" was
+        // this screen, on a fold).
+        final metrics = _SeatMetrics(
+          compact: false,
+          s: _s,
+          cardBudget: _seatCardBudget(players),
+        );
+        final seatScale = metrics.portraitScale(constraints.biggest);
+        final endSeatHeight = metrics.topNatural.height * seatScale;
+        final sideWidth = metrics.sideNatural.width * seatScale;
         return Column(
           children: [
             if (players.length > 2)
@@ -821,6 +932,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[3],
                         currentPlayer,
                         isLeft: true,
+                        referenceWidth: metrics.sideNatural.width,
                       ),
                     ),
                   Expanded(
@@ -838,6 +950,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         players[1],
                         currentPlayer,
                         isRight: true,
+                        referenceWidth: metrics.sideNatural.width,
                       ),
                     ),
                 ],
@@ -869,44 +982,23 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       builder: (context, constraints) {
         final cramped = constraints.maxHeight < 390;
         final compact = constraints.maxHeight < 520;
-        // A fold opened flat measures about 841x600 logical: barely taller
-        // than a phone in landscape, but nearly twice as wide. Sizing the
-        // seats off height alone spent none of that — the side seats stayed at
-        // 86pt and the top and bottom ones were squeezed into a 92pt band, so
-        // a ~190pt seat was scaled to half size on the roomiest screen we
-        // support. Let a wide board buy width for the seats.
-        final wideBoard = constraints.maxWidth > 700;
-        final sideWidth = cramped
-            ? 72.0
-            : wideBoard
-            ? 150.0
-            : (constraints.maxHeight > 620 ? 104.0 : 86.0);
-        // A full-size seat (56px avatar + name + badges + the card-view button)
-        // wants roughly 170px. The old ceiling stopped at 108 even when the
-        // window was 800px tall, so on a desktop browser the seat overflowed its
-        // own background: the card-view button ended up drawn outside the
-        // profile box, and the bottom seat ran off the viewport. Phone
-        // landscape is unaffected — it stays under the 700px threshold and keeps
-        // the tighter caps.
-        // Same idea for the top and bottom bands. They cannot grow as freely —
-        // the trick area needs the middle — but 92pt was punishing on a board
-        // with 600pt to divide.
-        final slotCeiling = constraints.maxHeight > 700
-            ? 240.0
-            : wideBoard
-            ? 150.0
-            : (constraints.maxHeight > 620 ? 108.0 : 92.0);
-        final playerSlotHeight =
-            (constraints.maxHeight * (cramped ? 0.20 : (compact ? 0.23 : 0.26)))
-                .clamp(cramped ? 48.0 : 56.0, slotCeiling);
-        final trickSlotHeight =
-            (constraints.maxHeight * (cramped ? 0.34 : (compact ? 0.40 : 0.46)))
-                .clamp(
-                  cramped ? 76.0 : 88.0,
-                  constraints.maxHeight > 700
-                      ? 380.0
-                      : (constraints.maxHeight > 620 ? 180.0 : 132.0),
-                );
+        // One scale for all four seats — see _SeatMetrics. The tables of
+        // breakpoints this replaces (72/86/104/150 for the columns, 92/108/
+        // 150/240 for the bands) were each chosen for the screen that had just
+        // gone wrong, and no two of them agreed on how big a seat should be.
+        final metrics = _SeatMetrics(
+          compact: compact,
+          s: _s,
+          cardBudget: _seatCardBudget(players),
+        );
+        final seatScale = metrics.landscapeScale(constraints.biggest);
+        final sideWidth = metrics.sideNatural.width * seatScale;
+        final playerSlotHeight = metrics.topNatural.height * seatScale;
+        // Whatever the two bands leave, less the 4pt gaps around it.
+        final trickSlotHeight = math.max(
+          cramped ? 76.0 : 88.0,
+          constraints.maxHeight - 2 * playerSlotHeight - 8,
+        );
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -920,6 +1012,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   currentPlayer,
                   isLeft: true,
                   compact: compact,
+                  referenceWidth: metrics.sideNatural.width,
                 ),
               ),
             if (players.length > 3) const SizedBox(width: 6),
@@ -978,6 +1071,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   currentPlayer,
                   isRight: true,
                   compact: compact,
+                  referenceWidth: metrics.sideNatural.width,
                 ),
               ),
           ],
@@ -986,6 +1080,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  /// [referenceWidth] — build the seat this wide instead of filling the slot.
+  ///
+  /// Only the side seats pass it, and it is the whole reason they can grow. A
+  /// seat laid out at its slot's width has a width ratio of exactly 1, so
+  /// BoxFit.contain never enlarges it however much room the column has; built
+  /// at its natural width instead, it scales up to the column the way the top
+  /// and bottom seats scale up to their band.
   Widget _buildScaledPlayerSection(
     GameService game,
     Map<String, dynamic> player,
@@ -993,6 +1094,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isLeft = false,
     bool isRight = false,
     bool compact = false,
+    double? referenceWidth,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1002,7 +1104,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // height to measure and nothing to scale. Unbounded vertically, the
         // seat lays out at its true size and the FittedBox shrinks it to fit.
         final child = ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+          constraints: BoxConstraints(
+            maxWidth: referenceWidth != null
+                ? math.min(referenceWidth, constraints.maxWidth)
+                : constraints.maxWidth,
+          ),
           child: _buildPlayerSection(
             game,
             player,

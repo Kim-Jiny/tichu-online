@@ -4283,6 +4283,9 @@ class L10nDe extends L10n {
   }
 
   @override
+  String get profileAllGames => 'Alle Spiele';
+
+  @override
   String get profileBotSubtitle => 'Bot';
 
   @override

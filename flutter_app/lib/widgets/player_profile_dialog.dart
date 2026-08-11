@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -14,9 +16,16 @@ import 'player_profile_header.dart';
 /// usually wasn't.
 ///
 /// [initialGame] picks which game's records open first — the screen you looked
-/// someone up from. [dismissWhen] closes the popup while it is open (the game
-/// screens use it to get out of the way when the round ends). [isBot] shows the
-/// bot blurb instead of a profile nobody has.
+/// someone up from. Left out, the popup opens on the combined record: from the
+/// lobby or the friends list there is no game in play, and defaulting to
+/// whichever one was last touched showed a Tichu-only record to someone who
+/// only came to see how the player is doing. [dismissWhen] closes the popup
+/// while it is open (the game screens use it to get out of the way when the
+/// round ends). [isBot] shows the bot blurb instead of a profile nobody has.
+///
+/// [maxHeight] caps the records area. Left null it takes what the screen can
+/// spare, which on anything bigger than a small phone is a good deal more than
+/// the fixed 560 it used to get.
 void showPlayerProfileDialog(
   BuildContext context,
   String nickname,
@@ -24,7 +33,7 @@ void showPlayerProfileDialog(
   String? initialGame,
   String? subtitle,
   bool isBot = false,
-  double maxHeight = 560,
+  double? maxHeight,
   bool Function(GameService game)? dismissWhen,
   Color placeholderBackground = const Color(0xFFE8F0F7),
   Color placeholderForeground = const Color(0xFF4F6B7A),
@@ -51,6 +60,22 @@ void showPlayerProfileDialog(
           // look-up; wait for this one rather than showing theirs.
           final isLoading =
               !isBot && (profile == null || profile['nickname'] != nickname);
+
+          // Take the width the screen has instead of letting the dialog shrink
+          // to whatever the widest chip happened to be. 32 for the inset and 32
+          // for the content padding; 480 is where the stat cards stop gaining
+          // anything from more room.
+          final media = MediaQuery.of(ctx).size;
+          final contentWidth = math.max(
+            240.0,
+            math.min(media.width - 64, 480.0),
+          );
+          // Header, actions and inset come off the top before the records get
+          // their share.
+          final available = (media.height - 190).clamp(220.0, 680.0);
+          final contentMaxHeight = maxHeight == null
+              ? available
+              : math.min(maxHeight, available);
 
           return AlertDialog(
             // Narrower inset than Material's default 40: at 40 a phone leaves
@@ -80,7 +105,7 @@ void showPlayerProfileDialog(
                   ? Text(
                       subtitle ?? l10n.lobbyPlayerProfile,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Color(0xFF84766E),
                       ),
                     )
@@ -93,34 +118,36 @@ void showPlayerProfileDialog(
               placeholderBackground: placeholderBackground,
               placeholderForeground: placeholderForeground,
             ),
-            content: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Replaces the card outline: the header and the records
-                  // still need to read as two things.
-                  Container(height: 1, color: const Color(0xFFEFE6E1)),
-                  const SizedBox(height: 10),
-                  if (isBot)
-                    SizedBox(width: 300, child: botProfileBody(ctx))
-                  else if (isLoading)
-                    const SizedBox(
-                      height: 140,
-                      width: 320,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: PlayerProfileBody(
-                          data: profile!,
-                          game: game,
-                          initialGame: initialGame ?? game.currentGameType,
+            content: SizedBox(
+              width: contentWidth,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: contentMaxHeight),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Replaces the card outline: the header and the records
+                    // still need to read as two things.
+                    Container(height: 1, color: const Color(0xFFEFE6E1)),
+                    const SizedBox(height: 10),
+                    if (isBot)
+                      botProfileBody(ctx)
+                    else if (isLoading)
+                      const SizedBox(
+                        height: 140,
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: PlayerProfileBody(
+                            data: profile!,
+                            game: game,
+                            initialGame: initialGame ?? kProfileAllGamesTab,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             actions: [

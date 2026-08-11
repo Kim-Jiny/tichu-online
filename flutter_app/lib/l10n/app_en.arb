@@ -2433,6 +2433,7 @@
       }
     }
   },
+  "profileAllGames": "All Games",
   "profileBotSubtitle": "Bot",
   "profileBotHeadline": "AI opponent",
   "profileBotBody": "Bots are not accounts, so there are no stats, and friend, block and report don't apply.",

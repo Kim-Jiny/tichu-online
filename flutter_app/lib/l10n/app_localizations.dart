@@ -7545,6 +7545,12 @@ abstract class L10n {
   /// **'{wins}W/{losses}L'**
   String adminWinLoss(int wins, int losses);
 
+  /// No description provided for @profileAllGames.
+  ///
+  /// In en, this message translates to:
+  /// **'All Games'**
+  String get profileAllGames;
+
   /// No description provided for @profileBotSubtitle.
   ///
   /// In en, this message translates to:

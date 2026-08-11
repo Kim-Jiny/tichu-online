@@ -69,6 +69,10 @@ class PlayerProfileHeader extends StatelessWidget {
     this.placeholderForeground = const Color(0xFF4F6B7A),
   });
 
+  /// The photo is the one thing in this popup people look at first, and at 38
+  /// it was smaller than the avatar in the room list it was opened from.
+  static const double _avatarSize = 60;
+
   bool get _isMe => nickname == game.playerName;
 
   /// The server answered and there is no account by that name.
@@ -124,13 +128,13 @@ class PlayerProfileHeader extends StatelessWidget {
                   Text(
                     nickname,
                     style: const TextStyle(
-                      fontSize: 17,
+                      fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF3E312A),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   // Bots get the plain label in every screen: four of the six
                   // build a level/exp strip here, and for a bot that strip is
                   // rendered from a profile that will never arrive.
@@ -138,7 +142,7 @@ class PlayerProfileHeader extends StatelessWidget {
                     Text(
                       l10n.profileBotSubtitle,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Color(0xFF84766E),
                       ),
                     )
@@ -148,7 +152,7 @@ class PlayerProfileHeader extends StatelessWidget {
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Color(0xFF84766E),
                       ),
                     ),
@@ -203,22 +207,26 @@ class PlayerProfileHeader extends StatelessWidget {
       // Bots never have a photo, so the shared placeholder left every bot popup
       // opening on the same anonymous person icon. Rounded square to match the
       // human avatars beside it.
-      return BotAvatar(size: 38, name: nickname, borderRadius: 12);
+      return BotAvatar(size: _avatarSize, name: nickname, borderRadius: 14);
     }
     final avatar = ProfileAvatar(
       photoUrl: resolved,
-      size: 38,
-      borderRadius: 12,
+      size: _avatarSize,
+      borderRadius: 14,
       blocked: blocked,
       fallback: SizedBox(
-        width: 38,
-        height: 38,
+        width: _avatarSize,
+        height: _avatarSize,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: placeholderBackground,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            borderRadius: const BorderRadius.all(Radius.circular(14)),
           ),
-          child: Icon(Icons.person_outline, color: placeholderForeground),
+          child: Icon(
+            Icons.person_outline,
+            size: _avatarSize * 0.55,
+            color: placeholderForeground,
+          ),
         ),
       ),
     );
@@ -259,7 +267,7 @@ class PlayerProfileHeader extends StatelessWidget {
               ),
               child: Icon(
                 editable ? Icons.edit : Icons.zoom_in,
-                size: 10,
+                size: 13,
                 color: Colors.white,
               ),
             ),
@@ -1105,7 +1113,7 @@ Widget profileLevelStrip(int level, int expTotal) {
       Text(
         'Lv.$level',
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
           color: Color(0xFF5A4038),
         ),
@@ -1116,7 +1124,7 @@ Widget profileLevelStrip(int level, int expTotal) {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: p.fraction,
-            minHeight: 4,
+            minHeight: 5,
             backgroundColor: const Color(0xFFEFE7E3),
             valueColor: const AlwaysStoppedAnimation(Colors.black),
           ),
@@ -1125,7 +1133,7 @@ Widget profileLevelStrip(int level, int expTotal) {
       const SizedBox(width: 6),
       Text(
         '${p.expInLevel}/${p.expToNext}',
-        style: const TextStyle(fontSize: 9, color: Color(0xFF9A8E8A)),
+        style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
       ),
     ],
   );

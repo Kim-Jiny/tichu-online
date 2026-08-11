@@ -4145,6 +4145,9 @@ class L10nKo extends L10n {
   }
 
   @override
+  String get profileAllGames => '전체';
+
+  @override
   String get profileBotSubtitle => '봇';
 
   @override

@@ -5,6 +5,35 @@ import '../services/game_service.dart';
 import 'player_profile_header.dart';
 import 'game_type_icon.dart';
 
+/// The pseudo game type that means "all four at once".
+///
+/// Not a game the server knows about — it only ever reaches [PlayerProfileBody]
+/// and the selector — so it is deliberately not a value any payload uses.
+const String kProfileAllGamesTab = 'all';
+
+/// One game's line in the combined view.
+class _GameTally {
+  final String key;
+  final String label;
+  final Color color;
+  final int games;
+  final int wins;
+  final int losses;
+
+  const _GameTally({
+    required this.key,
+    required this.label,
+    required this.color,
+    required this.games,
+    required this.wins,
+    required this.losses,
+  });
+
+  /// Rounded the same way the server rounds each game's own rate, so the
+  /// combined figure cannot disagree with the per-game ones by a decimal.
+  int get winRate => games == 0 ? 0 : ((wins * 100) / games).round();
+}
+
 /// Body of the player-profile popup: manner/desertion, a game selector, that
 /// game's season and overall records, and recent matches.
 ///
@@ -101,10 +130,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final llLosses = profile['llLosses'] ?? 0;
     final llWinRate = profile['llWinRate'] ?? 0;
     final recentMatches = data['recentMatches'] as List<dynamic>? ?? [];
-    final filteredMatches = recentMatches.where((m) {
-      final gameType = m['gameType']?.toString() ?? 'tichu';
-      return gameType == selectedTab;
-    }).toList();
+    final isAll = selectedTab == kProfileAllGamesTab;
+    final filteredMatches = isAll
+        ? recentMatches
+        : recentMatches.where((m) {
+            final gameType = m['gameType']?.toString() ?? 'tichu';
+            return gameType == selectedTab;
+          }).toList();
     final profileNickname = data['nickname']?.toString() ?? nickname;
     final isMe = profileNickname == game.playerName;
     return Column(
@@ -115,7 +147,16 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           const SizedBox(height: 10),
         ],
         _buildMannerLeaveRow(
-          totalGames: totalGames as int,
+          // Every game they have played, not Tichu's count. The desertions and
+          // reports on the other side of this score are account-wide, so a
+          // Mighty regular used to be judged on walk-outs from games that were
+          // never counted as played. It also has to agree with the 전체 tab
+          // sitting right underneath it.
+          totalGames:
+              (totalGames as int) +
+              (skGames as int) +
+              ((profile['mightyTotalGames'] ?? 0) as int) +
+              (llGames as int),
           reportCount: reportCount as int,
           leaveCount: leaveCount as int,
         ),
@@ -126,7 +167,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             String gameLabel;
             Color gameBgColor;
             Color gameFgColor;
+            IconData gameIcon = gameTypeIcon(selectedTab);
             switch (selectedTab) {
+              case kProfileAllGamesTab:
+                gameLabel = l10n.profileAllGames;
+                gameBgColor = const Color(0xFF5A4038);
+                gameFgColor = Colors.white;
+                gameIcon = Icons.apps_rounded;
+                break;
               case 'skull_king':
                 gameLabel = l10n.lobbySkullKing;
                 gameBgColor = const Color(0xFF2D2D3D);
@@ -170,6 +218,25 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.apps_rounded,
+                            size: 20,
+                            color: Color(0xFF5A4038),
+                          ),
+                          title: Text(l10n.profileAllGames),
+                          trailing: selectedTab == kProfileAllGamesTab
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Color(0xFF5A4038),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged(kProfileAllGamesTab);
+                          },
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
                         ListTile(
                           leading: Icon(
                             gameTypeIcon('tichu'),
@@ -261,17 +328,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      gameTypeIcon(selectedTab),
-                      size: 18,
-                      color: gameFgColor,
-                    ),
+                    Icon(gameIcon, size: 20, color: gameFgColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         gameLabel,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: gameFgColor,
                         ),
@@ -285,7 +348,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           },
         ),
         const SizedBox(height: 10),
-        if (selectedTab == 'tichu') ...[
+        if (isAll) ...[
+          _buildAllGamesCards(l10n, profile),
+        ] else if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
             title: l10n.lobbyTichuSeasonRanked,
             accent: const Color(0xFF3A3058),
@@ -352,11 +417,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             chips: [
               _buildStatChip(
                 l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  skGames as int,
-                  skWins as int,
-                  skLosses as int,
-                ),
+                l10n.lobbyRecordFormat(skGames, skWins as int, skLosses as int),
               ),
               _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
             ],
@@ -418,19 +479,162 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             chips: [
               _buildStatChip(
                 l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  llGames as int,
-                  llWins as int,
-                  llLosses as int,
-                ),
+                l10n.lobbyRecordFormat(llGames, llWins as int, llLosses as int),
               ),
               _buildStatChip(l10n.lobbyStatWinRate, '$llWinRate%'),
             ],
           ),
         ],
         const SizedBox(height: 12),
-        _buildRecentMatches(filteredMatches, profileNickname),
+        _buildRecentMatches(filteredMatches, profileNickname, mixed: isAll),
       ],
+    );
+  }
+
+  /// The combined view: the four games added up, then each one on its own line.
+  ///
+  /// No season rating here. Each game keeps its own, on its own scale, and an
+  /// average of four ratings would be a number that means nothing — the tab is
+  /// for "how is this player doing overall", which is the win/loss record.
+  Widget _buildAllGamesCards(L10n l10n, Map<String, dynamic> profile) {
+    int n(String key) => (profile[key] ?? 0) as int;
+    final tallies = <_GameTally>[
+      _GameTally(
+        key: 'tichu',
+        label: l10n.lobbyTichu,
+        color: const Color(0xFF7E57C2),
+        games: n('totalGames'),
+        wins: n('wins'),
+        losses: n('losses'),
+      ),
+      _GameTally(
+        key: 'skull_king',
+        label: l10n.lobbySkullKing,
+        color: const Color(0xFF2D2D3D),
+        games: n('skTotalGames'),
+        wins: n('skWins'),
+        losses: n('skLosses'),
+      ),
+      _GameTally(
+        key: 'mighty',
+        label: l10n.rankingMighty,
+        color: const Color(0xFF2E7D32),
+        games: n('mightyTotalGames'),
+        wins: n('mightyWins'),
+        losses: n('mightyLosses'),
+      ),
+      _GameTally(
+        key: 'love_letter',
+        label: l10n.lobbyLoveLetter,
+        color: const Color(0xFFE91E63),
+        games: n('llTotalGames'),
+        wins: n('llWins'),
+        losses: n('llLosses'),
+      ),
+    ];
+    final total = _GameTally(
+      key: kProfileAllGamesTab,
+      label: l10n.profileAllGames,
+      color: const Color(0xFF5A4038),
+      games: tallies.fold(0, (a, t) => a + t.games),
+      wins: tallies.fold(0, (a, t) => a + t.wins),
+      losses: tallies.fold(0, (a, t) => a + t.losses),
+    );
+
+    return Column(
+      children: [
+        _buildProfileSectionCard(
+          title: l10n.gameOverallRecord,
+          accent: const Color(0xFF4A3A32),
+          background: const Color(0xFFF7F2EF),
+          icon: Icons.leaderboard_rounded,
+          iconColor: const Color(0xFF8D6E63),
+          // The rate is the headline, so it is not repeated as a chip beside
+          // the record the way the per-game cards do it.
+          mainText: total.games == 0 ? '' : '${total.winRate}%',
+          chips: [
+            _buildStatChip(
+              l10n.lobbyStatRecord,
+              l10n.lobbyRecordFormat(total.games, total.wins, total.losses),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0D8D4)),
+          ),
+          child: Column(
+            children: [
+              for (final t in tallies) _buildGameTallyRow(l10n, t),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGameTallyRow(L10n l10n, _GameTally t) {
+    // A game they have never played is still worth a line: "0전" is the answer
+    // to "do they play Skull King", and a missing row is not.
+    final faded = t.games == 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(
+            gameTypeIcon(t.key),
+            size: 18,
+            color: faded ? const Color(0xFFBDB3AE) : t.color,
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 66,
+            child: Text(
+              t.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: faded
+                    ? const Color(0xFFA79E99)
+                    : const Color(0xFF5A4038),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              l10n.lobbyRecordFormat(t.games, t.wins, t.losses),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 13,
+                color: faded
+                    ? const Color(0xFFA79E99)
+                    : const Color(0xFF6A5A52),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 42,
+            child: Text(
+              faded ? '-' : '${t.winRate}%',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: faded
+                    ? const Color(0xFFA79E99)
+                    : const Color(0xFF5A4038),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -461,13 +665,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(icon, color: color, size: 16),
+                          Icon(icon, color: color, size: 17),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               l10n.rankingMannerScore,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: Color(0xFF8A8A8A),
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -479,7 +683,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       Text(
                         '$manner',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: color,
                         ),
@@ -489,13 +693,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(icon, color: color, size: 16),
+                      Icon(icon, color: color, size: 17),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           '${l10n.rankingMannerScore} $manner',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: color,
                           ),
@@ -520,14 +724,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           const Icon(
                             Icons.warning_amber_rounded,
                             color: Color(0xFFE57373),
-                            size: 16,
+                            size: 17,
                           ),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
                               l10n.gameDesertionLabel,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: Color(0xFF8A8A8A),
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -539,7 +743,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       Text(
                         '$leaveCount',
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF9A6A6A),
                         ),
@@ -552,14 +756,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       const Icon(
                         Icons.warning_amber_rounded,
                         color: Color(0xFFE57373),
-                        size: 16,
+                        size: 17,
                       ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           l10n.lobbyDesertions(leaveCount),
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF9A6A6A),
                           ),
@@ -594,6 +798,21 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     return Icons.sentiment_very_dissatisfied;
   }
 
+  /// The colour each game is known by across the popup — selector, tally rows
+  /// and the mark on a mixed match list all have to agree.
+  static Color _gameTypeColor(String gameType) {
+    switch (gameType) {
+      case 'skull_king':
+        return const Color(0xFF2D2D3D);
+      case 'mighty':
+        return const Color(0xFF2E7D32);
+      case 'love_letter':
+        return const Color(0xFFE91E63);
+      default:
+        return const Color(0xFF7E57C2);
+    }
+  }
+
   Widget _buildProfileSectionCard({
     required String title,
     required Color accent,
@@ -604,7 +823,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     required List<Widget> chips,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
@@ -613,12 +832,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         children: [
           Row(
             children: [
-              Icon(icon, color: iconColor, size: 16),
+              Icon(icon, color: iconColor, size: 18),
               const SizedBox(width: 6),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 13,
                   color: accent,
                   fontWeight: FontWeight.bold,
                 ),
@@ -628,7 +847,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 Text(
                   mainText,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: accent,
                   ),
@@ -649,7 +868,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   Widget _buildStatChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(10),
@@ -660,13 +879,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 10, color: Color(0xFF8A8A8A)),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
             ),
@@ -676,10 +895,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
+  /// How many matches the popup itself lists before "더보기" takes over.
+  static const int _recentMatchesShown = 5;
+
   Widget _buildRecentMatches(
     List<dynamic> recentMatches,
-    String profileNickname,
-  ) {
+    String profileNickname, {
+    required bool mixed,
+  }) {
     return SizedBox(
       width: double.infinity,
       child: Column(
@@ -688,14 +911,17 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           Row(
             children: [
               Text(
-                L10n.of(context).lobbyRecentMatches(3),
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+                L10n.of(context).lobbyRecentMatches(_recentMatchesShown),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A)),
               ),
               const Spacer(),
-              if (recentMatches.length > 3)
+              if (recentMatches.length > _recentMatchesShown)
                 TextButton(
-                  onPressed: () =>
-                      _showRecentMatchesDialog(recentMatches, profileNickname),
+                  onPressed: () => _showRecentMatchesDialog(
+                    recentMatches,
+                    profileNickname,
+                    mixed: mixed,
+                  ),
                   child: Text(L10n.of(context).lobbySeeMore),
                 ),
             ],
@@ -704,13 +930,17 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           if (recentMatches.isEmpty)
             Text(
               L10n.of(context).lobbyNoRecentMatches,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+              style: const TextStyle(fontSize: 13, color: Color(0xFF9A8E8A)),
             )
           else
             Column(
-              children: recentMatches.take(3).map<Widget>((match) {
-                return _buildMatchRow(match, profileNickname);
-              }).toList(),
+              children: recentMatches
+                  .take(_recentMatchesShown)
+                  .map<Widget>(
+                    (match) =>
+                        _buildMatchRow(match, profileNickname, mixed: mixed),
+                  )
+                  .toList(),
             ),
         ],
       ),
@@ -719,8 +949,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   void _showRecentMatchesDialog(
     List<dynamic> recentMatches,
-    String profileNickname,
-  ) {
+    String profileNickname, {
+    required bool mixed,
+  }) {
     final l10n = L10n.of(context);
     showDialog(
       context: context,
@@ -780,7 +1011,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               itemCount: recentMatches.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (_, index) {
-                return _buildMatchRow(recentMatches[index], profileNickname);
+                return _buildMatchRow(
+                  recentMatches[index],
+                  profileNickname,
+                  mixed: mixed,
+                );
               },
             ),
           ),
@@ -795,7 +1030,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
-  Widget _buildMatchRow(dynamic match, String profileNickname) {
+  /// [mixed] — the list spans more than one game, so each row has to say which
+  /// one it was. Within a single game's tab that mark would be the same on
+  /// every row and only takes width from the names.
+  Widget _buildMatchRow(
+    dynamic match,
+    String profileNickname, {
+    bool mixed = false,
+  }) {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
     final isLL = gameType == 'love_letter';
@@ -880,8 +1122,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       child: Row(
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 27,
+            height: 27,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: badgeColor,
@@ -891,7 +1133,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               badgeText,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -903,10 +1145,18 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               children: [
                 Row(
                   children: [
+                    if (mixed) ...[
+                      Icon(
+                        gameTypeIcon(gameType),
+                        size: 14,
+                        color: _gameTypeColor(gameType),
+                      ),
+                      const SizedBox(width: 5),
+                    ],
                     Text(
                       date,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: Color(0xFF8A8A8A),
                       ),
                     ),
@@ -942,7 +1192,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 Text(
                   playerText,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF5A4038),
                   ),
@@ -954,7 +1204,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           Text(
             scoreText,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
               color: Color(0xFF5A4038),
             ),

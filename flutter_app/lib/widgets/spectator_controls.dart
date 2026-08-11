@@ -293,7 +293,14 @@ class _SpectatorRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: nickname.isEmpty
             ? null
-            : () => showPlayerProfileDialog(context, nickname, game),
+            // The spectator list only exists inside a match, so the popup opens
+            // on that match's game rather than on the combined record.
+            : () => showPlayerProfileDialog(
+                context,
+                nickname,
+                game,
+                initialGame: game.currentGameType,
+              ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(

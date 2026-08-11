@@ -2253,6 +2253,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       nickname,
       game,
       subtitle: L10n.of(context).gamePlayerProfile,
+      // Watching a match counts as being in one: open on the game on the table,
+      // the same as the four game screens do. Without this the popup would fall
+      // back to the combined record, which is the lobby's answer, not this
+      // screen's.
+      initialGame: game.currentGameType,
       isBot: isBot,
     );
   }

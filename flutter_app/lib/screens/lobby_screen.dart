@@ -602,7 +602,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-
   /// Small caps-ish heading that separates the settings dialog into "what the
   /// room is called" and "how it plays" — without it the switch read as an
   /// afterthought glued under the name field.
@@ -1108,10 +1107,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           ),
                                           child: Row(
                                             children: [
-                                              Icon(
-                                                gameTypeIcon(selectedGameType),
-                                                size: 18,
-                                                color: gameFgColor,
+                                              gameTypeSymbol(
+                                                selectedGameType,
+                                                size: 20,
                                               ),
                                               const SizedBox(width: 8),
                                               Expanded(
@@ -1571,11 +1569,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             ),
                                             child: Row(
                                               children: [
-                                                Icon(
-                                                  gameTypeIcon(type),
-                                                  size: 16,
-                                                  color: color,
-                                                ),
+                                                gameTypeSymbol(type, size: 20),
                                                 const SizedBox(width: 10),
                                                 Expanded(
                                                   child: Text(
@@ -2484,21 +2478,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final String badgeText;
     const badgeTextColor = Colors.white;
 
+    // Both take the shared palette — these were a fourth hand-written copy of
+    // the same four colours.
+    stripColor = gameTypeColor(room.gameType);
+    badgeBgColor = stripColor;
     if (isLL) {
-      stripColor = const Color(0xFFE91E63);
-      badgeBgColor = const Color(0xFFE91E63);
       badgeText = l10n.lobbyLoveLetterBadge;
     } else if (isMighty) {
-      stripColor = const Color(0xFF5C6BC0);
-      badgeBgColor = const Color(0xFF5C6BC0);
       badgeText = l10n.lobbyMightyBadge;
     } else if (isSK) {
-      stripColor = const Color(0xFF21455F);
-      badgeBgColor = const Color(0xFF21455F);
       badgeText = l10n.lobbySkullKingBadge;
     } else {
-      stripColor = const Color(0xFF64B5F6);
-      badgeBgColor = const Color(0xFF64B5F6);
       badgeText = l10n.lobbyTichuBadge;
     }
     const nameColor = Color(0xFF4E3A34);
@@ -3635,15 +3625,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    game.currentGameType == 'love_letter'
-                        ? Icons.favorite
-                        : game.currentGameType == 'mighty'
-                        ? Icons.style
-                        : Icons.anchor,
-                    size: 14,
-                    color: Colors.white,
-                  ),
+                  gameTypeSymbol(game.currentGameType, size: 18),
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'love_letter'

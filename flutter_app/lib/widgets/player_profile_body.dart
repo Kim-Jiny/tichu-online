@@ -187,8 +187,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 ? Colors.white
                 : gameTypeOnColor(selectedTab);
             final gameIcon = isAllTab
-                ? Icons.apps_rounded
-                : gameTypeIcon(selectedTab);
+                ? const Icon(Icons.apps_rounded, size: 20, color: Colors.white)
+                : gameTypeSymbol(selectedTab, size: 22);
             return InkWell(
               onTap: () {
                 showModalBottomSheet(
@@ -232,11 +232,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         ListTile(
-                          leading: Icon(
-                            gameTypeIcon('tichu'),
-                            size: 20,
-                            color: gameTypeColor('tichu'),
-                          ),
+                          leading: gameTypeSymbol('tichu', size: 24),
                           title: Text(l10n.lobbyTichu),
                           trailing: selectedTab == 'tichu'
                               ? Icon(Icons.check, color: gameTypeColor('tichu'))
@@ -247,11 +243,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: Icon(
-                            gameTypeIcon('skull_king'),
-                            size: 20,
-                            color: gameTypeColor('skull_king'),
-                          ),
+                          leading: gameTypeSymbol('skull_king', size: 24),
                           title: Text(l10n.lobbySkullKing),
                           trailing: selectedTab == 'skull_king'
                               ? Icon(
@@ -265,11 +257,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: Icon(
-                            gameTypeIcon('mighty'),
-                            size: 20,
-                            color: gameTypeColor('mighty'),
-                          ),
+                          leading: gameTypeSymbol('mighty', size: 24),
                           title: Text(l10n.rankingMighty),
                           trailing: selectedTab == 'mighty'
                               ? Icon(
@@ -283,11 +271,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           },
                         ),
                         ListTile(
-                          leading: Icon(
-                            gameTypeIcon('love_letter'),
-                            size: 20,
-                            color: gameTypeColor('love_letter'),
-                          ),
+                          leading: gameTypeSymbol('love_letter', size: 24),
                           title: Text(l10n.lobbyLoveLetter),
                           trailing: selectedTab == 'love_letter'
                               ? Icon(
@@ -319,7 +303,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 ),
                 child: Row(
                   children: [
-                    Icon(gameIcon, size: 20, color: gameFgColor),
+                    gameIcon,
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -569,10 +553,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(
-            gameTypeIcon(t.key),
-            size: 18,
-            color: faded ? const Color(0xFFBDB3AE) : gameTypeColor(t.key),
+          // A game they have never played is dimmed rather than dropped, and
+          // the artwork cannot be tinted grey the way the glyph could — so it
+          // fades instead.
+          Opacity(
+            opacity: faded ? 0.35 : 1,
+            child: gameTypeSymbol(t.key, size: 20),
           ),
           const SizedBox(width: 8),
           SizedBox(
@@ -1462,7 +1448,7 @@ class _MatchHistoryDialog extends StatefulWidget {
 }
 
 class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
-  static const int _pageSize = 20;
+  static const int _pageSize = 50;
 
   /// Start fetching this far from the bottom, so the next page is usually
   /// already there when the last card scrolls into view.

@@ -2577,7 +2577,7 @@ async function setProfilePrivateHidePhoto(nickname, hide) {
 // Get recent matches for a player
 // Depth guard. Each source is asked for offset+limit rows, so a caller that
 // keeps paging would eventually ask every table for its whole history.
-const MATCH_HISTORY_MAX_DEPTH = 300;
+const MATCH_HISTORY_MAX_DEPTH = 500;
 
 /**
  * Recent matches for a profile.

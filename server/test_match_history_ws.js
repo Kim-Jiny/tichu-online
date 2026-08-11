@@ -12,6 +12,8 @@ const WebSocket = require('ws');
 
 const SERVER_URL = process.env.WS_URL || 'ws://localhost:8080';
 const TARGET = process.argv[2] || 'ㅋㅋㅋㅋㅋㅋ킼ㅋㅋ';
+// Matches MATCH_HISTORY_PAGE_MAX on the server and _pageSize on the client.
+const PAGE = 50;
 const run = Date.now().toString(36).slice(-5);
 
 let failures = 0;
@@ -67,23 +69,23 @@ async function page(c, opts) {
   if (!(await me.wait('login_success'))) throw new Error('login failed');
 
   console.log(`\n[${TARGET}]`);
-  const first = await page(me, { gameType: 'all', offset: 0, limit: 20 });
+  const first = await page(me, { gameType: 'all', offset: 0, limit: PAGE });
   check('the server answers a history request', first != null);
   if (!first) throw new Error('no answer');
   check('it echoes what was asked for',
     first.nickname === TARGET && first.gameType === 'all' && first.offset === 0,
     JSON.stringify({ n: first.nickname, g: first.gameType, o: first.offset }));
-  check('a full first page comes back', first.matches.length === 20,
+  check('a full first page comes back', first.matches.length === PAGE,
     `${first.matches.length}`);
   check('and says there is more', first.hasMore === true);
 
-  const second = await page(me, { gameType: 'all', offset: 20, limit: 20 });
+  const second = await page(me, { gameType: 'all', offset: PAGE, limit: PAGE });
   const overlap = second.matches
     .map(idOf)
     .filter((id) => first.matches.map(idOf).includes(id));
   check('the second page does not repeat the first', overlap.length === 0,
     overlap.join(','));
-  check('the second page is echoed at its own offset', second.offset === 20);
+  check('the second page is echoed at its own offset', second.offset === PAGE);
 
   const tab = await page(me, { gameType: 'tichu', offset: 0, limit: 10 });
   const strays = tab.matches.filter((m) => m.gameType !== 'tichu');
@@ -93,14 +95,14 @@ async function page(c, opts) {
   // The client asks for 20; nothing stops a hand-rolled message asking for
   // everything at once.
   const greedy = await page(me, { gameType: 'all', offset: 0, limit: 5000 });
-  check('an oversized page is clamped', greedy.matches.length <= 30,
+  check('an oversized page is clamped', greedy.matches.length <= PAGE,
     `${greedy.matches.length}`);
 
   const nobody = await page(me, {
     nickname: `없는사람${run}`,
     gameType: 'all',
     offset: 0,
-    limit: 20,
+    limit: PAGE,
   });
   check('an account with no history answers empty, not with an error',
     nobody != null && nobody.matches.length === 0 && nobody.hasMore === false);

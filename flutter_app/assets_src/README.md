@@ -11,6 +11,10 @@ bundled path, so they stay in the repo without riding along in the build.
 | --- | --- | --- |
 | `allowBotReplacement.png` (1536×1024 RGBA) | `assets/icons/allowBotReplacement.webp` (144×115) | 1.2 MB → 7.6 KB |
 | `lankIcon.png` (1536×1024 RGBA) | `assets/icons/lankIcon.webp` (144×125) | 1.4 MB → 11 KB |
+| `tichuSymbol.png` (1536×1024 RGBA) | `assets/icons/tichuSymbol.webp` (112×144) | 1.1 MB → 6.4 KB |
+| `skSymbol.png` (1024×1536 RGBA) | `assets/icons/skSymbol.webp` (88×144) | 1.1 MB → 6.1 KB |
+| `mtSymbol.png` (1024×1536 RGBA) | `assets/icons/mtSymbol.webp` (114×144) | 1.1 MB → 3.6 KB |
+| `llSymbol.png` (1024×1536 RGBA) | `assets/icons/llSymbol.webp` (144×131) | 965 KB → 3.3 KB |
 
 ## Converting a new one
 

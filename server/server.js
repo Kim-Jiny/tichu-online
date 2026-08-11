@@ -5679,7 +5679,7 @@ async function handleGetProfile(ws, data) {
 // per-game cap — see getRecentMatches — while this one pages a single tab. The
 // privacy checks are the same ones, deliberately repeated rather than shared by
 // flag: a history endpoint that forgets them leaks exactly what the pass is for.
-const MATCH_HISTORY_PAGE_MAX = 30;
+const MATCH_HISTORY_PAGE_MAX = 50;
 
 async function handleGetMatchHistory(ws, data) {
   if (!ws.nickname) {
@@ -5695,7 +5695,7 @@ async function handleGetMatchHistory(ws, data) {
   const offset = Math.max(0, Math.min(1000, Number(data.offset) || 0));
   const limit = Math.max(
     1,
-    Math.min(MATCH_HISTORY_PAGE_MAX, Number(data.limit) || 20),
+    Math.min(MATCH_HISTORY_PAGE_MAX, Number(data.limit) || 50),
   );
   const empty = () => sendTo(ws, {
     type: 'match_history_page',

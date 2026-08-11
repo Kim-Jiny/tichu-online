@@ -4253,6 +4253,32 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
             }
             const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
+            // A walk-out from a match that kept running. It has no score, no
+            // rank and no final roster — the row below would read p.score off
+            // entries that only carry a nickname and print "undefined점
+            // #undefined", and its endReason matches neither branch above so
+            // it wore the green "정상" badge. It gets its own row.
+            if (m.isMidGameLeave) {
+              const table = Array.isArray(m.players) && m.players.length
+                ? m.players.map(p => escapeHtml(p && p.nickname ? p.nickname : '?')).join(', ')
+                : '-';
+              const timedOut = m.endReason === 'mid_leave_timeout';
+              // What it was, then how it happened — the same split the two
+              // columns have for a finished match.
+              const midBadge = '<span class="badge" style="background:#fbe9e7;color:#d84315">중도탈주</span>';
+              const midEndBadge = timedOut
+                ? '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>'
+                : '<span class="badge" style="background:#fce4ec;color:#c62828">직접 나감</span>';
+              return `<tr>
+              <td style="color:#888">L${m.id}</td>
+              <td>${gameTypeBadge(m.gameType)}</td>
+              <td>${midBadge}</td>
+              <td style="font-size:12px">${table}${m.roomName ? '<br><span style="font-size:11px;color:#999">' + escapeHtml(m.roomName) + '</span>' : ''}</td>
+              <td>${rankedBadge}</td>
+              <td>${midEndBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+            }
             if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty') {
               const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
               return `<tr>

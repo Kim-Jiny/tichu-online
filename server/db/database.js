@@ -2601,6 +2601,12 @@ async function getRecentMatches(nickname, limit = 5, opts = null) {
   const onlyGame =
     paged && opts.gameType && opts.gameType !== 'all' ? opts.gameType : null;
   const wants = (gameType) => onlyGame == null || onlyGame === gameType;
+  // Walk-outs are an event, not a result, and a client that cannot draw them
+  // must not be paged through them either. Dropped at the query rather than
+  // after the slice: filtering a finished page would leave `hasMore` and the
+  // row count disagreeing, and a page that came back empty would stop the
+  // caller's scroll early.
+  const withMidLeave = opts?.includeMidLeave !== false;
   // How deep each source has to reach for this page to be correct.
   const need = paged
     ? Math.min(offset + limit, MATCH_HISTORY_MAX_DEPTH)
@@ -2811,7 +2817,7 @@ async function getRecentMatches(nickname, limit = 5, opts = null) {
     // than trying to read a score off them.
     // A walk-out is filed under the game it happened in, so a page for one
     // game keeps its own and drops the rest.
-    const midLeaveResult = await client.query(
+    const midLeaveResult = !withMidLeave ? { rows: [] } : await client.query(
       `SELECT id, game_type, reason, room_name, players, created_at
          FROM tc_midleave_log
         WHERE nickname = $1 AND created_at >= $3

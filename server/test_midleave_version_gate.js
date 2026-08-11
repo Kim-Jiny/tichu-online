@@ -74,6 +74,23 @@ async function historyFor(viewer, nickname) {
   return res.recentMatches ?? [];
 }
 
+/// The paged list behind "더보기" — a second endpoint over the same history,
+/// and the one that would quietly disagree with the popup if only one of them
+/// were gated.
+async function pagedHistoryFor(viewer, nickname) {
+  viewer.forget('match_history_page');
+  viewer.send({
+    type: 'get_match_history',
+    nickname,
+    gameType: 'all',
+    offset: 0,
+    limit: 50,
+  });
+  const res = await viewer.wait('match_history_page');
+  if (!res) throw new Error('no match_history_page');
+  return res.matches ?? [];
+}
+
 (async () => {
   const host = connect();
   const leaver = connect();
@@ -106,13 +123,21 @@ async function historyFor(viewer, nickname) {
   leaver.ws.close();
   await sleep(600);
 
+  // One account, three version claims — but they are the SAME account, and a
+  // second login kicks the first. So each client is asked everything it needs
+  // before the next one takes its place.
   console.log('\n[read it back at two versions]');
   const newEyes = await historyFor(host, LEAVER.nickname);
   const newWalkouts = newEyes.filter((m) => m.isMidGameLeave === true);
   check('a current client sees the walk-out', newWalkouts.length >= 1,
     `${newEyes.length} rows, ${newWalkouts.length} walk-outs`);
+  const newPaged = await pagedHistoryFor(host, LEAVER.nickname);
+  check('and pages through it in the history list',
+    newPaged.filter((m) => m.isMidGameLeave === true).length >= 1,
+    `${newPaged.length} rows`);
+  host.ws.close();
+  await sleep(400);
 
-  // Same account, same history — only the version claim differs.
   const oldApp = connect();
   await oldApp.ready;
   oldApp.send({
@@ -126,8 +151,17 @@ async function historyFor(viewer, nickname) {
   const oldWalkouts = oldEyes.filter((m) => m.isMidGameLeave === true);
   check('an older app is not sent any', oldWalkouts.length === 0,
     `${oldWalkouts.length} slipped through`);
-  check('and still gets everything else', oldEyes.length === newEyes.length - newWalkouts.length,
+  check('and still gets everything else',
+    oldEyes.length === newEyes.length - newWalkouts.length,
     `old ${oldEyes.length}, new ${newEyes.length} - ${newWalkouts.length}`);
+  // The popup and the paged list are two endpoints over the same history; only
+  // one of them being gated is the gap a later refactor walks into.
+  const oldPaged = await pagedHistoryFor(oldApp, LEAVER.nickname);
+  check('the history list agrees with the popup',
+    oldPaged.filter((m) => m.isMidGameLeave === true).length === 0,
+    `${oldPaged.filter((m) => m.isMidGameLeave === true).length} slipped through`);
+  oldApp.ws.close();
+  await sleep(400);
 
   // A client that sends no deviceInfo at all reads as 0.0.0 — the safe side.
   const unknown = connect();
@@ -142,8 +176,6 @@ async function historyFor(viewer, nickname) {
   check('a client that reports no version is treated as old',
     blindEyes.filter((m) => m.isMidGameLeave === true).length === 0);
 
-  host.ws.close();
-  oldApp.ws.close();
   unknown.ws.close();
 })()
   .then(() => {

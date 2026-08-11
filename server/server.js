@@ -5730,6 +5730,11 @@ async function handleGetMatchHistory(ws, data) {
   const { matches, hasMore } = await getRecentMatches(targetNickname, limit, {
     gameType,
     offset,
+    // Same rule as the popup's own list — see clientSupportsMidLeaveHistory.
+    // Old clients cannot reach this handler at all (the message type is newer
+    // than they are), but the two endpoints answering differently is the kind
+    // of gap a later refactor walks into.
+    includeMidLeave: clientSupportsMidLeaveHistory(ws),
   });
   sendTo(ws, {
     type: 'match_history_page',

@@ -7257,6 +7257,16 @@ function handOffSeatToBot(room, playerId, reason, options = {}) {
   }
 
   if (leaverWs) {
+    // room_left first, and unconditionally.
+    //
+    // left_in_progress is a type only the new client knows. On the deliberate
+    // routes the leave handler sends room_left of its own afterwards, but the
+    // timeout route ends here — so an already-installed app timing out of a
+    // mid-join room was told nothing it understood, and sat on a frozen board
+    // with no way back but the exit button. It is idempotent for both: the new
+    // client clears the room, then left_in_progress clears it again and adds
+    // the reason; the old client acts on the one message it recognises.
+    sendTo(leaverWs, { type: 'room_left' });
     sendTo(leaverWs, {
       type: 'left_in_progress',
       message: t(
@@ -7917,6 +7927,7 @@ function clearRoomTimers(roomId, room = null) {
   });
   delete timeoutCounts[roomId];
   delete turnTimerPhases[roomId];
+  delete turnTimerTargets[roomId];
   // Bot action timers (scheduleBotActions) live in global maps and were not
   // cleared above — drop them so the handle/entry doesn't leak after the room
   // is gone (the callback null-checks the room, but the entry would persist).

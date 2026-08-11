@@ -19,7 +19,7 @@ jobs:
       # 그 자리가 실서버 배포 경로다. @v5 로 올려야 하며, 검증이 실행
       # 자체이므로 "다음에 배포하는 날 그 커밋에 얹어서" 한다.
       # 절차와 근거: docs/MAINTENANCE.md 1번.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -75,7 +75,7 @@ jobs:
       - name: Package
         run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: web-bundle
           path: web-bundle.tar.gz
@@ -85,7 +85,7 @@ jobs:
     needs: build-web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: web-bundle
 

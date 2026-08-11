@@ -568,6 +568,14 @@ const PROFILE_PHOTO_MIN_VERSION = '2.8.0';
 // and needs the same client work (the redacted popup, and the owner's toggle
 // for whether the photo is included), so it rides the same minimum.
 const PROFILE_PRIVATE_MIN_VERSION = PROFILE_PHOTO_MIN_VERSION;
+// Mid-game walk-outs in the match history. These rows are an event, not a
+// result: no score, no final roster, and the client has to know to render them
+// as one. An older app picks its renderer off gameType alone, so a Skull King
+// walk-out came out as "undefined점 #undefined" and a Tichu one leaned on
+// back-filled seat fields to look like anything at all. Rather than shim the
+// payload into something they misread more quietly, don't send them the rows —
+// they are the only history entries whose absence costs an old client nothing.
+const MID_LEAVE_HISTORY_MIN_VERSION = '3.0.0';
 // SK_EXPANSION_UPDATE_MESSAGE removed – now uses t(locale, 'sk_expansion_update_required')
 
 function compareVersions(v1, v2) {
@@ -579,6 +587,14 @@ function compareVersions(v1, v2) {
     if ((a[i] || 0) < (b[i] || 0)) return -1;
   }
   return 0;
+}
+
+/// Whether this client renders a walk-out row as an event rather than a match.
+///
+/// A missing version reads as 0.0.0, so an unknown client is treated as old —
+/// which is the safe direction: it loses rows it could not have drawn.
+function clientSupportsMidLeaveHistory(ws) {
+  return compareVersions(ws.appVersion, MID_LEAVE_HISTORY_MIN_VERSION) >= 0;
 }
 
 function clientSupportsSK(ws) {
@@ -5649,7 +5665,10 @@ async function handleGetProfile(ws, data) {
     });
     return;
   }
-  const recentMatches = await getRecentMatches(targetNickname, 20);
+  const allMatches = await getRecentMatches(targetNickname, 20);
+  const recentMatches = clientSupportsMidLeaveHistory(ws)
+    ? allMatches
+    : allMatches.filter((m) => m.isMidGameLeave !== true);
   // Attach the resolved avatar URL, unless this viewer blocked or reported the
   // target — an image someone has objected to must not be forced back on them.
   if (profile) {

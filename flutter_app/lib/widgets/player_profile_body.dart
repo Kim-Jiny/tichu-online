@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -10,6 +12,9 @@ import 'game_type_icon.dart';
 /// Not a game the server knows about — it only ever reaches [PlayerProfileBody]
 /// and the selector — so it is deliberately not a value any payload uses.
 const String kProfileAllGamesTab = 'all';
+
+/// How a match ended for the person whose profile this is.
+enum _MatchOutcome { win, loss, draw, desertion, midLeave }
 
 /// One game's line in the combined view.
 class _GameTally {
@@ -568,9 +573,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             border: Border.all(color: const Color(0xFFE0D8D4)),
           ),
           child: Column(
-            children: [
-              for (final t in tallies) _buildGameTallyRow(l10n, t),
-            ],
+            children: [for (final t in tallies) _buildGameTallyRow(l10n, t)],
           ),
         ),
       ],
@@ -947,6 +950,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
+  /// The whole history behind "더보기".
+  ///
+  /// The popup's five rows are a glance; this is the list you actually read, so
+  /// it gets the width and the height the screen can give it, a tally across
+  /// the top, and one card per match instead of rows running together.
   void _showRecentMatchesDialog(
     List<dynamic> recentMatches,
     String profileNickname, {
@@ -957,6 +965,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       context: context,
       builder: (ctx) {
         final media = MediaQuery.of(ctx).size;
+        final width = math.max(240.0, math.min(media.width - 64, 520.0));
+        final height = (media.height * 0.66).clamp(240.0, 620.0);
+        final tally = <_MatchOutcome, int>{};
+        for (final m in recentMatches) {
+          final o = _outcomeOf(m, profileNickname);
+          tally[o] = (tally[o] ?? 0) + 1;
+        }
         return AlertDialog(
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -965,58 +980,86 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-          contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-          title: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE8DDD8)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.history, color: Color(0xFF6A5A52)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.lobbyRecentMatchesTitle,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF3E312A),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.lobbyRecentMatchesDesc(recentMatches.length),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF84766E),
-                        ),
-                      ),
-                    ],
-                  ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(8, 0, 14, 10),
+          // No card around the title. It sat inside the dialog's own frame —
+          // a border drawn just inside a border — the same thing the profile
+          // popup's header had before it was taken off.
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF2EBE7),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: const Icon(
+                  Icons.history,
+                  size: 20,
+                  color: Color(0xFF6A5A52),
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.lobbyRecentMatchesTitle,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF3E312A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.lobbyRecentMatchesDesc(recentMatches.length),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF84766E),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           content: SizedBox(
-            width: media.width > 700 ? 520 : media.width - 40,
-            height: media.height * 0.5,
-            child: ListView.separated(
-              itemCount: recentMatches.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (_, index) {
-                return _buildMatchRow(
-                  recentMatches[index],
-                  profileNickname,
-                  mixed: mixed,
-                );
-              },
+            width: width,
+            height: height,
+            child: Column(
+              children: [
+                _buildOutcomeTally(l10n, tally),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: recentMatches.isEmpty
+                      ? Center(
+                          child: Text(
+                            l10n.lobbyNoRecentMatches,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF9A8E8A),
+                            ),
+                          ),
+                        )
+                      // No explicit Scrollbar: Material already puts one on
+                      // desktop and the web through its ScrollBehavior, and
+                      // wrapping one here without owning a ScrollController is
+                      // how you get "no ScrollPosition attached" at runtime.
+                      : ListView.separated(
+                          padding: const EdgeInsets.only(right: 2),
+                          itemCount: recentMatches.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (_, index) => _buildMatchCard(
+                            recentMatches[index],
+                            profileNickname,
+                            mixed: mixed,
+                          ),
+                        ),
+                ),
+              ],
             ),
           ),
           actions: [
@@ -1030,57 +1073,191 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
+  /// The list in one line: how many of each result it holds.
+  ///
+  /// Only the outcomes that actually occur get a chip. A row of four counters
+  /// where three read 0 is noise, and desertions in particular should not be
+  /// advertised on a record that has none.
+  Widget _buildOutcomeTally(L10n l10n, Map<_MatchOutcome, int> tally) {
+    const order = [
+      _MatchOutcome.win,
+      _MatchOutcome.loss,
+      _MatchOutcome.draw,
+      _MatchOutcome.desertion,
+      _MatchOutcome.midLeave,
+    ];
+    final present = order.where((o) => (tally[o] ?? 0) > 0).toList();
+    if (present.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        for (final o in present) ...[
+          Expanded(child: _outcomeTallyChip(l10n, o, tally[o]!)),
+          if (o != present.last) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _outcomeTallyChip(L10n l10n, _MatchOutcome outcome, int count) {
+    final color = _outcomeColor(outcome);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              // The fill is the pale version of this; the number needs to hold
+              // its own against it.
+              color: Color.lerp(color, Colors.black, 0.32),
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            _outcomeLabel(l10n, outcome),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7C76)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// One match as a card, with the result carried by a stripe down its left
+  /// edge as well as by the badge — a page of rows all the same colour is what
+  /// made the old list hard to skim.
+  Widget _buildMatchCard(
+    dynamic match,
+    String profileNickname, {
+    required bool mixed,
+  }) {
+    final color = _outcomeColor(_outcomeOf(match, profileNickname));
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEDE4DF)),
+      ),
+      // The stripe takes its height from the row rather than carrying a fixed
+      // one, so a larger system text size cannot leave it short of the card.
+      // IntrinsicHeight and not `stretch`: a list item is handed an unbounded
+      // height, which is the one case stretch cannot resolve.
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(14),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
+                child: _buildMatchRow(
+                  match,
+                  profileNickname,
+                  mixed: mixed,
+                  padded: false,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// How a match ended, from this profile's side.
+  ///
+  /// One reading of the payload for everyone who needs it — the badge on a row
+  /// and the tally over the list. They used to be two separate readings waiting
+  /// to disagree, and "3승 2패" over five rows that showed something else is
+  /// the kind of wrong nobody reports.
+  static _MatchOutcome _outcomeOf(dynamic match, String profileNickname) {
+    // A walk-out from a match that kept running. It has no score and no final
+    // roster — the match may not even be over — so it is an event in the
+    // history, not a result. Checked before the win/loss cases because those
+    // would otherwise label it a plain loss.
+    if (match['isMidGameLeave'] == true) return _MatchOutcome.midLeave;
+    final deserter = match['deserterNickname']?.toString();
+    if (match['isDesertionLoss'] == true ||
+        (deserter != null &&
+            deserter.isNotEmpty &&
+            deserter == profileNickname)) {
+      return _MatchOutcome.desertion;
+    }
+    if (match['isDraw'] == true) return _MatchOutcome.draw;
+    return match['won'] == true ? _MatchOutcome.win : _MatchOutcome.loss;
+  }
+
+  static Color _outcomeColor(_MatchOutcome outcome) {
+    switch (outcome) {
+      // Same glyph as a desertion — it IS one — with orange standing in for the
+      // difference. The badge is a small circle, so the distinction has to be
+      // carried by colour; the word itself is on the detail line.
+      case _MatchOutcome.midLeave:
+        return const Color(0xFFFF8A65);
+      case _MatchOutcome.desertion:
+        return const Color(0xFFFFB74D);
+      case _MatchOutcome.draw:
+        return const Color(0xFFBDBDBD);
+      case _MatchOutcome.win:
+        return const Color(0xFF81C784);
+      case _MatchOutcome.loss:
+        return const Color(0xFFE57373);
+    }
+  }
+
+  static String _outcomeLabel(L10n l10n, _MatchOutcome outcome) {
+    switch (outcome) {
+      case _MatchOutcome.midLeave:
+      case _MatchOutcome.desertion:
+        return l10n.lobbyMatchDesertion;
+      case _MatchOutcome.draw:
+        return l10n.lobbyMatchDraw;
+      case _MatchOutcome.win:
+        return l10n.lobbyMatchWin;
+      case _MatchOutcome.loss:
+        return l10n.lobbyMatchLoss;
+    }
+  }
+
   /// [mixed] — the list spans more than one game, so each row has to say which
   /// one it was. Within a single game's tab that mark would be the same on
   /// every row and only takes width from the names.
+  ///
+  /// [padded] — the popup's own list separates rows with the row's own bottom
+  /// padding. Inside the full-history cards that gap belongs to the card.
   Widget _buildMatchRow(
     dynamic match,
     String profileNickname, {
     bool mixed = false,
+    bool padded = true,
   }) {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
     final isLL = gameType == 'love_letter';
     final l10n = L10n.of(context);
 
-    final deserterNickname = match['deserterNickname']?.toString();
+    final outcome = _outcomeOf(match, profileNickname);
     final isDesertionLoss =
-        match['isDesertionLoss'] == true ||
-        (deserterNickname != null &&
-            deserterNickname.isNotEmpty &&
-            deserterNickname == profileNickname);
-    final isDraw = match['isDraw'] == true;
-    final won = !isDraw && match['won'] == true;
+        outcome == _MatchOutcome.desertion || outcome == _MatchOutcome.midLeave;
+    final isMidGameLeave = outcome == _MatchOutcome.midLeave;
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
 
-    // A walk-out from a match that kept running. It has no score and no final
-    // roster — the match may not even be over — so it is an event in the
-    // history, not a result. Checked before the win/loss badges because those
-    // would otherwise label it a plain loss.
-    final isMidGameLeave = match['isMidGameLeave'] == true;
-
-    final Color badgeColor;
-    final String badgeText;
-    if (isMidGameLeave) {
-      // Same single glyph as a desertion — it IS one — with orange standing in
-      // for the difference. The badge is a 24px circle, so the distinction has
-      // to be carried by colour; the word itself is on the detail line.
-      badgeColor = const Color(0xFFFF8A65);
-      badgeText = l10n.lobbyMatchDesertion;
-    } else if (isDesertionLoss) {
-      badgeColor = const Color(0xFFFFB74D);
-      badgeText = l10n.lobbyMatchDesertion;
-    } else if (isDraw) {
-      badgeColor = const Color(0xFFBDBDBD);
-      badgeText = l10n.lobbyMatchDraw;
-    } else if (won) {
-      badgeColor = const Color(0xFF81C784);
-      badgeText = l10n.lobbyMatchWin;
-    } else {
-      badgeColor = const Color(0xFFE57373);
-      badgeText = l10n.lobbyMatchLoss;
-    }
+    final badgeColor = _outcomeColor(outcome);
+    final badgeText = _outcomeLabel(l10n, outcome);
 
     // Score / player info
     final isMighty = gameType == 'mighty';
@@ -1118,7 +1295,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: padded ? 6 : 0),
       child: Row(
         children: [
           Container(

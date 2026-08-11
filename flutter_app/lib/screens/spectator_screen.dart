@@ -93,12 +93,24 @@ class _SeatMetrics {
     _chromeHeight + (cardBudget == 0 ? _requestAreaHeight : _cardHeight),
   );
 
+  /// A side seat may be at most this many times taller than it is wide.
+  ///
+  /// A full hand on end is 300pt of cards over a 56pt avatar, which on a small
+  /// phone made the seat an 80×378 ribbon — the photo is square and undistorted
+  /// but the column it sits in reads as stretched. The cap makes the hand give
+  /// way instead: it is the part that can afford to be denser, and it is the
+  /// reason the whole seat could not be any wider.
+  static const double _maxSideAspect = 4.2;
+
   /// A side seat: the hand stands on end, so it is narrow and tall. The width
   /// is the avatar's, which is wider than a rotated card.
-  Size get sideNatural => Size(
-    math.max(_avatar, _cardHeight + 4) + _chromeWidth,
-    _chromeHeight + _handDown,
-  );
+  Size get sideNatural {
+    final width = math.max(_avatar, _cardHeight + 4) + _chromeWidth;
+    return Size(
+      width,
+      math.min(_chromeHeight + _handDown, width * _maxSideAspect),
+    );
+  }
 
   /// Everything stacks: two bands plus the side column, all in one height.
   double portraitScale(Size board) {
@@ -933,6 +945,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         currentPlayer,
                         isLeft: true,
                         referenceWidth: metrics.sideNatural.width,
+                        referenceHeight: metrics.sideNatural.height,
                       ),
                     ),
                   Expanded(
@@ -951,6 +964,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         currentPlayer,
                         isRight: true,
                         referenceWidth: metrics.sideNatural.width,
+                        referenceHeight: metrics.sideNatural.height,
                       ),
                     ),
                 ],
@@ -1013,6 +1027,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   isLeft: true,
                   compact: compact,
                   referenceWidth: metrics.sideNatural.width,
+                  referenceHeight: metrics.sideNatural.height,
                 ),
               ),
             if (players.length > 3) const SizedBox(width: 6),
@@ -1072,6 +1087,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   isRight: true,
                   compact: compact,
                   referenceWidth: metrics.sideNatural.width,
+                  referenceHeight: metrics.sideNatural.height,
                 ),
               ),
           ],
@@ -1087,6 +1103,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// BoxFit.contain never enlarges it however much room the column has; built
   /// at its natural width instead, it scales up to the column the way the top
   /// and bottom seats scale up to their band.
+  ///
+  /// [referenceHeight] — the seat's own budget, not the slot's. The hand inside
+  /// is Flexible with a scaleDown of its own, so a hand longer than the budget
+  /// packs tighter and the avatar and name keep their size. Passing the SLOT's
+  /// height here is what broke this before: the seat overflowed inside the
+  /// clamp and left the FittedBox nothing to measure.
   Widget _buildScaledPlayerSection(
     GameService game,
     Map<String, dynamic> player,
@@ -1095,6 +1117,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isRight = false,
     bool compact = false,
     double? referenceWidth,
+    double? referenceHeight,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1108,6 +1131,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             maxWidth: referenceWidth != null
                 ? math.min(referenceWidth, constraints.maxWidth)
                 : constraints.maxWidth,
+            maxHeight: referenceHeight ?? double.infinity,
           ),
           child: _buildPlayerSection(
             game,

@@ -695,22 +695,11 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildMenuButton(GameService game) {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: Icons.logout,
+      active: false,
+      iconColor: const Color(0xFFE53935),
       onTap: () => _showLeaveGameDialog(game),
-      child: Container(
-        padding: EdgeInsets.all(8 * _ts),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4 * _s,
-            ),
-          ],
-        ),
-        child: Icon(Icons.logout, color: Color(0xFFE53935), size: 20 * _ts),
-      ),
     );
   }
 
@@ -729,7 +718,10 @@ class _GameScreenState extends State<GameScreen> {
     }
     final unreadCount = totalMessages - _lastSeenMessageCount;
 
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: Icons.chat_bubble_outline_rounded,
+      active: _chatOpen,
+      badgeCount: unreadCount.clamp(0, 99),
       onTap: () => setState(() {
         _chatOpen = !_chatOpen;
         if (_chatOpen) {
@@ -737,85 +729,21 @@ class _GameScreenState extends State<GameScreen> {
           _scrollChatToBottom();
         }
       }),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _chatOpen
-                  ? const Color(0xFF64B5F6)
-                  : Colors.white.withValues(alpha: 0.8),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4 * _s,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.chat_bubble_outline,
-              color: _chatOpen ? Colors.white : const Color(0xFF5A4038),
-              size: 20 * _s,
-            ),
-          ),
-          if (unreadCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE53935),
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                child: Text(
-                  unreadCount > 9 ? '9+' : '$unreadCount',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10 * _ts,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 
   Widget _buildSoundButton(GameService game) {
-    final hasMuted = game.sfxVolume <= 0.01;
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: game.sfxVolume <= 0.01 ? Icons.volume_off : Icons.volume_up,
+      active: _soundPanelOpen,
       onTap: () => setState(() => _soundPanelOpen = !_soundPanelOpen),
-      child: Container(
-        padding: EdgeInsets.all(8 * _ts),
-        decoration: BoxDecoration(
-          color: _soundPanelOpen
-              ? const Color(0xFF81C784)
-              : Colors.white.withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4 * _s,
-            ),
-          ],
-        ),
-        child: Icon(
-          hasMuted ? Icons.volume_off : Icons.volume_up,
-          color: _soundPanelOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20 * _ts,
-        ),
-      ),
     );
   }
 
   Widget _buildMoreButton(GameService game) {
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: Icons.more_horiz,
+      active: _moreOpen,
       onTap: () => setState(() {
         _moreOpen = !_moreOpen;
         // Sub-panels (sound, viewers) are conceptually "inside" the
@@ -825,26 +753,6 @@ class _GameScreenState extends State<GameScreen> {
         _soundPanelOpen = false;
         _viewersOpen = false;
       }),
-      child: Container(
-        padding: EdgeInsets.all(8 * _ts),
-        decoration: BoxDecoration(
-          color: _moreOpen
-              ? const Color(0xFF81C784)
-              : Colors.white.withValues(alpha: 0.8),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4 * _s,
-            ),
-          ],
-        ),
-        child: Icon(
-          Icons.more_horiz,
-          color: _moreOpen ? Colors.white : const Color(0xFF5A4038),
-          size: 20 * _ts,
-        ),
-      ),
     );
   }
 
@@ -864,11 +772,10 @@ class _GameScreenState extends State<GameScreen> {
             // (who never have any viewer) can still reach the card-view
             // policy toggle inside the panel.
             //
-            // Scales with its contents. It was a flat 150 while the three
-            // buttons inside grew with the scale factor, so on a wide browser
-            // the icons outgrew the pill and spilled over its edges.
-            width: 150 * _ts,
-            padding: EdgeInsets.symmetric(horizontal: 8 * _ts, vertical: 6 * _ts),
+            // Sized by its contents. It was a flat 150, then 150 * the text
+            // scale, and neither had anything to do with how wide three
+            // buttons and two gaps actually are.
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.97),
               borderRadius: BorderRadius.circular(14),
@@ -881,7 +788,8 @@ class _GameScreenState extends State<GameScreen> {
               ],
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
               children: [
                 _buildViewersButton(game),
                 _buildSoundButton(game),
@@ -1032,9 +940,9 @@ class _GameScreenState extends State<GameScreen> {
         // which of the two is about to happen.
         content: Text(
           game.canLeaveInProgress
-              ? L10n.of(context).midLeaveConfirmBody(
-                  kMidGameJoinCooldownMinutes,
-                )
+              ? L10n.of(
+                  context,
+                ).midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : L10n.of(context).gameLeaveConfirm,
         ),
         actions: [
@@ -1266,8 +1174,12 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildSpectatorButton(GameService game) {
     final count = game.spectators.length;
     final hasViewers = game.cardViewers.isNotEmpty;
+    // The surface rather than the button: this one wants a long-press of its
+    // own, and PopupMenu-style widgets that own the gesture were exactly why
+    // the surface was split out. Everything else about it is the shared look.
     return GestureDetector(
       onTap: () => showSpectatorListDialog(context, game),
+      behavior: HitTestBehavior.opaque,
       // Always allow long-press so users (especially those set to
       // always_deny — who have no viewers and thus no in-game UI to
       // change the policy back) can still access the pref toggle.
@@ -1275,58 +1187,29 @@ class _GameScreenState extends State<GameScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4 * _s,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.people_alt,
-              color: Color(0xFF5A4038),
-              size: 20 * _s,
-            ),
+          SpectatorActionSurface(
+            icon: Icons.people_alt,
+            active: false,
+            badgeCount: count,
           ),
+          // Someone is currently allowed to see your hand. Not the same thing
+          // as having spectators, which is what the count says, so it keeps
+          // its own mark in the other corner.
           if (hasViewers)
             Positioned(
-              bottom: -4,
-              right: -4,
+              bottom: -3,
+              right: -3,
               child: Container(
                 padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF81C784),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF81C784),
                   shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.2),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.visibility,
-                  size: 10 * _s,
+                  size: 10,
                   color: Colors.white,
-                ),
-              ),
-            ),
-          if (count > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF7E57C2),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10 * _ts,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
               ),
             ),
@@ -1336,57 +1219,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildViewersButton(GameService game) {
-    final count = game.cardViewers.length;
-    return GestureDetector(
+    return SpectatorActionButton(
+      icon: Icons.visibility,
+      active: _viewersOpen,
+      badgeCount: game.cardViewers.length,
       onTap: () => setState(() => _viewersOpen = !_viewersOpen),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: EdgeInsets.all(8 * _ts),
-            decoration: BoxDecoration(
-              color: _viewersOpen
-                  ? const Color(0xFF81C784)
-                  : Colors.white.withValues(alpha: 0.8),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4 * _s,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.visibility,
-              color: _viewersOpen ? Colors.white : const Color(0xFF5A4038),
-              size: 20 * _ts,
-            ),
-          ),
-          if (count > 0)
-            Positioned(
-              top: -4,
-              right: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE53935),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10 * _ts,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
-
 
   Widget _buildViewersPanel(GameService game, {double topOffset = 48}) {
     return Positioned(
@@ -1621,7 +1460,10 @@ class _GameScreenState extends State<GameScreen> {
           SizedBox(height: 3 * _s),
           Text(
             _getPlayerInfo(partner),
-            style: TextStyle(fontSize: 11 * _ts, color: const Color(0xFF8A7A72)),
+            style: TextStyle(
+              fontSize: 11 * _ts,
+              color: const Color(0xFF8A7A72),
+            ),
           ),
           SizedBox(height: 6 * _s),
           // Card backs
@@ -2147,7 +1989,10 @@ class _GameScreenState extends State<GameScreen> {
                         : playerName,
                   )
                 : L10n.of(context).gameDogPlayed,
-            style: TextStyle(fontSize: 11 * _ts, color: const Color(0xFF8A7A72)),
+            style: TextStyle(
+              fontSize: 11 * _ts,
+              color: const Color(0xFF8A7A72),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -2367,7 +2212,11 @@ class _GameScreenState extends State<GameScreen> {
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: [buildRow(row1), SizedBox(height: 4 * _s), buildRow(row2)],
+          children: [
+            buildRow(row1),
+            SizedBox(height: 4 * _s),
+            buildRow(row2),
+          ],
         );
       },
     );
@@ -2589,59 +2438,56 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildLargeTichuDialog(GameService game) {
     return Container(
-        margin: EdgeInsets.symmetric(horizontal: 24 * _s),
-        padding: EdgeInsets.symmetric(horizontal: 16 * _s, vertical: 12 * _s),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      margin: EdgeInsets.symmetric(horizontal: 24 * _s),
+      padding: EdgeInsets.symmetric(horizontal: 16 * _s, vertical: 12 * _s),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              L10n.of(context).gameLargeTichuQuestion,
+              style: TextStyle(fontSize: 16 * _ts, fontWeight: FontWeight.bold),
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                L10n.of(context).gameLargeTichuQuestion,
-                style: TextStyle(
-                  fontSize: 16 * _ts,
-                  fontWeight: FontWeight.bold,
-                ),
+          ),
+          SizedBox(width: 12 * _s),
+          ElevatedButton(
+            onPressed: () => game.declareLargeTichu(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD700),
+              textStyle: TextStyle(fontSize: 14 * _ts),
+              padding: EdgeInsets.symmetric(
+                horizontal: 16 * _s,
+                vertical: 8 * _s,
               ),
             ),
-            SizedBox(width: 12 * _s),
-            ElevatedButton(
-              onPressed: () => game.declareLargeTichu(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD700),
-                textStyle: TextStyle(fontSize: 14 * _ts),
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16 * _s,
-                  vertical: 8 * _s,
-                ),
+            child: Text(L10n.of(context).gameDeclare),
+          ),
+          SizedBox(width: 12 * _s),
+          OutlinedButton(
+            onPressed: () => game.passLargeTichu(),
+            style: OutlinedButton.styleFrom(
+              textStyle: TextStyle(fontSize: 14 * _ts),
+              padding: EdgeInsets.symmetric(
+                horizontal: 16 * _s,
+                vertical: 8 * _s,
               ),
-              child: Text(L10n.of(context).gameDeclare),
             ),
-            SizedBox(width: 12 * _s),
-            OutlinedButton(
-              onPressed: () => game.passLargeTichu(),
-              style: OutlinedButton.styleFrom(
-                textStyle: TextStyle(fontSize: 14 * _ts),
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16 * _s,
-                  vertical: 8 * _s,
-                ),
-              ),
-              child: Text(L10n.of(context).gamePass),
-            ),
-          ],
-        ),
+            child: Text(L10n.of(context).gamePass),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3031,11 +2877,7 @@ class _GameScreenState extends State<GameScreen> {
             ),
             if (isAssigned) ...[
               SizedBox(width: 4 * _s),
-              Icon(
-                Icons.check_circle,
-                size: 14 * _s,
-                color: Color(0xFF3A5A40),
-              ),
+              Icon(Icons.check_circle, size: 14 * _s, color: Color(0xFF3A5A40)),
             ],
           ],
         ),
@@ -3794,7 +3636,11 @@ class _GameScreenState extends State<GameScreen> {
         : Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [avatar, SizedBox(width: 6 * _s * s), plate],
+            children: [
+              avatar,
+              SizedBox(width: 6 * _s * s),
+              plate,
+            ],
           );
     // Overlay, not the seat's own Stack: a sibling drawn later used to paint
     // straight over the bubble.
@@ -3853,7 +3699,11 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 13 * _ts, fontWeight: FontWeight.bold, color: fg),
+        style: TextStyle(
+          fontSize: 13 * _ts,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
       ),
     );
   }
@@ -3936,7 +3786,8 @@ class _GameScreenState extends State<GameScreen> {
         // the table. Cap the rows at a share of the screen and, if that bites,
         // walk the width back down so the cards keep their proportions.
         final rows = cards.length <= 6 ? 1 : 2;
-        final maxRowsHeight = MediaQuery.of(context).size.height * _handHeightShare;
+        final maxRowsHeight =
+            MediaQuery.of(context).size.height * _handHeightShare;
         final maxCardHeight = maxRowsHeight / rows;
         if (cardHeight > maxCardHeight) {
           cardHeight = maxCardHeight;

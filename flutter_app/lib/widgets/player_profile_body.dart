@@ -928,38 +928,25 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     );
   }
 
-  /// One match as a card, with the result carried by a stripe down its left
-  /// edge as well as by the badge — a page of rows all the same colour is what
-  /// made the old list hard to skim.
+  /// One match as a card, tinted by how it went.
+  ///
+  /// The result used to be a 4px stripe down the left edge — a mark you had to
+  /// look for. The whole card carries it now, so a page of history sorts itself
+  /// into wins and losses before you read a word of it. Kept pale: the outcome
+  /// pill inside is the same colour further up, and it has to stay legible
+  /// against this.
   Widget _buildMatchCard(dynamic match, String profileNickname) {
-    final color = _outcomeColor(_outcomeOf(match, profileNickname));
+    final outcome = _outcomeOf(match, profileNickname);
     return Container(
-      // Clipped, or the stripe paints over the rounded corner and the card
-      // looks like it has a square notch cut out of its left edge.
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.fromLTRB(11, 9, 12, 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
+        color: _outcomeTint(outcome, 0.10),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFEDE4DF)),
-      ),
-      // The stripe takes its height from the row rather than carrying a fixed
-      // one, so a larger system text size cannot leave it short of the card.
-      // IntrinsicHeight and not `stretch`: a list item is handed an unbounded
-      // height, which is the one case stretch cannot resolve.
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(width: 4, color: color),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
-                child: _buildMatchRow(match, profileNickname, padded: false),
-              ),
-            ),
-          ],
+        border: Border.all(
+          color: _outcomeColor(outcome).withValues(alpha: 0.3),
         ),
       ),
+      child: _buildMatchRow(match, profileNickname, padded: false),
     );
   }
 
@@ -1025,9 +1012,21 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     }
   }
 
-  /// The outcome colour, dark enough to be read as text on white.
+  /// The outcome colour, dark enough to be read as text on its own tint.
+  ///
+  /// 0.5 towards black is what it takes: the pale ones (the grey of a draw, the
+  /// amber of a desertion) sat at 3.6:1 against their own pill at 0.38, under
+  /// the 4.5:1 that 12px text needs. This clears 4.8:1 for all five.
   static Color _outcomeInk(_MatchOutcome outcome) =>
-      Color.lerp(_outcomeColor(outcome), Colors.black, 0.3)!;
+      Color.lerp(_outcomeColor(outcome), Colors.black, 0.5)!;
+
+  /// The outcome colour washed towards white. Two strengths are in use: a pale
+  /// one for a whole card, a stronger one for the pill sitting on it.
+  static Color _outcomeTint(_MatchOutcome outcome, double amount) =>
+      Color.alphaBlend(
+        _outcomeColor(outcome).withValues(alpha: amount),
+        Colors.white,
+      );
 
   /// One match.
   ///
@@ -1123,12 +1122,25 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      _outcomeLabel(l10n, outcome),
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        color: _outcomeInk(outcome),
+                    // A filled pill, not coloured text. Pale green words on
+                    // white were the least readable thing in the row, and the
+                    // one thing every reader looks for first.
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _outcomeTint(outcome, 0.42),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Text(
+                        _outcomeLabel(l10n, outcome),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: _outcomeInk(outcome),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 7),

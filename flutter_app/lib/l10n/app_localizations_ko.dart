@@ -4568,4 +4568,62 @@ class L10nKo extends L10n {
   @override
   String get lobbyRandomNounLl =>
       '연애편지|밀회|고백|편지함|장미|비밀|속삭임|찻집|정원|무도회|왕궁|초대장|봉투|약속|산책|쪽지';
+
+  @override
+  String get trickCardDragon => '드래곤';
+
+  @override
+  String get trickCardPhoenix => '봉황';
+
+  @override
+  String get trickCardMahjong => '새';
+
+  @override
+  String get trickCardDog => '개';
+
+  @override
+  String trickPhoenixOver(String beat) {
+    return '봉황 $beat';
+  }
+
+  @override
+  String trickPair(String rank) {
+    return '$rank 페어';
+  }
+
+  @override
+  String trickTriple(String rank) {
+    return '$rank 트리플';
+  }
+
+  @override
+  String trickFullHouse(String rank) {
+    return '$rank 풀하우스';
+  }
+
+  @override
+  String trickStraight(String rank, int count) {
+    return '$rank스트레이트($count장)';
+  }
+
+  @override
+  String trickSteps(String rank, int count) {
+    return '$rank스텝($count장)';
+  }
+
+  @override
+  String get trickBombFour => '폭탄(4)';
+
+  @override
+  String get trickBombStraightFlush => '스플 폭탄';
+
+  @override
+  String trickCallSuffix(String rank) {
+    return '콜$rank';
+  }
+
+  @override
+  String shopSaleWindow(String window) {
+    return '판매기간 $window';
+  }
 }

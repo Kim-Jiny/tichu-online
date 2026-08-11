@@ -8306,6 +8306,90 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Love Letter|Rendezvous|Confession|Mailbox|Rose|Secret|Whisper|Tearoom|Garden|Ball|Palace|Invitation|Envelope|Promise|Stroll|Note'**
   String get lobbyRandomNounLl;
+
+  /// No description provided for @trickCardDragon.
+  ///
+  /// In en, this message translates to:
+  /// **'Dragon'**
+  String get trickCardDragon;
+
+  /// No description provided for @trickCardPhoenix.
+  ///
+  /// In en, this message translates to:
+  /// **'Phoenix'**
+  String get trickCardPhoenix;
+
+  /// No description provided for @trickCardMahjong.
+  ///
+  /// In en, this message translates to:
+  /// **'Mahjong'**
+  String get trickCardMahjong;
+
+  /// No description provided for @trickCardDog.
+  ///
+  /// In en, this message translates to:
+  /// **'Dog'**
+  String get trickCardDog;
+
+  /// No description provided for @trickPhoenixOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Phoenix {beat}'**
+  String trickPhoenixOver(String beat);
+
+  /// No description provided for @trickPair.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank} pair'**
+  String trickPair(String rank);
+
+  /// No description provided for @trickTriple.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank} triple'**
+  String trickTriple(String rank);
+
+  /// No description provided for @trickFullHouse.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank} full house'**
+  String trickFullHouse(String rank);
+
+  /// No description provided for @trickStraight.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank} straight ({count})'**
+  String trickStraight(String rank, int count);
+
+  /// No description provided for @trickSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'{rank} steps ({count})'**
+  String trickSteps(String rank, int count);
+
+  /// No description provided for @trickBombFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Bomb (4)'**
+  String get trickBombFour;
+
+  /// No description provided for @trickBombStraightFlush.
+  ///
+  /// In en, this message translates to:
+  /// **'SF bomb'**
+  String get trickBombStraightFlush;
+
+  /// No description provided for @trickCallSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'call {rank}'**
+  String trickCallSuffix(String rank);
+
+  /// No description provided for @shopSaleWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'On sale {window}'**
+  String shopSaleWindow(String window);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

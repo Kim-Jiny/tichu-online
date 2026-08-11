@@ -2912,7 +2912,9 @@ class _ShopScreenState extends State<ShopScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '판매기간 ${_saleWindowText(item)}',
+                                l10n.shopSaleWindow(
+                                  _saleWindowText(item) ?? '',
+                                ),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,

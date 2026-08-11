@@ -2642,5 +2642,81 @@
   "lobbyRandomAdjMighty": "Spirited|Resolute|Cunning|Splendid|Bold|Lone|Clever|Fearless|Blazing|Cool-headed|Rousing|Sneaky|Proud|Seasoned|Reckless|Steadfast",
   "lobbyRandomNounMighty": "Mighty Room|Giruda|Declarer|Round|Contract|Duel|Showdown|Friend|Stakes|Classic|Fair|Match|Seat|Stage|Finale|Table",
   "lobbyRandomAdjLl": "Secret|Sweet|Shy|Fluttering|Tender|Elegant|Hidden|Quiet|Giddy|Wistful|Lovely|Softly|Distant|Cosy|Cute|Sparkling",
-  "lobbyRandomNounLl": "Love Letter|Rendezvous|Confession|Mailbox|Rose|Secret|Whisper|Tearoom|Garden|Ball|Palace|Invitation|Envelope|Promise|Stroll|Note"
+  "lobbyRandomNounLl": "Love Letter|Rendezvous|Confession|Mailbox|Rose|Secret|Whisper|Tearoom|Garden|Ball|Palace|Invitation|Envelope|Promise|Stroll|Note",
+  "trickCardDragon": "Dragon",
+  "trickCardPhoenix": "Phoenix",
+  "trickCardMahjong": "Mahjong",
+  "trickCardDog": "Dog",
+  "trickPhoenixOver": "Phoenix {beat}",
+  "@trickPhoenixOver": {
+    "placeholders": {
+      "beat": {
+        "type": "String"
+      }
+    }
+  },
+  "trickPair": "{rank} pair",
+  "@trickPair": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "trickTriple": "{rank} triple",
+  "@trickTriple": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "trickFullHouse": "{rank} full house",
+  "@trickFullHouse": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "trickStraight": "{rank} straight ({count})",
+  "@trickStraight": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trickSteps": "{rank} steps ({count})",
+  "@trickSteps": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trickBombFour": "Bomb (4)",
+  "trickBombStraightFlush": "SF bomb",
+  "trickCallSuffix": "call {rank}",
+  "@trickCallSuffix": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
+  "shopSaleWindow": "On sale {window}",
+  "@shopSaleWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  }
 }

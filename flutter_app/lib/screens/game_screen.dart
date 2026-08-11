@@ -2505,47 +2505,58 @@ class _GameScreenState extends State<GameScreen> {
     return true;
   }
 
+  // The trick log was the last Korean left in the game itself: an English or
+  // German player read their own moves back as "드래곤", "페어", "폭탄(4)".
+  // Every other game screen had been translated; this one had not.
   String _formatPlayLine(TrickPlay play, String? callRank) {
+    final l10n = L10n.of(context);
     final name = play.playerName.length > 6
         ? '${play.playerName.substring(0, 6)}…'
         : play.playerName;
     final desc = _comboShortDesc(play);
     if (callRank != null && callRank.isNotEmpty) {
-      return '$name: $desc - 콜$callRank';
+      return '$name: $desc - ${l10n.trickCallSuffix(callRank)}';
     }
     return '$name: $desc';
   }
 
   String _comboShortDesc(TrickPlay play) {
+    final l10n = L10n.of(context);
     final cards = play.cards;
     if (cards.length == 1) {
       final cid = cards[0];
       if (cid == 'special_phoenix' && play.comboValue > 1) {
-        return '봉황 ${_phoenixBeatLabel(play.comboValue)}';
+        return l10n.trickPhoenixOver(_phoenixBeatLabel(play.comboValue));
       }
-      if (cid == 'special_dragon') return '드래곤';
-      if (cid == 'special_phoenix') return '봉황';
-      if (cid == 'special_bird') return '새';
-      if (cid == 'special_dog') return '개';
+      if (cid == 'special_dragon') return l10n.trickCardDragon;
+      if (cid == 'special_phoenix') return l10n.trickCardPhoenix;
+      if (cid == 'special_bird') return l10n.trickCardMahjong;
+      if (cid == 'special_dog') return l10n.trickCardDog;
       return _rankFromCardId(cid);
     }
     switch (play.combo) {
       case 'pair':
-        return '${_rankFromCardId(cards[0])} 페어';
+        return l10n.trickPair(_rankFromCardId(cards[0]));
       case 'triple':
-        return '${_rankFromCardId(cards[0])} 트리플';
+        return l10n.trickTriple(_rankFromCardId(cards[0]));
       case 'full_house':
-        return '${_rankFromCardId(cards[0])} 풀하우스';
+        return l10n.trickFullHouse(_rankFromCardId(cards[0]));
       case 'straight':
-        return '${_rankLabelFromValue(play.comboValue)}스트레이트(${cards.length}장)';
+        return l10n.trickStraight(
+          _rankLabelFromValue(play.comboValue),
+          cards.length,
+        );
       case 'steps':
-        return '${_rankLabelFromValue(play.comboValue)}스텝(${cards.length}장)';
+        return l10n.trickSteps(
+          _rankLabelFromValue(play.comboValue),
+          cards.length,
+        );
       case 'bomb_four':
-        return '폭탄(4)';
+        return l10n.trickBombFour;
       case 'bomb_straight_flush':
-        return '스플 폭탄';
+        return l10n.trickBombStraightFlush;
       default:
-        return '${cards.length}장';
+        return l10n.gameCardCount(cards.length);
     }
   }
 

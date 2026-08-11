@@ -1640,5 +1640,19 @@
   "lobbyRandomAdjMighty": "기세등등한|비장한|치밀한|화려한|과감한|고독한|영리한|담대한|불꽃같은|냉철한|호쾌한|은밀한|당당한|노련한|무모한|우직한",
   "lobbyRandomNounMighty": "마이티방|기루다|주공|한판|공약|대결|승부|프렌드|판돈|명승부|한마당|대전|자리|무대|결전|테이블",
   "lobbyRandomAdjLl": "은밀한|달콤한|수줍은|설레는|다정한|우아한|비밀의|조용한|간질간질한|애틋한|사랑스런|살며시|아련한|포근한|귀여운|반짝이는",
-  "lobbyRandomNounLl": "연애편지|밀회|고백|편지함|장미|비밀|속삭임|찻집|정원|무도회|왕궁|초대장|봉투|약속|산책|쪽지"
+  "lobbyRandomNounLl": "연애편지|밀회|고백|편지함|장미|비밀|속삭임|찻집|정원|무도회|왕궁|초대장|봉투|약속|산책|쪽지",
+  "trickCardDragon": "드래곤",
+  "trickCardPhoenix": "봉황",
+  "trickCardMahjong": "새",
+  "trickCardDog": "개",
+  "trickPhoenixOver": "봉황 {beat}",
+  "trickPair": "{rank} 페어",
+  "trickTriple": "{rank} 트리플",
+  "trickFullHouse": "{rank} 풀하우스",
+  "trickStraight": "{rank}스트레이트({count}장)",
+  "trickSteps": "{rank}스텝({count}장)",
+  "trickBombFour": "폭탄(4)",
+  "trickBombStraightFlush": "스플 폭탄",
+  "trickCallSuffix": "콜{rank}",
+  "shopSaleWindow": "판매기간 {window}"
 }

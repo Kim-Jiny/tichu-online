@@ -4715,4 +4715,62 @@ class L10nDe extends L10n {
   @override
   String get lobbyRandomNounLl =>
       'Liebesbrief|Rendezvous|Geständnis|Briefkasten|Rose|Geheimnis|Flüstern|Teestube|Garten|Ball|Palast|Einladung|Umschlag|Versprechen|Spaziergang|Zettel';
+
+  @override
+  String get trickCardDragon => 'Drache';
+
+  @override
+  String get trickCardPhoenix => 'Phönix';
+
+  @override
+  String get trickCardMahjong => 'Mahjong';
+
+  @override
+  String get trickCardDog => 'Hund';
+
+  @override
+  String trickPhoenixOver(String beat) {
+    return 'Phönix $beat';
+  }
+
+  @override
+  String trickPair(String rank) {
+    return '$rank-Paar';
+  }
+
+  @override
+  String trickTriple(String rank) {
+    return '$rank-Drilling';
+  }
+
+  @override
+  String trickFullHouse(String rank) {
+    return '$rank Full House';
+  }
+
+  @override
+  String trickStraight(String rank, int count) {
+    return '$rank-Straße ($count)';
+  }
+
+  @override
+  String trickSteps(String rank, int count) {
+    return '$rank-Treppe ($count)';
+  }
+
+  @override
+  String get trickBombFour => 'Bombe (4)';
+
+  @override
+  String get trickBombStraightFlush => 'SF-Bombe';
+
+  @override
+  String trickCallSuffix(String rank) {
+    return 'Ansage $rank';
+  }
+
+  @override
+  String shopSaleWindow(String window) {
+    return 'Verkauf $window';
+  }
 }

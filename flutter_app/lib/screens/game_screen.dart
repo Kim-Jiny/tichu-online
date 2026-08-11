@@ -696,7 +696,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildMenuButton(GameService game) {
     return SpectatorActionButton(
-      icon: Icons.logout,
+      icon: Icons.exit_to_app,
       active: false,
       iconColor: const Color(0xFFE53935),
       onTap: () => _showLeaveGameDialog(game),
@@ -791,6 +791,7 @@ class _GameScreenState extends State<GameScreen> {
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
               children: [
+                _buildSpectatorButton(game),
                 _buildViewersButton(game),
                 _buildSoundButton(game),
                 _buildMenuButton(game),
@@ -806,42 +807,10 @@ class _GameScreenState extends State<GameScreen> {
     return Positioned(
       top: _moreOpen ? 108 : 56,
       right: 10,
-      child: Container(
-        width: 180,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              L10n.of(context).gameSoundEffects,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            Slider(
-              value: game.sfxVolume,
-              onChanged: (v) => game.setSfxVolume(v),
-              onChangeEnd: (v) => game.setSfxVolume(v, persist: true),
-              min: 0,
-              max: 1,
-            ),
-          ],
-        ),
-      ),
+      // The shared panel. Four screens carried a byte-identical copy of this
+      // container, slider and title — and Tichu's copy had lost the spectator
+      // title branch somewhere along the way.
+      child: SpectatorSoundPanel(game: game, width: 180),
     );
   }
 
@@ -1172,57 +1141,31 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildSpectatorButton(GameService game) {
-    final count = game.spectators.length;
-    final hasViewers = game.cardViewers.isNotEmpty;
-    // The surface rather than the button: this one wants a long-press of its
-    // own, and PopupMenu-style widgets that own the gesture were exactly why
-    // the surface was split out. Everything else about it is the shared look.
-    return GestureDetector(
-      onTap: () => showSpectatorListDialog(context, game),
-      behavior: HitTestBehavior.opaque,
-      // Always allow long-press so users (especially those set to
-      // always_deny — who have no viewers and thus no in-game UI to
-      // change the policy back) can still access the pref toggle.
-      onLongPress: () => setState(() => _viewersOpen = !_viewersOpen),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          SpectatorActionSurface(
-            icon: Icons.people_alt,
-            active: false,
-            badgeCount: count,
-          ),
-          // Someone is currently allowed to see your hand. Not the same thing
-          // as having spectators, which is what the count says, so it keeps
-          // its own mark in the other corner.
-          if (hasViewers)
-            Positioned(
-              bottom: -3,
-              right: -3,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF81C784),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.2),
-                ),
-                child: const Icon(
-                  Icons.visibility,
-                  size: 10,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-        ],
-      ),
+    // Plain, the way Skull King and Mighty have it. It used to carry a green
+    // eye in its own corner for "someone can see my hand" and a long-press to
+    // reach the card-view policy — both from when it sat alone in the top bar.
+    // It now sits next to the visibility button in the more menu, which is
+    // where the policy lives and which colours itself when there are viewers.
+    return SpectatorActionButton(
+      icon: Icons.people_alt,
+      active: false,
+      badgeCount: game.spectators.length,
+      onTap: () {
+        setState(() => _moreOpen = false);
+        showSpectatorListDialog(context, game);
+      },
     );
   }
 
   Widget _buildViewersButton(GameService game) {
+    final hasViewers = game.cardViewers.isNotEmpty;
     return SpectatorActionButton(
       icon: Icons.visibility,
       active: _viewersOpen,
       badgeCount: game.cardViewers.length,
+      // Blue while someone can see the hand — the same signal Skull King's
+      // gives, and what the green corner dot on the spectator button used to.
+      iconColor: hasViewers ? const Color(0xFF6A9BD1) : null,
       onTap: () => setState(() => _viewersOpen = !_viewersOpen),
     );
   }
@@ -1771,10 +1714,18 @@ class _GameScreenState extends State<GameScreen> {
           // the scoreBar for horizontal space.
           Align(
             alignment: Alignment.centerRight,
+            // leaderboard · chat · more, the order the other three games use.
+            // Tichu was the only one with the spectator list promoted to the
+            // top bar and the only one with no score-history button — its
+            // score pill is tappable, which is not something you can see.
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildSpectatorButton(game),
+                SpectatorActionButton(
+                  icon: Icons.leaderboard_outlined,
+                  active: false,
+                  onTap: () => _showScoreHistoryDialog(state),
+                ),
                 const SizedBox(width: 6),
                 _buildChatButton(game),
                 const SizedBox(width: 6),

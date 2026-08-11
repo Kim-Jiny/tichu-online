@@ -1355,9 +1355,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 ],
                 const SizedBox(width: 6),
                 _buildSpectatorButton(game),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 _buildSoundButton(game),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 _buildChatButton(game),
               ],
             )
@@ -2009,7 +2009,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildChatButton(GameService game) {
     return SpectatorActionButton(
-      icon: Icons.chat_bubble_outline,
+      icon: Icons.chat_bubble_outline_rounded,
       active: _chatOpen,
       badgeCount: _chatOpen
           ? 0

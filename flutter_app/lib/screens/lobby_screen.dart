@@ -3472,7 +3472,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // with no way back that looks like a way back.
           if (!_roomChatDocked)
             _roomIconButton(
-              icon: Icons.chat_bubble_outline,
+              icon: Icons.chat_bubble_outline_rounded,
               active: _roomChatOpen,
               badge: _roomChatOpen
                   ? 0

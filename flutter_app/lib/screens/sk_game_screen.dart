@@ -1059,50 +1059,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildSoundPanel(GameService game) {
-    final l10n = L10n.of(context);
-    final title = game.isSpectator
-        ? l10n.spectatorSoundEffects
-        : l10n.gameSoundEffects;
-
     return Positioned(
       top: 122,
       right: 8,
-      child: Container(
-        width: 190,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            Slider(
-              value: game.sfxVolume,
-              onChanged: (value) => game.setSfxVolume(value),
-              onChangeEnd: (value) => game.setSfxVolume(value, persist: true),
-              min: 0,
-              max: 1,
-            ),
-          ],
-        ),
-      ),
+      child: SpectatorSoundPanel(game: game, width: 190),
     );
   }
 

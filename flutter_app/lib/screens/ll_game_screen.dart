@@ -450,7 +450,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 size: 18,
                 color: Color(0xFFC62828),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   message,
@@ -742,11 +742,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
       return SpectatorHeader(
         game: gs,
         statusLine: '${l10n.llRound} ${state.round}',
+        // The score history goes on the status line, in the slot Tichu uses for
+        // its tappable score chips — the same move Skull King and Mighty made,
+        // which Love Letter missed. The draw-pile count keeps its place beside
+        // it; it is the one number this game reads off the header.
         statusTrailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               '${state.drawPileCount}',
               style: const TextStyle(
@@ -755,20 +759,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            const SizedBox(width: 8),
+            SpectatorStatusChip(
+              icon: Icons.leaderboard_outlined,
+              label: l10n.gameScoreHistory,
+              onTap: () => showLLScoreHistoryDialog(
+                context,
+                roundHistory: state.roundHistory,
+                players: state.players,
+                targetTokens: state.targetTokens,
+              ),
+            ),
           ],
         ),
         actions: [
-          _buildTopActionButton(
-            icon: Icons.leaderboard_outlined,
-            active: false,
-            onTap: () => showLLScoreHistoryDialog(
-              context,
-              roundHistory: state.roundHistory,
-              players: state.players,
-              targetTokens: state.targetTokens,
-            ),
-          ),
-          const SizedBox(width: 4),
           _buildTopActionButton(
             icon: Icons.help_outline,
             active: false,
@@ -777,9 +781,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
               _showCardGuide(context);
             },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _buildTopActionButton(
-            icon: Icons.chat_bubble_outline,
+            icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
             badgeCount: _chatOpen ? 0 : unread.clamp(0, 99),
             onTap: () {
@@ -794,7 +798,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               });
             },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _buildTopActionButton(
             icon: Icons.more_horiz,
             active: _moreOpen,
@@ -847,7 +851,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
@@ -890,7 +894,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               targetTokens: state.targetTokens,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _buildTopActionButton(
             icon: Icons.help_outline,
             active: false,
@@ -899,9 +903,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
               _showCardGuide(context);
             },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _buildTopActionButton(
-            icon: Icons.chat_bubble_outline,
+            icon: Icons.chat_bubble_outline_rounded,
             active: _chatOpen,
             badgeCount: _chatOpen ? 0 : unread.clamp(0, 99),
             onTap: () {
@@ -916,7 +920,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               });
             },
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           _buildTopActionButton(
             icon: Icons.more_horiz,
             active: _moreOpen,
@@ -960,21 +964,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildTopActionButton(
-              icon: hasMuted ? Icons.volume_off : Icons.volume_up,
-              active: _soundPanelOpen,
-              onTap: () {
-                setState(() {
-                  _soundPanelOpen = !_soundPanelOpen;
-                  _moreOpen = false;
-                  if (_soundPanelOpen) {
-                    _chatOpen = false;
-                    _viewersOpen = false;
-                  }
-                });
-              },
-            ),
-            const SizedBox(width: 8),
             // Everyone gets the spectator list, the way Skull King and Mighty
             // do it. Love Letter gave it to spectators only, so a player had no
             // way to see who was watching — or to open a watcher's profile to
@@ -988,7 +977,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 showSpectatorListDialog(context, gs);
               },
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             if (!gs.isSpectator)
               _buildTopActionButton(
                 icon: Icons.visibility,
@@ -1008,7 +997,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   });
                 },
               ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
+            _buildTopActionButton(
+              icon: hasMuted ? Icons.volume_off : Icons.volume_up,
+              active: _soundPanelOpen,
+              onTap: () {
+                setState(() {
+                  _soundPanelOpen = !_soundPanelOpen;
+                  _moreOpen = false;
+                  if (_soundPanelOpen) {
+                    _chatOpen = false;
+                    _viewersOpen = false;
+                  }
+                });
+              },
+            ),
+            const SizedBox(width: 6),
             _buildTopActionButton(
               icon: Icons.exit_to_app,
               active: false,
@@ -1053,50 +1057,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
   }
 
   Widget _buildSoundPanel(GameService gs) {
-    final l10n = L10n.of(context);
-    final title = gs.isSpectator
-        ? l10n.spectatorSoundEffects
-        : l10n.gameSoundEffects;
-
     return Positioned(
       top: gs.isSpectator ? 96 : 54,
       right: 8,
-      child: Container(
-        width: 190,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            Slider(
-              value: gs.sfxVolume,
-              onChanged: (value) => gs.setSfxVolume(value),
-              onChangeEnd: (value) => gs.setSfxVolume(value, persist: true),
-              min: 0,
-              max: 1,
-            ),
-          ],
-        ),
-      ),
+      child: SpectatorSoundPanel(game: gs, width: 190),
     );
   }
 
@@ -1128,7 +1092,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   size: 18,
                   color: Color(0xFF6A9BD1),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameViewingMyCards,
@@ -1545,7 +1509,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
               ),
               if (currentPlayer != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 9,
@@ -1635,7 +1599,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               Row(
                 children: [
                   const Icon(Icons.visibility, color: Color(0xFF6A9BD1)),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       L10n.of(context).skGameCardViewRequest(spectatorNickname),
@@ -1663,7 +1627,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       child: Text(L10n.of(context).skGameReject),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () =>
@@ -2472,7 +2436,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               size: 14,
               color: Color(0xFF8A7A72),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               L10n.of(context).llGuardPeek,
               style: const TextStyle(
@@ -2909,7 +2873,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               if (lastHand != null)
                 LoveLetterCard(
                   cardId: lastHand,
@@ -2922,9 +2886,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
               else
                 const SizedBox(width: 44, height: 62),
               if (discards.isNotEmpty) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(width: 1, height: 48, color: const Color(0xFFE0D8D4)),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -3407,7 +3371,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 ),
               if (gs.myTimeoutCount > 0) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => gs.resetTimeout(),
                   child: Container(
@@ -3431,7 +3395,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             color: Color(0xFFE65100),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
                           L10n.of(context).gameNotAfk,
                           style: const TextStyle(
@@ -3617,7 +3581,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 color: Color(0xFFFFB74D),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
               L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
               style: const TextStyle(

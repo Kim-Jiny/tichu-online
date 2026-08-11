@@ -633,7 +633,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       ),
                     ),
                     _buildTopActionButton(
-                      icon: Icons.chat_bubble_outline,
+                      icon: Icons.chat_bubble_outline_rounded,
                       active: _chatOpen,
                       badgeCount: _chatOpen
                           ? 0
@@ -966,7 +966,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             actions: [
               _buildTopActionButton(
-                icon: Icons.chat_bubble_outline,
+                icon: Icons.chat_bubble_outline_rounded,
                 active: _chatOpen,
                 badgeCount: _chatOpen
                     ? 0
@@ -1063,7 +1063,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: _buildTopActionButton(
-                  icon: Icons.chat_bubble_outline,
+                  icon: Icons.chat_bubble_outline_rounded,
                   active: _chatOpen,
                   badgeCount: _chatOpen
                       ? 0
@@ -1110,50 +1110,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   Widget _buildSoundPanel(GameService game) {
-    final l10n = L10n.of(context);
-    final title = game.isSpectator
-        ? l10n.spectatorSoundEffects
-        : l10n.gameSoundEffects;
-
     return Positioned(
       top: 120,
       right: 8,
-      child: Container(
-        width: 190,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            Slider(
-              value: game.sfxVolume,
-              onChanged: (value) => game.setSfxVolume(value),
-              onChangeEnd: (value) => game.setSfxVolume(value, persist: true),
-              min: 0,
-              max: 1,
-            ),
-          ],
-        ),
-      ),
+      child: SpectatorSoundPanel(game: game, width: 190),
     );
   }
 

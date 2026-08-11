@@ -78,8 +78,21 @@ class _SeatMetrics {
   /// Container padding and outer margin, both sides.
   double get _chromeWidth => 2 * (compact ? 6 : 8) + 2 * (compact ? 2 : 4);
 
-  /// Height of the button that stands in for a hand nobody may see.
-  static const double _requestAreaHeight = 40;
+  /// Height of the button that stands in for a hand nobody may see: padding,
+  /// the eye icon, a gap, one line of text and the border.
+  double get _requestAreaHeight =>
+      2 * (compact ? 6 : 8) +
+      (compact ? 16 : 20) +
+      (compact ? 1 : 2) +
+      (compact ? 13 : 14) +
+      2;
+
+  /// Whether the seat holds anything that can give way under a height budget.
+  ///
+  /// The hand is Flexible with a scaleDown of its own; the request button is
+  /// not, so budgeting a height for it can only overflow — which is exactly
+  /// what a 40pt guess at a 54pt button did.
+  bool get hasSqueezableHand => cardBudget > 0;
 
   double get _handAcross =>
       cardBudget == 0 ? 90 : _cardWidth + (cardBudget - 1) * _overlapAcross;
@@ -945,7 +958,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         currentPlayer,
                         isLeft: true,
                         referenceWidth: metrics.sideNatural.width,
-                        referenceHeight: metrics.sideNatural.height,
+                        referenceHeight: metrics.hasSqueezableHand
+                            ? metrics.sideNatural.height
+                            : null,
                       ),
                     ),
                   Expanded(
@@ -964,7 +979,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         currentPlayer,
                         isRight: true,
                         referenceWidth: metrics.sideNatural.width,
-                        referenceHeight: metrics.sideNatural.height,
+                        referenceHeight: metrics.hasSqueezableHand
+                            ? metrics.sideNatural.height
+                            : null,
                       ),
                     ),
                 ],
@@ -1027,7 +1044,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   isLeft: true,
                   compact: compact,
                   referenceWidth: metrics.sideNatural.width,
-                  referenceHeight: metrics.sideNatural.height,
+                  referenceHeight: metrics.hasSqueezableHand
+                      ? metrics.sideNatural.height
+                      : null,
                 ),
               ),
             if (players.length > 3) const SizedBox(width: 6),
@@ -1087,7 +1106,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   isRight: true,
                   compact: compact,
                   referenceWidth: metrics.sideNatural.width,
-                  referenceHeight: metrics.sideNatural.height,
+                  referenceHeight: metrics.hasSqueezableHand
+                      ? metrics.sideNatural.height
+                      : null,
                 ),
               ),
           ],

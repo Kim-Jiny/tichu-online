@@ -257,7 +257,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
               // Errors were silent on this screen — every other game draws the
               // service's errorMessage in a banner and Love Letter drew
               // nothing, so a refused action looked like a dead control.
-              if (gs.errorMessage != null) _buildLLErrorBanner(gs.errorMessage!),
+              if (gs.errorMessage != null)
+                _buildLLErrorBanner(gs.errorMessage!),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                 child: Column(
@@ -473,48 +474,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
     int badgeCount = 0,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    // The waiting-room header used to carry its own button: a 36pt circle with
+    // a pink borderless badge, sitting a few pixels from the rounded squares
+    // and red badges every other header in the app uses. Same component now.
+    return SpectatorActionButton(
+      icon: icon,
+      active: active,
+      badgeCount: badgeCount,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(0xFFE91E63).withValues(alpha: 0.15)
-                  : const Color(0xFFF2ECE8),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: active ? const Color(0xFFE91E63) : const Color(0xFF6A5A52),
-            ),
-          ),
-          if (badgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE91E63),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$badgeCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 
@@ -1008,17 +975,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
               },
             ),
             const SizedBox(width: 8),
-            if (gs.isSpectator)
-              _buildTopActionButton(
-                icon: Icons.people_alt,
-                active: false,
-                badgeCount: gs.spectators.length,
-                onTap: () {
-                  setState(() => _moreOpen = false);
-                  showSpectatorListDialog(context, gs);
-                },
-              )
-            else
+            // Everyone gets the spectator list, the way Skull King and Mighty
+            // do it. Love Letter gave it to spectators only, so a player had no
+            // way to see who was watching — or to open a watcher's profile to
+            // block or report them.
+            _buildTopActionButton(
+              icon: Icons.people_alt,
+              active: false,
+              badgeCount: gs.spectators.length,
+              onTap: () {
+                setState(() => _moreOpen = false);
+                showSpectatorListDialog(context, gs);
+              },
+            ),
+            const SizedBox(width: 8),
+            if (!gs.isSpectator)
               _buildTopActionButton(
                 icon: Icons.visibility,
                 active: _viewersOpen,

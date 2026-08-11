@@ -449,28 +449,8 @@ function selectExchangeCards(cards) {
     return penalty;
   }
 
-  function partnerGiveScore(info) {
-    let score = 0;
-    if (info.isDragon) score += 420;
-    else if (info.isPhoenix) score += 340;
-    else if (info.isBird) score += 120;
-    else if (info.isDog) score += 30;
-    else score += info.value * 16;
-
-    if (info.isAce) score += 120;
-    else if (info.isKing) score += 35;
-    if (info.isPointCard) score += 25;
-
-    // Avoid breaking our own strongest structures unless the card is truly premium.
-    if (info.isBombCard) score -= 260;
-    else if (info.inMultiPlan) score -= 90 + info.planSize * 12;
-
-    // Low trash is poor partner help.
-    if (!info.isSpecial && !info.isPointCard && info.value <= 5) score -= 80;
-    return score;
-  }
-
   const used = new Set();
+
 
   function pickOpponentCard() {
     const available = meta
@@ -482,21 +462,42 @@ function selectExchangeCards(cards) {
     return chosen.card;
   }
 
+  /**
+   * The partner gets the best card in hand: Dragon, else Phoenix, else the
+   * highest number card.
+   *
+   * This used to be a score that weighed strength against keeping one's own
+   * shapes together, and the weighing came out wrong: a King taken from KK
+   * scored 154 against a loose 10's 185, so the partner got the 10 and the
+   * pair stayed home. Same for a hand whose only high cards were paired.
+   *
+   * The exchange is the one moment you can arm the only other player on your
+   * side, and a split pair is a cheaper loss than a partner who cannot take a
+   * trick. Nor does it depend on anyone declaring Tichu — a declaration only
+   * raises the stakes on the same card.
+   */
   function pickPartnerCard() {
-    const available = meta
-      .filter(info => !used.has(info.card))
-      .sort((a, b) => partnerGiveScore(b) - partnerGiveScore(a));
-    const chosen = available[0] || meta.find(info => !used.has(info.card));
-    if (!chosen) return cards[0];
+    const remaining = meta.filter(info => !used.has(info.card));
+    if (remaining.length === 0) return cards[0];
+    const chosen =
+      remaining.find(info => info.isDragon)
+      || remaining.find(info => info.isPhoenix)
+      // Bird and Dog are specials but not strength — they lose to any number
+      // card here, which is why this looks at the normal cards only.
+      || remaining
+        .filter(info => !info.isSpecial)
+        .sort((a, b) => b.value - a.value)[0]
+      || remaining[0];
     used.add(chosen.card);
     return chosen.card;
   }
 
-  // Prioritize "do not feed opponents" first; partner gets the best of what's
-  // left, which is much safer than choosing the partner gift first.
+  // The partner's card is decided first and taken off the table: it is the one
+  // choice with no trade-off left in it, and picking the opponents' first
+  // would let a cheap-to-dump reading of the same card claim it.
+  const partner = pickPartnerCard();
   const left = pickOpponentCard();
   const right = pickOpponentCard();
-  const partner = pickPartnerCard();
 
   return { left, partner, right };
 }
@@ -2836,4 +2837,12 @@ function decideBotAction(game, botId, strategy = 'heuristic') {
 }
 
 
-module.exports = { BotPlayer, decideBotAction, VALID_BOT_STRATEGIES };
+module.exports = {
+  BotPlayer,
+  decideBotAction,
+  VALID_BOT_STRATEGIES,
+  // Exported so the exchange can be exercised on its own: it is a pure
+  // hand -> three cards function, and the alternative is standing up a
+  // whole game to see which card the partner gets.
+  selectExchangeCards,
+};

@@ -62,6 +62,7 @@ class NetworkService extends ChangeNotifier {
   // disconnect→reconnect chain (listeners → ConnectionOverlay → restore).
   Timer? _heartbeatTimer;
   DateTime? _lastPongAt;
+  DateTime? _lastHeartbeatTickAt;
   static const Duration _heartbeatInterval = Duration(seconds: 5);
   static const Duration _heartbeatDeadAfter = Duration(seconds: 15);
 
@@ -192,6 +193,7 @@ class NetworkService extends ChangeNotifier {
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
     _lastPongAt = DateTime.now();
+    _lastHeartbeatTickAt = DateTime.now();
     _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) => _heartbeatTick());
   }
 
@@ -200,10 +202,37 @@ class NetworkService extends ChangeNotifier {
     _heartbeatTimer = null;
   }
 
+  /// Does a silent pong window mean the socket is dead?
+  ///
+  /// Only if we were awake to notice. A hidden browser tab throttles periodic
+  /// timers to about one a minute and a suspended app stops them outright, so
+  /// the first tick after waking is always long past the dead window — not
+  /// because the socket died, but because we were never allowed to ping it. A
+  /// tick that late has no standing to declare anything dead; it pings, and
+  /// the next tick judges on evidence we actually gathered.
+  static bool heartbeatSaysDead({
+    required Duration sinceLastTick,
+    required Duration? sinceLastPong,
+  }) {
+    if (sinceLastPong == null) return false;
+    if (sinceLastTick > _heartbeatInterval * 3) return false;
+    return sinceLastPong > _heartbeatDeadAfter;
+  }
+
   void _heartbeatTick() {
     if (!_isConnected || _channel == null) return;
+
+    final now = DateTime.now();
+    final sinceLastTick = _lastHeartbeatTickAt == null
+        ? Duration.zero
+        : now.difference(_lastHeartbeatTickAt!);
+    _lastHeartbeatTickAt = now;
+
     final last = _lastPongAt;
-    if (last != null && DateTime.now().difference(last) > _heartbeatDeadAfter) {
+    if (heartbeatSaysDead(
+      sinceLastTick: sinceLastTick,
+      sinceLastPong: last == null ? null : now.difference(last),
+    )) {
       // No pong within the dead window → zombie socket (e.g. network handoff
       // with no TCP FIN). Tear it down so the normal reconnect chain runs.
       debugPrint('[Network] Heartbeat timeout — treating socket as dead');
@@ -229,11 +258,22 @@ class NetworkService extends ChangeNotifier {
   /// Past [assumeDeadAfter] of suspension the socket is almost certainly gone,
   /// so skip the probe and tear it down immediately; below that a ping is
   /// cheap and avoids dropping a connection that actually survived.
+  ///
+  /// That shortcut is for a suspended app, and only a suspended app. A hidden
+  /// browser tab keeps its socket open, and the server's heartbeat is a
+  /// protocol-level ping the browser answers from its network stack without
+  /// waking any of our throttled timers — so the connection really is fine
+  /// when you come back. Worse, the web reports `inactive` for a plain window
+  /// blur, so clicking away for ten seconds was enough to throw away a working
+  /// socket. On the web we always probe and let the answer decide.
   static const Duration assumeDeadAfter = Duration(seconds: 10);
+
+  static bool shouldAssumeDeadAfterResume(Duration pausedFor, {required bool isWeb}) =>
+      !isWeb && pausedFor >= assumeDeadAfter;
 
   void checkAliveAfterResume(Duration pausedFor) {
     if (!_isConnected || _channel == null) return;
-    if (pausedFor >= assumeDeadAfter) {
+    if (shouldAssumeDeadAfterResume(pausedFor, isWeb: kIsWeb)) {
       debugPrint('[Network] Resumed after ${pausedFor.inSeconds}s — assuming the socket is dead');
       disconnect(intentional: false);
       return;

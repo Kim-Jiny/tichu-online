@@ -843,6 +843,21 @@ class L10nKo extends L10n {
   String get profileMatchHistoryTitle => '전적 히스토리';
 
   @override
+  String get profileOutcomeWin => '승리';
+
+  @override
+  String get profileOutcomeLoss => '패배';
+
+  @override
+  String get profileOutcomeDraw => '무승부';
+
+  @override
+  String get profileOutcomeDesertion => '탈주';
+
+  @override
+  String get profileOutcomeMidLeave => '중도탈주';
+
+  @override
   String lobbyRecentMatchesDesc(int count) {
     return '최근 $count경기 결과를 확인할 수 있습니다.';
   }
@@ -855,9 +870,6 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyMatchDesertion => '탈';
-
-  @override
-  String get lobbyMatchMidLeave => '중탈';
 
   @override
   String get lobbyMatchDraw => '무';

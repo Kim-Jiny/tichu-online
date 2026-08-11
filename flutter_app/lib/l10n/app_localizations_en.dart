@@ -869,6 +869,21 @@ class L10nEn extends L10n {
   String get profileMatchHistoryTitle => 'Match History';
 
   @override
+  String get profileOutcomeWin => 'Win';
+
+  @override
+  String get profileOutcomeLoss => 'Loss';
+
+  @override
+  String get profileOutcomeDraw => 'Draw';
+
+  @override
+  String get profileOutcomeDesertion => 'Desertion';
+
+  @override
+  String get profileOutcomeMidLeave => 'Walked out';
+
+  @override
   String lobbyRecentMatchesDesc(int count) {
     return 'View results of the last $count matches.';
   }
@@ -881,9 +896,6 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyMatchDesertion => 'D';
-
-  @override
-  String get lobbyMatchMidLeave => 'ML';
 
   @override
   String get lobbyMatchDraw => 'D';

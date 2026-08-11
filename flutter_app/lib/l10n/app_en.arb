@@ -387,6 +387,11 @@
   },
   "lobbyRecentMatchesTitle": "Recent Matches",
   "profileMatchHistoryTitle": "Match History",
+  "profileOutcomeWin": "Win",
+  "profileOutcomeLoss": "Loss",
+  "profileOutcomeDraw": "Draw",
+  "profileOutcomeDesertion": "Desertion",
+  "profileOutcomeMidLeave": "Walked out",
   "lobbyRecentMatchesDesc": "View results of the last {count} matches.",
   "@lobbyRecentMatchesDesc": {
     "placeholders": {
@@ -398,7 +403,6 @@
   "lobbySeeMore": "See More",
   "lobbyNoRecentMatches": "No recent matches",
   "lobbyMatchDesertion": "D",
-  "lobbyMatchMidLeave": "ML",
   "lobbyMatchDraw": "D",
   "lobbyMatchWin": "W",
   "lobbyMatchLoss": "L",

@@ -461,7 +461,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           ),
         ],
         const SizedBox(height: 12),
-        _buildRecentMatches(filteredMatches, profileNickname, mixed: isAll),
+        _buildRecentMatches(filteredMatches, profileNickname),
       ],
     );
   }
@@ -530,16 +530,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           ],
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE0D8D4)),
-          ),
-          child: Column(
-            children: [for (final t in tallies) _buildGameTallyRow(l10n, t)],
-          ),
+        Column(
+          children: [for (final t in tallies) _buildGameTallyRow(l10n, t)],
         ),
       ],
     );
@@ -549,8 +541,16 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     // A game they have never played is still worth a line: "0전" is the answer
     // to "do they play Skull King", and a missing row is not.
     final faded = t.games == 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      // Its own game's colour, washed out. Four rows of the same text on the
+      // same white ran together; the tint gives each one an edge and says which
+      // game it is a second time, in the colour the rest of the app uses.
+      decoration: BoxDecoration(
+        color: faded ? const Color(0xFFF6F4F3) : _cardTint(t.key),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Row(
         children: [
           // A game they have never played is dimmed rather than dropped, and
@@ -865,9 +865,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   Widget _buildRecentMatches(
     List<dynamic> recentMatches,
-    String profileNickname, {
-    required bool mixed,
-  }) {
+    String profileNickname,
+  ) {
     return SizedBox(
       width: double.infinity,
       child: Column(
@@ -882,11 +881,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               const Spacer(),
               if (recentMatches.length > _recentMatchesShown)
                 TextButton(
-                  onPressed: () => _showRecentMatchesDialog(
-                    recentMatches,
-                    profileNickname,
-                    mixed: mixed,
-                  ),
+                  onPressed: () =>
+                      _showRecentMatchesDialog(recentMatches, profileNickname),
                   child: Text(L10n.of(context).lobbySeeMore),
                 ),
             ],
@@ -902,8 +898,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               children: recentMatches
                   .take(_recentMatchesShown)
                   .map<Widget>(
-                    (match) =>
-                        _buildMatchRow(match, profileNickname, mixed: mixed),
+                    (match) => _buildMatchRow(match, profileNickname),
                   )
                   .toList(),
             ),
@@ -915,13 +910,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   /// The whole history behind "더보기".
   ///
   /// The popup's five rows are a glance; this is the list you actually read, so
-  /// it gets the width and the height the screen can give it, a tally across
-  /// the top, one card per match, and the rest of the history as you scroll.
+  /// it gets the width and the height the screen can give it, one card per
+  /// match, and the rest of the history as you scroll.
   void _showRecentMatchesDialog(
     List<dynamic> recentMatches,
-    String profileNickname, {
-    required bool mixed,
-  }) {
+    String profileNickname,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => _MatchHistoryDialog(
@@ -929,78 +923,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         gameType: _tab,
         game: widget.game,
         initial: recentMatches,
-        mixed: mixed,
-        cardBuilder: (match) =>
-            _buildMatchCard(match, profileNickname, mixed: mixed),
-        tallyBuilder: (l10n, matches) =>
-            _buildOutcomeTally(l10n, _tallyOf(matches, profileNickname)),
-      ),
-    );
-  }
-
-  static Map<_MatchOutcome, int> _tallyOf(
-    List<dynamic> matches,
-    String profileNickname,
-  ) {
-    final tally = <_MatchOutcome, int>{};
-    for (final m in matches) {
-      final o = _outcomeOf(m, profileNickname);
-      tally[o] = (tally[o] ?? 0) + 1;
-    }
-    return tally;
-  }
-
-  /// The list in one line: how many of each result it holds.
-  ///
-  /// Only the outcomes that actually occur get a chip. A row of four counters
-  /// where three read 0 is noise, and desertions in particular should not be
-  /// advertised on a record that has none.
-  Widget _buildOutcomeTally(L10n l10n, Map<_MatchOutcome, int> tally) {
-    const order = [
-      _MatchOutcome.win,
-      _MatchOutcome.loss,
-      _MatchOutcome.draw,
-      _MatchOutcome.desertion,
-      _MatchOutcome.midLeave,
-    ];
-    final present = order.where((o) => (tally[o] ?? 0) > 0).toList();
-    if (present.isEmpty) return const SizedBox.shrink();
-    return Row(
-      children: [
-        for (final o in present) ...[
-          Expanded(child: _outcomeTallyChip(l10n, o, tally[o]!)),
-          if (o != present.last) const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-
-  Widget _outcomeTallyChip(L10n l10n, _MatchOutcome outcome, int count) {
-    final color = _outcomeColor(outcome);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              // The fill is the pale version of this; the number needs to hold
-              // its own against it.
-              color: Color.lerp(color, Colors.black, 0.32),
-            ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            _outcomeLabel(l10n, outcome),
-            style: const TextStyle(fontSize: 11, color: Color(0xFF8A7C76)),
-          ),
-        ],
+        cardBuilder: (match) => _buildMatchCard(match, profileNickname),
       ),
     );
   }
@@ -1008,11 +931,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   /// One match as a card, with the result carried by a stripe down its left
   /// edge as well as by the badge — a page of rows all the same colour is what
   /// made the old list hard to skim.
-  Widget _buildMatchCard(
-    dynamic match,
-    String profileNickname, {
-    required bool mixed,
-  }) {
+  Widget _buildMatchCard(dynamic match, String profileNickname) {
     final color = _outcomeColor(_outcomeOf(match, profileNickname));
     return Container(
       // Clipped, or the stripe paints over the rounded corner and the card
@@ -1035,12 +954,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
-                child: _buildMatchRow(
-                  match,
-                  profileNickname,
-                  mixed: mixed,
-                  padded: false,
-                ),
+                child: _buildMatchRow(match, profileNickname, padded: false),
               ),
             ),
           ],
@@ -1090,42 +1004,43 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     }
   }
 
-  /// The glyph inside the round badge on a row. One character, because that is
-  /// all a 27px circle holds — a walk-out and a desertion share it and are told
-  /// apart by colour.
-  static String _outcomeBadge(L10n l10n, _MatchOutcome outcome) {
+  /// What happened, in a word.
+  ///
+  /// Single glyphs ("승", "탈") were what fitted in the round badge the rows
+  /// used to open with. That badge is now the game's symbol, so the result has
+  /// the space to say itself — and the two kinds of walk-out stop sharing one
+  /// character.
+  static String _outcomeLabel(L10n l10n, _MatchOutcome outcome) {
     switch (outcome) {
       case _MatchOutcome.midLeave:
+        return l10n.profileOutcomeMidLeave;
       case _MatchOutcome.desertion:
-        return l10n.lobbyMatchDesertion;
+        return l10n.profileOutcomeDesertion;
       case _MatchOutcome.draw:
-        return l10n.lobbyMatchDraw;
+        return l10n.profileOutcomeDraw;
       case _MatchOutcome.win:
-        return l10n.lobbyMatchWin;
+        return l10n.profileOutcomeWin;
       case _MatchOutcome.loss:
-        return l10n.lobbyMatchLoss;
+        return l10n.profileOutcomeLoss;
     }
   }
 
-  /// The word under a tally chip. Here the two kinds of walk-out sit side by
-  /// side, so they cannot both be "탈" — two identical counters reading
-  /// different numbers is a puzzle, not a summary.
-  static String _outcomeLabel(L10n l10n, _MatchOutcome outcome) {
-    return outcome == _MatchOutcome.midLeave
-        ? l10n.lobbyMatchMidLeave
-        : _outcomeBadge(l10n, outcome);
-  }
+  /// The outcome colour, dark enough to be read as text on white.
+  static Color _outcomeInk(_MatchOutcome outcome) =>
+      Color.lerp(_outcomeColor(outcome), Colors.black, 0.3)!;
 
-  /// [mixed] — the list spans more than one game, so each row has to say which
-  /// one it was. Within a single game's tab that mark would be the same on
-  /// every row and only takes width from the names.
+  /// One match.
+  ///
+  /// The symbol says which game, the word says how it went, and neither has to
+  /// do the other's job: the row used to open with a coloured circle holding a
+  /// single character, and spell the game out beside the date only when the
+  /// list happened to be mixed.
   ///
   /// [padded] — the popup's own list separates rows with the row's own bottom
   /// padding. Inside the full-history cards that gap belongs to the card.
   Widget _buildMatchRow(
     dynamic match,
     String profileNickname, {
-    bool mixed = false,
     bool padded = true,
   }) {
     final gameType = match['gameType']?.toString() ?? 'tichu';
@@ -1139,9 +1054,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final isMidGameLeave = outcome == _MatchOutcome.midLeave;
     final date = _formatShortDate(match['createdAt']);
     final isRanked = match['isRanked'] == true;
-
-    final badgeColor = _outcomeColor(outcome);
-    final badgeText = _outcomeBadge(l10n, outcome);
 
     // Score / player info
     final isMighty = gameType == 'mighty';
@@ -1203,44 +1115,23 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       padding: EdgeInsets.only(bottom: padded ? 6 : 0),
       child: Row(
         children: [
-          Container(
-            width: 27,
-            height: 27,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: badgeColor,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              badgeText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
+          gameTypeSymbol(gameType, size: 28),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    // Spelled out, not an icon: four small glyphs all in the
-                    // same weight are something you decode, and the name is
-                    // shorter to read than the icon is to recognise.
-                    if (mixed) ...[
-                      Text(
-                        gameTypeLabel(l10n, gameType),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: gameTypeColor(gameType),
-                        ),
+                    Text(
+                      _outcomeLabel(l10n, outcome),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: _outcomeInk(outcome),
                       ),
-                      const SizedBox(width: 7),
-                    ],
+                    ),
+                    const SizedBox(width: 7),
                     Text(
                       date,
                       style: const TextStyle(
@@ -1429,18 +1320,14 @@ class _MatchHistoryDialog extends StatefulWidget {
 
   /// What the popup already had, shown until the first page lands.
   final List<dynamic> initial;
-  final bool mixed;
   final Widget Function(dynamic match) cardBuilder;
-  final Widget Function(L10n l10n, List<dynamic> matches) tallyBuilder;
 
   const _MatchHistoryDialog({
     required this.nickname,
     required this.gameType,
     required this.game,
     required this.initial,
-    required this.mixed,
     required this.cardBuilder,
-    required this.tallyBuilder,
   });
 
   @override
@@ -1587,10 +1474,11 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
       content: SizedBox(
         width: width,
         height: height,
+        // No tally across the top. It counted the rows in hand, which climbs
+        // every time another page arrives — a summary that changes as you
+        // scroll is one nobody can trust.
         child: Column(
           children: [
-            widget.tallyBuilder(l10n, _matches),
-            const SizedBox(height: 12),
             Expanded(
               child: _matches.isEmpty
                   ? Center(

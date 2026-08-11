@@ -1695,6 +1695,36 @@ abstract class L10n {
   /// **'Match History'**
   String get profileMatchHistoryTitle;
 
+  /// No description provided for @profileOutcomeWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win'**
+  String get profileOutcomeWin;
+
+  /// No description provided for @profileOutcomeLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Loss'**
+  String get profileOutcomeLoss;
+
+  /// No description provided for @profileOutcomeDraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get profileOutcomeDraw;
+
+  /// No description provided for @profileOutcomeDesertion.
+  ///
+  /// In en, this message translates to:
+  /// **'Desertion'**
+  String get profileOutcomeDesertion;
+
+  /// No description provided for @profileOutcomeMidLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Walked out'**
+  String get profileOutcomeMidLeave;
+
   /// No description provided for @lobbyRecentMatchesDesc.
   ///
   /// In en, this message translates to:
@@ -1718,12 +1748,6 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'D'**
   String get lobbyMatchDesertion;
-
-  /// No description provided for @lobbyMatchMidLeave.
-  ///
-  /// In en, this message translates to:
-  /// **'ML'**
-  String get lobbyMatchMidLeave;
 
   /// No description provided for @lobbyMatchDraw.
   ///

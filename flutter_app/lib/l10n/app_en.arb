@@ -386,6 +386,7 @@
     }
   },
   "lobbyRecentMatchesTitle": "Recent Matches",
+  "profileMatchHistoryTitle": "Match History",
   "lobbyRecentMatchesDesc": "View results of the last {count} matches.",
   "@lobbyRecentMatchesDesc": {
     "placeholders": {

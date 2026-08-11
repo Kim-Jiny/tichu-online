@@ -840,6 +840,9 @@ class L10nKo extends L10n {
   String get lobbyRecentMatchesTitle => '최근 전적';
 
   @override
+  String get profileMatchHistoryTitle => '전적 히스토리';
+
+  @override
   String lobbyRecentMatchesDesc(int count) {
     return '최근 $count경기 결과를 확인할 수 있습니다.';
   }

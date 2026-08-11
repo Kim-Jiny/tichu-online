@@ -265,6 +265,7 @@
   "lobbyRecordFormat": "{games}전 {wins}승 {losses}패",
   "lobbyRecentMatches": "최근 전적 ({count})",
   "lobbyRecentMatchesTitle": "최근 전적",
+  "profileMatchHistoryTitle": "전적 히스토리",
   "lobbyRecentMatchesDesc": "최근 {count}경기 결과를 확인할 수 있습니다.",
   "lobbySeeMore": "더보기",
   "lobbyNoRecentMatches": "최근 전적이 없습니다",

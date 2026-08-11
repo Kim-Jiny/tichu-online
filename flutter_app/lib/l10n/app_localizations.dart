@@ -1689,6 +1689,12 @@ abstract class L10n {
   /// **'Recent Matches'**
   String get lobbyRecentMatchesTitle;
 
+  /// No description provided for @profileMatchHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Match History'**
+  String get profileMatchHistoryTitle;
+
   /// No description provided for @lobbyRecentMatchesDesc.
   ///
   /// In en, this message translates to:

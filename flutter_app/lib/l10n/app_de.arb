@@ -275,6 +275,7 @@
   "lobbyRecordFormat": "{games}S {wins}G {losses}V",
   "lobbyRecentMatches": "Letzte Spiele ({count})",
   "lobbyRecentMatchesTitle": "Letzte Spiele",
+  "profileMatchHistoryTitle": "Spielverlauf",
   "lobbyRecentMatchesDesc": "Ergebnisse der letzten {count} Spiele anzeigen.",
   "lobbySeeMore": "Mehr anzeigen",
   "lobbyNoRecentMatches": "Keine aktuellen Spiele",

@@ -876,6 +876,9 @@ class L10nDe extends L10n {
   String get lobbyRecentMatchesTitle => 'Letzte Spiele';
 
   @override
+  String get profileMatchHistoryTitle => 'Spielverlauf';
+
+  @override
   String lobbyRecentMatchesDesc(int count) {
     return 'Ergebnisse der letzten $count Spiele anzeigen.';
   }

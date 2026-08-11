@@ -1583,27 +1583,17 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
             ),
           ),
           const SizedBox(width: 11),
+          // No count under the title. It reads as the size of the record, but
+          // it is only how far this list has been paged so far — it climbs as
+          // you scroll, which makes the number itself look unreliable.
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.lobbyRecentMatchesTitle,
-                  style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF3E312A),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.lobbyRecentMatchesDesc(_matches.length),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF84766E),
-                  ),
-                ),
-              ],
+            child: Text(
+              l10n.profileMatchHistoryTitle,
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF3E312A),
+              ),
             ),
           ),
         ],

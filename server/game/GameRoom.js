@@ -211,6 +211,7 @@ class GameRoom {
       if (this.game) {
         this.game.updatePlayerId(oldPlayerId, newPlayerId);
       }
+      this._followCardViewPermissions(oldPlayerId, newPlayerId);
       // Update host if needed
       if (this.hostId === oldPlayerId) {
         this.hostId = newPlayerId;
@@ -219,6 +220,33 @@ class GameRoom {
       return { success: true, oldPlayerId };
     }
     return { success: false };
+  }
+
+  /**
+   * Carry card-view permissions over to a player's new id.
+   *
+   * Permissions are stored as spectator -> set of player ids, and a reconnect
+   * mints the player a new one. The sets went on naming the id that had just
+   * gone away, so everyone watching that player's hand quietly lost it the
+   * moment the player's connection blipped — and had to ask for it again,
+   * while the player got a fresh prompt they had already answered.
+   *
+   * Requests still waiting for an answer are dropped rather than carried. They
+   * are five-second prompts, the client that was showing one has just been
+   * rebuilt, and their expiry timers close over the old id — a moved key would
+   * fire against a player who no longer exists.
+   */
+  _followCardViewPermissions(oldPlayerId, newPlayerId) {
+    if (!oldPlayerId || oldPlayerId === newPlayerId) return;
+    for (const allowed of Object.values(this.spectatorPermissions)) {
+      if (allowed.delete(oldPlayerId)) allowed.add(newPlayerId);
+    }
+    delete this.pendingCardRequests[oldPlayerId];
+    for (const timerKey of Object.keys(this.cardRequestTimers)) {
+      if (timerKey.split(':')[0] !== oldPlayerId) continue;
+      clearTimeout(this.cardRequestTimers[timerKey]);
+      delete this.cardRequestTimers[timerKey];
+    }
   }
 
   // Get disconnected player nicknames

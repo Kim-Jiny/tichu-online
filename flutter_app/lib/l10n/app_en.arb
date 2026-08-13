@@ -2467,7 +2467,7 @@
   "lobbySwitchToSpectatorDesc": "Give up your seat and just watch",
   "lobbyRoomTools": "Room tools",
   "lobbyRoomPlaying": "Playing",
-  "lobbyNoRoomsForFilter": "No rooms for the selected games",
+  "lobbyNoRoomsForFilter": "No rooms in this game\nTap All to see the others",
   "lobbyAllowSpectators": "Allow spectators",
   "lobbyAllowSpectatorsDesc": "Others can watch this room. Turn off to keep it closed.",
   "profilePhotoViewLarge": "View full size",
@@ -2769,5 +2769,6 @@
   "marketingConfirmStatusLabel": "Status",
   "marketingConfirmStatusValue": "Subscribed",
   "marketingConfirmKeep": "Keep receiving",
-  "marketingConfirmStop": "Stop sending"
+  "marketingConfirmStop": "Stop sending",
+  "lobbyFilterAll": "All"
 }

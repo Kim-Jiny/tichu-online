@@ -7668,7 +7668,7 @@ abstract class L10n {
   /// No description provided for @lobbyNoRoomsForFilter.
   ///
   /// In en, this message translates to:
-  /// **'No rooms for the selected games'**
+  /// **'No rooms in this game\nTap All to see the others'**
   String get lobbyNoRoomsForFilter;
 
   /// No description provided for @lobbyAllowSpectators.
@@ -8570,6 +8570,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Stop sending'**
   String get marketingConfirmStop;
+
+  /// No description provided for @lobbyFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get lobbyFilterAll;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

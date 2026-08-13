@@ -1510,7 +1510,7 @@
   "lobbySwitchToSpectatorDesc": "Platz freigeben und nur zusehen",
   "lobbyRoomTools": "Raum-Werkzeuge",
   "lobbyRoomPlaying": "Läuft",
-  "lobbyNoRoomsForFilter": "Keine Räume für die gewählten Spiele",
+  "lobbyNoRoomsForFilter": "Keine Räume in diesem Spiel\nTippe auf „Alle“ für die anderen",
   "lobbyAllowSpectators": "Zuschauer erlauben",
   "lobbyAllowSpectatorsDesc": "Andere können diesen Raum ansehen. Aus = niemand kommt herein.",
   "profilePhotoViewLarge": "In voller Größe ansehen",
@@ -1684,5 +1684,6 @@
   "marketingConfirmStatusLabel": "Status",
   "marketingConfirmStatusValue": "Angemeldet",
   "marketingConfirmKeep": "Weiter erhalten",
-  "marketingConfirmStop": "Nicht mehr senden"
+  "marketingConfirmStop": "Nicht mehr senden",
+  "lobbyFilterAll": "Alle"
 }

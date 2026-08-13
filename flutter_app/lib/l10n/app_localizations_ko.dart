@@ -4209,7 +4209,7 @@ class L10nKo extends L10n {
   String get lobbyRoomPlaying => '게임 중';
 
   @override
-  String get lobbyNoRoomsForFilter => '선택한 게임의 방이 없어요';
+  String get lobbyNoRoomsForFilter => '이 게임의 방이 없어요\n전체를 눌러 다른 게임도 보세요';
 
   @override
   String get lobbyAllowSpectators => '관전 허용';
@@ -4726,4 +4726,7 @@ class L10nKo extends L10n {
 
   @override
   String get marketingConfirmStop => '그만 받을게요';
+
+  @override
+  String get lobbyFilterAll => '전체';
 }

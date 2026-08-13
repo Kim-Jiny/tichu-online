@@ -4348,7 +4348,8 @@ class L10nDe extends L10n {
   String get lobbyRoomPlaying => 'Läuft';
 
   @override
-  String get lobbyNoRoomsForFilter => 'Keine Räume für die gewählten Spiele';
+  String get lobbyNoRoomsForFilter =>
+      'Keine Räume in diesem Spiel\nTippe auf „Alle“ für die anderen';
 
   @override
   String get lobbyAllowSpectators => 'Zuschauer erlauben';
@@ -4875,4 +4876,7 @@ class L10nDe extends L10n {
 
   @override
   String get marketingConfirmStop => 'Nicht mehr senden';
+
+  @override
+  String get lobbyFilterAll => 'Alle';
 }

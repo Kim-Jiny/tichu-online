@@ -34,6 +34,21 @@ import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../widgets/spectator_controls.dart';
 
+/// The rooms to show for [gameType], or all of them when it is null.
+///
+/// Pulled out of the widget so the rule can be tested on its own. It reads as
+/// trivial, and it is — but the version before it was a set of SWITCHED-OFF
+/// types, so tapping the chip labelled 티츄 hid Tichu. Inverting this by
+/// accident produces a screen that looks like it is working.
+List<T> filterRoomsByGame<T>(
+  List<T> rooms,
+  String? gameType,
+  String Function(T) typeOf,
+) {
+  if (gameType == null) return rooms;
+  return rooms.where((r) => typeOf(r) == gameType).toList();
+}
+
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
 
@@ -45,10 +60,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
   bool _roomMoreOpen = false;
 
-  /// Game types the player has switched off in the room list. Empty = show all,
-  /// which is the default: you open the lobby to see what is there, not to
-  /// configure it first.
-  final Set<String> _hiddenGameTypes = {};
+  /// Which game's rooms are showing, or null for all of them.
+  ///
+  /// Was a set of switched-OFF types, which meant tapping 티츄 hid Tichu —
+  /// the opposite of what a coloured chip labelled with a game reads as, and
+  /// it took three taps to see one game. Now the chips pick one, the way a tab
+  /// bar does, with an explicit 전체 to come back to.
+  ///
+  /// Deliberately not persisted. A filter left on from last week is invisible
+  /// on launch and turns a lobby with rooms in it into "방이 없어요".
+  String? _roomGameFilter;
 
   // 채팅
   final TextEditingController _chatController = TextEditingController();
@@ -2360,44 +2381,47 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  /// One toggle per game type. Coloured while its rooms are showing, drained
-  /// when they are hidden — the colour matches that game's strip and badge in the
-  /// rows below, so the filter and the thing it filters read as the same family.
+  /// 전체, then one chip per game. The selected one is filled in that game's
+  /// colour — the same colour as its strip and badge in the rows below, so the
+  /// filter and the thing it filters read as the same family.
+  ///
+  /// Picking one, not hiding one. Tapping a chip labelled 티츄 has to show
+  /// Tichu; the previous toggle did the reverse, and isolating a single game
+  /// meant tapping the other three.
   List<Widget> _buildGameFilterChips() {
     final l10n = L10n.of(context);
-    final games = [
+    // 전체 carries the app's own brown rather than any game's colour, so it
+    // never looks like a fifth game.
+    final chips = <(String?, String, Color)>[
+      (null, l10n.lobbyFilterAll, const Color(0xFF7A6A62)),
       ('tichu', l10n.lobbyTichu, const Color(0xFF64B5F6)),
       ('mighty', l10n.rankingMighty, const Color(0xFF5C6BC0)),
       ('skull_king', l10n.lobbySkullKing, const Color(0xFF21455F)),
       ('love_letter', l10n.lobbyLoveLetter, const Color(0xFFE91E63)),
     ];
     return [
-      for (final (type, label, color) in games)
+      for (final (type, label, color) in chips)
         Padding(
           padding: const EdgeInsets.only(right: 6),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() {
-              if (_hiddenGameTypes.remove(type)) return;
-              // The last one on stays on. Turning everything off leaves a list
-              // that can only ever be empty, which is not a state anyone wants
-              // to arrive at by tapping.
-              if (_hiddenGameTypes.length < games.length - 1) {
-                _hiddenGameTypes.add(type);
-              }
-            }),
+            // Tapping the selected game again goes back to 전체, so getting out
+            // of a filter never needs you to find the 전체 chip.
+            onTap: () => setState(
+              () => _roomGameFilter = _roomGameFilter == type ? null : type,
+            ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _hiddenGameTypes.contains(type)
-                    ? Colors.white.withValues(alpha: 0.6)
-                    : color,
+                color: _roomGameFilter == type
+                    ? color
+                    : Colors.white.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: _hiddenGameTypes.contains(type)
-                      ? const Color(0xFFE6DDD8)
-                      : color,
+                  color: _roomGameFilter == type
+                      ? color
+                      : const Color(0xFFE6DDD8),
                 ),
               ),
               child: Text(
@@ -2405,9 +2429,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: _hiddenGameTypes.contains(type)
-                      ? const Color(0xFFB4A8A2)
-                      : Colors.white,
+                  color: _roomGameFilter == type
+                      ? Colors.white
+                      : const Color(0xFFB4A8A2),
                 ),
               ),
             ),
@@ -2417,11 +2441,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildRoomList(List<Room> allRooms) {
-    final rooms = _hiddenGameTypes.isEmpty
-        ? allRooms
-        : allRooms
-              .where((r) => !_hiddenGameTypes.contains(r.gameType))
-              .toList();
+    final rooms = filterRoomsByGame(
+      allRooms,
+      _roomGameFilter,
+      (r) => r.gameType,
+    );
     if (rooms.isEmpty) {
       return Center(
         child: Text(

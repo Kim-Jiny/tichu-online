@@ -2718,5 +2718,29 @@
         "type": "String"
       }
     }
-  }
+  },
+  "couponSectionTitle": "Coupon",
+  "couponRedeemTitle": "Redeem a coupon",
+  "couponRedeemHint": "Enter the code exactly as it appears. Capitals and spaces do not matter.",
+  "couponCodeLabel": "Coupon code",
+  "couponRedeemButton": "Redeem",
+  "couponRewardGold": "Received {amount} gold",
+  "@couponRewardGold": {
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "couponRewardItem": "Item added to your inventory",
+  "couponRewardItemDays": "Item added for {days} days",
+  "@couponRewardItemDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "couponInNotice": "Coupon included",
+  "couponCopied": "Code copied"
 }

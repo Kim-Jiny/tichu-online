@@ -1654,5 +1654,15 @@
   "trickBombFour": "Bombe (4)",
   "trickBombStraightFlush": "SF-Bombe",
   "trickCallSuffix": "Ansage {rank}",
-  "shopSaleWindow": "Verkauf {window}"
+  "shopSaleWindow": "Verkauf {window}",
+  "couponSectionTitle": "Gutschein",
+  "couponRedeemTitle": "Gutschein einlösen",
+  "couponRedeemHint": "Gib den Code genau so ein, wie er dasteht. Groß- und Kleinschreibung sowie Leerzeichen sind egal.",
+  "couponCodeLabel": "Gutscheincode",
+  "couponRedeemButton": "Einlösen",
+  "couponRewardGold": "{amount} Gold erhalten",
+  "couponRewardItem": "Gegenstand liegt in deinem Inventar",
+  "couponRewardItemDays": "Gegenstand für {days} Tage erhalten",
+  "couponInNotice": "Mit Gutschein",
+  "couponCopied": "Code kopiert"
 }

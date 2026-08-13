@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'rules_screen.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../widgets/coupon_redeem.dart';
 import '../widgets/choice_pill.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/profile_avatar.dart';
@@ -1528,6 +1529,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ]),
                           const SizedBox(height: 12),
                           _buildSection(l10n.settingsInquirySection, [
+                            // Coupons sit with the support rows because that is
+                            // where someone goes when they have a code and no
+                            // idea what to do with it. Absent on the iOS app —
+                            // see couponUiVisible.
+                            if (couponUiVisible) ...[
+                              _buildRow(
+                                icon: Icons.confirmation_number_outlined,
+                                iconColor: const Color(0xFFB07B2E),
+                                title: l10n.couponRedeemTitle,
+                                onTap: () => showCouponRedeemDialog(context),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  color: Color(0xFFB0A8A4),
+                                ),
+                              ),
+                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            ],
                             _buildRow(
                               icon: Icons.help_outline,
                               iconColor: const Color(0xFFBA68C8),

@@ -4773,4 +4773,39 @@ class L10nDe extends L10n {
   String shopSaleWindow(String window) {
     return 'Verkauf $window';
   }
+
+  @override
+  String get couponSectionTitle => 'Gutschein';
+
+  @override
+  String get couponRedeemTitle => 'Gutschein einlösen';
+
+  @override
+  String get couponRedeemHint =>
+      'Gib den Code genau so ein, wie er dasteht. Groß- und Kleinschreibung sowie Leerzeichen sind egal.';
+
+  @override
+  String get couponCodeLabel => 'Gutscheincode';
+
+  @override
+  String get couponRedeemButton => 'Einlösen';
+
+  @override
+  String couponRewardGold(int amount) {
+    return '$amount Gold erhalten';
+  }
+
+  @override
+  String get couponRewardItem => 'Gegenstand liegt in deinem Inventar';
+
+  @override
+  String couponRewardItemDays(int days) {
+    return 'Gegenstand für $days Tage erhalten';
+  }
+
+  @override
+  String get couponInNotice => 'Mit Gutschein';
+
+  @override
+  String get couponCopied => 'Code kopiert';
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../widgets/coupon_redeem.dart';
 
 class NoticesScreen extends StatefulWidget {
   final Set<int> unreadIds;
@@ -265,6 +266,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final content = item['content']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
     final publishedAt = _formatShortDate(item['published_at']);
+    // Withheld entirely on the iOS app, code and all.
+    final couponCode = couponUiVisible
+        ? (item['coupon_code']?.toString() ?? '')
+        : '';
 
     Navigator.push(
       context,
@@ -274,6 +279,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
           content: content,
           category: category,
           publishedAt: publishedAt,
+          couponCode: couponCode,
         ),
       ),
     );
@@ -322,11 +328,16 @@ class _NoticeDetailPage extends StatelessWidget {
   final String category;
   final String publishedAt;
 
+  /// The coupon this notice hands out, if any. Empty on the iOS app even when
+  /// the notice carries one — see couponUiVisible.
+  final String couponCode;
+
   const _NoticeDetailPage({
     required this.title,
     required this.content,
     required this.category,
     required this.publishedAt,
+    this.couponCode = '',
   });
 
   @override
@@ -441,9 +452,21 @@ class _NoticeDetailPage extends StatelessWidget {
                       const SizedBox(height: 14),
                       Expanded(
                         child: SingleChildScrollView(
-                          child: Text(
-                            content,
-                            style: const TextStyle(fontSize: 14, height: 1.7, color: Color(0xFF5A4038)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                content,
+                                style: const TextStyle(fontSize: 14, height: 1.7, color: Color(0xFF5A4038)),
+                              ),
+                              // Below the text, not above it: the post says
+                              // what the coupon is for, and the code is what
+                              // you act on once you have read that.
+                              if (couponCode.isNotEmpty) ...[
+                                const SizedBox(height: 18),
+                                NoticeCouponBlock(code: couponCode),
+                              ],
+                            ],
                           ),
                         ),
                       ),

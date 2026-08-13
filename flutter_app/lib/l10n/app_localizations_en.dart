@@ -4737,4 +4737,39 @@ class L10nEn extends L10n {
   String shopSaleWindow(String window) {
     return 'On sale $window';
   }
+
+  @override
+  String get couponSectionTitle => 'Coupon';
+
+  @override
+  String get couponRedeemTitle => 'Redeem a coupon';
+
+  @override
+  String get couponRedeemHint =>
+      'Enter the code exactly as it appears. Capitals and spaces do not matter.';
+
+  @override
+  String get couponCodeLabel => 'Coupon code';
+
+  @override
+  String get couponRedeemButton => 'Redeem';
+
+  @override
+  String couponRewardGold(int amount) {
+    return 'Received $amount gold';
+  }
+
+  @override
+  String get couponRewardItem => 'Item added to your inventory';
+
+  @override
+  String couponRewardItemDays(int days) {
+    return 'Item added for $days days';
+  }
+
+  @override
+  String get couponInNotice => 'Coupon included';
+
+  @override
+  String get couponCopied => 'Code copied';
 }

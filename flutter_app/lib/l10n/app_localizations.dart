@@ -8390,6 +8390,66 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'On sale {window}'**
   String shopSaleWindow(String window);
+
+  /// No description provided for @couponSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon'**
+  String get couponSectionTitle;
+
+  /// No description provided for @couponRedeemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem a coupon'**
+  String get couponRedeemTitle;
+
+  /// No description provided for @couponRedeemHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code exactly as it appears. Capitals and spaces do not matter.'**
+  String get couponRedeemHint;
+
+  /// No description provided for @couponCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon code'**
+  String get couponCodeLabel;
+
+  /// No description provided for @couponRedeemButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem'**
+  String get couponRedeemButton;
+
+  /// No description provided for @couponRewardGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {amount} gold'**
+  String couponRewardGold(int amount);
+
+  /// No description provided for @couponRewardItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item added to your inventory'**
+  String get couponRewardItem;
+
+  /// No description provided for @couponRewardItemDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Item added for {days} days'**
+  String couponRewardItemDays(int days);
+
+  /// No description provided for @couponInNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon included'**
+  String get couponInNotice;
+
+  /// No description provided for @couponCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Code copied'**
+  String get couponCopied;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

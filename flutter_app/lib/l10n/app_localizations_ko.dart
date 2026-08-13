@@ -4626,4 +4626,38 @@ class L10nKo extends L10n {
   String shopSaleWindow(String window) {
     return '판매기간 $window';
   }
+
+  @override
+  String get couponSectionTitle => '쿠폰';
+
+  @override
+  String get couponRedeemTitle => '쿠폰 등록';
+
+  @override
+  String get couponRedeemHint => '보이는 그대로 입력하세요. 대소문자와 공백은 상관없습니다.';
+
+  @override
+  String get couponCodeLabel => '쿠폰 코드';
+
+  @override
+  String get couponRedeemButton => '등록';
+
+  @override
+  String couponRewardGold(int amount) {
+    return '골드 $amount 받았습니다';
+  }
+
+  @override
+  String get couponRewardItem => '아이템이 보관함에 들어왔습니다';
+
+  @override
+  String couponRewardItemDays(int days) {
+    return '아이템을 $days일간 사용할 수 있습니다';
+  }
+
+  @override
+  String get couponInNotice => '쿠폰 있음';
+
+  @override
+  String get couponCopied => '코드를 복사했습니다';
 }

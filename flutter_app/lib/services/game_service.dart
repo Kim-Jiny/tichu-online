@@ -2367,6 +2367,22 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      // Coupon redemption. The reward matters to two screens (wallet and
+      // inventory) and both are refreshed by the server right after this, so
+      // all that is kept here is the outcome the dialog reports.
+      case 'coupon_result':
+        _couponCompleter?.complete(
+          CouponOutcome(
+            success: data['success'] == true,
+            message: data['message'] as String?,
+            rewardType: (data['reward'] as Map?)?['type'] as String?,
+            rewardGold: (data['reward'] as Map?)?['gold'] as int?,
+            rewardDays: _daysUntil((data['reward'] as Map?)?['expiresAt']),
+          ),
+        );
+        _couponCompleter = null;
+        break;
+
       case 'notices_result':
         noticesLoading = false;
         if (data['success'] == true) {
@@ -3645,6 +3661,38 @@ class GameService extends ChangeNotifier {
   }
 
   // Request user profile
+  Completer<CouponOutcome>? _couponCompleter;
+
+  /// How many whole days until [iso], or null when there is no expiry.
+  static int? _daysUntil(dynamic iso) {
+    if (iso == null) return null;
+    final at = DateTime.tryParse(iso.toString());
+    if (at == null) return null;
+    final days = at.difference(DateTime.now()).inHours / 24;
+    return days <= 0 ? 0 : days.round();
+  }
+
+  /// Redeem a coupon code and wait for the server's verdict.
+  ///
+  /// Only one at a time: the reply carries no request id, so a second attempt
+  /// in flight would have its answer handed to the first waiter. The UI
+  /// disables the button while this is pending, and this makes that a rule
+  /// rather than a hope.
+  Future<CouponOutcome> redeemCoupon(String code) {
+    final existing = _couponCompleter;
+    if (existing != null) return existing.future;
+    final completer = Completer<CouponOutcome>();
+    _couponCompleter = completer;
+    _network.send({'type': 'redeem_coupon', 'code': code});
+    Future.delayed(const Duration(seconds: 12), () {
+      if (identical(_couponCompleter, completer) && !completer.isCompleted) {
+        _couponCompleter = null;
+        completer.complete(const CouponOutcome(success: false));
+      }
+    });
+    return completer.future;
+  }
+
   void requestProfile(String nickname) {
     _profiles.beginRequest(nickname);
     _network.send({'type': 'get_profile', 'nickname': nickname});
@@ -4465,4 +4513,24 @@ class GameService extends ChangeNotifier {
     _pushToggleTimer?.cancel();
     super.dispose();
   }
+}
+
+/// What came back from redeeming a coupon.
+///
+/// A null [message] with `success: false` means the server never answered —
+/// the screen says so in its own words rather than showing an empty error.
+class CouponOutcome {
+  final bool success;
+  final String? message;
+  final String? rewardType;
+  final int? rewardGold;
+  final int? rewardDays;
+
+  const CouponOutcome({
+    required this.success,
+    this.message,
+    this.rewardType,
+    this.rewardGold,
+    this.rewardDays,
+  });
 }

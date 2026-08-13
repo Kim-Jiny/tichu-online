@@ -3530,6 +3530,74 @@ async function getFcmTokenStats() {
   return r.rows[0];
 }
 
+/// Give someone an item that was not bought — a coupon reward or a campaign
+/// payout — with the same ownership rules the shop uses.
+///
+/// buyItem refuses a permanent item you already own and extends a time-limited
+/// one. A gift cannot refuse: the coupon is already spent, the notification is
+/// already tapped. So the equivalent behaviour here is
+///   - permanent and already owned → leave it alone, report it
+///   - time-limited and still running → push the expiry out
+///   - otherwise → insert
+/// rather than stacking a second row. Duplicate rows would inflate the
+/// backstage inventory and the "쓰는 중" holder counts, and there is no way to
+/// own a permanent banner twice.
+///
+/// [days] overrides the shop's own duration (a coupon can hand out a week of
+/// something the shop sells by the month). Runs on the caller's client so it
+/// joins their transaction.
+async function grantItemToUser(client, nickname, item, days, source) {
+  const permanent = item.is_permanent === true || !days;
+  if (permanent) {
+    const owned = await client.query(
+      'SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
+      [nickname, item.item_key],
+    );
+    if (owned.rows.length > 0) {
+      return { itemKey: item.item_key, expiresAt: null, alreadyOwned: true };
+    }
+    await client.query(
+      `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+       VALUES ($1, $2, NULL, FALSE, $3)`,
+      [nickname, item.item_key, source],
+    );
+    return { itemKey: item.item_key, expiresAt: null, alreadyOwned: false };
+  }
+
+  // Time-limited. Extend from now when it has already lapsed, the same rule
+  // buyItem and the backstage's extend button use — adding days to a date in
+  // the past hands over nothing.
+  const existing = await client.query(
+    'SELECT id FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
+    [nickname, item.item_key],
+  );
+  if (existing.rows.length > 0) {
+    const r = await client.query(
+      `UPDATE tc_user_items
+       SET expires_at = CASE
+         WHEN expires_at IS NULL OR expires_at < (NOW() AT TIME ZONE 'UTC')
+           THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
+         ELSE expires_at + ($2 || ' days')::interval END
+       WHERE id = $1
+       RETURNING expires_at`,
+      [existing.rows[0].id, days],
+    );
+    return {
+      itemKey: item.item_key,
+      expiresAt: r.rows[0].expires_at,
+      extended: true,
+    };
+  }
+  const r = await client.query(
+    `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+     VALUES ($1, $2, (NOW() AT TIME ZONE 'UTC') + ($3 || ' days')::interval,
+             FALSE, $4)
+     RETURNING expires_at`,
+    [nickname, item.item_key, days, source],
+  );
+  return { itemKey: item.item_key, expiresAt: r.rows[0].expires_at };
+}
+
 // ===== Marketing push campaigns =====
 
 /// Whether [when] falls in the window 광고성 정보 may not be sent in — 21:00 to
@@ -3669,6 +3737,41 @@ async function deletePushCampaign(id) {
   return { success: true };
 }
 
+/// Put the audience on record BEFORE anything is sent.
+///
+/// The recipient row is what entitles someone to the reward, and a push cannot
+/// be recalled. Writing the rows first means the only two outcomes are "no
+/// notification and no rows" (retry it) or "notification and rows" (works).
+/// Doing it the other way round has a third: the notification lands, the write
+/// fails, and everyone who taps is told the reward is not theirs.
+///
+/// Rows start as 'pending'; recordCampaignSend settles them to sent/failed
+/// once FCM has answered. claimPushCampaign does not look at status — it only
+/// needs the row to exist — so a reward is claimable either way.
+async function reserveCampaignRecipients(campaignId, nicknames) {
+  if (!nicknames.length) return { success: true, reserved: 0 };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const nickname of nicknames) {
+      await client.query(
+        `INSERT INTO tc_push_campaign_recipients (campaign_id, nickname, status)
+         VALUES ($1, $2, 'pending')
+         ON CONFLICT (campaign_id, nickname) DO NOTHING`,
+        [campaignId, nickname],
+      );
+    }
+    await client.query('COMMIT');
+    return { success: true, reserved: nicknames.length };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Reserve campaign recipients error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 /// Write the audience down and mark the campaign sent.
 ///
 /// [results] is what sendBroadcastPush reports per token. Failures are stored
@@ -3806,18 +3909,15 @@ async function claimPushCampaign(nickname, campaignId) {
         return { success: false, messageKey: 'db_item_not_found' };
       }
       const days = camp.reward_days != null ? camp.reward_days : item.duration_days;
-      // The expiry is computed in SQL against UTC. Binding a JS Date to a
-      // `timestamp without time zone` sends it in the process timezone, which
-      // is nine hours out on a KST host.
-      await client.query(
-        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-         VALUES ($1, $2,
-           CASE WHEN $3::boolean OR $4::int IS NULL THEN NULL
-                ELSE (NOW() AT TIME ZONE 'UTC') + ($4 || ' days')::interval END,
-           FALSE, 'push_campaign')`,
-        [nickname, item.item_key, item.is_permanent === true, days ?? null],
+      const granted = await grantItemToUser(
+        client, nickname, item, days, 'push_campaign',
       );
-      reward = { type: 'item', itemKey: item.item_key, days: days ?? null };
+      reward = {
+        type: 'item',
+        itemKey: granted.itemKey,
+        days: days ?? null,
+        alreadyOwned: granted.alreadyOwned === true,
+      };
     } else {
       // A campaign with no reward is a plain announcement; the tap is still
       // worth recording, and the client is told there is nothing to show.
@@ -8259,26 +8359,18 @@ async function redeemCoupon(nickname, rawCode) {
       const days = coupon.reward_days != null
         ? coupon.reward_days
         : item.duration_days;
-      // Computed in SQL against UTC, not as a JS Date. expires_at is
-      // `timestamp without time zone` holding UTC, and node-pg serializes a
-      // Date in the PROCESS timezone — nine hours out on a KST host, which is
-      // every developer machine here. The push-campaign grant already does it
-      // this way; this was the last place that did not.
-      const permanent = item.is_permanent === true || !days;
-      const inserted = await client.query(
-        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-         VALUES ($1, $2,
-           CASE WHEN $3::boolean THEN NULL
-                ELSE (NOW() AT TIME ZONE 'UTC') + ($4 || ' days')::interval END,
-           FALSE, 'coupon')
-         RETURNING expires_at`,
-        [nickname, item.item_key, permanent, permanent ? null : days],
+      // Shared with the campaign payout: same ownership rules the shop uses,
+      // so a permanent item nobody can own twice does not stack a second row.
+      const granted = await grantItemToUser(
+        client, nickname, item, days, 'coupon',
       );
-      const expiresAt = inserted.rows[0].expires_at;
       reward = {
         type: 'item',
-        itemKey: item.item_key,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        itemKey: granted.itemKey,
+        expiresAt: granted.expiresAt
+          ? new Date(granted.expiresAt).toISOString()
+          : null,
+        alreadyOwned: granted.alreadyOwned === true,
       };
     }
 
@@ -8294,6 +8386,14 @@ async function redeemCoupon(nickname, rawCode) {
 }
 
 /** Admin: create or overwrite a coupon. */
+/// One coupon by code, or null. Used to check a code exists before a notice
+/// starts advertising it.
+async function getCouponByCode(code) {
+  const r = await pool.query('SELECT * FROM tc_coupons WHERE code = $1',
+    [normalizeCouponCode(code)]);
+  return r.rows[0] || null;
+}
+
 async function upsertCoupon(data, adminActor = 'admin') {
   const code = normalizeCouponCode(data.code);
   if (!code) return { success: false, message: '코드를 입력하세요' };
@@ -10801,6 +10901,7 @@ module.exports = {
   listPushCampaigns,
   getPushCampaign,
   deletePushCampaign,
+  reserveCampaignRecipients,
   recordCampaignSend,
   claimPushCampaign,
   getCampaignRecipients,
@@ -10881,6 +10982,7 @@ module.exports = {
   adminAdjustGold,
   redeemCoupon,
   upsertCoupon,
+  getCouponByCode,
   listCoupons,
   getCouponRedemptions,
   deleteCoupon,

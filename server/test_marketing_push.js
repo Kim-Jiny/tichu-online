@@ -158,6 +158,51 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('and answering the notice puts them straight back in',
     mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
 
+  console.log('\n[발송 전에 수신자를 먼저 적어둔다]');
+  // A push cannot be recalled; a database write can be retried. So the rows go
+  // in first — otherwise a failed write leaves everyone holding a notification
+  // the server refuses to pay out on.
+  const campR2 = await db.createPushCampaign({
+    title: '(광고) 예약', body: 'x', rewardGold: 20 });
+  const res = await db.reserveCampaignRecipients(campR2.id, [nick(1)]);
+  check('예약이 성공한다', res.success === true);
+  const reserved = await db.getCampaignRecipients(campR2.id);
+  check('발송 전에 이미 행이 있다', reserved.rows.length === 1);
+  check('상태는 pending', reserved.rows[0].status === 'pending');
+  // Nothing has been sent, yet the reward is already claimable — that is the
+  // point. claimPushCampaign looks for the row, not for a delivery status.
+  const early = await db.claimPushCampaign(nick(1), campR2.id);
+  check('행만 있으면 보상은 수령된다', early.success === true, early.messageKey || '');
+  // Reserving twice must not duplicate or reset anyone.
+  await db.reserveCampaignRecipients(campR2.id, [nick(1)]);
+  const reReserved = await db.getCampaignRecipients(campR2.id);
+  check('두 번 예약해도 행은 하나', reReserved.rows.length === 1);
+  check('이미 수령한 기록이 지워지지 않는다',
+    reReserved.rows[0].claimed_at != null);
+
+  console.log('\n[캠페인이 이미 가진 영구 아이템을 줄 때]');
+  const permItem2 = (await db.pool.query(
+    'SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE LIMIT 1')).rows[0];
+  if (permItem2) {
+    const campI = await db.createPushCampaign({
+      title: '(광고) 아이템', body: 'x',
+      rewardItemKey: permItem2.item_key });
+    const campI2 = await db.createPushCampaign({
+      title: '(광고) 아이템2', body: 'x',
+      rewardItemKey: permItem2.item_key });
+    for (const c of [campI, campI2]) {
+      await db.recordCampaignSend(c.id, [{ nickname: nick(3), success: true }]);
+      await db.claimPushCampaign(nick(3), c.id);
+    }
+    const n = (await db.pool.query(
+      'SELECT COUNT(*)::int n FROM tc_user_items WHERE nickname = $1 AND item_key = $2',
+      [nick(3), permItem2.item_key])).rows[0].n;
+    check('두 캠페인에서 같은 영구 아이템을 받아도 행은 하나', n === 1, `${n} rows`);
+    await db.deletePushCampaign(campI.id);
+    await db.deletePushCampaign(campI2.id);
+  }
+  await db.deletePushCampaign(campR2.id);
+
   console.log('\n[앱을 지운 기기]');
   // FCM answers "not registered" for a token whose app is gone. The account
   // stays; only the device is retired.

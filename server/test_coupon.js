@@ -168,6 +168,51 @@ async function cleanup(codes, n) {
       Math.abs(Number(drift)) < 2, `${Number(drift).toFixed(1)} minutes off`);
   }
 
+  console.log('\n[이미 가진 것을 또 받았을 때]');
+  // A gift cannot refuse the way the shop does — the coupon is already spent.
+  // What it must not do is stack a second row: a permanent item cannot be
+  // owned twice, and duplicates inflate the backstage inventory and the
+  // "쓰는 중" holder counts.
+  const permItem = (await db.pool.query(
+    `SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE LIMIT 1`)).rows[0];
+  if (permItem) {
+    const rows = async () => (await db.pool.query(
+      'SELECT COUNT(*)::int n FROM tc_user_items WHERE nickname = $1 AND item_key = $2',
+      [nick(6), permItem.item_key])).rows[0].n;
+    for (const suffix of ['A', 'B']) {
+      const code = `PERM${suffix}${run.toUpperCase()}`;
+      codes.push(code);
+      await db.upsertCoupon({
+        code, rewardType: 'item', rewardItemKey: permItem.item_key });
+      const got = await db.redeemCoupon(nick(6), code);
+      check(`영구 아이템 지급 (${suffix})`, got.success === true, got.messageKey || '');
+    }
+    check('두 번 받아도 행은 하나', (await rows()) === 1, `${await rows()} rows`);
+  }
+
+  const dupTemp = (await db.pool.query(
+    `SELECT item_key, duration_days FROM tc_shop_items
+     WHERE is_permanent = FALSE AND duration_days IS NOT NULL LIMIT 1`)).rows[0];
+  if (dupTemp) {
+    const hours = async () => Number((await db.pool.query(
+      `SELECT EXTRACT(EPOCH FROM (expires_at - (NOW() AT TIME ZONE 'UTC')))/3600 h
+       FROM tc_user_items WHERE nickname = $1 AND item_key = $2`,
+      [nick(7), dupTemp.item_key])).rows[0]?.h);
+    for (const suffix of ['A', 'B']) {
+      const code = `TEMP${suffix}${run.toUpperCase()}`;
+      codes.push(code);
+      await db.upsertCoupon({
+        code, rewardType: 'item', rewardItemKey: dupTemp.item_key, rewardDays: 5 });
+      await db.redeemCoupon(nick(7), code);
+    }
+    const n = (await db.pool.query(
+      'SELECT COUNT(*)::int n FROM tc_user_items WHERE nickname = $1 AND item_key = $2',
+      [nick(7), dupTemp.item_key])).rows[0].n;
+    check('기간제도 행은 하나', n === 1, `${n} rows`);
+    check('대신 기간이 합쳐진다 (5+5=10일)',
+      Math.abs((await hours()) - 240) < 1, `${(await hours()).toFixed(1)}h`);
+  }
+
   await cleanup(codes, USERS);
 })()
   .then(() => {

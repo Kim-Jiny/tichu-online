@@ -8,7 +8,7 @@ const {
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
-  recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  reserveCampaignRecipients, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -20,7 +20,7 @@ const {
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
   getBroadcastFcmTokens, insertPushHistory, getPushHistory, insertPushRecipients, getPushHistoryDetail,
-  upsertCoupon, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
+  upsertCoupon, getCouponByCode, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 // 정보통신망법 §50 ④ — the "(광고)" label and the opt-out line. See
@@ -4926,6 +4926,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('수신동의한 대상이 없습니다.'));
     }
+    // The audience goes on record BEFORE the push. A notification cannot be
+    // recalled; a database write can be retried. In the other order, a failed
+    // write leaves everyone holding a notification the server will refuse to
+    // pay out on.
+    const reserved = await reserveCampaignRecipients(
+      id, audience.map((u) => u.nickname),
+    );
+    if (!reserved.success) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent(
+          '수신자 기록에 실패해 발송하지 않았습니다. 아무에게도 안 갔으니 다시 시도하세요.'));
+    }
+
     const push = await sendBroadcastPush(
       audience.map((u) => ({ id: u.id, fcm_token: u.fcm_token })),
       camp.title,
@@ -4934,13 +4947,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     );
     await markFcmTokensInvalid(push.invalidUserIds || []);
     const byId = new Map(audience.map((u) => [u.id, u.nickname]));
-    await recordCampaignSend(id, (push.results || []).map((r) => ({
+    const recorded = await recordCampaignSend(id, (push.results || []).map((r) => ({
       nickname: byId.get(r.userId),
       success: r.success,
     })).filter((r) => r.nickname));
-    return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent(
+    // Rewards are safe either way now — the rows are already there. What can
+    // still be wrong is the tally, so say so instead of reporting a clean send.
+    const tally = recorded.success
+      ? ''
+      : ' — 다만 발송 결과 집계에 실패했습니다. 보상 수령에는 영향이 없고, 통계만 부정확할 수 있습니다.';
+    return redirect(res, '/tc-backstage/campaigns?r='
+      + (recorded.success ? 'ok' : 'fail') + '&msg=' + encodeURIComponent(
       `${formatNumber(push.successCount)}명에게 보냈습니다.`
-      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '')));
+      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + tally));
   }
 
   const campaignDetailMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)$/);
@@ -8030,7 +8049,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // Create notice
   if (pathname === '/tc-backstage/notices/new' && method === 'POST') {
     const body = await parseBody(req);
-    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', body.coupon_code || null);
+    // A notice can advertise a coupon; it must be one that exists. Otherwise
+    // players see "쿠폰 있음", type the code, and get 쿠폰을 찾을 수 없습니다 —
+    // and the first anyone hears of it is a complaint. A typo at write time is
+    // the cheapest place to catch this.
+    const noticeCoupon = normalizeCouponCode(body.coupon_code || '');
+    if (noticeCoupon) {
+      const exists = await getCouponByCode(noticeCoupon);
+      if (!exists) {
+        return redirect(res, '/tc-backstage/notices?r=fail&msg='
+          + encodeURIComponent(`"${noticeCoupon}" 쿠폰이 없습니다. 쿠폰을 먼저 만들거나 코드를 확인해 주세요.`));
+      }
+    }
+    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null);
     return redirect(res, '/tc-backstage/notices');
   }
 
@@ -8052,7 +8083,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // Update notice
   if (noticeEditMatch && method === 'POST') {
     const body = await parseBody(req);
-    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', body.coupon_code || null);
+    // A notice can advertise a coupon; it must be one that exists. Otherwise
+    // players see "쿠폰 있음", type the code, and get 쿠폰을 찾을 수 없습니다 —
+    // and the first anyone hears of it is a complaint. A typo at write time is
+    // the cheapest place to catch this.
+    const noticeCoupon = normalizeCouponCode(body.coupon_code || '');
+    if (noticeCoupon) {
+      const exists = await getCouponByCode(noticeCoupon);
+      if (!exists) {
+        return redirect(res, '/tc-backstage/notices?r=fail&msg='
+          + encodeURIComponent(`"${noticeCoupon}" 쿠폰이 없습니다. 쿠폰을 먼저 만들거나 코드를 확인해 주세요.`));
+      }
+    }
+    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null);
     return redirect(res, '/tc-backstage/notices');
   }
 

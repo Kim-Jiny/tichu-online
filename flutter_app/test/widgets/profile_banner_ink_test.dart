@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tichu_online/widgets/player_profile_header.dart';
+import 'package:tichu_online/utils/banner_ink.dart';
 
 /// Which colour the profile popup writes a nickname in once someone's banner
 /// is behind it.

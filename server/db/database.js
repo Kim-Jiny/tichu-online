@@ -8243,18 +8243,26 @@ async function redeemCoupon(nickname, rawCode) {
       const days = coupon.reward_days != null
         ? coupon.reward_days
         : item.duration_days;
-      const expiresAt = item.is_permanent || !days
-        ? null
-        : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-      await client.query(
+      // Computed in SQL against UTC, not as a JS Date. expires_at is
+      // `timestamp without time zone` holding UTC, and node-pg serializes a
+      // Date in the PROCESS timezone — nine hours out on a KST host, which is
+      // every developer machine here. The push-campaign grant already does it
+      // this way; this was the last place that did not.
+      const permanent = item.is_permanent === true || !days;
+      const inserted = await client.query(
         `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
-         VALUES ($1, $2, $3, FALSE, 'coupon')`,
-        [nickname, item.item_key, expiresAt],
+         VALUES ($1, $2,
+           CASE WHEN $3::boolean THEN NULL
+                ELSE (NOW() AT TIME ZONE 'UTC') + ($4 || ' days')::interval END,
+           FALSE, 'coupon')
+         RETURNING expires_at`,
+        [nickname, item.item_key, permanent, permanent ? null : days],
       );
+      const expiresAt = inserted.rows[0].expires_at;
       reward = {
         type: 'item',
         itemKey: item.item_key,
-        expiresAt: expiresAt ? expiresAt.toISOString() : null,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
       };
     }
 
@@ -8346,14 +8354,34 @@ async function getCouponRedemptions(code, limit = 100) {
   }
 }
 
+/// Delete a coupon and the record of who used it.
+///
+/// Both, in one transaction. tc_coupon_redemptions has no foreign key, so the
+/// rows used to outlive the coupon — and codes get reused. `WELCOME2026`
+/// recreated after a cleanup would hit UNIQUE (code, nickname) for everyone
+/// who redeemed the old one and turn them away with "이미 등록한 쿠폰입니다",
+/// on a coupon they have never seen. The admin's redemption list would mix the
+/// two runs together as well.
+///
+/// The audit does not disappear with them: every grant is written to
+/// tc_gold_history (source 'coupon') or tc_user_items (source 'coupon'), which
+/// is where "what did this account actually receive" is answered.
 async function deleteCoupon(code) {
+  const normalized = normalizeCouponCode(code);
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM tc_coupons WHERE code = $1',
-      [normalizeCouponCode(code)]);
+    await client.query('BEGIN');
+    await client.query('DELETE FROM tc_coupon_redemptions WHERE code = $1',
+      [normalized]);
+    await client.query('DELETE FROM tc_coupons WHERE code = $1', [normalized]);
+    await client.query('COMMIT');
     return { success: true };
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Delete coupon error:', err);
     return { success: false, message: err.message };
+  } finally {
+    client.release();
   }
 }
 

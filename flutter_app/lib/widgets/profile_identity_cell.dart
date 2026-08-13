@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../utils/banner_ink.dart';
 import 'level_badge.dart';
 import 'profile_avatar.dart';
 import 'title_chip.dart';
@@ -76,7 +77,14 @@ class ProfileIdentityCell extends StatelessWidget {
     // presence being claimed there.
     final away = isOnline == false;
     final gradient = away ? null : game.bannerGradient(bannerKey);
-    final textColor = away ? null : game.bannerTextColor(bannerKey);
+    // profileBannerInk, not the raw override: a banner whose admin left
+    // text.color blank returns null, and the fallbacks below are the app's
+    // brown — invisible on a dark gradient. The profile popup already goes
+    // through this; the point of moving this list onto the shared cell was
+    // that a player looks the same everywhere.
+    final textColor = away || gradient == null
+        ? null
+        : profileBannerInk(gradient, game.bannerTextColor(bannerKey));
     final photo = game.resolvePhotoUrl(photoUrl);
     const avatarSize = 40.0;
 
@@ -166,6 +174,9 @@ class ProfileIdentityCell extends StatelessWidget {
                         child: TitleChip(
                           titleKey: titleKey,
                           titleName: titleName,
+                          // Title colours are chosen against cream; several
+                          // vanish on a dark banner without this.
+                          onInk: textColor,
                         ),
                       ),
                     Row(

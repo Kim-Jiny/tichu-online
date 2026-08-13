@@ -153,6 +153,19 @@ async function cleanup(codes, n) {
       ? Math.round((new Date(owned.expires_at) - Date.now()) / 86400000)
       : null;
     check('reward_days overrides the shop duration', days === 3, `${days} days`);
+    // The rounded day count above passes whether or not the timezone is right
+    // — three days minus nine hours still rounds to three. Compare in SQL,
+    // where the column's UTC value meets a UTC now, and give it minutes of
+    // slack rather than hours. Run under TZ=Asia/Seoul this is what fails if
+    // the expiry is ever built from a JS Date again.
+    const drift = (await db.pool.query(
+      `SELECT EXTRACT(EPOCH FROM (
+                expires_at - ((NOW() AT TIME ZONE 'UTC') + INTERVAL '3 days')
+              )) / 60 AS minutes
+       FROM tc_user_items WHERE nickname = $1 AND item_key = $2`,
+      [nick(3), shopItem.item_key])).rows[0]?.minutes;
+    check('and lands exactly three days out in UTC, whatever the host timezone',
+      Math.abs(Number(drift)) < 2, `${Number(drift).toFixed(1)} minutes off`);
   }
 
   await cleanup(codes, USERS);

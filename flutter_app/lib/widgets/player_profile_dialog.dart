@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../utils/banner_ink.dart';
 import 'player_profile_body.dart';
 import 'player_profile_header.dart';
 

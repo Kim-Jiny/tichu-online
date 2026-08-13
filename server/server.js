@@ -3818,12 +3818,6 @@ async function handleSocialLogin(ws, data) {
       ws.marketingAsked = result.marketingAsked === true;
       ws.marketingConfirmDue = result.marketingConfirmDue === true;
       ws.marketingConsentAt = result.marketingConsentAt || null;
-  ws.marketingConfirmDue = result.marketingConfirmDue === true;
-  ws.marketingConsentAt = result.marketingConsentAt || null;
-  ws.marketingPushEnabled = result.marketingPushEnabled === true;
-  ws.marketingAsked = result.marketingAsked === true;
-  ws.marketingConfirmDue = result.marketingConfirmDue === true;
-  ws.marketingConsentAt = result.marketingConsentAt || null;
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;

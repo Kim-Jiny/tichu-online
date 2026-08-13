@@ -7023,6 +7023,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // things you check while a giveaway is running.
   if (pathname === '/tc-backstage/coupons' && method === 'GET') {
     const coupons = await listCoupons();
+    const hideOnIos = (await getConfig('coupon_hide_ios')) === 'on';
     const items = await getAllShopItemsAdmin();
     const editCode = url.searchParams.get('edit');
     const editing = editCode
@@ -7077,6 +7078,28 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const f = editing || {};
     const content = `
       ${pageHeader('쿠폰', '공지나 블로그에 뿌리는 코드. iOS 앱에서는 등록 UI가 보이지 않습니다.')}
+
+      <div class="card" style="border-left:4px solid ${hideOnIos ? '#c62828' : '#2e7d32'}">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <h3 style="margin:0 0 4px">iOS 심사 모드</h3>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6">
+              켜면 <b>쿠폰이 붙은 공지가 iOS 앱에만</b> 안 내려갑니다. 웹·안드로이드는 그대로입니다
+              (아이폰 사파리도 웹이라 영향 없습니다).<br>
+              심사 올릴 때만 잠깐 켜두면 됩니다 — 서버 설정이라 앱 재심사 없이 바로 되돌아갑니다.
+              <br>지금 상태: <b style="color:${hideOnIos ? '#c62828' : '#2e7d32'}">${hideOnIos ? '켜짐 — iOS 앱에 쿠폰 공지 안 보임' : '꺼짐 — 모든 플랫폼에 보임'}</b>
+            </div>
+          </div>
+          <form method="POST" action="/tc-backstage/coupons/ios-hide">
+            <input type="hidden" name="value" value="${hideOnIos ? 'off' : 'on'}">
+            <button class="btn ${hideOnIos ? 'btn-primary' : ''}"
+                    style="${hideOnIos ? '' : 'background:#c62828;color:#fff'}">
+              ${hideOnIos ? '심사 모드 끄기' : '심사 모드 켜기'}
+            </button>
+          </form>
+        </div>
+      </div>
+
       <div class="card">
         <h3 style="margin-top:0">${editing ? `쿠폰 수정 — ${escapeHtml(editing.code)}` : '새 쿠폰'}</h3>
         <form method="POST" action="/tc-backstage/coupons">
@@ -7157,6 +7180,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   if (pathname === '/tc-backstage/coupons' && method === 'POST') {
     const body = await parseBody(req);
+    // A gold coupon with a blank amount saves happily and then pays nothing,
+    // which nobody notices until a player redeems the code off a blog post and
+    // gets zero gold. Refuse it here rather than issue a dud.
+    if (body.reward_type !== 'item' && !(Number(body.reward_gold) > 0)) {
+      return html(res, layout('쿠폰', `
+        ${pageHeader('쿠폰', '')}
+        <div class="card">
+          <h3 style="margin:0 0 8px">저장하지 않았습니다</h3>
+          <p style="color:var(--muted);line-height:1.7">
+            골드 쿠폰인데 지급할 골드가 비어 있거나 0입니다.
+            이대로 발급하면 코드는 정상적으로 등록되는데 아무것도 지급되지 않습니다.<br>
+            뒤로 가서 골드 수량을 채워주세요.
+          </p>
+          <a class="btn" href="/tc-backstage/coupons">쿠폰 목록으로</a>
+        </div>
+      `, '/tc-backstage/coupons'));
+    }
     await upsertCoupon({
       code: body.code,
       rewardType: body.reward_type,
@@ -7170,6 +7210,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       isActive: body.is_active === '1',
       memo: body.memo,
     }, sessionInfo.session.username || 'admin');
+    return redirect(res, '/tc-backstage/coupons');
+  }
+
+  if (pathname === '/tc-backstage/coupons/ios-hide' && method === 'POST') {
+    const body = await parseBody(req);
+    await updateConfig('coupon_hide_ios', body.value === 'on' ? 'on' : 'off');
     return redirect(res, '/tc-backstage/coupons');
   }
 

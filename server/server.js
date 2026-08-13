@@ -9633,8 +9633,28 @@ async function handleMarkInquiriesRead(ws) {
   sendTo(ws, { type: 'inquiries_result', ...result });
 }
 
+/// Config key for the App Review kill switch. See handleGetNotices.
+const COUPON_HIDE_IOS_KEY = 'coupon_hide_ios';
+
 async function handleGetNotices(ws) {
   const result = await getPublishedNotices();
+  // App Review kill switch, flipped from the backstage.
+  //
+  // The client already withholds the redeem button on the iOS app, but that
+  // rule is compiled into the binary — if a reviewer objects to coupons at
+  // all, turning it off would mean another release and another wait. This
+  // does it from the server, and only for the iOS *app*: the notice is
+  // dropped whole rather than stripped of its code, because the body text is
+  // written by hand and usually describes the coupon too.
+  //
+  // devicePlatform is 'web' for every browser, iPhone Safari included, so web
+  // players keep seeing everything while the switch is on.
+  if (ws.devicePlatform === 'ios' && Array.isArray(result.notices)) {
+    const hide = (await getConfig(COUPON_HIDE_IOS_KEY)) === 'on';
+    if (hide) {
+      result.notices = result.notices.filter((n) => !n.coupon_code);
+    }
+  }
   sendTo(ws, { type: 'notices_result', ...result });
 }
 

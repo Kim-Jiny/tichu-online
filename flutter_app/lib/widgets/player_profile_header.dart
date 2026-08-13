@@ -224,11 +224,9 @@ class PlayerProfileHeader extends StatelessWidget {
   /// No plate behind it — a title is the person's, not a badge the popup
   /// issues, and boxing it made the header read as two chips stacked. Bold and
   /// in the title's own colour is enough separation from the nickname under it.
-  /// On a banner it takes a halo instead: the title colours are picked to
-  /// stand out on cream, and several of them (the near-black pirate) vanish
-  /// against a dark gradient with nothing behind them. The halo is whatever the
-  /// nickname beside it is not, so it works on pastel banners and dark ones
-  /// from the same rule.
+  /// On a banner the chip is told what reads against it, and lightens itself
+  /// if the fill is dark — the title colours were all chosen against cream,
+  /// and several (the near-black pirate) vanish on a dark gradient.
   Widget _titleLine(String? titleKey, String titleName, Color? ink) {
     return TitleChip(
       titleKey: titleKey,
@@ -236,9 +234,7 @@ class PlayerProfileHeader extends StatelessWidget {
       fontSize: 12.5,
       iconSize: 12.5,
       fontWeight: FontWeight.w800,
-      haloColor: ink == null
-          ? null
-          : (ink.computeLuminance() > 0.5 ? Colors.black : Colors.white),
+      onInk: ink,
     );
   }
 

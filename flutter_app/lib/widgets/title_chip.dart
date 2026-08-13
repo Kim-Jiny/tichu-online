@@ -10,13 +10,9 @@ class TitleChip extends StatelessWidget {
   final double iconSize;
   final FontWeight fontWeight;
 
-  /// A soft halo behind the text, for the places a title is drawn over
-  /// something other than the app's cream background. Title colours are chosen
-  /// to stand out on cream, so a few of them (the near-black pirate, the yellow
-  /// lucky star) disappear on a banner without one. Pass the colour that
-  /// contrasts with what is behind it — white under dark titles, black under
-  /// light ones.
-  final Color? haloColor;
+  /// The colour that reads against whatever is behind this chip — the
+  /// banner's text colour, or null on the app's normal cream.
+  final Color? onInk;
 
   const TitleChip({
     super.key,
@@ -25,35 +21,21 @@ class TitleChip extends StatelessWidget {
     this.fontSize = 11,
     this.iconSize = 11,
     this.fontWeight = FontWeight.w600,
-    this.haloColor,
+    this.onInk,
   });
 
   @override
   Widget build(BuildContext context) {
     final name = titleName;
     if (name == null || name.isEmpty) return const SizedBox.shrink();
-    final color = titleColorFor(titleKey);
+    final color = titleColorFor(titleKey, onInk: onInk);
     // A user-written title carries no icon: the catalog icons say "this is one
     // of ours", and a self-chosen title must not be able to borrow that.
     final custom = isCustomTitleKey(titleKey);
-    final halo = haloColor == null
-        ? null
-        : [
-            Shadow(
-              color: haloColor!.withValues(alpha: 0.85),
-              blurRadius: 3,
-            ),
-          ];
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!custom)
-          Icon(
-            titleIconFor(titleKey),
-            size: iconSize,
-            color: color,
-            shadows: halo,
-          ),
+        if (!custom) Icon(titleIconFor(titleKey), size: iconSize, color: color),
         if (!custom) const SizedBox(width: 3),
         Flexible(
           child: Text(
@@ -64,7 +46,6 @@ class TitleChip extends StatelessWidget {
               fontSize: fontSize,
               color: color,
               fontWeight: fontWeight,
-              shadows: halo,
             ),
           ),
         ),
@@ -146,7 +127,55 @@ const Map<String, Color> customTitleColors = {
   'slate': Color(0xFF455A64),
 };
 
-Color titleColorFor(String? titleKey) {
+/// The colour a title is drawn in.
+///
+/// [onInk] is the colour that reads against whatever is behind it — pass the
+/// banner's text colour, or null on the app's normal cream. Every title colour
+/// was chosen against cream, so a dark banner swallows the darker half of them
+/// (the near-black pirate, the deep teal tactician) while the palette itself
+/// stays perfectly good on every other surface.
+///
+/// Lightened rather than replaced. The colour is how a title is recognised —
+/// forcing them all to white would make twenty titles look like one.
+Color titleColorFor(String? titleKey, {Color? onInk}) {
+  final base = _titleBaseColor(titleKey);
+  // onInk light means the background is dark. Anything else — including no
+  // banner at all — keeps the palette as designed.
+  if (onInk == null || onInk.computeLuminance() < 0.5) return base;
+  return lightenForDarkBackground(base);
+}
+
+/// Raise a colour until it reads on a dark fill, keeping its hue.
+///
+/// The decision is made on LUMINANCE, not on HSL lightness. They disagree
+/// badly on saturated hues: pure yellow has an HSL lightness of 0.5 and looks
+/// dim by that measure, while being one of the brightest colours there is.
+/// Judging by lightness washed the yellow lucky star out to cream for no
+/// reason.
+///
+/// The lift itself walks HSL lightness up, because that is what preserves the
+/// hue. It stops as soon as the colour is bright enough, so a title only moves
+/// as far as it has to — and re-applying it changes nothing, which matters
+/// because the same colour passes through here on every rebuild.
+Color lightenForDarkBackground(Color base) {
+  if (base.computeLuminance() >= _minLuminanceOnDark) return base;
+  var hsl = HSLColor.fromColor(base);
+  // Very dark colours are often near-grey; a little saturation keeps them from
+  // lifting into a flat white.
+  if (hsl.saturation < 0.25) hsl = hsl.withSaturation(0.25);
+  for (var l = hsl.lightness; l <= 0.92; l += 0.02) {
+    final candidate = hsl.withLightness(l).toColor();
+    if (candidate.computeLuminance() >= _minLuminanceOnDark) return candidate;
+  }
+  return hsl.withLightness(0.92).toColor();
+}
+
+/// Enough to read comfortably on the darkest banner in the catalogue. Not so
+/// high that everything converges on white — the colours still have to tell
+/// twenty titles apart.
+const double _minLuminanceOnDark = 0.35;
+
+Color _titleBaseColor(String? titleKey) {
   if (isCustomTitleKey(titleKey)) {
     return customTitleColors[titleKey!.substring('custom:'.length)] ??
         const Color(0xFF5A4038);

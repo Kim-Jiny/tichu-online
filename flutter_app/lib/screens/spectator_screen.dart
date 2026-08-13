@@ -710,6 +710,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               titleName: player.titleName,
               fontSize: 10,
               iconSize: 10,
+              // The seat is filled with this player's banner; a dark one
+              // swallows half the title palette.
+              onInk: bannerText,
             ),
             const SizedBox(height: 2),
           ],

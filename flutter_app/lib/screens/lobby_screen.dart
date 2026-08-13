@@ -4615,6 +4615,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     child: TitleChip(
                                       titleKey: player.titleKey,
                                       titleName: player.titleName,
+                                      // Same override the nickname below uses,
+                                      // so both react to a dark banner together.
+                                      onInk: (!isEmpty && !isBot)
+                                          ? game.bannerTextColor(
+                                              player.bannerKey,
+                                            )
+                                          : null,
                                     ),
                                   ),
                                 Builder(

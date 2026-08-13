@@ -3526,6 +3526,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: TitleChip(
                       titleKey: 'custom:rose',
                       titleName: titleOverride,
+                      onInk: textColor,
                     ),
                   )
                 else if (isBanner && _myTitleName(g) != null)
@@ -3534,12 +3535,20 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: TitleChip(
                       titleKey: g.equippedTitle,
                       titleName: _myTitleName(g),
+                      // The whole point of this strip is showing the banner
+                      // under your own name and title. On a dark one the title
+                      // has to come up with the nickname.
+                      onInk: textColor,
                     ),
                   )
                 else if (!isBanner)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
-                    child: TitleChip(titleKey: itemKey, titleName: itemName),
+                    child: TitleChip(
+                      titleKey: itemKey,
+                      titleName: itemName,
+                      onInk: textColor,
+                    ),
                   ),
                 Text(
                   nickname,

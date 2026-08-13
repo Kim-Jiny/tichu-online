@@ -8,6 +8,15 @@ class TitleChip extends StatelessWidget {
   final String? titleName;
   final double fontSize;
   final double iconSize;
+  final FontWeight fontWeight;
+
+  /// A soft halo behind the text, for the places a title is drawn over
+  /// something other than the app's cream background. Title colours are chosen
+  /// to stand out on cream, so a few of them (the near-black pirate, the yellow
+  /// lucky star) disappear on a banner without one. Pass the colour that
+  /// contrasts with what is behind it — white under dark titles, black under
+  /// light ones.
+  final Color? haloColor;
 
   const TitleChip({
     super.key,
@@ -15,6 +24,8 @@ class TitleChip extends StatelessWidget {
     required this.titleName,
     this.fontSize = 11,
     this.iconSize = 11,
+    this.fontWeight = FontWeight.w600,
+    this.haloColor,
   });
 
   @override
@@ -25,10 +36,24 @@ class TitleChip extends StatelessWidget {
     // A user-written title carries no icon: the catalog icons say "this is one
     // of ours", and a self-chosen title must not be able to borrow that.
     final custom = isCustomTitleKey(titleKey);
+    final halo = haloColor == null
+        ? null
+        : [
+            Shadow(
+              color: haloColor!.withValues(alpha: 0.85),
+              blurRadius: 3,
+            ),
+          ];
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!custom) Icon(titleIconFor(titleKey), size: iconSize, color: color),
+        if (!custom)
+          Icon(
+            titleIconFor(titleKey),
+            size: iconSize,
+            color: color,
+            shadows: halo,
+          ),
         if (!custom) const SizedBox(width: 3),
         Flexible(
           child: Text(
@@ -38,7 +63,8 @@ class TitleChip extends StatelessWidget {
             style: TextStyle(
               fontSize: fontSize,
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: fontWeight,
+              shadows: halo,
             ),
           ),
         ),

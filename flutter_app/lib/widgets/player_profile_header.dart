@@ -12,6 +12,7 @@ import '../utils/level_curve.dart';
 import 'bot_avatar.dart';
 import 'choice_pill.dart';
 import 'profile_avatar.dart';
+import 'title_chip.dart';
 
 /// Header of the player-profile popup: avatar, nickname, and the friend /
 /// block / report actions.
@@ -56,6 +57,14 @@ class PlayerProfileHeader extends StatelessWidget {
   final Color placeholderBackground;
   final Color placeholderForeground;
 
+  /// Text colour when this header is sitting on someone's equipped banner.
+  ///
+  /// Null means the plain white popup, which keeps the brown palette the rest
+  /// of the app uses. A banner can be anything from pastel to near-black, so
+  /// on one the header has to be told what will read against it — see
+  /// [profileBannerInk].
+  final Color? ink;
+
   const PlayerProfileHeader({
     super.key,
     required this.nickname,
@@ -67,6 +76,7 @@ class PlayerProfileHeader extends StatelessWidget {
     this.isBot = false,
     this.placeholderBackground = const Color(0xFFE8F0F7),
     this.placeholderForeground = const Color(0xFF4F6B7A),
+    this.ink,
   });
 
   /// The photo is the one thing in this popup people look at first, and at 38
@@ -113,6 +123,10 @@ class PlayerProfileHeader extends StatelessWidget {
     final resolved = game.resolvePhotoUrl(rawPhoto);
     final isBlockedUser = game.isBlocked(nickname);
     final editable = _canEditPhoto(inner);
+    final onBanner = ink != null;
+    final nameColor = ink ?? const Color(0xFF3E312A);
+    final mutedColor = ink?.withValues(alpha: 0.78) ?? const Color(0xFF84766E);
+    final titleName = isBot ? null : inner?['titleName'] as String?;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,12 +139,23 @@ class PlayerProfileHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Above the nickname, the way the lobby seat and the four
+                  // game screens place it — a title read as part of the name
+                  // when it sat beside one.
+                  if (titleName != null && titleName.isNotEmpty) ...[
+                    _titleLine(inner?['titleKey'] as String?, titleName, ink),
+                  ],
                   Text(
                     nickname,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF3E312A),
+                      color: nameColor,
+                      // The title sits directly above with no gap of its own.
+                      // At the default line height the font's own leading put
+                      // a title's worth of air between the two, which read as
+                      // a stray label rather than as this person's title.
+                      height: titleName != null ? 1.15 : null,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -141,20 +166,14 @@ class PlayerProfileHeader extends StatelessWidget {
                   if (isBot)
                     Text(
                       l10n.profileBotSubtitle,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF84766E),
-                      ),
+                      style: TextStyle(fontSize: 13, color: mutedColor),
                     )
                   else if (subtitleBuilder != null)
                     subtitleBuilder!(inner)
                   else
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF84766E),
-                      ),
+                      style: TextStyle(fontSize: 13, color: mutedColor),
                     ),
                 ],
               ),
@@ -169,13 +188,16 @@ class PlayerProfileHeader extends StatelessWidget {
           Row(
             spacing: 8,
             children: [
-              Expanded(child: _friendButton(context, l10n)),
-              Expanded(child: _blockButton(context, l10n, isBlockedUser)),
+              Expanded(child: _friendButton(context, l10n, onBanner)),
+              Expanded(
+                child: _blockButton(context, l10n, isBlockedUser, onBanner),
+              ),
               Expanded(
                 child: _iconButton(
                   icon: Icons.report_outlined,
                   color: const Color(0xFFE57373),
                   tooltip: l10n.gameReport,
+                  onBanner: onBanner,
                   onTap: () {
                     // Closing the profile dialog takes this widget's context
                     // down with it, so the report dialog has to be opened on the
@@ -194,6 +216,29 @@ class PlayerProfileHeader extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  /// The equipped title, above the nickname.
+  ///
+  /// No plate behind it — a title is the person's, not a badge the popup
+  /// issues, and boxing it made the header read as two chips stacked. Bold and
+  /// in the title's own colour is enough separation from the nickname under it.
+  /// On a banner it takes a halo instead: the title colours are picked to
+  /// stand out on cream, and several of them (the near-black pirate) vanish
+  /// against a dark gradient with nothing behind them. The halo is whatever the
+  /// nickname beside it is not, so it works on pastel banners and dark ones
+  /// from the same rule.
+  Widget _titleLine(String? titleKey, String titleName, Color? ink) {
+    return TitleChip(
+      titleKey: titleKey,
+      titleName: titleName,
+      fontSize: 12.5,
+      iconSize: 12.5,
+      fontWeight: FontWeight.w800,
+      haloColor: ink == null
+          ? null
+          : (ink.computeLuminance() > 0.5 ? Colors.black : Colors.white),
     );
   }
 
@@ -277,7 +322,7 @@ class PlayerProfileHeader extends StatelessWidget {
     );
   }
 
-  Widget _friendButton(BuildContext context, L10n l10n) {
+  Widget _friendButton(BuildContext context, L10n l10n, bool onBanner) {
     if (game.friends.contains(nickname)) {
       // Already friends: the button stays, in blue, and says so when tapped —
       // a dead grey chip reads as "this is broken", and the three actions only
@@ -286,6 +331,7 @@ class PlayerProfileHeader extends StatelessWidget {
         icon: Icons.people_alt,
         color: const Color(0xFF4FC3F7),
         tooltip: l10n.gameAlreadyFriend,
+        onBanner: onBanner,
         onTap: () {
           final messenger = ScaffoldMessenger.of(context);
           messenger.hideCurrentSnackBar();
@@ -300,6 +346,7 @@ class PlayerProfileHeader extends StatelessWidget {
         icon: Icons.hourglass_top,
         color: const Color(0xFFBDBDBD),
         tooltip: l10n.gameRequestPending,
+        onBanner: onBanner,
         onTap: () {},
       );
     }
@@ -307,6 +354,7 @@ class PlayerProfileHeader extends StatelessWidget {
       icon: Icons.person_add,
       color: const Color(0xFF81C784),
       tooltip: l10n.gameAddFriend,
+      onBanner: onBanner,
       onTap: () {
         final messenger = ScaffoldMessenger.of(context);
         game.addFriendAction(nickname);
@@ -318,11 +366,17 @@ class PlayerProfileHeader extends StatelessWidget {
     );
   }
 
-  Widget _blockButton(BuildContext context, L10n l10n, bool blocked) {
+  Widget _blockButton(
+    BuildContext context,
+    L10n l10n,
+    bool blocked,
+    bool onBanner,
+  ) {
     return _iconButton(
       icon: blocked ? Icons.block : Icons.shield_outlined,
       color: blocked ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
       tooltip: blocked ? l10n.gameUnblock : l10n.gameBlock,
+      onBanner: onBanner,
       onTap: () {
         final messenger = ScaffoldMessenger.of(context);
         if (blocked) {
@@ -347,9 +401,17 @@ class PlayerProfileHeader extends StatelessWidget {
     required Color color,
     required String tooltip,
     required VoidCallback onTap,
+    bool onBanner = false,
   }) {
     return Material(
-      color: color.withValues(alpha: 0.13),
+      // A 13% tint of the button's own colour is what makes these read as
+      // buttons on white. Over a banner it reads as nothing at all — on a dark
+      // gradient it is invisible, on a saturated one it fights the fill. A
+      // near-opaque white plate gives them the same white background they were
+      // designed against, whatever is behind it.
+      color: onBanner
+          ? Colors.white.withValues(alpha: 0.92)
+          : color.withValues(alpha: 0.13),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -1106,16 +1168,19 @@ Widget _botCard(L10n l10n) {
 /// Four of the six popups carried a byte-identical private copy of this, and
 /// the two that did not (Skull King, Mighty) ended up looking different from the
 /// rest — Skull King showed a bare "Lv.N" box in the body instead.
-Widget profileLevelStrip(int level, int expTotal) {
+/// [ink] recolours the strip for a header sitting on an equipped banner. The
+/// default is a black bar on a pale track, which is the right contrast on the
+/// cream popup and unreadable on a dark one.
+Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
   final p = LevelCurve.progress(level, expTotal);
   return Row(
     children: [
       Text(
         'Lv.$level',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF5A4038),
+          color: ink ?? const Color(0xFF5A4038),
         ),
       ),
       const SizedBox(width: 8),
@@ -1125,16 +1190,48 @@ Widget profileLevelStrip(int level, int expTotal) {
           child: LinearProgressIndicator(
             value: p.fraction,
             minHeight: 5,
-            backgroundColor: const Color(0xFFEFE7E3),
-            valueColor: const AlwaysStoppedAnimation(Colors.black),
+            backgroundColor:
+                ink?.withValues(alpha: 0.28) ?? const Color(0xFFEFE7E3),
+            valueColor: AlwaysStoppedAnimation(ink ?? Colors.black),
           ),
         ),
       ),
       const SizedBox(width: 6),
       Text(
         '${p.expInLevel}/${p.expToNext}',
-        style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+        style: TextStyle(
+          fontSize: 11,
+          color: ink?.withValues(alpha: 0.75) ?? const Color(0xFF9A8E8A),
+        ),
       ),
     ],
   );
+}
+
+/// What colour of text will read on top of an equipped banner.
+///
+/// [override] is the admin-set `metadata.visual.text.color`, which is the
+/// answer whenever it exists — someone looked at that banner and decided. It
+/// often doesn't: the banners that shipped before that field, and anything an
+/// admin adds without filling it in. Falling back to the popup's usual dark
+/// brown puts near-invisible text on the dark banners, so the fallback is
+/// decided by how bright the gradient actually is.
+///
+/// The whole gradient is averaged rather than sampled at one end. A banner
+/// that runs dark-to-light has no single answer, and the header spans all of
+/// it; the average is the colour most of the text sits on.
+Color profileBannerInk(LinearGradient? gradient, Color? override) {
+  if (override != null) return override;
+  if (gradient == null || gradient.colors.isEmpty) {
+    return const Color(0xFF3E312A);
+  }
+  var sum = 0.0;
+  for (final c in gradient.colors) {
+    sum += c.computeLuminance();
+  }
+  final mean = sum / gradient.colors.length;
+  // 0.45 rather than the usual 0.5: this text is bold and fairly large, and
+  // the dark brown holds up a little past the midpoint where white starts to
+  // glare.
+  return mean > 0.45 ? const Color(0xFF3E312A) : Colors.white;
 }

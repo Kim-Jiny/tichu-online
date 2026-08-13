@@ -186,6 +186,47 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
   }
 }
 
+/// What the iOS app shows instead of the coupon block.
+///
+/// The code, the field and any "go to the web" prompt stay off — that last one
+/// is the external call-to-action the whole gate exists to avoid. What is left
+/// is the bare fact that this post carries a coupon, so a reader who wants one
+/// knows there is something to ask about. Without this the iOS build hides the
+/// coupon so completely that nobody could know to ask, and support-by-inquiry
+/// has nothing to work with.
+class NoticeCouponMuted extends StatelessWidget {
+  const NoticeCouponMuted({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F2EE),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE6DDD8)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.confirmation_number_outlined,
+              size: 15, color: Color(0xFF9A8E8A)),
+          const SizedBox(width: 6),
+          Text(
+            l10n.couponInNotice,
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF8A7A72),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The coupon attached to a notice: the code, a way to copy it, and the way in.
 ///
 /// Callers must check [couponUiVisible] first — this widget draws the code

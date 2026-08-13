@@ -41,13 +41,8 @@ void main() {
     });
   }
 
-  test('the rule is about the app, not about Apple', () {
-    // kIsWeb is checked first precisely so that Safari on an iPhone — which
-    // reports iOS — is still a web client. This asserts the shape of the
-    // expression rather than kIsWeb itself, which a widget test cannot change.
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    const webWins = true; // stands in for kIsWeb
-    expect(webWins || defaultTargetPlatform != TargetPlatform.iOS, isTrue,
-        reason: 'a web build on iOS must still show coupon UI');
-  });
+  // The Safari-on-iPhone case cannot be asserted here: kIsWeb is a compile
+  // time constant and a widget test always runs with it false. It is covered
+  // by the shape of the expression — kIsWeb is the first operand, so a web
+  // build short-circuits to visible before the platform is even consulted.
 }

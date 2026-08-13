@@ -169,6 +169,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final title = item['title']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
     final isPinned = item['is_pinned'] == true;
+    final hasCoupon = (item['coupon_code']?.toString() ?? '').isNotEmpty;
     final publishedAt = _formatShortDate(item['published_at']);
     final noticeId = item['id'];
     final isNew = noticeId is int &&
@@ -214,6 +215,15 @@ class _NoticesScreenState extends State<NoticesScreen> {
               const Padding(
                 padding: EdgeInsets.only(right: 8),
                 child: Icon(Icons.push_pin, size: 16, color: Color(0xFFFF8F00)),
+              ),
+            // Shown on every platform: knowing which post carries a coupon is
+            // worth as much on iOS, where the code itself is withheld and the
+            // reader has to ask.
+            if (hasCoupon)
+              const Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: Icon(Icons.confirmation_number,
+                    size: 16, color: Color(0xFFB07B2E)),
               ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -266,10 +276,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final content = item['content']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
     final publishedAt = _formatShortDate(item['published_at']);
-    // Withheld entirely on the iOS app, code and all.
-    final couponCode = couponUiVisible
-        ? (item['coupon_code']?.toString() ?? '')
-        : '';
+    final rawCoupon = item['coupon_code']?.toString() ?? '';
+    // The code itself is withheld on the iOS app; that the post carries one is
+    // not — see NoticeCouponMuted.
+    final couponCode = couponUiVisible ? rawCoupon : '';
+    final hasCoupon = rawCoupon.isNotEmpty;
 
     Navigator.push(
       context,
@@ -280,6 +291,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
           category: category,
           publishedAt: publishedAt,
           couponCode: couponCode,
+          hasCoupon: hasCoupon,
         ),
       ),
     );
@@ -328,9 +340,12 @@ class _NoticeDetailPage extends StatelessWidget {
   final String category;
   final String publishedAt;
 
-  /// The coupon this notice hands out, if any. Empty on the iOS app even when
-  /// the notice carries one — see couponUiVisible.
+  /// The coupon this notice hands out. Empty on the iOS app even when the
+  /// notice carries one — see couponUiVisible.
   final String couponCode;
+
+  /// Whether a coupon exists at all, regardless of whether it may be shown.
+  final bool hasCoupon;
 
   const _NoticeDetailPage({
     required this.title,
@@ -338,6 +353,7 @@ class _NoticeDetailPage extends StatelessWidget {
     required this.category,
     required this.publishedAt,
     this.couponCode = '',
+    this.hasCoupon = false,
   });
 
   @override
@@ -465,6 +481,9 @@ class _NoticeDetailPage extends StatelessWidget {
                               if (couponCode.isNotEmpty) ...[
                                 const SizedBox(height: 18),
                                 NoticeCouponBlock(code: couponCode),
+                              ] else if (hasCoupon) ...[
+                                const SizedBox(height: 18),
+                                const NoticeCouponMuted(),
                               ],
                             ],
                           ),

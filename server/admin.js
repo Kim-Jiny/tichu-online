@@ -23,6 +23,13 @@ const {
   upsertCoupon, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
+// 정보통신망법 §50 ④ — the "(광고)" label and the opt-out line. See
+// marketing_rules.js.
+const {
+  MARKETING_OPT_OUT_LINE,
+  withMarketingOptOut,
+  adTitleLooksLabelled,
+} = require('./marketing_rules');
 const minioClient = require('./storage/minioClient');
 const {
   TITLE_COLORS: CUSTOM_TITLE_HEX,
@@ -4761,6 +4768,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <label>내용</label>
             <textarea name="body" required rows="3" placeholder="지금 눌러서 들어오면 50골드!"
               style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px"></textarea>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">
+              발송할 때 아래 한 줄이 본문 끝에 자동으로 붙습니다 — 직접 쓰지 마세요.<br>
+              <span class="mono" style="color:#5A4038">${escapeHtml(MARKETING_OPT_OUT_LINE.trim())}</span>
+            </div>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <div>
@@ -4826,7 +4837,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // every time, and the person typing at 2am is the one who forgets. Both
     // bracket shapes because a Korean IME produces （광고） as readily as
     // (광고).
-    if (!/^[(（]\s*광고\s*[)）]/.test(title)) {
+    if (!adTitleLooksLabelled(title)) {
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('광고성 정보라서 제목이 "(광고)" 로 시작해야 합니다. 정보통신망법 §50 ④.'));
     }
@@ -4886,7 +4897,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const push = await sendBroadcastPush(
       audience.map((u) => ({ id: u.id, fcm_token: u.fcm_token })),
       camp.title,
-      camp.body,
+      withMarketingOptOut(camp.body),
       { type: 'campaign', campaignId: id },
     );
     await markFcmTokensInvalid(push.invalidUserIds || []);

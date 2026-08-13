@@ -1,9 +1,28 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../main.dart' show pendingCampaignTaps;
 import '../services/game_service.dart';
+
+/// Whether to raise the first-time consent popup here.
+///
+/// Never on the web. Web builds skip FCM registration entirely, so there is no
+/// token and a yes would buy the player nothing — it would just cost the web
+/// funnel a popup. Leaving the question unanswered is the point:
+/// marketing_asked_at stays null, and the app asks properly on whichever
+/// device they eventually install it on.
+bool marketingConsentAskAllowed({required bool isWeb}) => !isWeb;
+
+/// Whether to show the two-yearly confirmation here.
+///
+/// Everywhere, web included — the opposite of the rule above, on purpose. This
+/// notice is owed to someone who already consented (정보통신망법 §50 ⑧), and a
+/// player who has stopped opening the app may only ever be reachable in a
+/// browser. Suppressing it there would mean the obligation goes undischarged
+/// for exactly the people hardest to reach.
+bool marketingConfirmNoticeAllowed({required bool isWeb}) => true;
 
 /// The two things a marketing campaign needs on screen: asking permission
 /// once, and saying what arrived when a notification is tapped.
@@ -62,8 +81,9 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
     }
     if (_askingConsent || _showingReward || game.playerId.isEmpty) return;
     if (!game.marketingAsked) {
-      _askConsent(game);
-    } else if (game.marketingConfirmDue) {
+      if (marketingConsentAskAllowed(isWeb: kIsWeb)) _askConsent(game);
+    } else if (game.marketingConfirmDue &&
+        marketingConfirmNoticeAllowed(isWeb: kIsWeb)) {
       _confirmConsent(game);
     }
   }

@@ -214,6 +214,37 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
     second.messageKey);
   check('and pays nothing further', (await goldOf(nick(1))) === before + 50);
 
+  console.log('\n[광고에 반드시 붙어야 하는 것들]');
+  // 정보통신망법 §50 ④: an advertisement must be labelled "(광고)" in the
+  // subject and must say how to stop receiving them. Both are enforced in
+  // admin.js — the label at save time, the opt-out line at send time — so this
+  // asserts on the same helpers the route uses rather than on the DB.
+  const { adTitleLooksLabelled, withMarketingOptOut } =
+    require('./marketing_rules.js');
+  check('an unlabelled subject is rejected',
+    adTitleLooksLabelled('주말 이벤트') === false);
+  check('a labelled one is accepted',
+    adTitleLooksLabelled('(광고) 주말 이벤트') === true);
+  check('a full-width bracket from a Korean IME is accepted too',
+    adTitleLooksLabelled('（광고） 주말 이벤트') === true);
+  check('as is spacing inside the bracket',
+    adTitleLooksLabelled('( 광고 ) 주말 이벤트') === true);
+  check('but not a label buried mid-title',
+    adTitleLooksLabelled('주말 (광고) 이벤트') === false,
+    'the law puts it at the start of the subject');
+
+  const outgoing = withMarketingOptOut('지금 눌러서 들어오면 50골드!');
+  check('the opt-out line is appended to the body that is sent',
+    outgoing.includes('수신거부'), outgoing);
+  check('and it names the real screen',
+    outgoing.includes('이벤트·혜택 알림'),
+    'if that settings label moves, this line has to move with it');
+  check('the admin copy is left intact above it',
+    outgoing.startsWith('지금 눌러서 들어오면 50골드!'));
+  check('appending twice does not double the line',
+    withMarketingOptOut(outgoing).split('수신거부').length - 1 === 1,
+    'a resend must not stack it');
+
   console.log('\n[닉네임을 물려받은 새 계정]');
   // Deleting an account frees its nickname, so the next person to take it must
   // not inherit rewards that were sent to the previous owner. Simulated by

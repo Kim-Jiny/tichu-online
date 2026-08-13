@@ -1693,5 +1693,8 @@
   "friendsLastSeenLongAgo": "Vor über einem Monat online",
   "chatToday": "Heute",
   "chatYesterday": "Gestern",
-  "chatDate": "{d}.{m}.{y}"
+  "chatDate": "{d}.{m}.{y}",
+  "shopSheetCreateTitle": "Titel erstellen",
+  "shopSheetRegisterPhoto": "Foto festlegen",
+  "shopSheetEquipped": "Ausgerüstet"
 }

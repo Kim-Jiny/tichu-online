@@ -12,6 +12,7 @@ import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/profile_avatar.dart';
+import '../widgets/player_profile_header.dart' show changeProfilePhoto;
 import '../widgets/title_chip.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/gold_icon.dart';
@@ -2979,20 +2980,34 @@ class _ShopScreenState extends State<ShopScreen> {
                         ),
                       if (tierList == null) const SizedBox(height: 10),
                       if (tierList != null)
-                        Row(
-                          children: [
-                            for (var i = 0; i < tierList.length; i++) ...[
-                              if (i > 0) const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildTierActionButton(
-                                  ctx,
-                                  game,
-                                  tierList[i],
-                                  extend: owned,
-                                ),
-                              ),
-                            ],
-                          ],
+                        Builder(
+                          builder: (_) {
+                            final action = owned
+                                ? _ownedActions(ctx, game, item, compact: true)
+                                : null;
+                            return Row(
+                              children: [
+                                for (var i = 0; i < tierList.length; i++) ...[
+                                  if (i > 0) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildTierActionButton(
+                                      ctx,
+                                      game,
+                                      tierList[i],
+                                      extend: owned,
+                                    ),
+                                  ),
+                                ],
+                                // A pass is bought to DO something. With two
+                                // tiers already on the row this is a third
+                                // column, which is why the label is short.
+                                if (action != null) ...[
+                                  const SizedBox(width: 8),
+                                  Expanded(child: action),
+                                ],
+                              ],
+                            );
+                          },
                         )
                       else
                         Builder(
@@ -3002,8 +3017,10 @@ class _ShopScreenState extends State<ShopScreen> {
                             // owned-season the same as owned-permanent here.
                             final lockedAsOwned =
                                 ownedPermanent || (isSeason && owned);
-                            return SizedBox(
-                              width: double.infinity,
+                            final action = owned
+                                ? _ownedActions(ctx, game, item)
+                                : null;
+                            final buyButton = SizedBox(
                               height: 46,
                               child: ElevatedButton(
                                 onPressed: lockedAsOwned
@@ -3053,6 +3070,22 @@ class _ShopScreenState extends State<ShopScreen> {
                                 ),
                               ),
                             );
+                            // Side by side, not stacked: a second full-width
+                            // button pushes the sheet past its height and turns
+                            // reading an item into scrolling.
+                            if (action == null) {
+                              return SizedBox(
+                                width: double.infinity,
+                                child: buyButton,
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: buyButton),
+                                const SizedBox(width: 8),
+                                Expanded(child: action),
+                              ],
+                            );
                           },
                         ),
                     ],
@@ -3063,6 +3096,161 @@ class _ShopScreenState extends State<ShopScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// The row of actions an item offers once you already own it.
+  ///
+  /// Before this, owning something ended the sheet: an owned permanent item
+  /// showed a dead "보유 중" button and an owned pass showed only 연장. Both
+  /// left the actual use of the thing somewhere else — equip in the inventory
+  /// tab, write a title in a dialog reached from a different screen, upload a
+  /// photo from the profile popup. The sheet you opened to look at the item is
+  /// the obvious place to use it.
+  ///
+  /// Returns null when there is nothing to offer, so the caller can skip the
+  /// spacing too.
+  /// [compact] drops the icon and tightens the text. A pass with two duration
+  /// tiers already fills the row, so its action is a third column and has no
+  /// width to spare.
+  Widget? _ownedActions(
+    BuildContext sheetCtx,
+    GameService game,
+    Map<String, dynamic> item, {
+    bool compact = false,
+  }) {
+    final l10n = L10n.of(sheetCtx);
+    final itemKey = item['item_key'] as String? ?? '';
+    final category = item['category'] as String? ?? '';
+    final effect = item['effect_type'] as String?;
+
+    // The pass items do not get equipped; they unlock a thing to do. Send the
+    // player at that thing instead.
+    if (effect == 'custom_title') {
+      return _sheetAction(
+        sheetCtx,
+        Icons.edit_outlined,
+        l10n.shopSheetCreateTitle,
+        () {
+          Navigator.pop(sheetCtx);
+          _showCustomTitleDialog(context, game);
+        },
+      );
+    }
+    if (effect == 'profile_photo') {
+      return _sheetAction(
+        sheetCtx,
+        Icons.photo_camera_rounded,
+        l10n.shopSheetRegisterPhoto,
+        () {
+          Navigator.pop(sheetCtx);
+          changeProfilePhoto(
+            context,
+            game,
+            photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
+            nickname: game.playerName,
+          );
+        },
+        compact: compact,
+      );
+    }
+
+    // Only the three whose equipped state we can actually read. card_skin is a
+    // category the schema allows and nothing currently uses; offering 장착하기
+    // for it would leave the button showing on a skin that is already on,
+    // because there is no equippedCardSkin to compare against.
+    const equippable = {'banner', 'title', 'theme'};
+    if (!equippable.contains(category)) return null;
+    final equipped = switch (category) {
+      'banner' => game.equippedBanner,
+      'title' => game.equippedTitle,
+      _ => game.equippedTheme,
+    };
+    if (equipped == itemKey) {
+      // Not a button: there is nothing to do, and a live-looking control that
+      // re-equips what is already on reads as if it failed the first time.
+      return Container(
+        width: double.infinity,
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDE7F6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_rounded, size: 18, color: Color(0xFF7E57C2)),
+            const SizedBox(width: 6),
+            Text(
+              l10n.shopSheetEquipped,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF7E57C2),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return _sheetAction(
+      sheetCtx,
+      Icons.check_circle_outline,
+      l10n.shopEquipNow,
+      () {
+        Navigator.pop(sheetCtx);
+        game.equipItem(itemKey);
+      },
+    );
+  }
+
+  Widget _sheetAction(
+    BuildContext ctx,
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    bool compact = false,
+  }) {
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: compact ? 13.5 : 15,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    return SizedBox(
+      width: double.infinity,
+      height: 46,
+      child: compact
+          ? ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEDE7F6),
+                foregroundColor: const Color(0xFF6A4FA8),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: text,
+            )
+          : ElevatedButton.icon(
+              onPressed: onTap,
+              icon: Icon(icon, size: 18),
+              label: text,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEDE7F6),
+                foregroundColor: const Color(0xFF6A4FA8),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
     );
   }
 

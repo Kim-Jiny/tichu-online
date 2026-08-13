@@ -4875,4 +4875,13 @@ class L10nEn extends L10n {
   String chatDate(int y, int m, int d) {
     return '$m/$d/$y';
   }
+
+  @override
+  String get shopSheetCreateTitle => 'Create title';
+
+  @override
+  String get shopSheetRegisterPhoto => 'Set photo';
+
+  @override
+  String get shopSheetEquipped => 'Equipped';
 }

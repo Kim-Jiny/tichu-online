@@ -8624,6 +8624,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'{m}/{d}/{y}'**
   String chatDate(int y, int m, int d);
+
+  /// No description provided for @shopSheetCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create title'**
+  String get shopSheetCreateTitle;
+
+  /// No description provided for @shopSheetRegisterPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Set photo'**
+  String get shopSheetRegisterPhoto;
+
+  /// No description provided for @shopSheetEquipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipped'**
+  String get shopSheetEquipped;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

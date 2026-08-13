@@ -4761,4 +4761,13 @@ class L10nKo extends L10n {
   String chatDate(int y, int m, int d) {
     return '$y년 $m월 $d일';
   }
+
+  @override
+  String get shopSheetCreateTitle => '칭호 만들기';
+
+  @override
+  String get shopSheetRegisterPhoto => '사진 등록하기';
+
+  @override
+  String get shopSheetEquipped => '장착 중';
 }

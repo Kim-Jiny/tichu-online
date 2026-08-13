@@ -4911,4 +4911,13 @@ class L10nDe extends L10n {
   String chatDate(int y, int m, int d) {
     return '$d.$m.$y';
   }
+
+  @override
+  String get shopSheetCreateTitle => 'Titel erstellen';
+
+  @override
+  String get shopSheetRegisterPhoto => 'Foto festlegen';
+
+  @override
+  String get shopSheetEquipped => 'Ausgerüstet';
 }

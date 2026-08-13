@@ -1693,5 +1693,8 @@
   "friendsLastSeenLongAgo": "한 달 이상 전 접속",
   "chatToday": "오늘",
   "chatYesterday": "어제",
-  "chatDate": "{y}년 {m}월 {d}일"
+  "chatDate": "{y}년 {m}월 {d}일",
+  "shopSheetCreateTitle": "칭호 만들기",
+  "shopSheetRegisterPhoto": "사진 등록하기",
+  "shopSheetEquipped": "장착 중"
 }

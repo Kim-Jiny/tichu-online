@@ -2066,18 +2066,6 @@ async function getFriends(nickname) {
   }
 }
 
-/// Friends, with everything the list needs to draw each of them: when they
-/// were last connected, plus the photo, banner, title and level the rest of
-/// the app shows a player by.
-///
-/// Separate from getFriends, which five call sites use as a plain list of
-/// nicknames — widening that return type to reach one screen would touch
-/// friend broadcasts and room invites for no reason.
-///
-/// The timestamp is joined here rather than looked up per friend: the caller
-/// builds one row per friend and would otherwise run a query inside that loop.
-/// COALESCE onto last_login so accounts that predate last_seen_at show their
-/// sign-in rather than nothing at all.
 /// Who this account has exchanged DMs with, for the backstage.
 ///
 /// Deliberately only the partner list: a name, a count, and when it last
@@ -2135,6 +2123,18 @@ async function getAdminDmThread(nickname, partner, limit = 100, offset = 0) {
   return { rows: r.rows, total, hasMore: start > 0 };
 }
 
+/// Friends, with everything the list needs to draw each of them: when they
+/// were last connected, plus the photo, banner, title and level the rest of
+/// the app shows a player by.
+///
+/// Separate from getFriends, which five call sites use as a plain list of
+/// nicknames — widening that return type to reach one screen would touch
+/// friend broadcasts and room invites for no reason.
+///
+/// The timestamp is joined here rather than looked up per friend: the caller
+/// builds one row per friend and would otherwise run a query inside that loop.
+/// COALESCE onto last_login so accounts that predate last_seen_at show their
+/// sign-in rather than nothing at all.
 async function getFriendsWithLastSeen(nickname, locale = 'ko') {
   const client = await pool.connect();
   try {
@@ -3418,47 +3418,6 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
   return getGoldHistory(nickname, limit, offset);
 }
 
-/// Everything this account holds right now, for the admin's inventory panel.
-///
-/// Deliberately NOT getUserItems: that one is the player's own inventory and
-/// deletes expired rows on the way past (cleanupExpiredItems). A support view
-/// must not change what it is reporting on, and an expired row is exactly the
-/// one an admin is most likely to be asked about — "my pass ran out while I
-/// couldn't play". It survives until the owner next opens their inventory, and
-/// until then it can be extended back to life.
-///
-/// The profile-photo pass is appended as a synthetic row. It lives on tc_users
-/// rather than tc_user_items (the upload gate reads it there), so an inventory
-/// built from tc_user_items alone silently omits the one entitlement people
-/// pay real attention to.
-/// How many people are actually holding each shop item right now, for the
-/// backstage's item list.
-///
-/// Three numbers because "쓰고 있다" means two different things depending on
-/// the item. A pass is being used if its days have not run out; a banner is
-/// being used if it is also equipped — plenty of people own five and wear one.
-/// `total` includes lapsed holders, which is what says whether an item ever
-/// sold at all versus is merely between renewals.
-///
-/// The equipped count only counts people whose entitlement is still live. An
-/// equip row is not cleared when the item lapses, so counting the equips table
-/// alone reports banners nobody can actually see.
-/// Every shop purchase, newest first — who bought what, when, for how much.
-///
-/// Two sources, because a renewal is not a row. buyItem INSERTs a
-/// tc_user_items row for a first purchase but UPDATEs the expiry for a repeat
-/// one, writing a tc_gold_history row instead. A log built on tc_user_items
-/// alone silently omits every renewal, which is most of the revenue on an item
-/// people keep. Both are unioned here, and each row says which it was.
-///
-/// The ledger side only stores the item's display names ("ko|en|de"), not its
-/// key, so the key and category are looked up by Korean name in a scalar
-/// subquery. A scalar subquery rather than a join: two items sharing a name
-/// would multiply the row instead of just picking one.
-///
-/// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
-/// and combine.
-/// Every stored token, live or already marked dead, for the uninstall probe.
 /// How long a marketing consent stands before it has to be confirmed.
 /// 정보통신망법 §50 ⑧ — every two years from the date it was given.
 const MARKETING_CONFIRM_INTERVAL = '2 years';
@@ -3895,6 +3854,21 @@ async function getCampaignRecipients(campaignId, limit = 200, offset = 0) {
   return { rows: r.rows.slice(0, limit), hasMore: r.rows.length > limit };
 }
 
+/// Every shop purchase, newest first — who bought what, when, for how much.
+///
+/// Two sources, because a renewal is not a row. buyItem INSERTs a
+/// tc_user_items row for a first purchase but UPDATEs the expiry for a repeat
+/// one, writing a tc_gold_history row instead. A log built on tc_user_items
+/// alone silently omits every renewal, which is most of the revenue on an item
+/// people keep. Both are unioned here, and each row says which it was.
+///
+/// The ledger side only stores the item's display names ("ko|en|de"), not its
+/// key, so the key and category are looked up by Korean name in a scalar
+/// subquery. A scalar subquery rather than a join: two items sharing a name
+/// would multiply the row instead of just picking one.
+///
+/// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
+/// and combine.
 async function getShopPurchaseLog(opts = {}) {
   const limit = Math.min(200, Math.max(1, opts.limit || 50));
   const offset = Math.max(0, opts.offset || 0);
@@ -4012,6 +3986,18 @@ async function getShopPurchaseLogSummary(opts = {}) {
   }
 }
 
+/// How many people are actually holding each shop item right now, for the
+/// backstage's item list.
+///
+/// Three numbers because "쓰고 있다" means two different things depending on
+/// the item. A pass is being used if its days have not run out; a banner is
+/// being used if it is also equipped — plenty of people own five and wear one.
+/// `total` includes lapsed holders, which is what says whether an item ever
+/// sold at all versus is merely between renewals.
+///
+/// The equipped count only counts people whose entitlement is still live. An
+/// equip row is not cleared when the item lapses, so counting the equips table
+/// alone reports banners nobody can actually see.
 async function getShopItemHolderCounts() {
   const client = await pool.connect();
   try {
@@ -4061,6 +4047,19 @@ async function getShopItemHolderCounts() {
   }
 }
 
+/// Everything this account holds right now, for the admin's inventory panel.
+///
+/// Deliberately NOT getUserItems: that one is the player's own inventory and
+/// deletes expired rows on the way past (cleanupExpiredItems). A support view
+/// must not change what it is reporting on, and an expired row is exactly the
+/// one an admin is most likely to be asked about — "my pass ran out while I
+/// couldn't play". It survives until the owner next opens their inventory, and
+/// until then it can be extended back to life.
+///
+/// The profile-photo pass is appended as a synthetic row. It lives on tc_users
+/// rather than tc_user_items (the upload gate reads it there), so an inventory
+/// built from tc_user_items alone silently omits the one entitlement people
+/// pay real attention to.
 async function getAdminUserInventory(nickname) {
   const client = await pool.connect();
   try {

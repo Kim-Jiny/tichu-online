@@ -26,6 +26,7 @@ const {
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
+  redeemCoupon, normalizeCouponCode,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
   createBankDeposit, countPendingBankDeposits,
@@ -3235,6 +3236,9 @@ async function handleMessage(ws, data) {
       break;
     case 'get_notices':
       await handleGetNotices(ws);
+      break;
+    case 'redeem_coupon':
+      await handleRedeemCoupon(ws, data);
       break;
     case 'add_friend':
       await handleAddFriend(ws, data);
@@ -9632,6 +9636,58 @@ async function handleMarkInquiriesRead(ws) {
 async function handleGetNotices(ws) {
   const result = await getPublishedNotices();
   sendTo(ws, { type: 'notices_result', ...result });
+}
+
+/**
+ * Redeem a coupon code.
+ *
+ * No platform gate here on purpose. The iOS *app* hides the entry UI (App
+ * Store rules are about what the app presents), but iOS Safari is a web
+ * client and must work — and a rule enforced only by hiding a button is not a
+ * rule. Everything that decides the outcome lives in the database
+ * transaction; this handler only carries the answer back.
+ */
+async function handleRedeemCoupon(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const code = normalizeCouponCode(data.code);
+  if (!code) {
+    sendTo(ws, {
+      type: 'coupon_result',
+      success: false,
+      message: t(ws.locale, 'coupon_code_required'),
+    });
+    return;
+  }
+
+  const result = await redeemCoupon(ws.nickname, code);
+  if (!result.success) {
+    sendTo(ws, {
+      type: 'coupon_result',
+      success: false,
+      code,
+      message: t(ws.locale, result.messageKey || 'coupon_failed'),
+    });
+    return;
+  }
+
+  console.log(`[COUPON] ${ws.nickname} redeemed ${code} -> ${JSON.stringify(result.reward)}`);
+  sendTo(ws, {
+    type: 'coupon_result',
+    success: true,
+    code,
+    reward: result.reward,
+  });
+  // The wallet and the inventory are what the player checks next; refresh
+  // whichever one moved through the same handlers the client already trusts,
+  // so the payload shape matches what it parses everywhere else.
+  if (result.reward.type === 'gold') {
+    await handleGetWallet(ws);
+  } else {
+    await handleGetInventory(ws);
+  }
 }
 
 // Add friend handler

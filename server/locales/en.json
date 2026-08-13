@@ -287,5 +287,12 @@
   "bank_deposit_bad_product": "That product is not on sale",
   "bank_deposit_need_name": "Please enter the depositor name",
   "bank_deposit_submitted": "Your deposit notice was sent. Gold is granted once it is confirmed",
-  "bank_deposit_pending_exists": "You already have a deposit awaiting confirmation"
+  "bank_deposit_pending_exists": "You already have a deposit awaiting confirmation",
+  "coupon_not_found": "No such coupon code",
+  "coupon_expired": "This coupon has expired",
+  "coupon_exhausted": "All of these coupons have been claimed",
+  "coupon_already_used": "You have already used this coupon",
+  "coupon_inactive": "This coupon is not available right now",
+  "coupon_failed": "Could not redeem the coupon. Please try again shortly",
+  "coupon_code_required": "Enter a coupon code"
 }

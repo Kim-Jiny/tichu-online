@@ -248,6 +248,53 @@ async function runMigrations() {
     // commas.
     await client.query(`ALTER TABLE tc_midleave_log ADD COLUMN IF NOT EXISTS players TEXT`);
 
+    // ── Coupons ──────────────────────────────────────────────────────────
+    // A code handed out in a notice or on a blog, redeemed once per account
+    // for gold or a shop item.
+    //
+    // `redeemed_count` is denormalised on purpose. The honest count is a
+    // COUNT(*) over the redemption table, but the cap has to be enforced
+    // inside the same transaction that inserts the redemption — and counting
+    // rows under a lock is the slow way to do what one locked integer does.
+    // The redemption table stays the source of truth for *who*; this column is
+    // the source of truth for *how many are left*.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_coupons (
+        code VARCHAR(40) PRIMARY KEY,
+        reward_type VARCHAR(20) NOT NULL,
+        reward_gold INT,
+        reward_item_key VARCHAR(80),
+        reward_days INT,
+        max_redemptions INT,
+        redeemed_count INT NOT NULL DEFAULT 0,
+        expires_at TIMESTAMP,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        memo TEXT,
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // One per account, enforced by the database rather than by a check-then-
+    // insert. Two taps that arrive together both pass a check; only one can
+    // win a unique index.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_coupon_redemptions (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(40) NOT NULL,
+        nickname VARCHAR(50) NOT NULL,
+        reward_summary TEXT,
+        redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (code, nickname)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_tc_coupon_redemptions_code
+        ON tc_coupon_redemptions (code, redeemed_at DESC)
+    `);
+    // A notice can carry a coupon: the post announces it and the reader
+    // redeems from the same screen.
+    await client.query(`ALTER TABLE tc_notices ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40)`);
+
     // User stats columns
     // Snapshot of the target's profile photo at the moment of the report.
     // Report-side hiding keys off this (a NEW photo shows again), and the
@@ -6944,6 +6991,261 @@ async function getAdminPushRecipients(kind) {
 }
 
 // Admin: adjust user gold (positive = add, negative = deduct)
+// ═══════════════════════════════════════════════════════════
+//  COUPONS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * A JS Date as UTC text for a `timestamp without time zone` column.
+ *
+ * node-pg serializes a Date using the *process* timezone, so on a KST host a
+ * value nine hours off is what lands in the column. Every timestamp this file
+ * writes by hand goes through here or the same `.replace` pair inline.
+ */
+function toUtcTimestampText(value) {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().replace('T', ' ').replace('Z', '');
+}
+
+/** Codes are typed by hand off a blog post: case and spacing must not matter. */
+function normalizeCouponCode(raw) {
+  return String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+/**
+ * Redeem a coupon for `nickname`.
+ *
+ * Everything that decides the outcome happens inside one transaction, and the
+ * coupon row is locked before the cap is read. Without the lock, two players
+ * redeeming the last seat of a 100-person coupon both read 99 and both write
+ * 100 — the cap is exactly the kind of number that only breaks under the load
+ * a giveaway creates.
+ *
+ * The per-account rule is left to the UNIQUE index rather than a SELECT: a
+ * check-then-insert has the same race one layer up, and a double-tap is the
+ * common case, not the exotic one.
+ */
+async function redeemCoupon(nickname, rawCode) {
+  const code = normalizeCouponCode(rawCode);
+  if (!code) return { success: false, messageKey: 'coupon_not_found' };
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const couponRes = await client.query(
+      'SELECT * FROM tc_coupons WHERE code = $1 FOR UPDATE',
+      [code],
+    );
+    const coupon = couponRes.rows[0];
+    if (!coupon) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'coupon_not_found' };
+    }
+    if (!coupon.is_active) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'coupon_inactive' };
+    }
+    // Compared in SQL, against the same clock the column is written from.
+    // These are `timestamp without time zone` holding UTC, and reading one
+    // into a JS Date makes it a local time — so a coupon that expired an hour
+    // ago looked eight hours away from expiring on a KST host. Same trap the
+    // match-history lower bound fell into; see the `since` text conversions.
+    const expiredRes = await client.query(
+      `SELECT (expires_at IS NOT NULL
+               AND expires_at < (NOW() AT TIME ZONE 'UTC')) AS expired
+         FROM tc_coupons WHERE code = $1`,
+      [code],
+    );
+    if (expiredRes.rows[0]?.expired) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'coupon_expired' };
+    }
+    if (coupon.max_redemptions != null
+        && coupon.redeemed_count >= coupon.max_redemptions) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'coupon_exhausted' };
+    }
+
+    const user = await client.query(
+      'SELECT 1 FROM tc_users WHERE nickname = $1', [nickname],
+    );
+    if (user.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'db_user_not_found' };
+    }
+
+    // Claim the seat first. If this account already has one the unique index
+    // raises 23505 and nothing below runs — no double reward.
+    let summary;
+    try {
+      if (coupon.reward_type === 'gold') {
+        summary = `gold:${coupon.reward_gold || 0}`;
+      } else {
+        summary = `item:${coupon.reward_item_key}`;
+      }
+      await client.query(
+        `INSERT INTO tc_coupon_redemptions (code, nickname, reward_summary)
+         VALUES ($1, $2, $3)`,
+        [code, nickname, summary],
+      );
+    } catch (e) {
+      await client.query('ROLLBACK');
+      if (e.code === '23505') {
+        return { success: false, messageKey: 'coupon_already_used' };
+      }
+      throw e;
+    }
+
+    await client.query(
+      'UPDATE tc_coupons SET redeemed_count = redeemed_count + 1 WHERE code = $1',
+      [code],
+    );
+
+    let reward;
+    if (coupon.reward_type === 'gold') {
+      const amount = coupon.reward_gold || 0;
+      const updated = await client.query(
+        'UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold',
+        [nickname, amount],
+      );
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'coupon', $3, $4)`,
+        [nickname, amount, 'coupon', code],
+      );
+      reward = { type: 'gold', gold: amount, newGold: updated.rows[0].gold };
+    } else {
+      const itemRes = await client.query(
+        'SELECT item_key, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1',
+        [coupon.reward_item_key],
+      );
+      const item = itemRes.rows[0];
+      if (!item) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_item_not_found' };
+      }
+      // reward_days overrides the shop's own duration — the same item can be
+      // given for a week in one campaign and a month in another.
+      const days = coupon.reward_days != null
+        ? coupon.reward_days
+        : item.duration_days;
+      const expiresAt = item.is_permanent || !days
+        ? null
+        : new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+      await client.query(
+        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+         VALUES ($1, $2, $3, FALSE, 'coupon')`,
+        [nickname, item.item_key, expiresAt],
+      );
+      reward = {
+        type: 'item',
+        itemKey: item.item_key,
+        expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      };
+    }
+
+    await client.query('COMMIT');
+    return { success: true, code, reward };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Redeem coupon error:', err);
+    return { success: false, messageKey: 'coupon_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/** Admin: create or overwrite a coupon. */
+async function upsertCoupon(data, adminActor = 'admin') {
+  const code = normalizeCouponCode(data.code);
+  if (!code) return { success: false, message: '코드를 입력하세요' };
+  const rewardType = data.rewardType === 'item' ? 'item' : 'gold';
+  if (rewardType === 'gold' && !(Number(data.rewardGold) > 0)) {
+    return { success: false, message: '골드는 1 이상이어야 합니다' };
+  }
+  if (rewardType === 'item' && !data.rewardItemKey) {
+    return { success: false, message: '아이템을 선택하세요' };
+  }
+  try {
+    await pool.query(
+      `INSERT INTO tc_coupons
+         (code, reward_type, reward_gold, reward_item_key, reward_days,
+          max_redemptions, expires_at, is_active, memo, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (code) DO UPDATE SET
+         reward_type = EXCLUDED.reward_type,
+         reward_gold = EXCLUDED.reward_gold,
+         reward_item_key = EXCLUDED.reward_item_key,
+         reward_days = EXCLUDED.reward_days,
+         max_redemptions = EXCLUDED.max_redemptions,
+         expires_at = EXCLUDED.expires_at,
+         is_active = EXCLUDED.is_active,
+         memo = EXCLUDED.memo`,
+      [
+        code,
+        rewardType,
+        rewardType === 'gold' ? Number(data.rewardGold) : null,
+        rewardType === 'item' ? data.rewardItemKey : null,
+        data.rewardDays ? Number(data.rewardDays) : null,
+        data.maxRedemptions ? Number(data.maxRedemptions) : null,
+        toUtcTimestampText(data.expiresAt),
+        data.isActive !== false,
+        data.memo || null,
+        adminActor,
+      ],
+    );
+    return { success: true, code };
+  } catch (err) {
+    console.error('Upsert coupon error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+async function listCoupons() {
+  try {
+    const res = await pool.query(
+      `SELECT c.*,
+              (SELECT COUNT(*) FROM tc_coupon_redemptions r WHERE r.code = c.code)
+                AS actual_redeemed
+         FROM tc_coupons c
+        ORDER BY c.created_at DESC`,
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('List coupons error:', err);
+    return [];
+  }
+}
+
+async function getCouponRedemptions(code, limit = 100) {
+  try {
+    const res = await pool.query(
+      `SELECT nickname, reward_summary, redeemed_at
+         FROM tc_coupon_redemptions
+        WHERE code = $1 ORDER BY redeemed_at DESC LIMIT $2`,
+      [normalizeCouponCode(code), limit],
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('Coupon redemptions error:', err);
+    return [];
+  }
+}
+
+async function deleteCoupon(code) {
+  try {
+    await pool.query('DELETE FROM tc_coupons WHERE code = $1',
+      [normalizeCouponCode(code)]);
+    return { success: true };
+  } catch (err) {
+    console.error('Delete coupon error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
 async function adminAdjustGold(nickname, amount, adminActor = 'admin') {
   const client = await pool.connect();
   try {
@@ -9384,6 +9686,12 @@ module.exports = {
   getLocalizedConfig,
   updateConfig,
   adminAdjustGold,
+  redeemCoupon,
+  upsertCoupon,
+  listCoupons,
+  getCouponRedemptions,
+  deleteCoupon,
+  normalizeCouponCode,
   createBankDeposit,
   countPendingBankDeposits,
   countPendingBankDepositsAll,

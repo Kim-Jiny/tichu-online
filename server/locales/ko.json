@@ -287,5 +287,12 @@
   "bank_deposit_bad_product": "판매 중인 상품이 아닙니다",
   "bank_deposit_need_name": "입금자명을 입력해 주세요",
   "bank_deposit_submitted": "입금 확인 요청을 보냈습니다. 확인 후 골드가 지급됩니다",
-  "bank_deposit_pending_exists": "이미 확인 대기 중인 입금 요청이 있습니다"
+  "bank_deposit_pending_exists": "이미 확인 대기 중인 입금 요청이 있습니다",
+  "coupon_not_found": "존재하지 않는 쿠폰 코드입니다",
+  "coupon_expired": "사용 기간이 지난 쿠폰입니다",
+  "coupon_exhausted": "준비된 수량이 모두 소진되었습니다",
+  "coupon_already_used": "이미 등록한 쿠폰입니다",
+  "coupon_inactive": "지금은 사용할 수 없는 쿠폰입니다",
+  "coupon_failed": "쿠폰 등록에 실패했습니다. 잠시 후 다시 시도해 주세요",
+  "coupon_code_required": "쿠폰 코드를 입력해 주세요"
 }

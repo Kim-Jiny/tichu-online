@@ -355,6 +355,15 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_inquiry BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_report BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_admin_payment BOOLEAN DEFAULT true`);
+    // Marketing consent. Unlike every other push preference above, this one
+    // defaults to FALSE: 정보통신망법 requires opt-in for 광고성 정보, so an
+    // account that has never been asked must not be in the audience. The
+    // timestamp is the record of when they said yes (or no) — the column alone
+    // cannot tell "declined" from "never asked", and that is the thing you have
+    // to be able to show.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_push_enabled BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_asked_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
@@ -1430,6 +1439,54 @@ async function runMigrations() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_push_recipients_history ON tc_push_recipients(push_history_id)`);
 
+    // Marketing campaigns: a push that pays out when it is tapped.
+    //
+    // Separate from tc_push_history, which records an admin broadcast and
+    // nothing else. A campaign has to survive the send — the reward is claimed
+    // minutes or days later, by a client that only knows the campaign id.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_campaigns (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        reward_gold INTEGER DEFAULT 0,
+        reward_item_key VARCHAR(80),
+        reward_days INT,
+        -- After this, taps still open the app but pay nothing. Stored UTC.
+        claim_deadline TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'draft',
+        target_filter VARCHAR(20) DEFAULT 'all',
+        sent_at TIMESTAMP,
+        sent_count INTEGER DEFAULT 0,
+        fail_count INTEGER DEFAULT 0,
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // One row per person the campaign was sent to.
+    //
+    // This is what makes the reward safe: a claim is only honoured if the
+    // claimer has a row here. Without it, anyone who learned a campaign id
+    // could collect. It is also the only way to count opens and claims, which
+    // a topic send cannot do at all.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_campaign_recipients (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER NOT NULL REFERENCES tc_push_campaigns(id) ON DELETE CASCADE,
+        nickname VARCHAR(50) NOT NULL,
+        status VARCHAR(20) NOT NULL,
+        opened_at TIMESTAMP,
+        claimed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (campaign_id, nickname)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_recipients_campaign
+      ON tc_push_campaign_recipients(campaign_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_recipients_nickname
+      ON tc_push_campaign_recipients(nickname)`);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     // 예전에는 로그만 찍고 계속 떴다. 그러면 실패한 문장 뒤의 마이그레이션이
@@ -1522,7 +1579,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -1558,6 +1615,10 @@ async function loginUser(username, password) {
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
       pushAdminPayment: user.push_admin_payment !== false,
+      marketingPushEnabled: user.marketing_push_enabled === true,
+      // Never asked is not the same as declined, and only the first of those
+      // should raise the consent popup.
+      marketingAsked: user.marketing_asked_at != null,
     };
   } catch (err) {
     console.error('Login error:', err);
@@ -3149,6 +3210,292 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
 ///
 /// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
 /// and combine.
+// ===== Marketing push campaigns =====
+
+/// Whether [when] falls in the window 광고성 정보 may not be sent in — 21:00 to
+/// 08:00 Korean time.
+///
+/// The rule is about the RECIPIENT's local night, and the overwhelming
+/// majority of players are in Korea, so KST is the yardstick. Computed from
+/// the UTC instant rather than the host clock: production runs UTC and a
+/// developer's machine does not, and a guard that only holds on one of them is
+/// not a guard.
+function isKstNight(when = new Date()) {
+  const kstHour = Math.floor(
+    (((when.getTime() + 9 * 3600 * 1000) % 86400000) + 86400000) % 86400000
+    / 3600000,
+  );
+  return kstHour >= 21 || kstHour < 8;
+}
+
+/// Who a marketing push may go to right now.
+///
+/// Consent is read here, at send time, from the database. That is the whole
+/// argument against FCM topics for this: with a topic, consent lives in a
+/// subscription the device has to remember to cancel, so a withdrawal that
+/// fails to reach FCM keeps delivering ads to someone who said stop. Here a
+/// withdrawal is one UPDATE and the next send simply does not include them.
+async function getMarketingAudience(targetFilter = 'all') {
+  const params = [];
+  let q = `SELECT id, nickname, fcm_token
+           FROM tc_users
+           WHERE marketing_push_enabled = TRUE
+             AND push_enabled = TRUE
+             AND is_deleted IS NOT TRUE
+             AND fcm_token IS NOT NULL AND fcm_token <> ''`;
+  if (targetFilter === 'ios' || targetFilter === 'android') {
+    params.push(targetFilter);
+    q += ` AND device_platform = $1`;
+  }
+  const r = await pool.query(q, params);
+  return r.rows;
+}
+
+/// Record a yes or no, and when. Returns the stored state.
+async function setMarketingConsent(nickname, enabled) {
+  const r = await pool.query(
+    `UPDATE tc_users
+     SET marketing_push_enabled = $2,
+         marketing_asked_at = (NOW() AT TIME ZONE 'UTC'),
+         -- Only a yes stamps the consent time; a withdrawal leaves the
+         -- original date in place, since "consented on X, withdrew on Y" is
+         -- the pair you have to be able to show.
+         marketing_consent_at = CASE WHEN $2 THEN (NOW() AT TIME ZONE 'UTC')
+                                     ELSE marketing_consent_at END
+     WHERE nickname = $1
+     RETURNING marketing_push_enabled, marketing_consent_at`,
+    [nickname, !!enabled],
+  );
+  if (r.rows.length === 0) return { success: false, messageKey: 'db_user_not_found' };
+  return {
+    success: true,
+    enabled: r.rows[0].marketing_push_enabled === true,
+    consentAt: r.rows[0].marketing_consent_at,
+  };
+}
+
+/// Has this account been asked yet? The client shows the consent popup once,
+/// and "never asked" is not the same as "said no".
+async function getMarketingConsentState(nickname) {
+  const r = await pool.query(
+    `SELECT marketing_push_enabled, marketing_asked_at FROM tc_users WHERE nickname = $1`,
+    [nickname],
+  );
+  if (r.rows.length === 0) return null;
+  return {
+    enabled: r.rows[0].marketing_push_enabled === true,
+    asked: r.rows[0].marketing_asked_at != null,
+  };
+}
+
+async function createPushCampaign(data, actor = 'admin') {
+  const r = await pool.query(
+    `INSERT INTO tc_push_campaigns
+       (title, body, reward_gold, reward_item_key, reward_days,
+        claim_deadline, target_filter, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [
+      String(data.title || '').slice(0, 200),
+      String(data.body || ''),
+      parseInt(data.rewardGold, 10) || 0,
+      data.rewardItemKey || null,
+      data.rewardDays ? parseInt(data.rewardDays, 10) : null,
+      data.claimDeadline ? toUtcTimestampText(data.claimDeadline) : null,
+      data.targetFilter || 'all',
+      actor,
+    ],
+  );
+  return { success: true, id: r.rows[0].id };
+}
+
+async function listPushCampaigns(limit = 50) {
+  const r = await pool.query(
+    `SELECT c.*,
+            (SELECT COUNT(*) FROM tc_push_campaign_recipients cr
+              WHERE cr.campaign_id = c.id AND cr.status = 'sent')::int AS sent,
+            (SELECT COUNT(*) FROM tc_push_campaign_recipients cr
+              WHERE cr.campaign_id = c.id AND cr.opened_at IS NOT NULL)::int AS opened,
+            (SELECT COUNT(*) FROM tc_push_campaign_recipients cr
+              WHERE cr.campaign_id = c.id AND cr.claimed_at IS NOT NULL)::int AS claimed
+     FROM tc_push_campaigns c
+     ORDER BY c.created_at DESC LIMIT $1`,
+    [limit],
+  );
+  return r.rows;
+}
+
+async function getPushCampaign(id) {
+  const r = await pool.query('SELECT * FROM tc_push_campaigns WHERE id = $1', [id]);
+  return r.rows[0] || null;
+}
+
+async function deletePushCampaign(id) {
+  await pool.query('DELETE FROM tc_push_campaigns WHERE id = $1', [id]);
+  return { success: true };
+}
+
+/// Write the audience down and mark the campaign sent.
+///
+/// [results] is what sendBroadcastPush reports per token. Failures are stored
+/// too, with their status: an audience of 1,000 that reached 400 is a delivery
+/// problem, and a table that only holds the 400 hides it.
+async function recordCampaignSend(campaignId, results) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let sent = 0;
+    let failed = 0;
+    for (const r of results) {
+      if (r.success) sent++; else failed++;
+      await client.query(
+        `INSERT INTO tc_push_campaign_recipients (campaign_id, nickname, status)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (campaign_id, nickname) DO NOTHING`,
+        [campaignId, r.nickname, r.success ? 'sent' : 'failed'],
+      );
+    }
+    await client.query(
+      `UPDATE tc_push_campaigns
+       SET status = 'sent', sent_at = (NOW() AT TIME ZONE 'UTC'),
+           sent_count = $2, fail_count = $3
+       WHERE id = $1`,
+      [campaignId, sent, failed],
+    );
+    await client.query('COMMIT');
+    return { success: true, sent, failed };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Record campaign send error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+/// Tapping the notification: mark the open, and pay out once.
+///
+/// Every refusal is a real case, not defensive padding:
+///  - no recipient row → this account was not sent the campaign. Campaign ids
+///    are small integers that travel to the client, so without this check
+///    anyone could guess one and collect.
+///  - already claimed → the tap handler can fire twice (cold start plus the
+///    resume callback), and a retry after a dropped reply is normal.
+///  - past the deadline → the notification stays on the phone for days.
+///
+/// The open is recorded even when the reward is refused. "500 sent, 300
+/// opened, 12 claimed" is the shape of a deadline that was too short, and you
+/// cannot see it if a late tap leaves no trace.
+async function claimPushCampaign(nickname, campaignId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const rec = await client.query(
+      `SELECT id, claimed_at FROM tc_push_campaign_recipients
+       WHERE campaign_id = $1 AND nickname = $2 FOR UPDATE`,
+      [campaignId, nickname],
+    );
+    if (rec.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'push_reward_not_yours' };
+    }
+    await client.query(
+      `UPDATE tc_push_campaign_recipients
+       SET opened_at = COALESCE(opened_at, (NOW() AT TIME ZONE 'UTC'))
+       WHERE id = $1`,
+      [rec.rows[0].id],
+    );
+    if (rec.rows[0].claimed_at) {
+      await client.query('COMMIT');
+      return { success: false, messageKey: 'push_reward_already_claimed' };
+    }
+    const camp = (await client.query(
+      `SELECT * FROM tc_push_campaigns WHERE id = $1`, [campaignId])).rows[0];
+    if (!camp) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'push_reward_not_found' };
+    }
+    const expired = (await client.query(
+      `SELECT $1::timestamp IS NOT NULL
+              AND $1::timestamp < (NOW() AT TIME ZONE 'UTC') AS expired`,
+      [camp.claim_deadline])).rows[0].expired;
+    if (expired) {
+      await client.query('COMMIT'); // the open still counts
+      return { success: false, messageKey: 'push_reward_expired' };
+    }
+
+    let reward = null;
+    if (camp.reward_gold > 0) {
+      const updated = await client.query(
+        'UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold',
+        [nickname, camp.reward_gold],
+      );
+      if (updated.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_user_not_found' };
+      }
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'push_campaign', $3, $4)`,
+        [nickname, camp.reward_gold, camp.title, `campaign:${campaignId}`],
+      );
+      reward = { type: 'gold', gold: camp.reward_gold, newGold: updated.rows[0].gold };
+    } else if (camp.reward_item_key) {
+      const item = (await client.query(
+        `SELECT item_key, is_permanent, duration_days FROM tc_shop_items
+         WHERE item_key = $1`, [camp.reward_item_key])).rows[0];
+      if (!item) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_item_not_found' };
+      }
+      const days = camp.reward_days != null ? camp.reward_days : item.duration_days;
+      // The expiry is computed in SQL against UTC. Binding a JS Date to a
+      // `timestamp without time zone` sends it in the process timezone, which
+      // is nine hours out on a KST host.
+      await client.query(
+        `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+         VALUES ($1, $2,
+           CASE WHEN $3::boolean OR $4::int IS NULL THEN NULL
+                ELSE (NOW() AT TIME ZONE 'UTC') + ($4 || ' days')::interval END,
+           FALSE, 'push_campaign')`,
+        [nickname, item.item_key, item.is_permanent === true, days ?? null],
+      );
+      reward = { type: 'item', itemKey: item.item_key, days: days ?? null };
+    } else {
+      // A campaign with no reward is a plain announcement; the tap is still
+      // worth recording, and the client is told there is nothing to show.
+      await client.query(
+        `UPDATE tc_push_campaign_recipients SET claimed_at = (NOW() AT TIME ZONE 'UTC')
+         WHERE id = $1`, [rec.rows[0].id]);
+      await client.query('COMMIT');
+      return { success: true, reward: null };
+    }
+
+    await client.query(
+      `UPDATE tc_push_campaign_recipients SET claimed_at = (NOW() AT TIME ZONE 'UTC')
+       WHERE id = $1`, [rec.rows[0].id]);
+    await client.query('COMMIT');
+    return { success: true, reward, title: camp.title };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Claim push campaign error:', err);
+    return { success: false, messageKey: 'push_reward_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+async function getCampaignRecipients(campaignId, limit = 200, offset = 0) {
+  const r = await pool.query(
+    `SELECT nickname, status, opened_at, claimed_at, created_at
+     FROM tc_push_campaign_recipients
+     WHERE campaign_id = $1
+     ORDER BY claimed_at DESC NULLS LAST, opened_at DESC NULLS LAST, nickname
+     LIMIT $2 OFFSET $3`,
+    [campaignId, limit + 1, offset],
+  );
+  return { rows: r.rows.slice(0, limit), hasMore: r.rows.length > limit };
+}
+
 async function getShopPurchaseLog(opts = {}) {
   const limit = Math.min(200, Math.max(1, opts.limit || 50));
   const offset = Math.max(0, opts.offset || 0);
@@ -7058,7 +7405,7 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
@@ -7082,6 +7429,10 @@ async function loginSocial(provider, providerUid) {
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
       pushAdminPayment: user.push_admin_payment !== false,
+      marketingPushEnabled: user.marketing_push_enabled === true,
+      // Never asked is not the same as declined, and only the first of those
+      // should raise the consent popup.
+      marketingAsked: user.marketing_asked_at != null,
     };
   } catch (err) {
     console.error('Social login error:', err);
@@ -9993,6 +10344,17 @@ module.exports = {
   getAdminPurchaseHistory,
   getAdminUserInventory,
   getShopItemHolderCounts,
+  isKstNight,
+  getMarketingAudience,
+  setMarketingConsent,
+  getMarketingConsentState,
+  createPushCampaign,
+  listPushCampaigns,
+  getPushCampaign,
+  deletePushCampaign,
+  recordCampaignSend,
+  claimPushCampaign,
+  getCampaignRecipients,
   getShopPurchaseLog,
   getShopPurchaseLogSummary,
   adminExtendUserItem,

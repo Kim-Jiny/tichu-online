@@ -6,7 +6,9 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  isKstNight, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
+  deletePushCampaign, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -611,6 +613,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
     <a href="/tc-backstage/shop/history" class="${activePage === 'shop-history' ? 'active' : ''}" onclick="closeSidebar()">상점 구매</a>
+    <a href="/tc-backstage/campaigns" class="${activePage === 'campaigns' ? 'active' : ''}" onclick="closeSidebar()">마케팅 푸시</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
     <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
   </div>
@@ -4650,6 +4653,231 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // on each user's detail page; this is the same log without the user filter
   // fixed, which is what answers "did that item actually sell" and "what did
   // this person spend on".
+  // ── 마케팅 푸시 캠페인 ───────────────────────────────────────────────
+  //
+  // Tokens, not an FCM topic. A topic cannot answer any of the three questions
+  // this page exists for: how many people it went to, how many opened it, and
+  // who is owed the reward. It also puts consent on the device — a withdrawal
+  // that fails to reach FCM keeps delivering ads — where here it is one column
+  // read at send time.
+  if (pathname === '/tc-backstage/campaigns' && method === 'GET') {
+    const campaigns = await listPushCampaigns(50);
+    const audience = await getMarketingAudience('all');
+    const night = isKstNight();
+    const notice = url.searchParams.get('msg');
+    const failed = url.searchParams.get('r') === 'fail';
+    const items = await getAllShopItemsAdmin();
+
+    const statusBadge = (c) => c.status === 'sent'
+      ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">발송됨</span>'
+      : '<span class="badge" style="background:#f5f5f5;color:#777">작성 중</span>';
+
+    const rows = campaigns.map((c) => {
+      const reward = c.reward_gold > 0
+        ? `${formatNumber(c.reward_gold)} 골드`
+        : c.reward_item_key
+        ? escapeHtml(c.reward_item_key) + (c.reward_days ? ` (${c.reward_days}일)` : '')
+        : '<span style="color:#bbb">없음</span>';
+      // Open rate against what was actually delivered, not against the
+      // audience: a token that FCM rejected never had a chance to be opened,
+      // and counting it drags the rate down for a delivery problem.
+      const rate = (n) => c.sent > 0 ? `${Math.round((n / c.sent) * 100)}%` : '-';
+      return `<tr>
+        <td style="font-size:12px;color:#888;white-space:nowrap">${c.sent_at ? formatDate(c.sent_at) : '-'}</td>
+        <td>
+          <div style="font-weight:700">${escapeHtml(c.title)}</div>
+          <div style="font-size:12px;color:#777">${escapeHtml((c.body || '').slice(0, 60))}</div>
+        </td>
+        <td>${reward}</td>
+        <td>${statusBadge(c)}</td>
+        <td style="text-align:right;font-weight:700">${formatNumber(c.sent)}${c.fail_count > 0 ? `<div style="font-size:11px;color:#c62828;font-weight:400">실패 ${formatNumber(c.fail_count)}</div>` : ''}</td>
+        <td style="text-align:right;font-weight:700;color:#1565c0">${formatNumber(c.opened)}<div style="font-size:11px;color:#999;font-weight:400">${rate(c.opened)}</div></td>
+        <td style="text-align:right;font-weight:700;color:#2e7d32">${formatNumber(c.claimed)}<div style="font-size:11px;color:#999;font-weight:400">${rate(c.claimed)}</div></td>
+        <td style="white-space:nowrap">
+          <a class="btn btn-secondary" style="font-size:12px;padding:5px 10px" href="/tc-backstage/campaigns/${c.id}">수신자</a>
+          ${c.status !== 'sent' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/send" style="display:inline"
+                onsubmit="return confirm('${escapeHtml(c.title)}\n\n지금 ${formatNumber(audience.length)}명에게 발송합니다. 되돌릴 수 없습니다.')">
+            <button class="btn btn-primary" style="font-size:12px;padding:5px 10px">발송</button>
+          </form>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+
+    const content = `
+      ${pageHeader('마케팅 푸시',
+        '수신동의한 사람에게만 나갑니다. 동의 여부는 발송하는 순간 DB 에서 읽으므로, 철회한 사람은 그 즉시 대상에서 빠집니다.'
+        + '<br>푸시를 눌러 들어온 사람에게 보상이 자동 지급되고, 몇 명이 눌렀는지·몇 명이 받았는지가 아래에 남습니다.')}
+      ${notice ? `<div class="card" style="border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};color:${failed ? '#c62828' : '#2e7d32'};font-weight:700">${escapeHtml(notice)}</div>` : ''}
+      ${summaryStrip([
+        { label: '수신동의', value: formatNumber(audience.length), meta: '지금 발송 가능한 인원' },
+        { label: '발송 가능 시간', value: night ? '아니오' : '예',
+          meta: night ? '21~08시(KST)에는 광고성 푸시를 보내지 않습니다' : '광고 허용 시간대입니다' },
+      ])}
+      ${night ? `<div class="card" style="border-left:4px solid #ef6c00;color:#ef6c00;line-height:1.6">
+        지금은 <b>야간(21~08시 KST)</b>이라 발송이 막혀 있습니다. 정보통신망법상 야간 광고성 정보는 별도의 야간 수신동의가 필요한데,
+        받지 않기로 했습니다. 아침 8시 이후에 보내주세요.
+      </div>` : ''}
+      <div class="card">
+        <h3>새 캠페인</h3>
+        <form method="POST" action="/tc-backstage/campaigns" style="display:grid;gap:10px;max-width:620px">
+          <div>
+            <label>제목</label>
+            <input type="text" name="title" required maxlength="200" placeholder="(광고) 주말 이벤트 안내"
+              style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              광고성 정보에는 제목에 <b>(광고)</b> 표기가 필요합니다.
+            </div>
+          </div>
+          <div>
+            <label>내용</label>
+            <textarea name="body" required rows="3" placeholder="지금 눌러서 들어오면 50골드!"
+              style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div>
+              <label>골드 보상</label>
+              <input type="number" name="reward_gold" value="0" min="0" step="10"
+                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+            <div>
+              <label>또는 아이템</label>
+              <select name="reward_item_key" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+                <option value="">없음</option>
+                ${items.map((i) => `<option value="${escapeHtml(i.item_key)}">${escapeHtml(i.name_ko)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>아이템 기간(일)</label>
+              <input type="number" name="reward_days" min="1" placeholder="상품 기본값"
+                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+          </div>
+          <div>
+            <label>수령 마감 (KST)</label>
+            <input type="datetime-local" name="claim_deadline"
+              style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              비우면 계속 받을 수 있습니다. 마감 후에 눌러도 앱은 열리지만 보상은 나가지 않습니다.
+            </div>
+          </div>
+          <div>
+            <label>대상</label>
+            <select name="target_filter" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <option value="all">전체</option>
+              <option value="android">안드로이드</option>
+              <option value="ios">iOS</option>
+            </select>
+          </div>
+          <div><button class="btn btn-primary">저장</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>캠페인 <span style="font-size:13px;color:#888;font-weight:400">${campaigns.length}개</span></h3>
+        ${campaigns.length ? `<div class="table-wrap"><table>
+          <tr><th>발송일</th><th>내용</th><th>보상</th><th>상태</th>
+              <th style="text-align:right">발송</th><th style="text-align:right">열람</th>
+              <th style="text-align:right">수령</th><th></th></tr>
+          ${rows}
+        </table></div>` : '<div class="empty">아직 캠페인이 없습니다</div>'}
+      </div>
+    `;
+    return html(res, layout('마케팅 푸시', content, 'campaigns'));
+  }
+
+  if (pathname === '/tc-backstage/campaigns' && method === 'POST') {
+    const body = await parseBody(req);
+    const title = (body.title || '').trim();
+    const text = (body.body || '').trim();
+    if (!title || !text) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('제목과 내용을 모두 입력해 주세요.'));
+    }
+    await createPushCampaign({
+      title,
+      body: text,
+      rewardGold: body.reward_gold,
+      rewardItemKey: body.reward_item_key || null,
+      rewardDays: body.reward_days || null,
+      // The field is KST wall-clock by contract, converted here so it does not
+      // depend on the timezone this process happens to run in.
+      claimDeadline: parseKstDateTimeInput(body.claim_deadline),
+      targetFilter: body.target_filter || 'all',
+    }, sessionInfo.session.username || 'admin');
+    return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent('저장했습니다.'));
+  }
+
+  const campaignSendMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)\/send$/);
+  if (campaignSendMatch && method === 'POST') {
+    const id = parseInt(campaignSendMatch[1], 10);
+    const camp = await getPushCampaign(id);
+    if (!camp) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('캠페인을 찾을 수 없습니다.'));
+    }
+    if (camp.status === 'sent') {
+      // Sending twice would pay nobody twice (the recipient row is unique) but
+      // would notify everyone again and reset the counters, so it is refused.
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('이미 발송한 캠페인입니다.'));
+    }
+    if (isKstNight()) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('야간(21~08시 KST)에는 광고성 푸시를 보내지 않습니다.'));
+    }
+    const audience = await getMarketingAudience(camp.target_filter || 'all');
+    if (audience.length === 0) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('수신동의한 대상이 없습니다.'));
+    }
+    const push = await sendBroadcastPush(
+      audience.map((u) => ({ id: u.id, fcm_token: u.fcm_token })),
+      camp.title,
+      camp.body,
+      { type: 'campaign', campaignId: id },
+    );
+    for (const userId of push.invalidUserIds || []) {
+      await clearInvalidFcmToken(userId);
+    }
+    const byId = new Map(audience.map((u) => [u.id, u.nickname]));
+    await recordCampaignSend(id, (push.results || []).map((r) => ({
+      nickname: byId.get(r.userId),
+      success: r.success,
+    })).filter((r) => r.nickname));
+    return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent(
+      `${formatNumber(push.successCount)}명에게 보냈습니다.`
+      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '')));
+  }
+
+  const campaignDetailMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)$/);
+  if (campaignDetailMatch && method === 'GET') {
+    const id = parseInt(campaignDetailMatch[1], 10);
+    const camp = await getPushCampaign(id);
+    if (!camp) return html(res, layout('찾을 수 없음', '<div class="empty">캠페인을 찾을 수 없습니다</div>', 'campaigns'), 404);
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const offset = (page - 1) * PAGE_ROWS;
+    const list = await getCampaignRecipients(id, PAGE_ROWS, offset);
+    const rows = list.rows.map((r) => `<tr>
+      <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}" style="font-weight:700">${escapeHtml(r.nickname)}</a></td>
+      <td>${r.status === 'sent'
+        ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">발송</span>'
+        : '<span class="badge" style="background:#ffebee;color:#c62828">실패</span>'}</td>
+      <td style="font-size:12px;color:#888">${r.opened_at ? formatDate(r.opened_at) : '-'}</td>
+      <td style="font-size:12px;color:#888">${r.claimed_at ? formatDate(r.claimed_at) : '-'}</td>
+    </tr>`).join('');
+    return html(res, layout(`캠페인 · ${escapeHtml(camp.title)}`, `
+      ${pageHeader(escapeHtml(camp.title),
+        '눌러서 들어온 시각과 보상을 받은 시각입니다. 마감이 지난 뒤에 누른 사람은 열람만 남고 수령은 비어 있습니다.')}
+      <div class="card"><a class="btn" href="/tc-backstage/campaigns">← 목록으로</a></div>
+      <div class="card">
+        <h3>${pageRangeLabel(page, offset, list.rows.length)}</h3>
+        ${list.rows.length ? `<div class="table-wrap"><table>
+          <tr><th>유저</th><th>발송</th><th>열람</th><th>수령</th></tr>${rows}
+        </table></div>` : '<div class="empty">수신자가 없습니다</div>'}
+        ${pagerLinks(`/tc-backstage/campaigns/${id}`, page, list.hasMore)}
+      </div>
+    `, 'campaigns'));
+  }
+
   if (pathname === '/tc-backstage/shop/history' && method === 'GET') {
     const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
     const itemKey = url.searchParams.get('item') || '';

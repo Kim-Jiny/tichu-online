@@ -294,5 +294,10 @@
   "coupon_already_used": "이미 등록한 쿠폰입니다",
   "coupon_inactive": "지금은 사용할 수 없는 쿠폰입니다",
   "coupon_failed": "쿠폰 등록에 실패했습니다. 잠시 후 다시 시도해 주세요",
-  "coupon_code_required": "쿠폰 코드를 입력해 주세요"
+  "coupon_code_required": "쿠폰 코드를 입력해 주세요",
+  "push_reward_not_yours": "이 알림의 대상이 아니어서 보상을 받을 수 없습니다",
+  "push_reward_already_claimed": "이미 받은 보상입니다",
+  "push_reward_expired": "보상 받는 기간이 지났습니다",
+  "push_reward_not_found": "알림 정보를 찾을 수 없습니다",
+  "push_reward_failed": "보상을 지급하지 못했습니다. 잠시 후 다시 시도해 주세요"
 }

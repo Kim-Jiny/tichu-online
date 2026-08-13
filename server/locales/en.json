@@ -294,5 +294,10 @@
   "coupon_already_used": "You have already used this coupon",
   "coupon_inactive": "This coupon is not available right now",
   "coupon_failed": "Could not redeem the coupon. Please try again shortly",
-  "coupon_code_required": "Enter a coupon code"
+  "coupon_code_required": "Enter a coupon code",
+  "push_reward_not_yours": "This reward was not sent to your account",
+  "push_reward_already_claimed": "You have already claimed this reward",
+  "push_reward_expired": "The window for claiming this reward has closed",
+  "push_reward_not_found": "That notification could not be found",
+  "push_reward_failed": "Could not grant the reward. Please try again shortly"
 }

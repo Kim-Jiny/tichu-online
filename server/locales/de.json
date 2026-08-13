@@ -294,5 +294,10 @@
   "coupon_already_used": "Du hast diesen Gutschein bereits eingelöst",
   "coupon_inactive": "Dieser Gutschein ist derzeit nicht verfügbar",
   "coupon_failed": "Einlösen fehlgeschlagen. Bitte versuche es gleich noch einmal",
-  "coupon_code_required": "Gib einen Gutscheincode ein"
+  "coupon_code_required": "Gib einen Gutscheincode ein",
+  "push_reward_not_yours": "Diese Belohnung wurde nicht an dein Konto gesendet",
+  "push_reward_already_claimed": "Du hast diese Belohnung bereits erhalten",
+  "push_reward_expired": "Der Zeitraum für diese Belohnung ist abgelaufen",
+  "push_reward_not_found": "Diese Benachrichtigung wurde nicht gefunden",
+  "push_reward_failed": "Belohnung konnte nicht vergeben werden. Bitte versuche es gleich noch einmal"
 }

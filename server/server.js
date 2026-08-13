@@ -27,6 +27,7 @@ const {
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   redeemCoupon, normalizeCouponCode,
+  setMarketingConsent, claimPushCampaign,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
   createBankDeposit, countPendingBankDeposits,
@@ -159,7 +160,12 @@ async function sendPushNotification(fcmToken, title, body) {
 }
 
 // Broadcast push notification to multiple users (batched)
-async function sendBroadcastPush(tokenRows, title, body) {
+//
+// [data] rides along as FCM's data payload — how a campaign notification tells
+// the app which campaign it is when the player taps it. FCM requires every
+// data value to be a string; numbers pass validation on some paths and are
+// dropped on others, so they are stringified here rather than at each caller.
+async function sendBroadcastPush(tokenRows, title, body, data = null) {
   if (!firebaseAdmin) return { successCount: 0, failCount: tokenRows.length, invalidUserIds: [], results: tokenRows.map(r => ({ userId: r.id, success: false, invalid: false })), error: 'Firebase not configured' };
   const BATCH_SIZE = 500;
   let successCount = 0;
@@ -174,6 +180,10 @@ async function sendBroadcastPush(tokenRows, title, body) {
       const result = await firebaseAdmin.messaging().sendEachForMulticast({
         tokens,
         notification: { title, body },
+        ...(data
+          ? { data: Object.fromEntries(
+              Object.entries(data).map(([k, v]) => [k, String(v)])) }
+          : {}),
       });
       result.responses.forEach((resp, idx) => {
         if (resp.success) {
@@ -3364,6 +3374,12 @@ async function handleMessage(ws, data) {
         }
       }
       break;
+    case 'set_marketing_consent':
+      await handleSetMarketingConsent(ws, data);
+      break;
+    case 'claim_push_reward':
+      await handleClaimPushReward(ws, data);
+      break;
     case 'get_admin_dashboard':
       await handleGetAdminDashboard(ws);
       break;
@@ -3660,6 +3676,8 @@ async function handleLogin(ws, data) {
   ws.pushAdminInquiry = result.pushAdminInquiry !== false;
   ws.pushAdminReport = result.pushAdminReport !== false;
   ws.pushAdminPayment = result.pushAdminPayment !== false;
+  ws.marketingPushEnabled = result.marketingPushEnabled === true;
+  ws.marketingAsked = result.marketingAsked === true;
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
   ws.locale = deviceInfo.locale || null;
@@ -3731,6 +3749,10 @@ async function handleSocialLogin(ws, data) {
       ws.pushAdminInquiry = result.pushAdminInquiry !== false;
       ws.pushAdminReport = result.pushAdminReport !== false;
       ws.pushAdminPayment = result.pushAdminPayment !== false;
+      ws.marketingPushEnabled = result.marketingPushEnabled === true;
+      ws.marketingAsked = result.marketingAsked === true;
+  ws.marketingPushEnabled = result.marketingPushEnabled === true;
+  ws.marketingAsked = result.marketingAsked === true;
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;
@@ -3826,6 +3848,8 @@ async function handleSocialRegister(ws, data) {
     ws.pushAdminInquiry = true;
     ws.pushAdminReport = true;
     ws.pushAdminPayment = true;
+    ws.marketingPushEnabled = false;
+    ws.marketingAsked = false;
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
     ws.locale = regDeviceInfo.locale || null;
@@ -3999,6 +4023,8 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4037,6 +4063,8 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4103,6 +4131,8 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4141,6 +4171,8 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4201,6 +4233,8 @@ async function handleReconnection(ws) {
             pushAdminInquiry: ws.pushAdminInquiry !== false,
             pushAdminReport: ws.pushAdminReport !== false,
             pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
             maintenanceStatus: getMaintenanceStatus(ws.locale),
             cardViewPref: ws.cardViewPref || 'ask',
           });
@@ -4261,6 +4295,8 @@ async function handleReconnection(ws) {
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
+          marketingPushEnabled: ws.marketingPushEnabled === true,
+          marketingAsked: ws.marketingAsked === true,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4298,6 +4334,8 @@ async function handleReconnection(ws) {
     pushAdminInquiry: ws.pushAdminInquiry !== false,
     pushAdminReport: ws.pushAdminReport !== false,
     pushAdminPayment: ws.pushAdminPayment !== false,
+    marketingPushEnabled: ws.marketingPushEnabled === true,
+    marketingAsked: ws.marketingAsked === true,
     maintenanceStatus: getMaintenanceStatus(ws.locale),
     cardViewPref: ws.cardViewPref || 'ask',
     photoUrl: ws.photoUrl || null,
@@ -9631,6 +9669,67 @@ async function handleMarkInquiriesRead(ws) {
   await markInquiriesRead(ws.nickname);
   const result = await getUserInquiries(ws.nickname);
   sendTo(ws, { type: 'inquiries_result', ...result });
+}
+
+/// Yes or no to marketing pushes, from the first-run popup or from settings.
+///
+/// The reply carries the stored state back rather than the client assuming its
+/// own switch took. A withdrawal that the client believes happened and the
+/// server never recorded is the failure that keeps sending ads to someone who
+/// opted out.
+async function handleSetMarketingConsent(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const result = await setMarketingConsent(ws.nickname, data.enabled === true);
+  if (result.success) {
+    // Keep this socket's copy in step: several code paths re-send
+    // login_success from ws.*, and a stale copy there would show the switch
+    // flipping back on its own.
+    ws.marketingPushEnabled = result.enabled === true;
+    ws.marketingAsked = true;
+  }
+  sendTo(ws, {
+    type: 'marketing_consent_result',
+    success: result.success === true,
+    enabled: result.enabled === true,
+  });
+}
+
+/// The player tapped a campaign notification.
+///
+/// Fire-and-forget from the client's point of view — it sends this on every
+/// launch that came from a notification, including ones it already sent and
+/// got no answer for. Everything that decides whether to pay is in
+/// claimPushCampaign; this only carries the answer back so the app can show
+/// what arrived.
+async function handleClaimPushReward(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const campaignId = parseInt(data.campaignId, 10);
+  if (!Number.isFinite(campaignId)) {
+    sendTo(ws, { type: 'push_reward_result', success: false });
+    return;
+  }
+  const result = await claimPushCampaign(ws.nickname, campaignId);
+  sendTo(ws, {
+    type: 'push_reward_result',
+    campaignId,
+    success: result.success === true,
+    reward: result.reward || null,
+    title: result.title || null,
+    message: result.messageKey ? t(ws.locale, result.messageKey) : null,
+    messageKey: result.messageKey || null,
+  });
+  // The wallet the app is showing is now stale. Pushed rather than waited for,
+  // the same way a coupon redemption does it.
+  if (result.success && result.reward) {
+    const wallet = await getWallet(ws.nickname);
+    if (wallet.success) sendTo(ws, { type: 'wallet_result', ...wallet });
+  }
 }
 
 /// Config key for the App Review kill switch. See handleGetNotices.

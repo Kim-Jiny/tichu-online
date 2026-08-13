@@ -1000,7 +1000,31 @@ async function runMigrations() {
         ('banner_sk_season_bronze', '스컬킹 시즌 브론즈 배너', '스컬킹 시즌 브론즈 배너', 'Skull King Season Bronze Banner', 'Skull-King-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_mighty_season_gold', '마이티 시즌 골드 배너', '마이티 시즌 골드 배너', 'Mighty Season Gold Banner', 'Mighty-Saison-Gold-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_mighty_season_silver', '마이티 시즌 실버 배너', '마이티 시즌 실버 배너', 'Mighty Season Silver Banner', 'Mighty-Saison-Silber-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_mighty_season_bronze', '마이티 시즌 브론즈 배너', '마이티 시즌 브론즈 배너', 'Mighty Season Bronze Banner', 'Mighty-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb)
+        ('banner_mighty_season_bronze', '마이티 시즌 브론즈 배너', '마이티 시즌 브론즈 배너', 'Mighty Season Bronze Banner', 'Mighty-Saison-Bronze-Banner', 'banner', 0, TRUE, FALSE, 30, FALSE, NULL, NULL, '{}'::jsonb),
+
+        -- 개척자 배너: 초기 이용자에게 쿠폰으로 주는 영구 배너.
+        --
+        -- is_purchasable = FALSE 로 나가고 그대로 둔다. 상점에서 파는 물건이
+        -- 아니라는 것이 이 배너의 전부다 — 팔리는 순간 "초기부터 있었다"는
+        -- 뜻이 사라진다. is_season 은 FALSE 다: 시즌 보상이 아니고, TRUE 면
+        -- 시즌 지급 로직이 후보로 집어간다.
+        --
+        -- 영구(is_permanent = TRUE, duration_days = NULL)라서 쿠폰으로 주면
+        -- expires_at 이 비어 들어간다 — redeemCoupon 이 그렇게 처리한다.
+        --
+        -- 열 개를 다 넣는 것은 어느 것을 뿌릴지 나중에 고르기 위해서다.
+        -- 상점에 안 뜨므로 이용자에게는 존재하지 않는 것과 같고, 안 쓸 것은
+        -- 그냥 안 주면 된다.
+        ('banner_pio_champagne', '개척자 · 샴페인', '개척자 · 샴페인', 'Pioneer · Champagne', 'Pioneer · Champagne', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pio_dawn', '개척자 · 여명', '개척자 · 여명', 'Pioneer · First Light', 'Pioneer · First Light', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pio_haze', '개척자 · 아침안개', '개척자 · 아침안개', 'Pioneer · Morning Haze', 'Pioneer · Morning Haze', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pio_pearl', '개척자 · 진주', '개척자 · 진주', 'Pioneer · Pearl', 'Pioneer · Pearl', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pio_sage', '개척자 · 린넨과 세이지', '개척자 · 린넨과 세이지', 'Pioneer · Linen and Sage', 'Pioneer · Linen and Sage', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pioneer_deep', '개척자 · 심해', '개척자 · 심해', 'Pioneer · Deep Current', 'Pioneer · Deep Current', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pioneer_gilt', '개척자 · 먹과 금테', '개척자 · 먹과 금테', 'Pioneer · Ink and Gilt', 'Pioneer · Ink and Gilt', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pioneer_iris', '개척자 · 오일슬릭', '개척자 · 오일슬릭', 'Pioneer · Oil Slick', 'Pioneer · Oil Slick', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pioneer_iris2', '개척자 · 네뷸라', '개척자 · 네뷸라', 'Pioneer · Nebula', 'Pioneer · Nebula', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+        ('banner_pioneer_iris3', '개척자 · 오로라나이트', '개척자 · 오로라나이트', 'Pioneer · Aurora Night', 'Pioneer · Aurora Night', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
         name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,

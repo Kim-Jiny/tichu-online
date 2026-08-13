@@ -244,6 +244,477 @@ const VISUAL_BACKFILL = {
   mighty_season_stats_reset: { version: 1, thumbnail: thumb('emoji_events',     '#1565C0', '#E1F5FE', '#B3E5FC', '#81D4FA') },
   mighty_trump_counter_7d:   { version: 1, thumbnail: thumb('analytics',        '#5C6BC0', '#E8EAF6', '#C5CAE9', '#9FA8DA') },
   mighty_prev_trick_7d:      { version: 1, thumbnail: thumb('analytics',        '#5C6BC0', '#E8EAF6', '#C5CAE9', '#9FA8DA') },
+
+  // 개척자 배너 — 상점에 없는 영구 배너. 여러 단계의 그라디언트를 쓰므로
+  // 두 색만 받는 linear()/preview() 헬퍼 대신 값을 그대로 적는다.
+  // 어드민이 색을 고치면 metadata.visual 이 이미 존재하게 되어 이 값이
+  // 다시 덮어쓰지 않는다 — backfillShopVisuals 참고.
+  'banner_pio_champagne': {
+    "text": {
+      "color": "#7A5A2E"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F7EFE0"
+          },
+          {
+            "at": 0.5,
+            "color": "#EFD9B4"
+          },
+          {
+            "at": 1,
+            "color": "#F9F2E6"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "celebration",
+      "iconColor": "#C9A85C",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F7EFE0"
+          },
+          {
+            "at": 1,
+            "color": "#EFD9B4"
+          }
+        ]
+      },
+      "borderColor": "#EFD9B4"
+    }
+  },
+  'banner_pio_dawn': {
+    "text": {
+      "color": "#8A4A32"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#FAE3D6"
+          },
+          {
+            "at": 0.5,
+            "color": "#FBF0DF"
+          },
+          {
+            "at": 1,
+            "color": "#E5EEF3"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "wb_twilight",
+      "iconColor": "#D08A63",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#FAE3D6"
+          },
+          {
+            "at": 1,
+            "color": "#E5EEF3"
+          }
+        ]
+      },
+      "borderColor": "#E5EEF3"
+    }
+  },
+  'banner_pio_haze': {
+    "text": {
+      "color": "#3F4E7A"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#E3ECF7"
+          },
+          {
+            "at": 0.5,
+            "color": "#E7E3F5"
+          },
+          {
+            "at": 1,
+            "color": "#F3EBF2"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "cloud",
+      "iconColor": "#7C8CC4",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#E3ECF7"
+          },
+          {
+            "at": 1,
+            "color": "#E7E3F5"
+          }
+        ]
+      },
+      "borderColor": "#E7E3F5"
+    }
+  },
+  'banner_pio_pearl': {
+    "text": {
+      "color": "#5A4A6A"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F3E6EE"
+          },
+          {
+            "at": 0.3333333333333333,
+            "color": "#E6EEF6"
+          },
+          {
+            "at": 0.6666666666666666,
+            "color": "#E4F2EA"
+          },
+          {
+            "at": 1,
+            "color": "#F2ECDF"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "blur_on",
+      "iconColor": "#9A86B0",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F3E6EE"
+          },
+          {
+            "at": 1,
+            "color": "#E4F2EA"
+          }
+        ]
+      },
+      "borderColor": "#E4F2EA"
+    }
+  },
+  'banner_pio_sage': {
+    "text": {
+      "color": "#40573F"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F2EEE4"
+          },
+          {
+            "at": 0.5,
+            "color": "#DFE7D8"
+          },
+          {
+            "at": 1,
+            "color": "#EDF1E7"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "park",
+      "iconColor": "#7A9678",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#F2EEE4"
+          },
+          {
+            "at": 1,
+            "color": "#DFE7D8"
+          }
+        ]
+      },
+      "borderColor": "#DFE7D8"
+    }
+  },
+  'banner_pioneer_deep': {
+    "text": {
+      "color": "#FFFFFF"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#052E3E"
+          },
+          {
+            "at": 0.5,
+            "color": "#0E5A6B"
+          },
+          {
+            "at": 1,
+            "color": "#16897F"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "waves",
+      "iconColor": "#0E5A6B",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#052E3E"
+          },
+          {
+            "at": 1,
+            "color": "#16897F"
+          }
+        ]
+      },
+      "borderColor": "#16897F"
+    }
+  },
+  'banner_pioneer_gilt': {
+    "text": {
+      "color": "#F0D9A7"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#1C1C24"
+          },
+          {
+            "at": 0.5,
+            "color": "#2E2A34"
+          },
+          {
+            "at": 1,
+            "color": "#4A3B2A"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "workspace_premium",
+      "iconColor": "#C9A85C",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#1C1C24"
+          },
+          {
+            "at": 1,
+            "color": "#4A3B2A"
+          }
+        ]
+      },
+      "borderColor": "#4A3B2A"
+    }
+  },
+  'banner_pioneer_iris': {
+    "text": {
+      "color": "#FFFFFF"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#241B4A"
+          },
+          {
+            "at": 0.3333333333333333,
+            "color": "#6E2A7E"
+          },
+          {
+            "at": 0.6666666666666666,
+            "color": "#12707F"
+          },
+          {
+            "at": 1,
+            "color": "#B98A2E"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "auto_awesome",
+      "iconColor": "#B98A2E",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#241B4A"
+          },
+          {
+            "at": 1,
+            "color": "#B98A2E"
+          }
+        ]
+      },
+      "borderColor": "#B98A2E"
+    }
+  },
+  'banner_pioneer_iris2': {
+    "text": {
+      "color": "#FFFFFF"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#3A1C71"
+          },
+          {
+            "at": 0.3333333333333333,
+            "color": "#A33A9B"
+          },
+          {
+            "at": 0.6666666666666666,
+            "color": "#2E4BA8"
+          },
+          {
+            "at": 1,
+            "color": "#22A7C4"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "blur_on",
+      "iconColor": "#A33A9B",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#3A1C71"
+          },
+          {
+            "at": 1,
+            "color": "#22A7C4"
+          }
+        ]
+      },
+      "borderColor": "#22A7C4"
+    }
+  },
+  'banner_pioneer_iris3': {
+    "text": {
+      "color": "#FFFFFF"
+    },
+    "preview": {
+      "background": {
+        "kind": "gradient",
+        "angle": 120,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#0C1E3E"
+          },
+          {
+            "at": 0.3333333333333333,
+            "color": "#14705F"
+          },
+          {
+            "at": 0.6666666666666666,
+            "color": "#2ECC9B"
+          },
+          {
+            "at": 1,
+            "color": "#7A4FBF"
+          }
+        ]
+      }
+    },
+    "version": 1,
+    "thumbnail": {
+      "icon": "nights_stay",
+      "iconColor": "#2ECC9B",
+      "background": {
+        "kind": "gradient",
+        "angle": 0,
+        "stops": [
+          {
+            "at": 0,
+            "color": "#0C1E3E"
+          },
+          {
+            "at": 1,
+            "color": "#2ECC9B"
+          }
+        ]
+      },
+      "borderColor": "#2ECC9B"
+    }
+  },
 };
 
 // Default visual per category — used as a render fallback when an item has

@@ -3350,19 +3350,34 @@ async function recordCampaignSend(campaignId, results) {
       await client.query(
         `INSERT INTO tc_push_campaign_recipients (campaign_id, nickname, status)
          VALUES ($1, $2, $3)
-         ON CONFLICT (campaign_id, nickname) DO NOTHING`,
+         ON CONFLICT (campaign_id, nickname) DO UPDATE
+           -- A retry after a partial failure must be able to turn a failed row
+           -- into a sent one. Never the other way round: once it reached them,
+           -- a later attempt that fails does not un-deliver it, and the row is
+           -- what entitles them to the reward.
+           SET status = CASE WHEN tc_push_campaign_recipients.status = 'sent'
+                             THEN 'sent' ELSE EXCLUDED.status END`,
         [campaignId, r.nickname, r.success ? 'sent' : 'failed'],
       );
     }
+    // Only a send that reached somebody counts as sent. A total failure is
+    // Firebase being unreachable or misconfigured, and burning the campaign
+    // for it would mean rebuilding it by hand to try again — so it stays a
+    // draft and the button stays available.
+    const delivered = sent > 0;
     await client.query(
       `UPDATE tc_push_campaigns
-       SET status = 'sent', sent_at = (NOW() AT TIME ZONE 'UTC'),
+       -- Cast once: without it Postgres deduces one type for the assignment
+       -- and another for the comparison and refuses the statement.
+       SET status = $4::varchar,
+           sent_at = CASE WHEN $4::varchar = 'sent' THEN (NOW() AT TIME ZONE 'UTC')
+                          ELSE sent_at END,
            sent_count = $2, fail_count = $3
        WHERE id = $1`,
-      [campaignId, sent, failed],
+      [campaignId, sent, failed, delivered ? 'sent' : 'draft'],
     );
     await client.query('COMMIT');
-    return { success: true, sent, failed };
+    return { success: delivered, sent, failed };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Record campaign send error:', err);

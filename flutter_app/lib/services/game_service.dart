@@ -115,7 +115,8 @@ class GameService extends ChangeNotifier {
   /// False when nobody else human is at the table, where the server ends the
   /// match instead rather than leave bots playing to an empty room.
   bool get canLeaveInProgress {
-    if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress) return false;
+    if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress)
+      return false;
     final otherHumans = roomPlayers
         .where((p) => p != null && !p.isBot && p.id != playerId)
         .length;
@@ -416,6 +417,21 @@ class GameService extends ChangeNotifier {
   bool pushAdminInquiryEnabled = true;
   bool pushAdminReportEnabled = true;
   bool pushAdminPaymentEnabled = true;
+
+  /// Marketing pushes. Opt-in, and not cached in SharedPreferences like the
+  /// others: consent is a record the server keeps, and a stale local copy
+  /// deciding what to show would be the app disagreeing with what was actually
+  /// consented to.
+  bool marketingPushEnabled = false;
+
+  /// Whether this account has ever answered the consent question. False means
+  /// never asked, which is the only state that raises the popup — someone who
+  /// declined must not be asked again on every launch.
+  bool marketingAsked = false;
+
+  /// A campaign reward that just landed, for the UI to celebrate and clear.
+  PushRewardOutcome? pendingPushReward;
+
   double sfxVolume = 0.7;
 
   // Admin
@@ -749,6 +765,11 @@ class GameService extends ChangeNotifier {
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
         pushAdminPaymentEnabled = data['pushAdminPayment'] != false;
+        marketingPushEnabled = data['marketingPushEnabled'] == true;
+        marketingAsked = data['marketingAsked'] == true;
+        // A notification tapped before this connection existed — the cold
+        // start case — has been waiting for a session to send it under.
+        _flushPushRewardClaims();
         cardViewPref = (data['cardViewPref'] as String?) ?? 'ask';
         loginError = null;
         _parseMaintenanceStatus(
@@ -2381,6 +2402,38 @@ class GameService extends ChangeNotifier {
           ),
         );
         _couponCompleter = null;
+        break;
+
+      case 'marketing_consent_result':
+        // Trust the server's copy over the optimistic local one. If the write
+        // failed, the switch has to go back — silently keeping it on is how an
+        // account that opted out keeps receiving ads.
+        marketingPushEnabled = data['enabled'] == true;
+        marketingAsked = true;
+        notifyListeners();
+        break;
+
+      case 'push_reward_result':
+        {
+          final id = data['campaignId'] as int?;
+          // Acknowledged either way: a refusal ("already claimed", "too late")
+          // is a final answer, and retrying it forever would re-send on every
+          // reconnect.
+          if (id != null) _unclaimedCampaigns.remove(id);
+          final reward = data['reward'] as Map?;
+          // Only a payout is worth interrupting someone for. A tap on an
+          // already-claimed notification is not news.
+          if (data['success'] == true && reward != null) {
+            pendingPushReward = PushRewardOutcome(
+              title: data['title'] as String?,
+              rewardType: reward['type'] as String?,
+              gold: reward['gold'] as int?,
+              itemKey: reward['itemKey'] as String?,
+              days: reward['days'] as int?,
+            );
+            notifyListeners();
+          }
+        }
         break;
 
       case 'notices_result':
@@ -4433,6 +4486,49 @@ class GameService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Answer the marketing consent question — from the first-run popup or from
+  /// settings. [marketingAsked] flips either way: declining is an answer, and
+  /// re-asking someone who said no is the thing the popup must never do.
+  void setMarketingConsent(bool enabled) {
+    marketingPushEnabled = enabled;
+    marketingAsked = true;
+    if (playerId.isNotEmpty) {
+      _network.send({'type': 'set_marketing_consent', 'enabled': enabled});
+    }
+    notifyListeners();
+  }
+
+  /// Campaign ids tapped but not yet acknowledged by the server.
+  ///
+  /// A notification can be tapped while the socket is down — on a cold start
+  /// the tap is known before the connection exists. Held here and flushed on
+  /// login, so the reward is not lost to whichever happened first.
+  final Set<int> _unclaimedCampaigns = <int>{};
+
+  /// The player tapped a campaign notification.
+  ///
+  /// Safe to call more than once for the same campaign: Firebase delivers the
+  /// launch message through two different callbacks depending on whether the
+  /// app was terminated or merely backgrounded, and the server pays once
+  /// regardless.
+  void claimPushReward(int campaignId) {
+    _unclaimedCampaigns.add(campaignId);
+    _flushPushRewardClaims();
+  }
+
+  void _flushPushRewardClaims() {
+    if (playerId.isEmpty || _unclaimedCampaigns.isEmpty) return;
+    for (final id in _unclaimedCampaigns.toList()) {
+      _network.send({'type': 'claim_push_reward', 'campaignId': id});
+    }
+  }
+
+  /// Called once the celebration has been shown, so it is not shown again.
+  void consumePushReward() {
+    pendingPushReward = null;
+    notifyListeners();
+  }
+
   Future<void> setPushFriendInviteEnabled(bool enabled) async {
     pushFriendInviteEnabled = enabled;
     final prefs = await SharedPreferences.getInstance();
@@ -4519,6 +4615,26 @@ class GameService extends ChangeNotifier {
 ///
 /// A null [message] with `success: false` means the server never answered —
 /// the screen says so in its own words rather than showing an empty error.
+/// A campaign reward that arrived and has not been shown yet.
+///
+/// Gold lands silently in the wallet, so without something on screen the
+/// player has no way to know the notification they tapped actually paid.
+class PushRewardOutcome {
+  final String? title;
+  final String? rewardType;
+  final int? gold;
+  final String? itemKey;
+  final int? days;
+
+  const PushRewardOutcome({
+    this.title,
+    this.rewardType,
+    this.gold,
+    this.itemKey,
+    this.days,
+  });
+}
+
 class CouponOutcome {
   final bool success;
   final String? message;

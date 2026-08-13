@@ -1664,5 +1664,15 @@
   "couponRewardItem": "Gegenstand liegt in deinem Inventar",
   "couponRewardItemDays": "Gegenstand für {days} Tage erhalten",
   "couponInNotice": "Mit Gutschein",
-  "couponCopied": "Code kopiert"
+  "couponCopied": "Code kopiert",
+  "marketingConsentTitle": "Event-News erhalten?",
+  "marketingConsentBody": "Wir schicken dir Pushes zu Angeboten, Events und Gutscheinen. Bei manchen gibt es Gold, wenn du sie antippst.",
+  "marketingConsentNote": "Dies ist die Einwilligung in Werbenachrichten. Du kannst sie jederzeit unter Einstellungen > Benachrichtigungen abschalten; zwischen 21 und 8 Uhr senden wir nie. Spielhinweise wie Freundschaftsanfragen sind davon nicht betroffen.",
+  "marketingConsentAccept": "Ja, gerne",
+  "marketingConsentDecline": "Nein danke",
+  "settingsMarketingPush": "Events und Angebote",
+  "settingsMarketingPushHint": "Werbenachrichten. Nie zwischen 21 und 8 Uhr",
+  "pushRewardTitle": "Belohnung erhalten!",
+  "pushRewardGold": "{gold} Gold wurden gutgeschrieben",
+  "pushRewardItem": "Der Gegenstand wurde hinzugefügt"
 }

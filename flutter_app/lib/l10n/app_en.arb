@@ -2742,5 +2742,22 @@
     }
   },
   "couponInNotice": "Coupon included",
-  "couponCopied": "Code copied"
+  "couponCopied": "Code copied",
+  "marketingConsentTitle": "Get event news?",
+  "marketingConsentBody": "We'll send you pushes about sales, events and coupons. Some of them pay out gold when you tap them.",
+  "marketingConsentNote": "This is consent to receive promotional messages. You can turn it off any time in Settings > Notifications, and we never send between 9pm and 8am. Game alerts such as friend requests are unaffected.",
+  "marketingConsentAccept": "Yes, send them",
+  "marketingConsentDecline": "No thanks",
+  "settingsMarketingPush": "Events and offers",
+  "settingsMarketingPushHint": "Promotional messages. Never sent between 9pm and 8am",
+  "pushRewardTitle": "Reward claimed!",
+  "pushRewardGold": "{gold} gold has been added",
+  "pushRewardItem": "The item has been added",
+  "@pushRewardGold": {
+    "placeholders": {
+      "gold": {
+        "type": "int"
+      }
+    }
+  }
 }

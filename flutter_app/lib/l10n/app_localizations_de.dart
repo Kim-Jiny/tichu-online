@@ -4808,4 +4808,39 @@ class L10nDe extends L10n {
 
   @override
   String get couponCopied => 'Code kopiert';
+
+  @override
+  String get marketingConsentTitle => 'Event-News erhalten?';
+
+  @override
+  String get marketingConsentBody =>
+      'Wir schicken dir Pushes zu Angeboten, Events und Gutscheinen. Bei manchen gibt es Gold, wenn du sie antippst.';
+
+  @override
+  String get marketingConsentNote =>
+      'Dies ist die Einwilligung in Werbenachrichten. Du kannst sie jederzeit unter Einstellungen > Benachrichtigungen abschalten; zwischen 21 und 8 Uhr senden wir nie. Spielhinweise wie Freundschaftsanfragen sind davon nicht betroffen.';
+
+  @override
+  String get marketingConsentAccept => 'Ja, gerne';
+
+  @override
+  String get marketingConsentDecline => 'Nein danke';
+
+  @override
+  String get settingsMarketingPush => 'Events und Angebote';
+
+  @override
+  String get settingsMarketingPushHint =>
+      'Werbenachrichten. Nie zwischen 21 und 8 Uhr';
+
+  @override
+  String get pushRewardTitle => 'Belohnung erhalten!';
+
+  @override
+  String pushRewardGold(int gold) {
+    return '$gold Gold wurden gutgeschrieben';
+  }
+
+  @override
+  String get pushRewardItem => 'Der Gegenstand wurde hinzugefügt';
 }

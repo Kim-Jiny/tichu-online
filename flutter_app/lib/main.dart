@@ -30,6 +30,7 @@ import 'services/locale_service.dart';
 import 'screens/game_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/lobby_screen.dart';
+import 'widgets/marketing_push.dart';
 import 'screens/spectator_screen.dart';
 import 'screens/sk_game_screen.dart';
 import 'screens/ll_game_screen.dart';
@@ -107,9 +108,36 @@ void main() async {
         'Foreground push: ${message.notification?.title} - ${message.notification?.body}',
       );
     });
+
+    // Tapping a campaign notification is what pays out, so the tap has to be
+    // caught in both of the states Firebase reports it in. They are different
+    // callbacks and neither covers the other: getInitialMessage is the launch
+    // that started the process, onMessageOpenedApp is a tap while the app was
+    // already in the background. Missing either one means a notification that
+    // silently does nothing.
+    //
+    // The campaign id is only recorded here. Sending it needs a logged-in
+    // socket, which on a cold start does not exist yet — GameService holds it
+    // and flushes on login.
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null) _rememberCampaignTap(initial);
+    FirebaseMessaging.onMessageOpenedApp.listen(_rememberCampaignTap);
   }
 
   runApp(const TichuApp());
+}
+
+/// Campaign ids from notifications tapped before GameService exists.
+///
+/// Read once by the app shell after the provider is up. A plain global rather
+/// than something passed through the widget tree: the tap is known before
+/// runApp on a cold start, which is earlier than any widget.
+final Set<int> pendingCampaignTaps = <int>{};
+
+void _rememberCampaignTap(RemoteMessage message) {
+  if (message.data['type'] != 'campaign') return;
+  final id = int.tryParse('${message.data['campaignId']}');
+  if (id != null) pendingCampaignTaps.add(id);
 }
 
 /// Firebase backs Google and Apple sign-in on every platform, web included —
@@ -515,7 +543,11 @@ class _AppFlowScreen extends StatelessWidget {
           break;
         case AppDestination.lobby:
         case AppDestination.waitingRoom:
-          child = const LobbyScreen();
+          // The gate sits here rather than inside LobbyScreen so neither the
+          // consent popup nor a reward can land on top of a game in progress.
+          // Both wait for the player to be back at the lobby, which is also
+          // where they can act on them.
+          child = const MarketingPushGate(child: LobbyScreen());
           break;
       }
     }

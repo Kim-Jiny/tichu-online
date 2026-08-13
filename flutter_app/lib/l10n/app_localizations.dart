@@ -8450,6 +8450,66 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Code copied'**
   String get couponCopied;
+
+  /// No description provided for @marketingConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get event news?'**
+  String get marketingConsentTitle;
+
+  /// No description provided for @marketingConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll send you pushes about sales, events and coupons. Some of them pay out gold when you tap them.'**
+  String get marketingConsentBody;
+
+  /// No description provided for @marketingConsentNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is consent to receive promotional messages. You can turn it off any time in Settings > Notifications, and we never send between 9pm and 8am. Game alerts such as friend requests are unaffected.'**
+  String get marketingConsentNote;
+
+  /// No description provided for @marketingConsentAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, send them'**
+  String get marketingConsentAccept;
+
+  /// No description provided for @marketingConsentDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'No thanks'**
+  String get marketingConsentDecline;
+
+  /// No description provided for @settingsMarketingPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Events and offers'**
+  String get settingsMarketingPush;
+
+  /// No description provided for @settingsMarketingPushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotional messages. Never sent between 9pm and 8am'**
+  String get settingsMarketingPushHint;
+
+  /// No description provided for @pushRewardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward claimed!'**
+  String get pushRewardTitle;
+
+  /// No description provided for @pushRewardGold.
+  ///
+  /// In en, this message translates to:
+  /// **'{gold} gold has been added'**
+  String pushRewardGold(int gold);
+
+  /// No description provided for @pushRewardItem.
+  ///
+  /// In en, this message translates to:
+  /// **'The item has been added'**
+  String get pushRewardItem;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

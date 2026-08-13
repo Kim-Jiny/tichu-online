@@ -1244,6 +1244,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 onChanged: (v) => game.setPushEnabled(v),
                               ),
                             ),
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            // Separate from the switch above on purpose. That
+                            // one is "notify me at all"; this one is consent to
+                            // advertising, which is a legal record and has to
+                            // be withdrawable on its own.
+                            _buildRow(
+                              icon: Icons.campaign_outlined,
+                              iconColor: const Color(0xFFE08A1E),
+                              title: l10n.settingsMarketingPush,
+                              subtitle: l10n.settingsMarketingPushHint,
+                              trailing: Switch(
+                                value: game.marketingPushEnabled,
+                                onChanged: (v) => game.setMarketingConsent(v),
+                              ),
+                            ),
                             if (game.isAdminUser) ...[
                               const Divider(
                                 height: 1,

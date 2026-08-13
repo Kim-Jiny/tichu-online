@@ -146,6 +146,29 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
     rec.rows[0]?.opened_at != null);
   check('and it is not marked as claimed', rec.rows[0]?.claimed_at == null);
 
+  console.log('\n[아무에게도 못 간 발송]');
+  // Firebase unreachable, or every token stale. Burning the campaign for that
+  // would mean rebuilding it by hand to try again.
+  const camp4 = await db.createPushCampaign({ title: 'f', body: 'f', rewardGold: 10 });
+  const dead = await db.recordCampaignSend(camp4.id, [
+    { nickname: nick(1), success: false },
+  ]);
+  check('the send reports failure', dead.success === false);
+  let c4 = (await db.listPushCampaigns(50)).find((c) => c.id === camp4.id);
+  check('the campaign stays a draft so it can be retried', c4.status === 'draft',
+    c4.status);
+  // The retry gets through.
+  await db.recordCampaignSend(camp4.id, [{ nickname: nick(1), success: true }]);
+  c4 = (await db.listPushCampaigns(50)).find((c) => c.id === camp4.id);
+  check('a successful retry marks it sent', c4.status === 'sent', c4.status);
+  check('and the recipient row flips from failed to sent', c4.sent === 1, `${c4.sent}`);
+  // Once delivered it must not be downgraded — the row is what entitles them
+  // to the reward.
+  await db.recordCampaignSend(camp4.id, [{ nickname: nick(1), success: false }]);
+  const after = await db.getCampaignRecipients(camp4.id);
+  check('a later failed attempt does not un-deliver it',
+    after.rows[0]?.status === 'sent', after.rows[0]?.status);
+
   console.log('\n[집계]');
   const list = await db.listPushCampaigns(50);
   const c1 = list.find((c) => c.id === camp.id);
@@ -156,7 +179,7 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('opened counts the recipients who tapped', c1.opened === 1, `${c1.opened}`);
   check('claimed counts who was paid', c1.claimed === 1, `${c1.claimed}`);
 
-  for (const id of [camp.id, camp2.id, camp3.id]) await db.deletePushCampaign(id);
+  for (const id of [camp.id, camp2.id, camp3.id, camp4.id]) await db.deletePushCampaign(id);
   for (let i = 1; i <= 5; i++) {
     await db.pool.query('DELETE FROM tc_gold_history WHERE nickname = $1', [nick(i)]);
     await db.pool.query('DELETE FROM tc_users WHERE nickname = $1', [nick(i)]);

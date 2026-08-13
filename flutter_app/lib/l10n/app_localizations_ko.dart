@@ -4660,4 +4660,38 @@ class L10nKo extends L10n {
 
   @override
   String get couponCopied => '코드를 복사했습니다';
+
+  @override
+  String get marketingConsentTitle => '이벤트 소식 받을까요?';
+
+  @override
+  String get marketingConsentBody =>
+      '할인, 이벤트, 쿠폰 소식을 푸시로 보내드립니다. 푸시를 눌러 들어오면 골드 같은 보상을 드리는 이벤트도 있어요.';
+
+  @override
+  String get marketingConsentNote =>
+      '광고성 정보 수신 동의입니다. 언제든 설정 > 알림에서 끌 수 있고, 밤 9시~아침 8시에는 보내지 않습니다. 게임 알림(친구 요청 등)은 이 설정과 무관합니다.';
+
+  @override
+  String get marketingConsentAccept => '받을게요';
+
+  @override
+  String get marketingConsentDecline => '괜찮아요';
+
+  @override
+  String get settingsMarketingPush => '이벤트·혜택 알림';
+
+  @override
+  String get settingsMarketingPushHint => '광고성 정보 수신 동의. 밤 9시~아침 8시에는 보내지 않습니다';
+
+  @override
+  String get pushRewardTitle => '보상을 받았어요!';
+
+  @override
+  String pushRewardGold(int gold) {
+    return '$gold 골드가 지급되었어요';
+  }
+
+  @override
+  String get pushRewardItem => '아이템이 지급되었어요';
 }

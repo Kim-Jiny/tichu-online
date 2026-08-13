@@ -8,7 +8,7 @@ const {
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
-  deletePushCampaign, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -4837,6 +4837,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // every time, and the person typing at 2am is the one who forgets. Both
     // bracket shapes because a Korean IME produces （광고） as readily as
     // (광고).
+    // Gold wins over an item in claimPushCampaign, so a campaign carrying both
+    // silently pays only the gold. Nothing errors, and the item quietly never
+    // reaches anyone — refuse it here instead of discovering it after a send.
+    if ((parseInt(body.reward_gold, 10) || 0) > 0 && body.reward_item_key) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('골드와 아이템 중 하나만 지정해 주세요. 둘 다 넣으면 골드만 지급됩니다.'));
+    }
     if (!adTitleLooksLabelled(title)) {
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('광고성 정보라서 제목이 "(광고)" 로 시작해야 합니다. 정보통신망법 §50 ④.'));

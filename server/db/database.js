@@ -3377,7 +3377,16 @@ async function getMarketingAudience(targetFilter = 'all') {
              AND push_enabled = TRUE
              AND is_deleted IS NOT TRUE
              AND fcm_token IS NOT NULL AND fcm_token <> ''
-             AND fcm_token_invalid_at IS NULL`;
+             AND fcm_token_invalid_at IS NULL
+             -- Overdue the two-yearly confirmation means the consent is no
+             -- longer good enough to send on (정보통신망법 §50 ⑧). They come
+             -- back into the audience the moment they answer the notice, which
+             -- is raised on their next launch. Leaving them in is the exact
+             -- thing the rule exists to stop, and the backstage's "2년 재확인
+             -- 대기" count is how you see it happening.
+             AND COALESCE(marketing_confirmed_at, marketing_consent_at)
+                 >= (NOW() AT TIME ZONE 'UTC')
+                    - INTERVAL '${MARKETING_CONFIRM_INTERVAL}'`;
   if (targetFilter === 'ios' || targetFilter === 'android') {
     params.push(targetFilter);
     q += ` AND device_platform = $1`;

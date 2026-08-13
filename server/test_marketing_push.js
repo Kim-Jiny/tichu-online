@@ -147,6 +147,17 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('the backstage can count who is overdue', typeof stats.due === 'number',
     JSON.stringify(stats));
 
+  // The point of the notice is that consent goes stale. Leaving an overdue
+  // account in the audience would mean the reminder exists but changes
+  // nothing — which is the situation the rule is written against.
+  await backdate(nick(1), '25 months');
+  check('an overdue consent stops being sendable',
+    !mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)),
+    'the confirmation has to gate the send, not just raise a popup');
+  await db.confirmMarketingConsent(nick(1), true);
+  check('and answering the notice puts them straight back in',
+    mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
+
   console.log('\n[앱을 지운 기기]');
   // FCM answers "not registered" for a token whose app is gone. The account
   // stays; only the device is retired.

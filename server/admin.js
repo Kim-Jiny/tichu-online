@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -821,6 +821,120 @@ function deviceBadge(platform) {
   if (p === 'ios') return '<span class="badge" style="background:#e3f2fd;color:#1565c0;font-size:11px;padding:2px 8px">iOS</span>';
   if (p === 'android') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32;font-size:11px;padding:2px 8px">AOS</span>';
   return `<span class="badge" style="background:#f5f5f5;color:#888;font-size:11px;padding:2px 8px">${escapeHtml(platform)}</span>`;
+}
+
+/// The gold ledger as table rows. Shared by the five-row card on a user's
+/// detail page and by the full-history page behind it, so the two cannot drift
+/// into showing the same movement differently.
+function renderGoldHistoryTable(history) {
+  return `<div class="table-wrap"><table>
+    <tr><th>일시</th><th>유형</th><th>내용</th><th>설명</th><th>변동</th></tr>
+    ${history.map(item => {
+              const delta = parseInt(item.goldDelta || 0);
+              const positive = delta >= 0;
+              const sourceMap = {
+                match: '게임',
+                ad_reward: '광고',
+                season_reward: '시즌',
+                shop_purchase: '상점',
+              };
+              const sourceLabel = sourceMap[item.source] || item.source || '-';
+              return `<tr>
+                <td style="font-size:12px;color:#888">${formatDate(item.createdAt)}</td>
+                <td><span class="badge" style="background:${positive ? '#e8f5e9' : '#fff3e0'};color:${positive ? '#2e7d32' : '#ef6c00'}">${escapeHtml(sourceLabel)}</span></td>
+                <td style="font-weight:600">${escapeHtml(item.title || '-')}</td>
+                <td style="font-size:12px;color:#666">${escapeHtml(item.description || '-')}</td>
+                <td style="font-weight:700;color:${positive ? '#2e7d32' : '#ef6c00'}">${positive ? '+' : ''}${delta.toLocaleString()}</td>
+              </tr>`;
+    }).join('')}
+  </table></div>`;
+}
+
+/// A user's matches as table rows. Shared by the five-row card on their detail
+/// page and by the full-history page behind it. Walk-outs, the three
+/// rank-based games and Tichu's team layout each need their own row shape, and
+/// keeping one copy is what stops the short list and the long one from
+/// disagreeing about what a match was.
+function renderUserMatchTable(matches) {
+  return `<div class="table-wrap"><table>
+    <tr><th>ID</th><th>게임</th><th>결과</th><th>점수/플레이어</th><th>유형</th><th>종료</th><th>날짜</th></tr>
+    ${matches.map(m => {
+            const resultBadge = m.isDraw
+              ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
+              : m.won
+                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">승</span>'
+                : '<span class="badge" style="background:#ffebee;color:#c62828">패</span>';
+            let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
+            if (m.endReason === 'leave') {
+              endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+            } else if (m.endReason === 'timeout') {
+              endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
+            }
+            const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
+            // A walk-out from a match that kept running. It has no score, no
+            // rank and no final roster — the row below would read p.score off
+            // entries that only carry a nickname and print "undefined점
+            // #undefined", and its endReason matches neither branch above so
+            // it wore the green "정상" badge. It gets its own row.
+            if (m.isMidGameLeave) {
+              const table = Array.isArray(m.players) && m.players.length
+                ? m.players.map(p => escapeHtml(p && p.nickname ? p.nickname : '?')).join(', ')
+                : '-';
+              const timedOut = m.endReason === 'mid_leave_timeout';
+              // What it was, then how it happened — the same split the two
+              // columns have for a finished match.
+              const midBadge = '<span class="badge" style="background:#fbe9e7;color:#d84315">중도탈주</span>';
+              const midEndBadge = timedOut
+                ? '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>'
+                : '<span class="badge" style="background:#fce4ec;color:#c62828">직접 나감</span>';
+              return `<tr>
+              <td style="color:#888">L${m.id}</td>
+              <td>${gameTypeBadge(m.gameType)}</td>
+              <td>${midBadge}</td>
+              <td style="font-size:12px">${table}${m.roomName ? '<br><span style="font-size:11px;color:#999">' + escapeHtml(m.roomName) + '</span>' : ''}</td>
+              <td>${rankedBadge}</td>
+              <td>${midEndBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+            }
+            if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty') {
+              const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
+              return `<tr>
+              <td>${m.id}</td>
+              <td>${gameTypeBadge(m.gameType)}</td>
+              <td>${resultBadge} <span style="font-size:11px;color:#888">#${m.myRank} (${m.myScore}점)</span></td>
+              <td style="font-size:12px">${playersText}</td>
+              <td>${rankedBadge}</td>
+              <td>${endBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+            }
+            const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
+            return `<tr>
+              <td>${m.id}</td>
+              <td>${gameTypeBadge(m.gameType)}</td>
+              <td>${resultBadge}</td>
+              <td style="font-size:12px"><span style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</span> <span style="font-weight:600">${m.teamAScore}:${m.teamBScore}</span> <span style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</span></td>
+              <td>${rankedBadge}</td>
+              <td>${endBadge}</td>
+              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
+            </tr>`;
+  }).join('')}
+  </table></div>`;
+}
+
+/// Prev / next for the backstage's paged history views. Deliberately not a
+/// numbered pager: neither list has a total to number against — the gold
+/// ledger is a UNION that would need a second full scan to count, and the
+/// match list only knows whether one more page exists.
+function pagerLinks(basePath, page, hasMore) {
+  const link = (p, label, enabled) => enabled
+    ? `<a class="btn" href="${basePath}?page=${p}">${label}</a>`
+    : `<span class="btn" style="opacity:.4;pointer-events:none">${label}</span>`;
+  return `<div style="display:flex;gap:8px;align-items:center;margin-top:14px">
+    ${link(page - 1, '← 이전', page > 1)}
+    ${link(page + 1, '다음 →', hasMore)}
+  </div>`;
 }
 
 function formatDate(d) {
@@ -3976,11 +4090,20 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatches, goldHistory, purchaseHistory, attendance, inventory] =
+    const [user, recentMatchPage, goldHistory, purchaseHistory, attendance, inventory] =
       await Promise.all([
         getUserDetail(nickname),
-        getRecentMatches(nickname, 20),
-        getAdminGoldHistory(nickname, 50),
+        // Five of each. The full lists live on their own pages — a heavy
+        // account put hundreds of rows on this page and buried everything
+        // under them.
+        //
+        // The paged shape, not the bare one: without opts every game type is
+        // capped at `limit` and merged with no global slice (so the profile
+        // popup's per-tab lists cannot starve each other), which here meant
+        // five games' worth of five — twenty-five rows under a "최근 5건"
+        // heading.
+        getRecentMatches(nickname, 5, { offset: 0 }),
+        getAdminGoldHistory(nickname, 5),
         getAdminPurchaseHistory(nickname, 30),
         getAttendanceForNickname(nickname),
         getAdminUserInventory(nickname),
@@ -4000,6 +4123,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const errorBanner = errKey
       ? `<div class="card" style="border-left:4px solid #e53935;color:#c62828">${escapeHtml(TITLE_ERRORS[errKey] || errKey)}</div>`
       : '';
+
+    const recentMatches = recentMatchPage?.matches || [];
 
     // Result of an extend, bounced back through the query string.
     const extended = url.searchParams.get('extended');
@@ -4109,32 +4234,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
 
       <div class="card">
-        <h3>골드 히스토리 <span style="font-size:13px;color:#888;font-weight:400">(${goldHistory?.history?.length || 0})</span></h3>
-        ${goldHistory?.success && goldHistory.history.length > 0 ? `
-          <div class="table-wrap"><table>
-            <tr><th>일시</th><th>유형</th><th>내용</th><th>설명</th><th>변동</th></tr>
-            ${goldHistory.history.map(item => {
-              const delta = parseInt(item.goldDelta || 0);
-              const positive = delta >= 0;
-              const sourceMap = {
-                match: '게임',
-                ad_reward: '광고',
-                season_reward: '시즌',
-                shop_purchase: '상점',
-              };
-              const sourceLabel = sourceMap[item.source] || item.source || '-';
-              return `<tr>
-                <td style="font-size:12px;color:#888">${formatDate(item.createdAt)}</td>
-                <td><span class="badge" style="background:${positive ? '#e8f5e9' : '#fff3e0'};color:${positive ? '#2e7d32' : '#ef6c00'}">${escapeHtml(sourceLabel)}</span></td>
-                <td style="font-weight:600">${escapeHtml(item.title || '-')}</td>
-                <td style="font-size:12px;color:#666">${escapeHtml(item.description || '-')}</td>
-                <td style="font-weight:700;color:${positive ? '#2e7d32' : '#ef6c00'}">${positive ? '+' : ''}${delta.toLocaleString()}</td>
-              </tr>`;
-            }).join('')}
-          </table></div>
-        ` : `
-          <div class="empty">${escapeHtml(goldHistory?.message || '표시할 골드 내역이 없습니다')}</div>
-        `}
+        <h3>골드 히스토리
+          <span style="font-size:13px;color:#888;font-weight:400">최근 ${goldHistory?.history?.length || 0}건</span>
+          <a href="/tc-backstage/users/${encodeURIComponent(user.nickname)}/gold-history"
+             style="font-size:13px;font-weight:600;margin-left:8px">전체 보기 →</a>
+        </h3>
+        ${goldHistory?.success && goldHistory.history.length > 0
+          ? renderGoldHistoryTable(goldHistory.history)
+          : `<div class="empty">${escapeHtml(goldHistory?.message || '표시할 골드 내역이 없습니다')}</div>`}
       </div>
 
       <div class="card">
@@ -4330,72 +4437,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
 
       <div class="card">
-        <h3>최근 매치 <span style="font-size:13px;color:#888;font-weight:400">(${recentMatches.length})</span></h3>
-        ${recentMatches.length > 0 ? `<div class="table-wrap"><table>
-          <tr><th>ID</th><th>게임</th><th>결과</th><th>점수/플레이어</th><th>유형</th><th>종료</th><th>날짜</th></tr>
-          ${recentMatches.map(m => {
-            const resultBadge = m.isDraw
-              ? '<span class="badge" style="background:#f5f5f5;color:#888">무승부</span>'
-              : m.won
-                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">승</span>'
-                : '<span class="badge" style="background:#ffebee;color:#c62828">패</span>';
-            let endBadge = '<span class="badge" style="background:#e8f5e9;color:#2e7d32">정상</span>';
-            if (m.endReason === 'leave') {
-              endBadge = '<span class="badge" style="background:#fce4ec;color:#c62828">이탈</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#c62828">' + escapeHtml(m.deserterNickname) + '</span>' : '');
-            } else if (m.endReason === 'timeout') {
-              endBadge = '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>' + (m.deserterNickname ? '<br><span style="font-size:11px;color:#f57f17">' + escapeHtml(m.deserterNickname) + '</span>' : '');
-            }
-            const rankedBadge = m.isRanked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-            // A walk-out from a match that kept running. It has no score, no
-            // rank and no final roster — the row below would read p.score off
-            // entries that only carry a nickname and print "undefined점
-            // #undefined", and its endReason matches neither branch above so
-            // it wore the green "정상" badge. It gets its own row.
-            if (m.isMidGameLeave) {
-              const table = Array.isArray(m.players) && m.players.length
-                ? m.players.map(p => escapeHtml(p && p.nickname ? p.nickname : '?')).join(', ')
-                : '-';
-              const timedOut = m.endReason === 'mid_leave_timeout';
-              // What it was, then how it happened — the same split the two
-              // columns have for a finished match.
-              const midBadge = '<span class="badge" style="background:#fbe9e7;color:#d84315">중도탈주</span>';
-              const midEndBadge = timedOut
-                ? '<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>'
-                : '<span class="badge" style="background:#fce4ec;color:#c62828">직접 나감</span>';
-              return `<tr>
-              <td style="color:#888">L${m.id}</td>
-              <td>${gameTypeBadge(m.gameType)}</td>
-              <td>${midBadge}</td>
-              <td style="font-size:12px">${table}${m.roomName ? '<br><span style="font-size:11px;color:#999">' + escapeHtml(m.roomName) + '</span>' : ''}</td>
-              <td>${rankedBadge}</td>
-              <td>${midEndBadge}</td>
-              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
-            </tr>`;
-            }
-            if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty') {
-              const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
-              return `<tr>
-              <td>${m.id}</td>
-              <td>${gameTypeBadge(m.gameType)}</td>
-              <td>${resultBadge} <span style="font-size:11px;color:#888">#${m.myRank} (${m.myScore}점)</span></td>
-              <td style="font-size:12px">${playersText}</td>
-              <td>${rankedBadge}</td>
-              <td>${endBadge}</td>
-              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
-            </tr>`;
-            }
-            const myTeamStyle = m.myTeam === 'A' ? 'font-weight:700;color:#c62828' : 'font-weight:700;color:#1565c0';
-            return `<tr>
-              <td>${m.id}</td>
-              <td>${gameTypeBadge(m.gameType)}</td>
-              <td>${resultBadge}</td>
-              <td style="font-size:12px"><span style="${m.myTeam === 'A' ? myTeamStyle : ''}">${escapeHtml(m.playerA1)}, ${escapeHtml(m.playerA2)}</span> <span style="font-weight:600">${m.teamAScore}:${m.teamBScore}</span> <span style="${m.myTeam === 'B' ? myTeamStyle : ''}">${escapeHtml(m.playerB1)}, ${escapeHtml(m.playerB2)}</span></td>
-              <td>${rankedBadge}</td>
-              <td>${endBadge}</td>
-              <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
-            </tr>`;
-          }).join('')}
-        </table></div>` : '<div class="empty">매치 기록 없음</div>'}
+        <h3>최근 매치
+          <span style="font-size:13px;color:#888;font-weight:400">최근 ${recentMatches.length}건</span>
+          <a href="/tc-backstage/users/${encodeURIComponent(user.nickname)}/matches"
+             style="font-size:13px;font-weight:600;margin-left:8px">전체 보기 →</a>
+        </h3>
+        ${recentMatches.length > 0
+          ? renderUserMatchTable(recentMatches)
+          : '<div class="empty">매치 기록 없음</div>'}
       </div>
 
       <div class="card" style="margin-top:0">
@@ -6954,6 +7003,60 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // Admin gold adjustment
+  // Full gold ledger and full match list. Split off the user detail page,
+  // which now shows five of each: an account with a few hundred rows made the
+  // rest of that page — memo, actions, inventory — unreachable without a long
+  // scroll past history nobody opened it for.
+  const PAGE_ROWS = 50;
+
+  const goldPageMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/gold-history$/);
+  if (goldPageMatch && method === 'GET') {
+    const nickname = decodeURIComponent(goldPageMatch[1]);
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const offset = (page - 1) * PAGE_ROWS;
+    // One extra row is the cheapest way to know whether a next page exists;
+    // a COUNT over that UNION would cost more than the page itself.
+    const ledger = await getAdminGoldHistory(nickname, PAGE_ROWS + 1, offset);
+    const rows = (ledger?.history || []).slice(0, PAGE_ROWS);
+    const hasMore = (ledger?.history || []).length > PAGE_ROWS;
+    return html(res, layout(`골드 히스토리 · ${escapeHtml(nickname)}`, `
+      ${pageHeader(`골드 히스토리 <span class="mono" style="font-size:15px;color:var(--muted)">${escapeHtml(nickname)}</span>`,
+        '게임 보상·광고·상점·어드민 지급까지 골드가 움직인 기록 전부입니다.')}
+      <div class="card">
+        <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
+      </div>
+      <div class="card">
+        <h3>${page}페이지 <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + rows.length}번째</span></h3>
+        ${rows.length ? renderGoldHistoryTable(rows) : '<div class="empty">더 표시할 내역이 없습니다</div>'}
+        ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/gold-history`, page, hasMore)}
+      </div>
+    `, 'users'));
+  }
+
+  const matchPageMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/matches$/);
+  if (matchPageMatch && method === 'GET') {
+    const nickname = decodeURIComponent(matchPageMatch[1]);
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const offset = (page - 1) * PAGE_ROWS;
+    // The paged shape of getRecentMatches — the same one the app's "더보기"
+    // list uses — so it reports hasMore itself and stops at the depth cap
+    // instead of paging into nothing.
+    const paged = await getRecentMatches(nickname, PAGE_ROWS, { offset });
+    const rows = paged?.matches || [];
+    return html(res, layout(`매치 기록 · ${escapeHtml(nickname)}`, `
+      ${pageHeader(`매치 기록 <span class="mono" style="font-size:15px;color:var(--muted)">${escapeHtml(nickname)}</span>`,
+        `모든 게임의 경기와 중도탈주를 시간순으로 봅니다. 최대 ${MATCH_HISTORY_MAX_DEPTH}경기까지 거슬러 올라갑니다.`)}
+      <div class="card">
+        <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
+      </div>
+      <div class="card">
+        <h3>${page}페이지 <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + rows.length}번째</span></h3>
+        ${rows.length ? renderUserMatchTable(rows) : '<div class="empty">더 표시할 경기가 없습니다</div>'}
+        ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/matches`, page, paged?.hasMore === true)}
+      </div>
+    `, 'users'));
+  }
+
   // Move a time-limited item's expiry. Same rule the shop uses when someone
   // re-buys a pass they already hold; see adminExtendUserItem.
   const itemExtendMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/items\/extend$/);

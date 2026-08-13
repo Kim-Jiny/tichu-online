@@ -2949,7 +2949,9 @@ async function getWallet(nickname) {
   }
 }
 
-async function getGoldHistory(nickname, limit = 30) {
+/// [offset] pages the ledger for the backstage's full-history page. The
+/// player-facing callers never pass it and keep the old single-page behaviour.
+async function getGoldHistory(nickname, limit = 30, offset = 0) {
   const client = await pool.connect();
   try {
     // Same nickname-recycling guard as getRecentMatches: match rows and
@@ -3080,9 +3082,9 @@ async function getGoldHistory(nickname, limit = 30) {
       WHERE history.gold_delta <> 0
         AND history.created_at >= $3
       ORDER BY history.created_at DESC
-      LIMIT $2
+      LIMIT $2 OFFSET $4
       `,
-      [nickname, limit, since]
+      [nickname, limit, since, Math.max(0, offset)]
     );
 
     return {
@@ -3103,8 +3105,8 @@ async function getGoldHistory(nickname, limit = 30) {
   }
 }
 
-async function getAdminGoldHistory(nickname, limit = 50) {
-  return getGoldHistory(nickname, limit);
+async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
+  return getGoldHistory(nickname, limit, offset);
 }
 
 /// Everything this account holds right now, for the admin's inventory panel.

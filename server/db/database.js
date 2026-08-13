@@ -2061,6 +2061,63 @@ async function getFriends(nickname) {
 /// builds one row per friend and would otherwise run a query inside that loop.
 /// COALESCE onto last_login so accounts that predate last_seen_at show their
 /// sign-in rather than nothing at all.
+/// Who this account has exchanged DMs with, for the backstage.
+///
+/// Deliberately only the partner list: a name, a count, and when it last
+/// moved. Reading someone's private messages is a real step, so the content
+/// sits behind a second click rather than unfolding on a page an admin opens
+/// for unrelated reasons.
+///
+/// Counts both directions — a conversation is one thing, not two.
+async function getAdminDmPartners(nickname) {
+  const r = await pool.query(
+    `SELECT partner,
+            COUNT(*)::int AS messages,
+            COUNT(*) FILTER (WHERE sender = $1)::int AS sent,
+            MAX(created_at) AS last_at
+     FROM (
+       SELECT CASE WHEN sender_nickname = $1 THEN receiver_nickname
+                   ELSE sender_nickname END AS partner,
+              sender_nickname AS sender,
+              created_at
+       FROM tc_dm_messages
+       WHERE sender_nickname = $1 OR receiver_nickname = $1
+     ) t
+     GROUP BY partner
+     ORDER BY last_at DESC`,
+    [nickname],
+  );
+  return r.rows;
+}
+
+/// One conversation, oldest first so it reads as a conversation.
+///
+/// Paged from the END: a report is almost always about something recent, and
+/// starting an admin at the first message of a thousand-message thread means
+/// scrolling to find it. Page 1 is the latest page.
+async function getAdminDmThread(nickname, partner, limit = 100, offset = 0) {
+  const total = (await pool.query(
+    `SELECT COUNT(*)::int n FROM tc_dm_messages
+     WHERE (sender_nickname = $1 AND receiver_nickname = $2)
+        OR (sender_nickname = $2 AND receiver_nickname = $1)`,
+    [nickname, partner],
+  )).rows[0].n;
+  // Walk back from the end; the last page is whatever is left over at the
+  // front, so it can be shorter than `limit`.
+  const start = Math.max(0, total - offset - limit);
+  const take = Math.min(limit, Math.max(0, total - offset));
+  const r = await pool.query(
+    `SELECT id, sender_nickname, receiver_nickname, message, created_at, read_at
+     FROM tc_dm_messages
+     WHERE (sender_nickname = $1 AND receiver_nickname = $2)
+        OR (sender_nickname = $2 AND receiver_nickname = $1)
+     ORDER BY created_at ASC, id ASC
+     LIMIT $3 OFFSET $4`,
+    [nickname, partner, take, start],
+  );
+  return { rows: r.rows, total, hasMore: start > 0 };
+}
+
 async function getFriendsWithLastSeen(nickname, locale = 'ko') {
   const client = await pool.connect();
   try {
@@ -10659,6 +10716,8 @@ module.exports = {
   addFriend,
   getFriends,
   getFriendsWithLastSeen,
+  getAdminDmPartners,
+  getAdminDmThread,
   touchLastSeen,
   setProfilePrivateHidePhoto,
   unequipCategory,

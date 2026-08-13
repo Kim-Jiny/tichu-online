@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
@@ -4146,7 +4146,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatchPage, goldHistory, purchaseHistory, attendance, inventory] =
+    const [
+      user, recentMatchPage, goldHistory, purchaseHistory, attendance,
+      inventory, dmPartners,
+    ] =
       await Promise.all([
         getUserDetail(nickname),
         // Five of each. The full lists live on their own pages — a heavy
@@ -4163,6 +4166,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         getAdminPurchaseHistory(nickname, 5),
         getAttendanceForNickname(nickname),
         getAdminUserInventory(nickname),
+        getAdminDmPartners(nickname),
       ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
@@ -4349,6 +4353,27 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             }).join('')}
           </table></div>
         ` : `<div class="empty">보유 중인 아이템이 없습니다</div>`}
+      </div>
+
+      <div class="card">
+        <h3>친구 대화 <span style="font-size:13px;color:#888;font-weight:400">${dmPartners.length}명과</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          신고가 들어왔을 때 무슨 말이 오갔는지 확인하는 용도입니다.
+          <b>사적인 대화이므로 내용은 여기 펼치지 않습니다</b> — 필요한 상대만 눌러서 보세요.
+        </div>
+        ${dmPartners.length ? `
+          <div class="table-wrap"><table>
+            <tr><th>상대</th><th style="text-align:right">주고받은 수</th><th style="text-align:right">이 유저가 보낸 수</th><th>마지막</th><th></th></tr>
+            ${dmPartners.map((p) => `<tr>
+              <td><a href="/tc-backstage/users/${encodeURIComponent(p.partner)}" style="font-weight:700">${escapeHtml(p.partner)}</a></td>
+              <td style="text-align:right;font-weight:700">${formatNumber(p.messages)}</td>
+              <td style="text-align:right">${formatNumber(p.sent)}</td>
+              <td style="font-size:12px;color:#888">${formatDate(p.last_at)}</td>
+              <td><a class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+                     href="/tc-backstage/users/${encodeURIComponent(user.nickname)}/dm/${encodeURIComponent(p.partner)}">대화 보기</a></td>
+            </tr>`).join('')}
+          </table></div>
+        ` : '<div class="empty">주고받은 대화가 없습니다</div>'}
       </div>
 
       <div class="card">
@@ -7465,6 +7490,55 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <h3>${pageRangeLabel(page, offset, rows.length)}</h3>
         ${rows.length ? renderGoldHistoryTable(rows) : '<div class="empty">더 표시할 내역이 없습니다</div>'}
         ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/gold-history`, page, hasMore)}
+      </div>
+    `, 'users'));
+  }
+
+  const dmThreadMatch = pathname.match(
+    /^\/tc-backstage\/users\/([^/]+)\/dm\/([^/]+)$/,
+  );
+  if (dmThreadMatch && method === 'GET') {
+    const nickname = decodeURIComponent(dmThreadMatch[1]);
+    const partner = decodeURIComponent(dmThreadMatch[2]);
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const PER = 100;
+    const thread = await getAdminDmThread(nickname, partner, PER, (page - 1) * PER);
+    // Page 1 is the LATEST page — a report is about something recent, and
+    // opening at message one of a long thread means scrolling to find it.
+    const rows = thread.rows.map((m) => {
+      const mine = m.sender_nickname === nickname;
+      return `<tr>
+        <td style="font-size:12px;color:#888;white-space:nowrap">${formatDate(m.created_at)}</td>
+        <td style="white-space:nowrap">
+          <span class="badge" style="background:${mine ? '#EDE7F6;color:#5E35B1' : '#E8F5E9;color:#2E7D32'}">
+            ${escapeHtml(m.sender_nickname)}
+          </span>
+        </td>
+        <td style="white-space:pre-wrap;word-break:break-word">${escapeHtml(m.message)}</td>
+        <td style="font-size:11px;color:#aaa;white-space:nowrap">${m.read_at ? '읽음' : '안 읽음'}</td>
+      </tr>`;
+    }).join('');
+    return html(res, layout(`대화 · ${escapeHtml(nickname)}`, `
+      ${pageHeader(
+        `${escapeHtml(nickname)} ↔ ${escapeHtml(partner)}`,
+        '사적인 대화입니다. 신고 확인 등 필요한 경우에만 열람하세요.'
+        + `<br>전체 ${formatNumber(thread.total)}건 · 최근 것이 1페이지입니다.`)}
+      <div class="card">
+        <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
+      </div>
+      <div class="card">
+        <h3>${page}페이지</h3>
+        ${thread.rows.length ? `<div class="table-wrap"><table>
+          <tr><th>시각</th><th>보낸 사람</th><th>내용</th><th></th></tr>${rows}
+        </table></div>` : '<div class="empty">표시할 대화가 없습니다</div>'}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px">
+          ${page > 1
+            ? `<a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}/dm/${encodeURIComponent(partner)}?page=${page - 1}">← 최근</a>`
+            : '<span class="btn" style="opacity:.4;pointer-events:none">← 최근</span>'}
+          ${thread.hasMore
+            ? `<a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}/dm/${encodeURIComponent(partner)}?page=${page + 1}">이전 →</a>`
+            : '<span class="btn" style="opacity:.4;pointer-events:none">이전 →</span>'}
+        </div>
       </div>
     `, 'users'));
   }

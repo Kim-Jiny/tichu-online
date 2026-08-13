@@ -8576,6 +8576,36 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'All'**
   String get lobbyFilterAll;
+
+  /// No description provided for @friendsLastSeenJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Online just now'**
+  String get friendsLastSeenJustNow;
+
+  /// No description provided for @friendsLastSeenMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Last on {n}m ago'**
+  String friendsLastSeenMinutes(int n);
+
+  /// No description provided for @friendsLastSeenHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Last on {n}h ago'**
+  String friendsLastSeenHours(int n);
+
+  /// No description provided for @friendsLastSeenDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last on {n}d ago'**
+  String friendsLastSeenDays(int n);
+
+  /// No description provided for @friendsLastSeenLongAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Last on over a month ago'**
+  String get friendsLastSeenLongAgo;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

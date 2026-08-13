@@ -379,6 +379,11 @@ async function runMigrations() {
     // lost it on this date" is a different fact from "never had one", which is
     // what an empty column would say.
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token_invalid_at TIMESTAMP`);
+    // When they were last connected — stamped on login AND on disconnect.
+    // Distinct from last_login, which only moves at sign-in: someone who
+    // logged in on Monday and played until last night reads as "3일 전" from
+    // last_login alone, which is the opposite of what a friends list is for.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
@@ -1616,7 +1621,10 @@ async function loginUser(username, password) {
 
     // Update last login
     await client.query(
-      'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      `UPDATE tc_users
+       SET last_login = CURRENT_TIMESTAMP,
+           last_seen_at = (NOW() AT TIME ZONE 'UTC')
+       WHERE id = $1`,
       [user.id]
     );
 
@@ -1985,6 +1993,60 @@ async function getFriends(nickname) {
     return [];
   } finally {
     client.release();
+  }
+}
+
+/// Friends plus when each was last connected.
+///
+/// Separate from getFriends, which five call sites use as a plain list of
+/// nicknames — widening that return type to reach one screen would touch
+/// friend broadcasts and room invites for no reason.
+///
+/// The timestamp is joined here rather than looked up per friend: the caller
+/// builds one row per friend and would otherwise run a query inside that loop.
+/// COALESCE onto last_login so accounts that predate last_seen_at show their
+/// sign-in rather than nothing at all.
+async function getFriendsWithLastSeen(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT f.friend, COALESCE(u.last_seen_at, u.last_login) AS last_seen_at
+       FROM (
+         SELECT CASE WHEN user_nickname = $1 THEN friend_nickname
+                     ELSE user_nickname END AS friend
+         FROM tc_friends
+         WHERE (user_nickname = $1 OR friend_nickname = $1)
+           AND status = 'accepted'
+       ) f
+       LEFT JOIN tc_users u ON u.nickname = f.friend`,
+      [nickname],
+    );
+    return result.rows.map((r) => ({
+      nickname: r.friend,
+      lastSeenAt: r.last_seen_at || null,
+    }));
+  } catch (err) {
+    console.error('Get friends with last seen error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+/// Stamp the moment a session ends. Called on disconnect, so an offline friend
+/// reads as "last here an hour ago" rather than "signed in three days ago".
+async function touchLastSeen(nickname) {
+  if (!nickname) return;
+  try {
+    await pool.query(
+      `UPDATE tc_users SET last_seen_at = (NOW() AT TIME ZONE 'UTC')
+       WHERE nickname = $1`,
+      [nickname],
+    );
+  } catch (err) {
+    // A missed stamp costs a slightly stale line in a friends list. Never
+    // worth failing a disconnect over.
+    console.error('touchLastSeen error:', err.message);
   }
 }
 
@@ -10505,6 +10567,8 @@ module.exports = {
   reportUser,
   addFriend,
   getFriends,
+  getFriendsWithLastSeen,
+  touchLastSeen,
   setProfilePrivateHidePhoto,
   unequipCategory,
   setCustomTitle,

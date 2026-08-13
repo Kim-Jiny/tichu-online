@@ -4843,4 +4843,25 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyFilterAll => 'All';
+
+  @override
+  String get friendsLastSeenJustNow => 'Online just now';
+
+  @override
+  String friendsLastSeenMinutes(int n) {
+    return 'Last on ${n}m ago';
+  }
+
+  @override
+  String friendsLastSeenHours(int n) {
+    return 'Last on ${n}h ago';
+  }
+
+  @override
+  String friendsLastSeenDays(int n) {
+    return 'Last on ${n}d ago';
+  }
+
+  @override
+  String get friendsLastSeenLongAgo => 'Last on over a month ago';
 }

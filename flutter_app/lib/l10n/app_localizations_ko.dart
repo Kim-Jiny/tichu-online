@@ -4729,4 +4729,25 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyFilterAll => '전체';
+
+  @override
+  String get friendsLastSeenJustNow => '방금 전까지 접속';
+
+  @override
+  String friendsLastSeenMinutes(int n) {
+    return '$n분 전 접속';
+  }
+
+  @override
+  String friendsLastSeenHours(int n) {
+    return '$n시간 전 접속';
+  }
+
+  @override
+  String friendsLastSeenDays(int n) {
+    return '$n일 전 접속';
+  }
+
+  @override
+  String get friendsLastSeenLongAgo => '한 달 이상 전 접속';
 }

@@ -1685,5 +1685,10 @@
   "marketingConfirmStatusValue": "수신 동의함",
   "marketingConfirmKeep": "계속 받을게요",
   "marketingConfirmStop": "그만 받을게요",
-  "lobbyFilterAll": "전체"
+  "lobbyFilterAll": "전체",
+  "friendsLastSeenJustNow": "방금 전까지 접속",
+  "friendsLastSeenMinutes": "{n}분 전 접속",
+  "friendsLastSeenHours": "{n}시간 전 접속",
+  "friendsLastSeenDays": "{n}일 전 접속",
+  "friendsLastSeenLongAgo": "한 달 이상 전 접속"
 }

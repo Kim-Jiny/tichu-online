@@ -1685,5 +1685,10 @@
   "marketingConfirmStatusValue": "Angemeldet",
   "marketingConfirmKeep": "Weiter erhalten",
   "marketingConfirmStop": "Nicht mehr senden",
-  "lobbyFilterAll": "Alle"
+  "lobbyFilterAll": "Alle",
+  "friendsLastSeenJustNow": "Gerade eben online",
+  "friendsLastSeenMinutes": "Vor {n} Min. online",
+  "friendsLastSeenHours": "Vor {n} Std. online",
+  "friendsLastSeenDays": "Vor {n} T. online",
+  "friendsLastSeenLongAgo": "Vor über einem Monat online"
 }

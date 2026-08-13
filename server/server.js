@@ -21,7 +21,7 @@ const webApp = require('./webApp');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
-  addFriend, getFriends, getPendingFriendRequests, setProfilePrivateHidePhoto,
+  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, setProfilePrivateHidePhoto,
   unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
   acceptFriendRequest, rejectFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
@@ -2953,6 +2953,9 @@ wss.on('connection', (ws, req) => {
     // Notify friends of offline status
     if (ws.nickname) {
       notifyFriendsOfStatusChange(ws.nickname, false);
+      // Fire and forget — the friends list is the only thing that reads it,
+      // and a disconnect must not wait on a write.
+      touchLastSeen(ws.nickname);
     }
     if (ws.roomId) {
       const room = lobby.getRoom(ws.roomId);
@@ -9975,8 +9978,8 @@ async function handleGetFriends(ws) {
     sendTo(ws, { type: 'friends_list', friends: [] });
     return;
   }
-  const friendNicknames = await getFriends(ws.nickname);
-  const friends = friendNicknames.map(nick => {
+  const rows = await getFriendsWithLastSeen(ws.nickname);
+  const friends = rows.map(({ nickname: nick, lastSeenAt }) => {
     const friendWs = findWsByNickname(nick);
     const isOnline = !!friendWs;
     let roomId = null;
@@ -9999,7 +10002,12 @@ async function handleGetFriends(ws) {
         roomPassword = r.password || '';
       }
     }
-    return { nickname: nick, isOnline, roomId, roomName, roomPlayerCount, roomInGame, roomPassword };
+    return {
+      nickname: nick, isOnline, roomId, roomName,
+      roomPlayerCount, roomInGame, roomPassword,
+      // Only meaningful while they are away; the dot says the rest.
+      lastSeenAt: isOnline || !lastSeenAt ? null : lastSeenAt,
+    };
   });
   sendTo(ws, { type: 'friends_list', friends });
 }

@@ -2770,5 +2770,31 @@
   "marketingConfirmStatusValue": "Subscribed",
   "marketingConfirmKeep": "Keep receiving",
   "marketingConfirmStop": "Stop sending",
-  "lobbyFilterAll": "All"
+  "lobbyFilterAll": "All",
+  "friendsLastSeenJustNow": "Online just now",
+  "friendsLastSeenMinutes": "Last on {n}m ago",
+  "friendsLastSeenHours": "Last on {n}h ago",
+  "friendsLastSeenDays": "Last on {n}d ago",
+  "friendsLastSeenLongAgo": "Last on over a month ago",
+  "@friendsLastSeenMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@friendsLastSeenHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@friendsLastSeenDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  }
 }

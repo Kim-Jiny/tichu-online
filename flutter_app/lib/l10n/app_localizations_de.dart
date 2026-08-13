@@ -4879,4 +4879,25 @@ class L10nDe extends L10n {
 
   @override
   String get lobbyFilterAll => 'Alle';
+
+  @override
+  String get friendsLastSeenJustNow => 'Gerade eben online';
+
+  @override
+  String friendsLastSeenMinutes(int n) {
+    return 'Vor $n Min. online';
+  }
+
+  @override
+  String friendsLastSeenHours(int n) {
+    return 'Vor $n Std. online';
+  }
+
+  @override
+  String friendsLastSeenDays(int n) {
+    return 'Vor $n T. online';
+  }
+
+  @override
+  String get friendsLastSeenLongAgo => 'Vor über einem Monat online';
 }

@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -3976,13 +3976,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   const userDetailMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)$/);
   if (userDetailMatch && method === 'GET') {
     const nickname = decodeURIComponent(userDetailMatch[1]);
-    const [user, recentMatches, goldHistory, purchaseHistory, attendance] = await Promise.all([
-      getUserDetail(nickname),
-      getRecentMatches(nickname, 20),
-      getAdminGoldHistory(nickname, 50),
-      getAdminPurchaseHistory(nickname, 30),
-      getAttendanceForNickname(nickname),
-    ]);
+    const [user, recentMatches, goldHistory, purchaseHistory, attendance, inventory] =
+      await Promise.all([
+        getUserDetail(nickname),
+        getRecentMatches(nickname, 20),
+        getAdminGoldHistory(nickname, 50),
+        getAdminPurchaseHistory(nickname, 30),
+        getAttendanceForNickname(nickname),
+        getAdminUserInventory(nickname),
+      ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
     // Set-title bounces back here with a reason key when it refuses.
@@ -3997,6 +3999,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const errKey = url.searchParams.get('err');
     const errorBanner = errKey
       ? `<div class="card" style="border-left:4px solid #e53935;color:#c62828">${escapeHtml(TITLE_ERRORS[errKey] || errKey)}</div>`
+      : '';
+
+    // Result of an extend, bounced back through the query string.
+    const extended = url.searchParams.get('extended');
+    const extendNotice = extended === 'ok'
+      ? `<div style="margin-top:8px;color:#2e7d32;font-weight:700">${escapeHtml(url.searchParams.get('msg') || '연장했습니다.')}</div>`
+      : extended === 'fail'
+      ? `<div style="margin-top:8px;color:#c62828;font-weight:700">${escapeHtml(url.searchParams.get('msg') || '연장하지 못했습니다.')}</div>`
       : '';
 
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
@@ -4125,6 +4135,57 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ` : `
           <div class="empty">${escapeHtml(goldHistory?.message || '표시할 골드 내역이 없습니다')}</div>
         `}
+      </div>
+
+      <div class="card">
+        <h3>보유 아이템 <span style="font-size:13px;color:#888;font-weight:400">(${inventory?.items?.length || 0})</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          이 유저가 지금 들고 있는 것 전부입니다 — 상점에서 산 것, 쿠폰으로 받은 것, 시즌 보상까지.
+          <b>일수에 음수를 넣으면 줄어듭니다.</b>
+          이미 만료된 것을 연장하면 만료일이 아니라 <b>지금</b>부터 계산합니다 (상점에서 재구매할 때와 같은 규칙).
+          ${extendNotice}
+        </div>
+        ${inventory?.items?.length ? `
+          <div class="table-wrap"><table>
+            <tr><th>아이템</th><th>분류</th><th>출처</th><th>획득</th><th>만료</th><th>상태</th><th>연장</th></tr>
+            ${inventory.items.map(it => {
+              const expires = it.expires_at ? new Date(it.expires_at) : null;
+              const live = it.is_permanent || !expires || expires.getTime() > Date.now();
+              const leftDays = expires
+                ? Math.ceil((expires.getTime() - Date.now()) / 86400000)
+                : null;
+              const state = it.is_permanent
+                ? '<span class="badge" style="background:#ede7f6;color:#4527a0">영구</span>'
+                : live
+                ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32">${leftDays === null ? '무기한' : `${leftDays}일 남음`}</span>`
+                : '<span class="badge" style="background:#ffebee;color:#c62828">만료</span>';
+              const sourceLabels = {
+                shop: '상점', coupon: '쿠폰', admin: '어드민',
+                season: '시즌', reward: '보상', tc_users: '별도 보관',
+              };
+              // A permanent item and one with no expiry have nothing to move.
+              const canExtend = !it.is_permanent && it.expires_at;
+              return `<tr${live ? '' : ' style="opacity:.62"'}>
+                <td>
+                  <div style="font-weight:700">${escapeHtml(it.name_ko || it.item_key)}${it.equipped ? ' <span class="badge" style="background:#e1f5fe;color:#0277bd">착용 중</span>' : ''}</div>
+                  <div class="muted mono" style="font-size:11px">${escapeHtml(it.item_key)}</div>
+                </td>
+                <td>${escapeHtml(it.category || '-')}${it.is_season ? ' <span class="badge" style="background:#e8f5e9;color:#2e7d32">시즌</span>' : ''}</td>
+                <td style="font-size:12px">${escapeHtml(sourceLabels[it.source] || it.source || '-')}</td>
+                <td style="font-size:12px;color:#888">${it.acquired_at ? formatDate(it.acquired_at) : '-'}</td>
+                <td style="font-size:12px;color:#888">${expires ? formatDate(expires) : '-'}</td>
+                <td>${state}</td>
+                <td>${canExtend ? `
+                  <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/items/extend" style="display:flex;gap:6px;align-items:center">
+                    <input type="hidden" name="item_key" value="${escapeHtml(it.item_key)}">
+                    <input type="number" name="days" value="7" step="1"
+                           style="width:70px;padding:5px 7px;border:1px solid var(--line);border-radius:7px">
+                    <button class="btn" style="padding:5px 11px">적용</button>
+                  </form>` : '<span class="muted" style="font-size:12px">-</span>'}</td>
+              </tr>`;
+            }).join('')}
+          </table></div>
+        ` : `<div class="empty">보유 중인 아이템이 없습니다</div>`}
       </div>
 
       <div class="card">
@@ -6893,6 +6954,29 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // Admin gold adjustment
+  // Move a time-limited item's expiry. Same rule the shop uses when someone
+  // re-buys a pass they already hold; see adminExtendUserItem.
+  const itemExtendMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/items\/extend$/);
+  if (itemExtendMatch && method === 'POST') {
+    const nickname = decodeURIComponent(itemExtendMatch[1]);
+    const body = await parseBody(req);
+    const days = parseInt(body.days, 10);
+    const result = await adminExtendUserItem(
+      nickname,
+      String(body.item_key || ''),
+      days,
+      sessionInfo.session.username || 'admin',
+    );
+    const msg = result.success
+      ? `${days > 0 ? `${days}일 연장` : `${-days}일 단축`}했습니다. 새 만료: ${formatDate(result.expiresAt)} (KST)`
+      : result.message || '연장하지 못했습니다.';
+    return redirect(
+      res,
+      `/tc-backstage/users/${encodeURIComponent(nickname)}`
+        + `?extended=${result.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(msg)}`,
+    );
+  }
+
   const goldMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/gold$/);
   if (goldMatch && method === 'POST') {
     const nickname = decodeURIComponent(goldMatch[1]);

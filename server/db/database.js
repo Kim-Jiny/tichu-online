@@ -3107,6 +3107,161 @@ async function getAdminGoldHistory(nickname, limit = 50) {
   return getGoldHistory(nickname, limit);
 }
 
+/// Everything this account holds right now, for the admin's inventory panel.
+///
+/// Deliberately NOT getUserItems: that one is the player's own inventory and
+/// deletes expired rows on the way past (cleanupExpiredItems). A support view
+/// must not change what it is reporting on, and an expired row is exactly the
+/// one an admin is most likely to be asked about — "my pass ran out while I
+/// couldn't play". It survives until the owner next opens their inventory, and
+/// until then it can be extended back to life.
+///
+/// The profile-photo pass is appended as a synthetic row. It lives on tc_users
+/// rather than tc_user_items (the upload gate reads it there), so an inventory
+/// built from tc_user_items alone silently omits the one entitlement people
+/// pay real attention to.
+async function getAdminUserInventory(nickname) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT ui.id, ui.item_key, ui.acquired_at, ui.expires_at, ui.source,
+              si.name_ko, si.category, si.is_permanent, si.duration_days,
+              si.effect_type, si.price, si.is_season,
+              (e.banner_key = ui.item_key OR e.title_key = ui.item_key
+                OR e.theme_key = ui.item_key OR e.card_skin_key = ui.item_key)
+                AS equipped
+       FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       LEFT JOIN tc_user_equips e ON e.nickname = ui.nickname
+       WHERE ui.nickname = $1
+       ORDER BY
+         -- Live and running out soonest at the top: that is what a support
+         -- question is about. Permanents and expired rows sink.
+         (ui.expires_at IS NOT NULL
+           AND ui.expires_at >= (NOW() AT TIME ZONE 'UTC')) DESC,
+         ui.expires_at ASC NULLS LAST,
+         ui.acquired_at DESC`,
+      [nickname],
+    );
+    const items = res.rows.map((r) => ({ ...r, kind: 'item' }));
+
+    const photo = await client.query(
+      `SELECT profile_photo_status, profile_photo_expires_at
+       FROM tc_users WHERE nickname = $1`,
+      [nickname],
+    );
+    const p = photo.rows[0];
+    if (p && (p.profile_photo_status === 'active' || p.profile_photo_expires_at)) {
+      items.unshift({
+        kind: 'profile_photo',
+        id: null,
+        item_key: 'profile_photo',
+        name_ko: '프로필 사진',
+        category: 'profile',
+        is_permanent: false,
+        duration_days: null,
+        effect_type: 'profile_photo',
+        source: 'tc_users',
+        acquired_at: null,
+        expires_at: p.profile_photo_expires_at,
+        equipped: false,
+        price: null,
+        is_season: false,
+      });
+    }
+    return { success: true, items };
+  } catch (err) {
+    console.error('Get admin user inventory error:', err);
+    return { success: false, items: [], message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+/// Move a time-limited entitlement's expiry by [days]. Negative shortens it.
+///
+/// Extends from NOW when the pass has already lapsed, rather than from the old
+/// expiry — the same rule buyItem uses. Adding seven days to something that ran
+/// out two months ago otherwise buys the player nothing, which is the opposite
+/// of what an admin typing "+7" is trying to do.
+///
+/// The arithmetic stays in SQL and against UTC. The columns are `timestamp
+/// without time zone` holding UTC, and reading one into JS to add days puts the
+/// result back through node-pg in the process timezone — nine hours out on a
+/// KST host.
+async function adminExtendUserItem(nickname, itemKey, days, adminActor = 'admin') {
+  const n = Math.trunc(Number(days));
+  if (!Number.isFinite(n) || n === 0) {
+    return { success: false, message: '일수를 확인해 주세요.' };
+  }
+  if (Math.abs(n) > 3650) {
+    return { success: false, message: '한 번에 3650일까지만 조정할 수 있습니다.' };
+  }
+  const client = await pool.connect();
+  try {
+    // The profile-photo pass is not a tc_user_items row; same rule, other home.
+    if (itemKey === 'profile_photo') {
+      const r = await client.query(
+        `UPDATE tc_users
+         SET profile_photo_status = 'active',
+             profile_photo_expires_at = CASE
+               WHEN profile_photo_expires_at IS NULL
+                 OR profile_photo_expires_at < (NOW() AT TIME ZONE 'UTC')
+                 THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
+               ELSE profile_photo_expires_at + ($2 || ' days')::interval
+             END
+         WHERE nickname = $1
+         RETURNING profile_photo_expires_at`,
+        [nickname, n],
+      );
+      if (r.rows.length === 0) {
+        return { success: false, message: '유저를 찾을 수 없습니다.' };
+      }
+      console.log(`[admin] ${adminActor} extended profile_photo for ${nickname} by ${n}d`);
+      return { success: true, expiresAt: r.rows[0].profile_photo_expires_at };
+    }
+
+    const owned = await client.query(
+      `SELECT ui.id, ui.expires_at, si.is_permanent
+       FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND ui.item_key = $2
+       ORDER BY ui.expires_at DESC NULLS FIRST
+       LIMIT 1`,
+      [nickname, itemKey],
+    );
+    if (owned.rows.length === 0) {
+      return { success: false, message: '이 유저가 가지고 있지 않은 아이템입니다.' };
+    }
+    // A permanent item and a non-permanent one with no expiry both already run
+    // forever. Writing a date onto either would take something away.
+    if (owned.rows[0].is_permanent) {
+      return { success: false, message: '영구 아이템이라 연장할 것이 없습니다.' };
+    }
+    if (owned.rows[0].expires_at === null) {
+      return { success: false, message: '만료일이 없는 아이템이라 연장할 것이 없습니다.' };
+    }
+    const r = await client.query(
+      `UPDATE tc_user_items
+       SET expires_at = CASE
+         WHEN expires_at < (NOW() AT TIME ZONE 'UTC')
+           THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
+         ELSE expires_at + ($2 || ' days')::interval
+       END
+       WHERE id = $1
+       RETURNING expires_at`,
+      [owned.rows[0].id, n],
+    );
+    console.log(`[admin] ${adminActor} extended ${itemKey} for ${nickname} by ${n}d`);
+    return { success: true, expiresAt: r.rows[0].expires_at };
+  } catch (err) {
+    console.error('Admin extend user item error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function getAdminPurchaseHistory(nickname, limit = 30) {
   const client = await pool.connect();
   try {
@@ -9625,6 +9780,8 @@ module.exports = {
   getGoldHistory,
   getAdminGoldHistory,
   getAdminPurchaseHistory,
+  getAdminUserInventory,
+  adminExtendUserItem,
   getShopItems,
   getUserItems,
   buyItem,

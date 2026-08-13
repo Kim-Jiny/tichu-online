@@ -1024,7 +1024,27 @@ async function runMigrations() {
         ('banner_pioneer_gilt', '개척자 · 먹과 금테', '개척자 · 먹과 금테', 'Pioneer · Ink and Gilt', 'Pioneer · Ink and Gilt', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_pioneer_iris', '개척자 · 오일슬릭', '개척자 · 오일슬릭', 'Pioneer · Oil Slick', 'Pioneer · Oil Slick', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
         ('banner_pioneer_iris2', '개척자 · 네뷸라', '개척자 · 네뷸라', 'Pioneer · Nebula', 'Pioneer · Nebula', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
-        ('banner_pioneer_iris3', '개척자 · 오로라나이트', '개척자 · 오로라나이트', 'Pioneer · Aurora Night', 'Pioneer · Aurora Night', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb)
+        ('banner_pioneer_iris3', '개척자 · 오로라나이트', '개척자 · 오로라나이트', 'Pioneer · Aurora Night', 'Pioneer · Aurora Night', 'banner', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{}'::jsonb),
+
+        -- 개척자 테마: 위 배너와 짝을 이루는 색. 같이 걸면 세트로 보인다.
+        --
+        -- 배너와 달리 테마 색은 클라이언트에 하드코딩돼 있다
+        -- (game_service.dart 의 themeGradientFor / cardBackColorsFor). 그래서
+        -- 이 행만 있고 앱이 구버전이면 기본 그라디언트로 떨어진다 — 앱이
+        -- 나간 뒤에 지급해야 한다.
+        --
+        -- includesCardSkin: 기존 테마와 같다. 테마는 배경과 카드 뒷면을
+        -- 함께 바꾼다.
+        ('theme_pio_deep', '개척자 · 심해 테마', '개척자 · 심해 테마', 'Pioneer · Deep Current Theme', 'Pioneer · Deep Current Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_gilt', '개척자 · 먹과 금테 테마', '개척자 · 먹과 금테 테마', 'Pioneer · Ink and Gilt Theme', 'Pioneer · Ink and Gilt Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_oilslick', '개척자 · 오일슬릭 테마', '개척자 · 오일슬릭 테마', 'Pioneer · Oil Slick Theme', 'Pioneer · Oil Slick Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_nebula', '개척자 · 네뷸라 테마', '개척자 · 네뷸라 테마', 'Pioneer · Nebula Theme', 'Pioneer · Nebula Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_aurora', '개척자 · 오로라나이트 테마', '개척자 · 오로라나이트 테마', 'Pioneer · Aurora Night Theme', 'Pioneer · Aurora Night Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_pearl', '개척자 · 진주 테마', '개척자 · 진주 테마', 'Pioneer · Pearl Theme', 'Pioneer · Pearl Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_champagne', '개척자 · 샴페인 테마', '개척자 · 샴페인 테마', 'Pioneer · Champagne Theme', 'Pioneer · Champagne Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_haze', '개척자 · 아침안개 테마', '개척자 · 아침안개 테마', 'Pioneer · Morning Haze Theme', 'Pioneer · Morning Haze Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_sage', '개척자 · 린넨과 세이지 테마', '개척자 · 린넨과 세이지 테마', 'Pioneer · Linen and Sage Theme', 'Pioneer · Linen and Sage Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+        ('theme_pio_dawn', '개척자 · 여명 테마', '개척자 · 여명 테마', 'Pioneer · First Light Theme', 'Pioneer · First Light Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
         name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,

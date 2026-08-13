@@ -715,6 +715,19 @@ const VISUAL_BACKFILL = {
       "borderColor": "#2ECC9B"
     }
   },
+
+  // 개척자 테마 썸네일. 색 자체는 클라이언트가 그리고, 여기는
+  // 상점 카드에 보이는 아이콘과 배경만 담는다.
+  theme_pio_deep: { version: 1, thumbnail: thumb('waves', '#2E7D74', '#E6F2F1', '#D3E9E6', '#2E7D74') },
+  theme_pio_gilt: { version: 1, thumbnail: thumb('workspace_premium', '#8A6B2E', '#F2EFEA', '#E6DFD2', '#8A6B2E') },
+  theme_pio_oilslick: { version: 1, thumbnail: thumb('auto_awesome', '#7A5A8E', '#EFE9F5', '#F5EFE2', '#7A5A8E') },
+  theme_pio_nebula: { version: 1, thumbnail: thumb('blur_on', '#6A4FA8', '#EDE7F6', '#E0F2F6', '#6A4FA8') },
+  theme_pio_aurora: { version: 1, thumbnail: thumb('nights_stay', '#2F8F72', '#E4F3EC', '#EDE7F6', '#2F8F72') },
+  theme_pio_pearl: { version: 1, thumbnail: thumb('blur_on', '#9A86B0', '#F5EDF2', '#EDF5EF', '#9A86B0') },
+  theme_pio_champagne: { version: 1, thumbnail: thumb('celebration', '#C9A85C', '#FAF3E6', '#F3E6CE', '#C9A85C') },
+  theme_pio_haze: { version: 1, thumbnail: thumb('cloud', '#7C8CC4', '#EAF1F9', '#F4EEF5', '#7C8CC4') },
+  theme_pio_sage: { version: 1, thumbnail: thumb('park', '#7A9678', '#F4F1E9', '#E6EDE1', '#7A9678') },
+  theme_pio_dawn: { version: 1, thumbnail: thumb('wb_twilight', '#D08A63', '#FCEDE4', '#EDF3F7', '#D08A63') },
 };
 
 // Default visual per category — used as a render fallback when an item has

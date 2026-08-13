@@ -680,6 +680,32 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFE8F5E9), Color(0xFFE0F2F1), Color(0xFFE8F0E8)];
       case 'theme_peach_30d':
         return const [Color(0xFFFFF8E1), Color(0xFFFFE8D0), Color(0xFFFFF0E0)];
+      // 개척자 테마 — 개척자 배너와 짝을 이루는 색이다. 둘을 같이 걸면
+      // 세트로 보이고, 따로 걸어도 어색하지 않을 만큼은 옅게 잡았다.
+      //
+      // 배너는 어두운 것도 있지만 테마는 전부 밝다. 테마는 앱 전체 배경이라
+      // 어두우면 모든 화면의 진한 글자가 죽는다 — 기존 13종이 전부 옅은
+      // 이유이기도 하다.
+      case 'theme_pio_deep':
+        return const [Color(0xFFE6F2F1), Color(0xFFD3E9E6), Color(0xFFE8F4F2)];
+      case 'theme_pio_gilt':
+        return const [Color(0xFFF2EFEA), Color(0xFFE6DFD2), Color(0xFFEFEAE1)];
+      case 'theme_pio_oilslick':
+        return const [Color(0xFFEFE9F5), Color(0xFFEDE6E0), Color(0xFFF5EFE2)];
+      case 'theme_pio_nebula':
+        return const [Color(0xFFEDE7F6), Color(0xFFE3ECF7), Color(0xFFE0F2F6)];
+      case 'theme_pio_aurora':
+        return const [Color(0xFFE4F3EC), Color(0xFFE6F0F2), Color(0xFFEDE7F6)];
+      case 'theme_pio_pearl':
+        return const [Color(0xFFF5EDF2), Color(0xFFEAF1F7), Color(0xFFEDF5EF)];
+      case 'theme_pio_champagne':
+        return const [Color(0xFFFAF3E6), Color(0xFFF3E6CE), Color(0xFFFBF6EC)];
+      case 'theme_pio_haze':
+        return const [Color(0xFFEAF1F9), Color(0xFFEBE8F7), Color(0xFFF4EEF5)];
+      case 'theme_pio_sage':
+        return const [Color(0xFFF4F1E9), Color(0xFFE6EDE1), Color(0xFFF0F3EC)];
+      case 'theme_pio_dawn':
+        return const [Color(0xFFFCEDE4), Color(0xFFFDF4E8), Color(0xFFEDF3F7)];
       default:
         return const [Color(0xFFF8F4F6), Color(0xFFEDE6F0), Color(0xFFE0ECF6)];
     }
@@ -718,6 +744,28 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFE0F0E8), Color(0xFFC0D8C8), Color(0xFFD0E0D0)];
       case 'theme_peach_30d':
         return const [Color(0xFFFFE8D0), Color(0xFFE8D0B8), Color(0xFFF0D8C8)];
+      // 개척자 테마의 카드 뒷면. 배경보다 한 단계 진하게 잡아야
+      // 카드가 배경에 묻히지 않는다.
+      case 'theme_pio_deep':
+        return const [Color(0xFFDCEFEC), Color(0xFFB9D9D4), Color(0xFFCBE5E1)];
+      case 'theme_pio_gilt':
+        return const [Color(0xFFEDE8DF), Color(0xFFD8CDBA), Color(0xFFE4DCCB)];
+      case 'theme_pio_oilslick':
+        return const [Color(0xFFE9E1F0), Color(0xFFD5C9DA), Color(0xFFE2D6C4)];
+      case 'theme_pio_nebula':
+        return const [Color(0xFFE4DAF0), Color(0xFFCBDAEE), Color(0xFFC9E9F0)];
+      case 'theme_pio_aurora':
+        return const [Color(0xFFD6EDE1), Color(0xFFD2E6EA), Color(0xFFDFD5EE)];
+      case 'theme_pio_pearl':
+        return const [Color(0xFFEEE1E9), Color(0xFFDAE6F1), Color(0xFFDEEDE2)];
+      case 'theme_pio_champagne':
+        return const [Color(0xFFF5EBD7), Color(0xFFE7D3AE), Color(0xFFF0E5CE)];
+      case 'theme_pio_haze':
+        return const [Color(0xFFDDE8F5), Color(0xFFDCD7F0), Color(0xFFEBDFEC)];
+      case 'theme_pio_sage':
+        return const [Color(0xFFEDE8DA), Color(0xFFD5E2CB), Color(0xFFE2E9D9)];
+      case 'theme_pio_dawn':
+        return const [Color(0xFFF8E0D0), Color(0xFFF7E9CF), Color(0xFFDDE9F1)];
       default:
         return const [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
     }

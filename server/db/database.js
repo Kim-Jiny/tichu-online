@@ -2049,7 +2049,9 @@ async function getFriends(nickname) {
   }
 }
 
-/// Friends plus when each was last connected.
+/// Friends, with everything the list needs to draw each of them: when they
+/// were last connected, plus the photo, banner, title and level the rest of
+/// the app shows a player by.
 ///
 /// Separate from getFriends, which five call sites use as a plain list of
 /// nicknames — widening that return type to reach one screen would touch
@@ -2059,11 +2061,29 @@ async function getFriends(nickname) {
 /// builds one row per friend and would otherwise run a query inside that loop.
 /// COALESCE onto last_login so accounts that predate last_seen_at show their
 /// sign-in rather than nothing at all.
-async function getFriendsWithLastSeen(nickname) {
+async function getFriendsWithLastSeen(nickname, locale = 'ko') {
   const client = await pool.connect();
   try {
+    // Whitelisted, the same way searchUsers does it — the locale reaches here
+    // from session state, but a column name is not a place to find out.
+    const titleCol = locale === 'en' ? 'name_en'
+      : locale === 'de' ? 'name_de'
+      : 'name_ko';
     const result = await client.query(
-      `SELECT f.friend, COALESCE(u.last_seen_at, u.last_login) AS last_seen_at
+      `SELECT f.friend,
+              COALESCE(u.last_seen_at, u.last_login) AS last_seen_at,
+              u.level,
+              u.profile_photo_key, u.profile_photo_status,
+              u.profile_photo_expires_at, u.profile_private_hide_photo,
+              u.custom_title_text,
+              e.banner_key, e.title_key,
+              si.${titleCol} AS title_name,
+              EXISTS (
+                SELECT 1 FROM tc_user_items ui
+                JOIN tc_shop_items s2 ON s2.item_key = ui.item_key
+                WHERE ui.nickname = u.nickname AND s2.effect_type = 'custom_title'
+                  AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
+              ) AS has_custom_title
        FROM (
          SELECT CASE WHEN user_nickname = $1 THEN friend_nickname
                      ELSE user_nickname END AS friend
@@ -2071,13 +2091,31 @@ async function getFriendsWithLastSeen(nickname) {
          WHERE (user_nickname = $1 OR friend_nickname = $1)
            AND status = 'accepted'
        ) f
-       LEFT JOIN tc_users u ON u.nickname = f.friend`,
+       LEFT JOIN tc_users u ON u.nickname = f.friend
+       LEFT JOIN tc_user_equips e ON e.nickname = f.friend
+       LEFT JOIN tc_shop_items si ON si.item_key = e.title_key`,
       [nickname],
     );
-    return result.rows.map((r) => ({
-      nickname: r.friend,
-      lastSeenAt: r.last_seen_at || null,
-    }));
+    return result.rows.map((r) => {
+      // Same rule as getUserProfile and searchUsers: a `custom:` title only
+      // shows while the pass is live and something is written, and it never
+      // falls back to a catalog name.
+      const wearingCustom = (r.title_key || '').startsWith('custom:');
+      const customActive =
+        wearingCustom && r.has_custom_title && !!r.custom_title_text;
+      return {
+        nickname: r.friend,
+        lastSeenAt: r.last_seen_at || null,
+        level: r.level,
+        bannerKey: r.banner_key || null,
+        titleKey: wearingCustom && !customActive ? null : (r.title_key || null),
+        titleName: customActive ? r.custom_title_text : (r.title_name || null),
+        profilePhotoKey: r.profile_photo_key || null,
+        profilePhotoStatus: r.profile_photo_status || 'none',
+        profilePhotoExpiresAt: r.profile_photo_expires_at || null,
+        profilePrivateHidePhoto: r.profile_private_hide_photo === true,
+      };
+    });
   } catch (err) {
     console.error('Get friends with last seen error:', err);
     return [];

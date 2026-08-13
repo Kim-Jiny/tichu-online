@@ -31,8 +31,21 @@ class ProfileIdentityCell extends StatelessWidget {
   /// Private to this viewer: shows the badge instead of the level.
   final bool isPrivate;
 
-  /// Trailing action (the add-friend button in search results).
+  /// Trailing action — the add-friend button in search, the invite/kick chips
+  /// in the friends list.
   final Widget? trailing;
+
+  /// A line under the nickname: what they are doing, or when they were last
+  /// here. Search results have nothing to say there, so it is optional.
+  final String? subtitle;
+
+  /// Colour for [subtitle]. Ignored when the cell is showing a banner, whose
+  /// own text colour wins — a green "online" on a dark gradient is unreadable.
+  final Color? subtitleColor;
+
+  /// Presence dot beside the avatar. Null hides it: in search, "is this
+  /// stranger online" is neither known nor useful.
+  final bool? isOnline;
 
   final VoidCallback? onTap;
 
@@ -47,14 +60,23 @@ class ProfileIdentityCell extends StatelessWidget {
     this.level,
     this.isPrivate = false,
     this.trailing,
+    this.subtitle,
+    this.subtitleColor,
+    this.isOnline,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final gradient = game.bannerGradient(bannerKey);
-    final textColor = game.bannerTextColor(bannerKey);
+    // Offline drains the banner. In a list sorted by presence the row itself
+    // has to say which half you are looking at, and a full-strength banner on
+    // someone who left yesterday reads as louder than a friend who is online
+    // right now. Null (search results) keeps full colour — there is no
+    // presence being claimed there.
+    final away = isOnline == false;
+    final gradient = away ? null : game.bannerGradient(bannerKey);
+    final textColor = away ? null : game.bannerTextColor(bannerKey);
     final photo = game.resolvePhotoUrl(photoUrl);
     const avatarSize = 40.0;
 
@@ -68,13 +90,29 @@ class ProfileIdentityCell extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: gradient,
             color: gradient == null
-                ? Colors.white.withValues(alpha: 0.85)
+                ? Colors.white.withValues(alpha: away ? 0.6 : 0.85)
                 : null,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE6DDD8)),
           ),
           child: Row(
             children: [
+              // Its own column rather than a corner of the avatar: overlaid,
+              // it covered part of the face, and the opposite corner is
+              // already taken by the level badge.
+              if (isOnline != null) ...[
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isOnline!
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFC4BAB4),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               SizedBox(
                 width: avatarSize,
                 height: avatarSize,
@@ -125,7 +163,10 @@ class ProfileIdentityCell extends StatelessWidget {
                     if ((titleName ?? '').isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
-                        child: TitleChip(titleKey: titleKey, titleName: titleName),
+                        child: TitleChip(
+                          titleKey: titleKey,
+                          titleName: titleName,
+                        ),
                       ),
                     Row(
                       children: [
@@ -147,13 +188,28 @@ class ProfileIdentityCell extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if ((subtitle ?? '').isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            // On a banner the caller's colour would be a
+                            // guess about a surface it cannot see; the
+                            // banner's own text colour is the one that reads.
+                            color: textColor != null
+                                ? textColor.withValues(alpha: 0.85)
+                                : (subtitleColor ?? const Color(0xFF9A8E8A)),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                trailing!,
-              ],
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
             ],
           ),
         ),

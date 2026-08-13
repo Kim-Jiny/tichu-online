@@ -392,192 +392,152 @@ class _FriendsScreenState extends State<FriendsScreen>
               } else if (isOnline) {
                 statusText = l10n.friendsStatusOnline;
               } else {
-                // The dot already says offline; the line beneath is better spent
-                // on when they were last here. Falls back to the plain word when
-                // the server has no timestamp — an account that has not signed in
-                // since before the column existed.
+                // The dot already says offline; the line beneath is better
+                // spent on when they were last here.
                 statusText =
                     _lastSeenText(l10n, friend['lastSeenAt'] as String?) ??
                     l10n.friendsStatusOffline;
               }
 
-              return GestureDetector(
-                onTap: () => _openDmChat(nickname),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isOnline
-                          ? const Color(0xFFC8E6C9)
-                          : const Color(0xFFE0D6D0),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Online indicator
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isOnline
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFFBDBDBD),
+              return ProfileIdentityCell(
+                game: game,
+                nickname: nickname,
+                photoUrl: friend['photoUrl'] as String?,
+                bannerKey: friend['bannerKey'] as String?,
+                titleKey: friend['titleKey'] as String?,
+                titleName: friend['titleName'] as String?,
+                level: friend['level'] as int?,
+                isOnline: isOnline,
+                subtitle: statusText,
+                subtitleColor: isOnline
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFF9A8E8A),
+                // Tapping the row opens who they are. Talking to them is a
+                // button — a whole row that means "chat" gives the profile no
+                // way in except a small icon, and looking someone up is the
+                // more common reason to be here.
+                onTap: () => showPlayerProfileDialog(context, nickname, game),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!widget.allowDmChat)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            l10n.friendsRestrictedDuringGame,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFFE65100),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // Name & status
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    nickname,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF5A4038),
+                    if (isOnline &&
+                        friend['roomId'] == null &&
+                        game.isInWaitingRoom)
+                      game.isRoomInvitePending(nickname)
+                          ? _buildActionChip(
+                              l10n.friendsInvited,
+                              Icons.schedule,
+                              const Color(0xFF8A8A8A),
+                              const Color(0xFFF1F1F1),
+                              () {},
+                            )
+                          : _buildActionChip(
+                              l10n.friendsInvite,
+                              Icons.send,
+                              const Color(0xFF1976D2),
+                              const Color(0xFFE3F2FD),
+                              () {
+                                game.inviteToRoom(nickname);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      l10n.friendsInviteSent(nickname),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              },
+                            ),
+                    if (friend['roomId'] != null && game.currentRoomId.isEmpty)
+                      _buildRoomActionChip(friend, game),
+                    _iconTapTarget(
+                      onTap: () => _openDmChat(nickname),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEDE7F6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble,
+                              size: 14,
+                              color: Color(0xFF7E57C2),
+                            ),
+                          ),
+                          // On the button it belongs to, not adrift in the
+                          // row: the count is about messages, and messages
+                          // are what that button opens.
+                          if (unread > 0)
+                            Positioned(
+                              right: -5,
+                              top: -5,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE53935),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
                                   ),
                                 ),
-                                if (unread > 0) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE53935),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '$unread',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                ],
-                                if (!widget.allowDmChat) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF3E0),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      l10n.friendsRestrictedDuringGame,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFFE65100),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isOnline
-                                    ? const Color(0xFF4CAF50)
-                                    : const Color(0xFF9A8E8A),
+                                ),
                               ),
                             ),
-                          ],
+                        ],
+                      ),
+                    ),
+                    _iconTapTarget(
+                      onTap: () =>
+                          _showRemoveFriendConfirmation(nickname, game),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.person_remove,
+                          size: 14,
+                          color: Color(0xFFE57373),
                         ),
                       ),
-                      // Action buttons
-                      if (isOnline &&
-                          friend['roomId'] == null &&
-                          game.isInWaitingRoom)
-                        game.isRoomInvitePending(nickname)
-                            ? _buildActionChip(
-                                l10n.friendsInvited,
-                                Icons.schedule,
-                                const Color(0xFF8A8A8A),
-                                const Color(0xFFF1F1F1),
-                                () {},
-                              )
-                            : _buildActionChip(
-                                l10n.friendsInvite,
-                                Icons.send,
-                                const Color(0xFF1976D2),
-                                const Color(0xFFE3F2FD),
-                                () {
-                                  game.inviteToRoom(nickname);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        l10n.friendsInviteSent(nickname),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                      if (friend['roomId'] != null &&
-                          game.currentRoomId.isEmpty)
-                        _buildRoomActionChip(friend, game),
-                      const SizedBox(width: 4),
-                      // Profile
-                      _iconTapTarget(
-                        // Same popup the lobby, the game board and search use —
-                        // the standalone profile screen predates the photo, the
-                        // custom title and the privacy pass, and shows none of
-                        // them.
-                        onTap: () =>
-                            showPlayerProfileDialog(context, nickname, game),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8EAF6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 14,
-                            color: Color(0xFF5C6BC0),
-                          ),
-                        ),
-                      ),
-                      // Remove friend
-                      _iconTapTarget(
-                        onTap: () =>
-                            _showRemoveFriendConfirmation(nickname, game),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.person_remove,
-                            size: 14,
-                            color: Color(0xFFE57373),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },

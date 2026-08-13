@@ -9978,8 +9978,10 @@ async function handleGetFriends(ws) {
     sendTo(ws, { type: 'friends_list', friends: [] });
     return;
   }
-  const rows = await getFriendsWithLastSeen(ws.nickname);
-  const friends = rows.map(({ nickname: nick, lastSeenAt }) => {
+  const rows = await getFriendsWithLastSeen(ws.nickname, ws.locale || 'ko');
+  const friends = rows.map((row) => {
+    const nick = row.nickname;
+    const lastSeenAt = row.lastSeenAt;
     const friendWs = findWsByNickname(nick);
     const isOnline = !!friendWs;
     let roomId = null;
@@ -10002,11 +10004,20 @@ async function handleGetFriends(ws) {
         roomPassword = r.password || '';
       }
     }
+    // A friend is not exempt from the two things that hide a face or a title:
+    // blocking them, or reporting one. Both are per-viewer, so they are
+    // applied here rather than in the query.
+    const hideTitle = titleReported(ws, nick, row.titleName);
     return {
       nickname: nick, isOnline, roomId, roomName,
       roomPlayerCount, roomInGame, roomPassword,
       // Only meaningful while they are away; the dot says the rest.
       lastSeenAt: isOnline || !lastSeenAt ? null : lastSeenAt,
+      level: row.level,
+      bannerKey: row.bannerKey,
+      titleKey: hideTitle ? null : row.titleKey,
+      titleName: hideTitle ? null : row.titleName,
+      photoUrl: visiblePhoto(ws, nick, profilePhotoUrlFrom(row)),
     };
   });
   sendTo(ws, { type: 'friends_list', friends });

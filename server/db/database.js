@@ -3544,9 +3544,17 @@ async function claimPushCampaign(nickname, campaignId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // The recipient row must predate nothing and postdate the account. A
+    // deleted account frees its nickname (deleteUser renames the old row), so
+    // without the created_at floor the next person to take that nickname
+    // inherits its unclaimed rewards — the same guard getRecentMatches and the
+    // gold ledger already apply for the same reason.
     const rec = await client.query(
-      `SELECT id, claimed_at FROM tc_push_campaign_recipients
-       WHERE campaign_id = $1 AND nickname = $2 FOR UPDATE`,
+      `SELECT r.id, r.claimed_at FROM tc_push_campaign_recipients r
+       JOIN tc_users u ON u.nickname = r.nickname
+       WHERE r.campaign_id = $1 AND r.nickname = $2
+         AND r.created_at >= u.created_at
+       FOR UPDATE OF r`,
       [campaignId, nickname],
     );
     if (rec.rows.length === 0) {

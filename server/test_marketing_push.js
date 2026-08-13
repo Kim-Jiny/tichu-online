@@ -214,6 +214,27 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
     second.messageKey);
   check('and pays nothing further', (await goldOf(nick(1))) === before + 50);
 
+  console.log('\n[닉네임을 물려받은 새 계정]');
+  // Deleting an account frees its nickname, so the next person to take it must
+  // not inherit rewards that were sent to the previous owner. Simulated by
+  // moving the account's created_at past the recipient row, which is exactly
+  // what a recycled nickname looks like.
+  const campR = await db.createPushCampaign({ title: 'r', body: 'r', rewardGold: 30 });
+  await db.recordCampaignSend(campR.id, [{ nickname: nick(2), success: true }]);
+  await db.pool.query(
+    `UPDATE tc_users SET created_at = (NOW() AT TIME ZONE 'UTC') + INTERVAL '1 minute'
+     WHERE nickname = $1`, [nick(2)]);
+  const inherited = await db.claimPushCampaign(nick(2), campR.id);
+  check('a reward sent before the account existed is refused',
+    inherited.success === false
+      && inherited.messageKey === 'push_reward_not_yours',
+    inherited.messageKey);
+  await db.pool.query(
+    `UPDATE tc_users SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 day'
+     WHERE nickname = $1`, [nick(2)]);
+  check('and honoured once the account predates it again',
+    (await db.claimPushCampaign(nick(2), campR.id)).success === true);
+
   console.log('\n[동시에 두 번 누른 경우]');
   // The cold-start handler and the resume handler can both fire.
   const camp2 = await db.createPushCampaign({ title: 'x', body: 'y', rewardGold: 100 });
@@ -278,7 +299,7 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('opened counts the recipients who tapped', c1.opened === 1, `${c1.opened}`);
   check('claimed counts who was paid', c1.claimed === 1, `${c1.claimed}`);
 
-  for (const id of [camp.id, camp2.id, camp3.id, camp4.id]) await db.deletePushCampaign(id);
+  for (const id of [camp.id, camp2.id, camp3.id, camp4.id, campR.id]) await db.deletePushCampaign(id);
   for (let i = 1; i <= 5; i++) {
     await db.pool.query('DELETE FROM tc_gold_history WHERE nickname = $1', [nick(i)]);
     await db.pool.query('DELETE FROM tc_users WHERE nickname = $1', [nick(i)]);

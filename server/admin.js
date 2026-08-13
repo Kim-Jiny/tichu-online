@@ -4754,7 +4754,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <input type="text" name="title" required maxlength="200" placeholder="(광고) 주말 이벤트 안내"
               style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
             <div style="font-size:12px;color:var(--muted);margin-top:4px">
-              광고성 정보에는 제목에 <b>(광고)</b> 표기가 필요합니다.
+              <b>(광고)</b> 로 시작해야 저장됩니다 — 정보통신망법 §50 ④.
             </div>
           </div>
           <div>
@@ -4820,6 +4820,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (!title || !text) {
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('제목과 내용을 모두 입력해 주세요.'));
+    }
+    // 정보통신망법 §50 ④ — 광고성 정보는 제목 맨 앞에 "(광고)". A hint under
+    // the field was not enough: this is a per-campaign rule that has to hold
+    // every time, and the person typing at 2am is the one who forgets. Both
+    // bracket shapes because a Korean IME produces （광고） as readily as
+    // (광고).
+    if (!/^[(（]\s*광고\s*[)）]/.test(title)) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('광고성 정보라서 제목이 "(광고)" 로 시작해야 합니다. 정보통신망법 §50 ④.'));
     }
     await createPushCampaign({
       title,

@@ -3772,6 +3772,29 @@ async function reserveCampaignRecipients(campaignId, nicknames) {
   }
 }
 
+/// Open a campaign for claims. Called the moment FCM reports a delivery.
+///
+/// Deliberately one small UPDATE, separate from the per-recipient tally. The
+/// tally loops over the whole audience and is the part most likely to fail
+/// halfway; if opening the campaign were bundled into it, a failure there
+/// would leave everyone holding a notification the server refuses to pay out
+/// on. Opening first means the worst case is wrong statistics.
+async function openCampaignForClaims(campaignId) {
+  try {
+    await pool.query(
+      `UPDATE tc_push_campaigns
+       SET status = 'sent',
+           sent_at = COALESCE(sent_at, (NOW() AT TIME ZONE 'UTC'))
+       WHERE id = $1`,
+      [campaignId],
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('Open campaign error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
 /// Write the audience down and mark the campaign sent.
 ///
 /// [results] is what sendBroadcastPush reports per token. Failures are stored
@@ -3874,6 +3897,15 @@ async function claimPushCampaign(nickname, campaignId) {
     if (!camp) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'push_reward_not_found' };
+    }
+    // The recipient rows are written BEFORE the push goes out, so that a
+    // failed write can never strand a delivered notification. That leaves a
+    // window where rows exist and nothing has been sent — and campaign ids are
+    // small integers a client could simply guess. So existence of the row is
+    // not enough: the campaign has to have been opened by an actual delivery.
+    if (camp.status !== 'sent') {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'push_reward_not_yours' };
     }
     const expired = (await client.query(
       `SELECT $1::timestamp IS NOT NULL
@@ -10902,6 +10934,7 @@ module.exports = {
   getPushCampaign,
   deletePushCampaign,
   reserveCampaignRecipients,
+  openCampaignForClaims,
   recordCampaignSend,
   claimPushCampaign,
   getCampaignRecipients,

@@ -8,7 +8,7 @@ const {
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
-  reserveCampaignRecipients, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -4946,20 +4946,31 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { type: 'campaign', campaignId: id },
     );
     await markFcmTokensInvalid(push.invalidUserIds || []);
+    // Open it the moment anything was delivered, before the per-recipient
+    // tally. That tally walks the whole audience and is the part that can die
+    // halfway; the claim gate reads this one flag, so it must be set by the
+    // smallest, most reliable write available.
+    let opened = { success: true };
+    if (push.successCount > 0) {
+      opened = await openCampaignForClaims(id);
+    }
     const byId = new Map(audience.map((u) => [u.id, u.nickname]));
     const recorded = await recordCampaignSend(id, (push.results || []).map((r) => ({
       nickname: byId.get(r.userId),
       success: r.success,
     })).filter((r) => r.nickname));
-    // Rewards are safe either way now — the rows are already there. What can
-    // still be wrong is the tally, so say so instead of reporting a clean send.
-    const tally = recorded.success
-      ? ''
-      : ' — 다만 발송 결과 집계에 실패했습니다. 보상 수령에는 영향이 없고, 통계만 부정확할 수 있습니다.';
+    // Two different kinds of "partly wrong" to report honestly. Failing to
+    // open the campaign means nobody can claim; failing the tally only means
+    // the numbers on this page are off.
+    const problem = !opened.success
+      ? ' — 다만 캠페인을 여는 데 실패해서 지금은 보상 수령이 막혀 있습니다. 다시 시도하세요.'
+      : !recorded.success
+      ? ' — 다만 발송 결과 집계에 실패했습니다. 보상 수령에는 영향이 없고, 통계만 부정확할 수 있습니다.'
+      : '';
     return redirect(res, '/tc-backstage/campaigns?r='
-      + (recorded.success ? 'ok' : 'fail') + '&msg=' + encodeURIComponent(
+      + (problem ? 'fail' : 'ok') + '&msg=' + encodeURIComponent(
       `${formatNumber(push.successCount)}명에게 보냈습니다.`
-      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + tally));
+      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + problem));
   }
 
   const campaignDetailMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)$/);

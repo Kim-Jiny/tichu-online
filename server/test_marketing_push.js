@@ -169,10 +169,20 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   const reserved = await db.getCampaignRecipients(campR2.id);
   check('발송 전에 이미 행이 있다', reserved.rows.length === 1);
   check('상태는 pending', reserved.rows[0].status === 'pending');
-  // Nothing has been sent, yet the reward is already claimable — that is the
-  // point. claimPushCampaign looks for the row, not for a delivery status.
+  // Reserved but not sent: the reward must NOT be claimable yet. Campaign ids
+  // are small integers, so a client could guess one and collect from a
+  // campaign whose notification never went out — including one whose delivery
+  // failed outright and will be retried.
   const early = await db.claimPushCampaign(nick(1), campR2.id);
-  check('행만 있으면 보상은 수령된다', early.success === true, early.messageKey || '');
+  check('아직 발송 전이면 수령되지 않는다',
+    early.success === false && early.messageKey === 'push_reward_not_yours',
+    early.messageKey || 'succeeded');
+
+  // Opening it is what a real delivery does.
+  await db.openCampaignForClaims(campR2.id);
+  const afterOpen = await db.claimPushCampaign(nick(1), campR2.id);
+  check('발송으로 캠페인이 열리면 수령된다',
+    afterOpen.success === true, afterOpen.messageKey || '');
   // Reserving twice must not duplicate or reset anyone.
   await db.reserveCampaignRecipients(campR2.id, [nick(1)]);
   const reReserved = await db.getCampaignRecipients(campR2.id);
@@ -192,6 +202,7 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
       rewardItemKey: permItem2.item_key });
     for (const c of [campI, campI2]) {
       await db.recordCampaignSend(c.id, [{ nickname: nick(3), success: true }]);
+      await db.openCampaignForClaims(c.id);
       await db.claimPushCampaign(nick(3), c.id);
     }
     const n = (await db.pool.query(

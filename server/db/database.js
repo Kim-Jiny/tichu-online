@@ -3134,6 +3134,138 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
 /// The equipped count only counts people whose entitlement is still live. An
 /// equip row is not cleared when the item lapses, so counting the equips table
 /// alone reports banners nobody can actually see.
+/// Every shop purchase, newest first — who bought what, when, for how much.
+///
+/// Two sources, because a renewal is not a row. buyItem INSERTs a
+/// tc_user_items row for a first purchase but UPDATEs the expiry for a repeat
+/// one, writing a tc_gold_history row instead. A log built on tc_user_items
+/// alone silently omits every renewal, which is most of the revenue on an item
+/// people keep. Both are unioned here, and each row says which it was.
+///
+/// The ledger side only stores the item's display names ("ko|en|de"), not its
+/// key, so the key and category are looked up by Korean name in a scalar
+/// subquery. A scalar subquery rather than a join: two items sharing a name
+/// would multiply the row instead of just picking one.
+///
+/// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
+/// and combine.
+async function getShopPurchaseLog(opts = {}) {
+  const limit = Math.min(200, Math.max(1, opts.limit || 50));
+  const offset = Math.max(0, opts.offset || 0);
+  const itemKey = opts.itemKey || null;
+  const nickname = opts.nickname ? `%${opts.nickname}%` : null;
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT * FROM (
+         SELECT ui.acquired_at AS at,
+                ui.nickname,
+                ui.item_key,
+                si.name_ko AS item_name,
+                si.category,
+                si.price,
+                si.is_permanent,
+                si.duration_days,
+                'new' AS kind
+         FROM tc_user_items ui
+         JOIN tc_shop_items si ON si.item_key = ui.item_key
+         WHERE ui.source = 'shop'
+
+         UNION ALL
+
+         SELECT gh.created_at AS at,
+                gh.nickname,
+                (SELECT si2.item_key FROM tc_shop_items si2
+                  WHERE si2.name_ko = split_part(gh.title, '|', 1) LIMIT 1) AS item_key,
+                split_part(gh.title, '|', 1) AS item_name,
+                (SELECT si2.category FROM tc_shop_items si2
+                  WHERE si2.name_ko = split_part(gh.title, '|', 1) LIMIT 1) AS category,
+                -gh.gold_delta AS price,
+                FALSE AS is_permanent,
+                (SELECT si2.duration_days FROM tc_shop_items si2
+                  WHERE si2.name_ko = split_part(gh.title, '|', 1) LIMIT 1) AS duration_days,
+                'extend' AS kind
+         FROM tc_gold_history gh
+         WHERE gh.source = 'shop_purchase'
+       ) log
+       WHERE ($1::text IS NULL OR log.item_key = $1)
+         AND ($2::text IS NULL OR log.nickname ILIKE $2)
+       ORDER BY log.at DESC
+       LIMIT $3 OFFSET $4`,
+      [itemKey, nickname, limit + 1, offset],
+    );
+    const rows = result.rows.slice(0, limit);
+    return {
+      success: true,
+      rows: rows.map((r) => ({
+        at: r.at,
+        nickname: r.nickname,
+        itemKey: r.item_key,
+        itemName: r.item_name,
+        category: r.category,
+        price: parseInt(r.price, 10) || 0,
+        isPermanent: r.is_permanent === true,
+        durationDays: r.duration_days,
+        kind: r.kind,
+      })),
+      hasMore: result.rows.length > limit,
+    };
+  } catch (err) {
+    console.error('Get shop purchase log error:', err);
+    return { success: false, rows: [], hasMore: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+/// Totals for the same log, over the same filters but the whole range — the
+/// figures at the top of the page must be about every matching purchase, not
+/// about the fifty rows on screen.
+async function getShopPurchaseLogSummary(opts = {}) {
+  const itemKey = opts.itemKey || null;
+  const nickname = opts.nickname ? `%${opts.nickname}%` : null;
+  const client = await pool.connect();
+  try {
+    const r = await client.query(
+      `SELECT COUNT(*)::int AS purchases,
+              COALESCE(SUM(log.price), 0)::bigint AS spent,
+              COUNT(DISTINCT log.nickname)::int AS buyers,
+              COUNT(*) FILTER (WHERE log.kind = 'extend')::int AS extends,
+              MAX(log.at) AS last_at
+       FROM (
+         SELECT ui.acquired_at AS at, ui.nickname, ui.item_key, si.price, 'new' AS kind
+         FROM tc_user_items ui
+         JOIN tc_shop_items si ON si.item_key = ui.item_key
+         WHERE ui.source = 'shop'
+         UNION ALL
+         SELECT gh.created_at, gh.nickname,
+                (SELECT si2.item_key FROM tc_shop_items si2
+                  WHERE si2.name_ko = split_part(gh.title, '|', 1) LIMIT 1),
+                -gh.gold_delta, 'extend'
+         FROM tc_gold_history gh
+         WHERE gh.source = 'shop_purchase'
+       ) log
+       WHERE ($1::text IS NULL OR log.item_key = $1)
+         AND ($2::text IS NULL OR log.nickname ILIKE $2)`,
+      [itemKey, nickname],
+    );
+    const a = r.rows[0];
+    return {
+      success: true,
+      purchases: a.purchases,
+      spent: Number(a.spent) || 0,
+      buyers: a.buyers,
+      extends: a.extends,
+      lastAt: a.last_at,
+    };
+  } catch (err) {
+    console.error('Get shop purchase log summary error:', err);
+    return { success: false, purchases: 0, spent: 0, buyers: 0, extends: 0, lastAt: null };
+  } finally {
+    client.release();
+  }
+}
+
 async function getShopItemHolderCounts() {
   const client = await pool.connect();
   try {
@@ -9861,6 +9993,8 @@ module.exports = {
   getAdminPurchaseHistory,
   getAdminUserInventory,
   getShopItemHolderCounts,
+  getShopPurchaseLog,
+  getShopPurchaseLogSummary,
   adminExtendUserItem,
   getShopItems,
   getUserItems,

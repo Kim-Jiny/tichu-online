@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -610,6 +610,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/filler-rooms" class="${activePage === 'filler-rooms' ? 'active' : ''}" onclick="closeSidebar()">봇방</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
+    <a href="/tc-backstage/shop/history" class="${activePage === 'shop-history' ? 'active' : ''}" onclick="closeSidebar()">상점 구매</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
     <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
   </div>
@@ -929,6 +930,9 @@ function renderUserMatchTable(matches) {
 /// match list only knows whether one more page exists.
 /// "2페이지 51–57번째" — or just the page number when the page is empty, since
 /// an out-of-range page would otherwise announce "101–100번째".
+/// Rows per page on every paged backstage list.
+const PAGE_ROWS = 50;
+
 function pageRangeLabel(page, offset, count) {
   const range = count > 0
     ? ` <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + count}번째</span>`
@@ -4642,6 +4646,95 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
 
   // ===== Shop Management =====
+  // Who bought what, when — across everyone. The per-user version of this is
+  // on each user's detail page; this is the same log without the user filter
+  // fixed, which is what answers "did that item actually sell" and "what did
+  // this person spend on".
+  if (pathname === '/tc-backstage/shop/history' && method === 'GET') {
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const itemKey = url.searchParams.get('item') || '';
+    const who = (url.searchParams.get('who') || '').trim();
+    const filters = { itemKey: itemKey || null, nickname: who || null };
+    const [log, sum, items] = await Promise.all([
+      getShopPurchaseLog({ ...filters, limit: PAGE_ROWS, offset: (page - 1) * PAGE_ROWS }),
+      getShopPurchaseLogSummary(filters),
+      getAllShopItemsAdmin(),
+    ]);
+    const offset = (page - 1) * PAGE_ROWS;
+    // Filters live in the query string, so paging has to carry them along.
+    const qs = (p) => {
+      const q = new URLSearchParams();
+      if (itemKey) q.set('item', itemKey);
+      if (who) q.set('who', who);
+      if (p > 1) q.set('page', String(p));
+      const t = q.toString();
+      return t ? `?${t}` : '';
+    };
+    const CATEGORY_TINTS = {
+      banner: '#e3f2fd;color:#1565c0',
+      title: '#fff3e0;color:#e65100',
+      theme: '#e8eaf6;color:#283593',
+      utility: '#fce4ec;color:#880e4f',
+      feature: '#ede7f6;color:#5e35b1',
+      card_skin: '#f1f8e9;color:#33691e',
+    };
+    const rowsHtml = log.rows.map((r) => `<tr>
+      <td style="font-size:12px;color:#888;white-space:nowrap">${formatDate(r.at)}</td>
+      <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}" style="font-weight:700">${escapeHtml(r.nickname)}</a></td>
+      <td>
+        <div style="font-weight:600">${escapeHtml(r.itemName || r.itemKey || '-')}</div>
+        ${r.itemKey ? `<div class="muted mono" style="font-size:11px">${escapeHtml(r.itemKey)}</div>` : ''}
+      </td>
+      <td>${r.category ? `<span class="badge" style="background:${CATEGORY_TINTS[r.category] || '#f5f5f5;color:#333'}">${escapeHtml(r.category)}</span>` : '<span style="color:#bbb">-</span>'}</td>
+      <td>${r.kind === 'extend'
+        ? '<span class="badge" style="background:#fff8e1;color:#8d6e00">연장</span>'
+        : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">신규</span>'}</td>
+      <td style="font-size:12px">${r.isPermanent ? '영구' : (r.durationDays ? `${r.durationDays}일` : '-')}</td>
+      <td style="text-align:right;font-weight:700;color:#d07a16">${formatNumber(r.price)}</td>
+    </tr>`).join('');
+
+    const content = `
+      ${pageHeader('상점 구매',
+        '골드로 산 기록입니다. 처음 산 것과 <b>기간을 늘린 것</b>을 함께 봅니다 — 재구매는 새 행이 아니라 만료일 갱신이라, 아이템 목록만 보면 통째로 빠집니다.'
+        + '<br>현금 결제는 <a href="/tc-backstage/iap-receipts">결제내역</a>에 있습니다.')}
+      ${summaryStrip([
+        { label: '구매 건수', value: formatNumber(sum.purchases), meta: `그중 연장 ${formatNumber(sum.extends)}건` },
+        { label: '사용된 골드', value: formatNumber(sum.spent), valueColor: '#d07a16' },
+        { label: '구매자', value: formatNumber(sum.buyers), meta: '중복 제외' },
+        { label: '마지막 구매', value: sum.lastAt ? formatDate(sum.lastAt) : '-' },
+      ])}
+      <div class="card">
+        <form method="GET" action="/tc-backstage/shop/history"
+              style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select name="item" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px">
+            <option value="">아이템 전체</option>
+            ${items.map((i) => `<option value="${escapeHtml(i.item_key)}"${i.item_key === itemKey ? ' selected' : ''}>${escapeHtml(i.name_ko)}</option>`).join('')}
+          </select>
+          <input type="text" name="who" value="${escapeHtml(who)}" placeholder="닉네임 (일부만 입력해도 됩니다)"
+                 style="flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px">
+          <button class="btn btn-primary">찾기</button>
+          ${itemKey || who ? '<a class="btn btn-secondary" href="/tc-backstage/shop/history">전체 보기</a>' : ''}
+        </form>
+      </div>
+      <div class="card">
+        <h3>${pageRangeLabel(page, offset, log.rows.length)}</h3>
+        ${log.rows.length ? `<div class="table-wrap"><table>
+          <tr><th>일시</th><th>유저</th><th>아이템</th><th>분류</th><th>구분</th><th>기간</th><th style="text-align:right">골드</th></tr>
+          ${rowsHtml}
+        </table></div>` : '<div class="empty">조건에 맞는 구매가 없습니다</div>'}
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px">
+          ${page > 1
+            ? `<a class="btn" href="/tc-backstage/shop/history${qs(page - 1)}">← 이전</a>`
+            : '<span class="btn" style="opacity:.4;pointer-events:none">← 이전</span>'}
+          ${log.hasMore
+            ? `<a class="btn" href="/tc-backstage/shop/history${qs(page + 1)}">다음 →</a>`
+            : '<span class="btn" style="opacity:.4;pointer-events:none">다음 →</span>'}
+        </div>
+      </div>
+    `;
+    return html(res, layout('상점 구매', content, 'shop-history'));
+  }
+
   if (pathname === '/tc-backstage/shop' && method === 'GET') {
     const [items, holders] = await Promise.all([
       getAllShopItemsAdmin(),
@@ -7054,8 +7147,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // which now shows five of each: an account with a few hundred rows made the
   // rest of that page — memo, actions, inventory — unreachable without a long
   // scroll past history nobody opened it for.
-  const PAGE_ROWS = 50;
-
   const goldPageMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/gold-history$/);
   if (goldPageMatch && method === 'GET') {
     const nickname = decodeURIComponent(goldPageMatch[1]);

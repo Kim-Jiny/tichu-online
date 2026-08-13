@@ -115,8 +115,9 @@ class GameService extends ChangeNotifier {
   /// False when nobody else human is at the table, where the server ends the
   /// match instead rather than leave bots playing to an empty room.
   bool get canLeaveInProgress {
-    if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress)
+    if (isSpectator || !roomAllowMidGameJoin || !roomGameInProgress) {
       return false;
+    }
     final otherHumans = roomPlayers
         .where((p) => p != null && !p.isBot && p.id != playerId)
         .length;

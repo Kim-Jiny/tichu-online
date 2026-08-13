@@ -26,13 +26,16 @@ class _NoticesScreenState extends State<NoticesScreen> {
   void initState() {
     super.initState();
     final game = context.read<GameService>();
-    // markCurrentNoticesAsRead() calls notifyListeners(); running it synchronously
-    // here fires a Provider rebuild during the build phase → "setState() called
-    // during build" assertion. Defer to just after the first frame.
+    // Both of these call notifyListeners(), and initState runs inside the
+    // build phase — a Provider rebuild from here trips "setState() called
+    // during build". The read-marking was already deferred; requestNotices
+    // was left behind and threw the same assertion the moment this screen
+    // opened. They go together.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) game.markCurrentNoticesAsRead();
+      if (!mounted) return;
+      game.markCurrentNoticesAsRead();
+      game.requestNotices(markReadOnReceive: true);
     });
-    game.requestNotices(markReadOnReceive: true);
   }
 
   @override

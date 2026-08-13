@@ -858,6 +858,36 @@ function formatDateInput(d) {
   return _kstDateFmt.format(dt);
 }
 
+/**
+ * A `datetime-local` value in KST, for the admin forms.
+ *
+ * The form contract is "these fields are Korean wall-clock time", full stop.
+ * Not the browser's timezone and not the server's: a `datetime-local` input
+ * carries no offset, so `new Date(value)` on the server reads it in the
+ * *server's* zone — production runs UTC, so a deadline typed as 23:59 was
+ * being stored as 23:59Z and expiring at 08:59 the next morning in Seoul.
+ * Local development hid it, because a KST dev box happens to read it right.
+ *
+ * formatDateInput is date-only and cannot be used here; a datetime-local with
+ * no time silently drops the hour when the form is re-opened to edit.
+ */
+function formatDateTimeInputKst(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '';
+  const p = {};
+  for (const part of _kstPartsFmt.formatToParts(dt)) p[part.type] = part.value;
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+/** The inverse: a KST wall-clock string from a form back to a real instant. */
+function parseKstDateTimeInput(value) {
+  if (!value) return null;
+  const withSeconds = /T\d{2}:\d{2}$/.test(value) ? `${value}:00` : value;
+  const dt = new Date(`${withSeconds}+09:00`);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
 function kstDateKey(d) {
   return formatDateInput(d);
 }
@@ -7086,10 +7116,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                      style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
             </div>
             <div>
-              <label style="font-weight:600;display:block;margin-bottom:4px">마감 일시 — 비우면 만료 없음</label>
-              <input type="datetime-local" name="expires_at" value="${f.expires_at ? formatDateInput(f.expires_at) : ''}"
+              <label style="font-weight:600;display:block;margin-bottom:4px">마감 일시 (KST) — 비우면 만료 없음</label>
+              <input type="datetime-local" name="expires_at" value="${formatDateTimeInputKst(f.expires_at)}"
                      style="padding:8px 12px;border:1px solid var(--line);border-radius:8px">
-              <div style="font-size:12px;color:var(--muted);margin-top:4px">브라우저의 현지 시각으로 입력하고 UTC 로 저장됩니다.</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">한국 시각(KST)으로 입력하세요. UTC 로 변환해 저장합니다.</div>
             </div>
             <div>
               <label style="font-weight:600;display:block;margin-bottom:4px">메모 (운영용, 사용자에게 안 보임)</label>
@@ -7134,7 +7164,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       rewardItemKey: body.reward_item_key,
       rewardDays: body.reward_days,
       maxRedemptions: body.max_redemptions,
-      expiresAt: body.expires_at || null,
+      // The field is KST wall-clock by contract; converted here so it does not
+      // depend on what timezone this process happens to run in.
+      expiresAt: parseKstDateTimeInput(body.expires_at),
       isActive: body.is_active === '1',
       memo: body.memo,
     }, sessionInfo.session.username || 'admin');

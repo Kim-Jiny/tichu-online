@@ -38,6 +38,19 @@ rm _tmp.png
 144px on the long edge matches the existing icon set (goldIcon is 144) and
 covers a 30px slot at 3x with room to spare.
 
+## 변환 후에는 `flutter run` 을 다시 띄운다
+
+원본을 `assets/icons/` 에서 여기로 옮기는 순간, 돌고 있는 `flutter run` 은
+세션 시작 때 만든 애셋 목록을 그대로 들고 있어서 없어진 파일을 찾다 죽는다.
+
+```
+Could not update files on device: PathNotFoundException:
+Cannot open file, path = '.../assets/icons/coupon.png'
+```
+
+핫리로드로도 핫리스타트로도 안 되고, 세션을 껐다 켜야 한다. 두 번 겪었다
+(게임 심볼 4종, coupon).
+
 ## Two ways this went wrong before
 
 - **A master with no alpha at all needs the background keyed out.** `coupon.png`

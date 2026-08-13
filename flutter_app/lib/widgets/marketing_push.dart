@@ -60,11 +60,11 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
       _showReward(game);
       return;
     }
-    if (!_askingConsent &&
-        !_showingReward &&
-        game.playerId.isNotEmpty &&
-        !game.marketingAsked) {
+    if (_askingConsent || _showingReward || game.playerId.isEmpty) return;
+    if (!game.marketingAsked) {
       _askConsent(game);
+    } else if (game.marketingConfirmDue) {
+      _confirmConsent(game);
     }
   }
 
@@ -79,6 +79,20 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
     await showPushRewardDialog(context, reward);
     _showingReward = false;
     if (mounted) _sync();
+  }
+
+  /// The two-yearly notice. Reuses the consent flag as its guard — only one of
+  /// the two ever applies, and they must not stack.
+  Future<void> _confirmConsent(GameService game) async {
+    _askingConsent = true;
+    final answer = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) =>
+          _ConfirmConsentDialog(consentAt: game.marketingConsentAt),
+    );
+    if (answer != null) game.confirmMarketingConsent(answer);
+    _askingConsent = false;
   }
 
   Future<void> _askConsent(GameService game) async {
@@ -224,6 +238,136 @@ Future<void> showPushRewardDialog(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => PushRewardDialog(reward: reward),
+  );
+}
+
+/// The two-yearly confirmation that someone is still subscribed to marketing
+/// messages — 정보통신망법 §50 ⑧.
+///
+/// 시행령 §62-3 fixes what it has to say, and each line below is one of those
+/// items: who is sending (전송자의 명칭), the date consent was given and the
+/// fact of it (수신동의 날짜 및 사실), and how to keep or withdraw it
+/// (유지 또는 철회의 의사표시 방법). Withdrawing is a button here, not a
+/// pointer to a settings screen — the notice itself has to be actionable.
+class _ConfirmConsentDialog extends StatelessWidget {
+  final DateTime? consentAt;
+
+  const _ConfirmConsentDialog({this.consentAt});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final d = consentAt;
+    final dateText = d == null
+        ? '-'
+        : '${d.year}. ${d.month.toString().padLeft(2, '0')}. '
+              '${d.day.toString().padLeft(2, '0')}.';
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      backgroundColor: const Color(0xFFFDFBFA),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 14, 24, 8),
+      title: Text(
+        l10n.marketingConfirmTitle,
+        style: const TextStyle(
+          fontSize: 17.5,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF3E312A),
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.marketingConfirmBody,
+            style: const TextStyle(
+              fontSize: 14.5,
+              height: 1.55,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F1EE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _line(
+                  l10n.marketingConfirmSenderLabel,
+                  l10n.marketingSenderName,
+                ),
+                const SizedBox(height: 6),
+                _line(l10n.marketingConfirmDateLabel, dateText),
+                const SizedBox(height: 6),
+                _line(
+                  l10n.marketingConfirmStatusLabel,
+                  l10n.marketingConfirmStatusValue,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            foregroundColor: const Color(0xFF8A7A72),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          child: Text(l10n.marketingConfirmStop),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFE08A1E),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          child: Text(l10n.marketingConfirmKeep),
+        ),
+      ],
+    );
+  }
+
+  static Widget _line(String label, String value) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(
+        width: 74,
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12.5, color: Color(0xFF9A8E8A)),
+        ),
+      ),
+      Expanded(
+        child: Text(
+          value,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF5A4038),
+          ),
+        ),
+      ),
+    ],
   );
 }
 

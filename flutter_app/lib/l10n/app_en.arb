@@ -2760,5 +2760,14 @@
       }
     }
   },
-  "settingsMarketingPushBlocked": "Notifications are off, so nothing is sent. Turn them on above to resume"
+  "settingsMarketingPushBlocked": "Notifications are off, so nothing is sent. Turn them on above to resume",
+  "marketingSenderName": "Tichu Online",
+  "marketingConfirmTitle": "Keep receiving event news?",
+  "marketingConfirmBody": "It has been two years since you agreed to receive promotional messages. We are required to check with you again.",
+  "marketingConfirmSenderLabel": "Sender",
+  "marketingConfirmDateLabel": "Consented",
+  "marketingConfirmStatusLabel": "Status",
+  "marketingConfirmStatusValue": "Subscribed",
+  "marketingConfirmKeep": "Keep receiving",
+  "marketingConfirmStop": "Stop sending"
 }

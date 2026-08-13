@@ -4811,4 +4811,32 @@ class L10nEn extends L10n {
   @override
   String get settingsMarketingPushBlocked =>
       'Notifications are off, so nothing is sent. Turn them on above to resume';
+
+  @override
+  String get marketingSenderName => 'Tichu Online';
+
+  @override
+  String get marketingConfirmTitle => 'Keep receiving event news?';
+
+  @override
+  String get marketingConfirmBody =>
+      'It has been two years since you agreed to receive promotional messages. We are required to check with you again.';
+
+  @override
+  String get marketingConfirmSenderLabel => 'Sender';
+
+  @override
+  String get marketingConfirmDateLabel => 'Consented';
+
+  @override
+  String get marketingConfirmStatusLabel => 'Status';
+
+  @override
+  String get marketingConfirmStatusValue => 'Subscribed';
+
+  @override
+  String get marketingConfirmKeep => 'Keep receiving';
+
+  @override
+  String get marketingConfirmStop => 'Stop sending';
 }

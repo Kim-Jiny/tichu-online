@@ -7,7 +7,7 @@ const {
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
-  isKstNight, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
+  isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   deletePushCampaign, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
@@ -4664,6 +4664,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const campaigns = await listPushCampaigns(50);
     const audience = await getMarketingAudience('all');
     const tokenStats = await getFcmTokenStats();
+    const confirmStats = await getMarketingConfirmStats();
     const night = isKstNight();
     const notice = url.searchParams.get('msg');
     const failed = url.searchParams.get('r') === 'fail';
@@ -4711,6 +4712,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${notice ? `<div class="card" style="border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};color:${failed ? '#c62828' : '#2e7d32'};font-weight:700">${escapeHtml(notice)}</div>` : ''}
       ${summaryStrip([
         { label: '수신동의', value: formatNumber(audience.length), meta: '지금 발송 가능한 인원' },
+        // Climbs when the notice is not reaching people: it only shows on
+        // launch, so an account that never opens the app cannot be told
+        // anything. Sending to them while overdue is what the law forbids.
+        { label: '2년 재확인 대기', value: formatNumber(confirmStats.due),
+          valueColor: confirmStats.due > 0 ? '#c62828' : undefined,
+          meta: `동의자 ${formatNumber(confirmStats.opted_in)}명 중 · 앱 실행 시 안내` },
         { label: '살아있는 기기', value: formatNumber(tokenStats.live),
           meta: `앱 삭제 감지 ${formatNumber(tokenStats.dead)}건` },
         { label: '발송 가능 시간', value: night ? '아니오' : '예',

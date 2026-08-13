@@ -8516,6 +8516,60 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Notifications are off, so nothing is sent. Turn them on above to resume'**
   String get settingsMarketingPushBlocked;
+
+  /// No description provided for @marketingSenderName.
+  ///
+  /// In en, this message translates to:
+  /// **'Tichu Online'**
+  String get marketingSenderName;
+
+  /// No description provided for @marketingConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep receiving event news?'**
+  String get marketingConfirmTitle;
+
+  /// No description provided for @marketingConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It has been two years since you agreed to receive promotional messages. We are required to check with you again.'**
+  String get marketingConfirmBody;
+
+  /// No description provided for @marketingConfirmSenderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sender'**
+  String get marketingConfirmSenderLabel;
+
+  /// No description provided for @marketingConfirmDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Consented'**
+  String get marketingConfirmDateLabel;
+
+  /// No description provided for @marketingConfirmStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get marketingConfirmStatusLabel;
+
+  /// No description provided for @marketingConfirmStatusValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribed'**
+  String get marketingConfirmStatusValue;
+
+  /// No description provided for @marketingConfirmKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep receiving'**
+  String get marketingConfirmKeep;
+
+  /// No description provided for @marketingConfirmStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop sending'**
+  String get marketingConfirmStop;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

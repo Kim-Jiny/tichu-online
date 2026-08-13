@@ -96,6 +96,57 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('and turning them back on restores the audience',
     mine(await db.getMarketingAudience('all')).length === 1);
 
+  console.log('\n[2년마다 하는 수신동의 확인 — 정보통신망법 §50 ⑧]');
+  // Two years is longer than any test can wait, so the consent date is
+  // backdated. That is also the only way this code path will ever be exercised
+  // before it matters in production.
+  const due = async (n) => (await db.isMarketingConfirmDue(n)).due;
+  check('a fresh consent is not due a confirmation', (await due(nick(1))) === false);
+
+  const backdate = (n, interval) => db.pool.query(
+    `UPDATE tc_users SET marketing_consent_at =
+       (NOW() AT TIME ZONE 'UTC') - $2::interval, marketing_confirmed_at = NULL
+     WHERE nickname = $1`, [n, interval]);
+
+  await backdate(nick(1), '23 months');
+  check('nor is one from 23 months ago', (await due(nick(1))) === false);
+  await backdate(nick(1), '25 months');
+  check('one from 25 months ago is', (await due(nick(1))) === true);
+
+  const info = await db.isMarketingConfirmDue(nick(1));
+  check('and the notice can state the date consent was given',
+    info.consentAt != null, 'the law requires the date, not just the fact');
+
+  // Keeping it.
+  const kept2 = await db.confirmMarketingConsent(nick(1), true);
+  check('confirming keeps them subscribed', kept2.enabled === true);
+  check('and clears the notice for another two years',
+    (await due(nick(1))) === false);
+  const dates = (await db.pool.query(
+    `SELECT marketing_consent_at, marketing_confirmed_at FROM tc_users
+     WHERE nickname = $1`, [nick(1)])).rows[0];
+  check('the original consent date is left alone',
+    new Date(dates.marketing_consent_at) < new Date(dates.marketing_confirmed_at),
+    'moving it would restart the clock from every confirmation');
+
+  // Withdrawing through the notice, which it has to offer.
+  await backdate(nick(1), '25 months');
+  const dropped = await db.confirmMarketingConsent(nick(1), false);
+  check('answering "stop" withdraws consent', dropped.enabled === false);
+  check('and takes them out of the audience',
+    !mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
+  check('a withdrawn account is not asked to confirm anything',
+    (await due(nick(1))) === false);
+
+  // Opting back in must start a fresh two years, not inherit an old due date.
+  await db.setMarketingConsent(nick(1), true);
+  check('opting back in is not immediately overdue', (await due(nick(1))) === false,
+    'a stale confirmed_at would make them due the moment they returned');
+
+  const stats = await db.getMarketingConfirmStats();
+  check('the backstage can count who is overdue', typeof stats.due === 'number',
+    JSON.stringify(stats));
+
   console.log('\n[앱을 지운 기기]');
   // FCM answers "not registered" for a token whose app is gone. The account
   // stays; only the device is retired.

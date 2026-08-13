@@ -364,6 +364,15 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_push_enabled BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_asked_at TIMESTAMP`);
+    // When we last told them they are still opted in. 정보통신망법 §50 ⑧ wants
+    // that confirmation every two years from the date consent was given, and
+    // 시행령 §62-3 says it must carry the sender's name, the date and fact of
+    // consent, and how to keep or withdraw it.
+    //
+    // Separate from marketing_consent_at, which must not move: the two-year
+    // clock runs from the original consent, and overwriting that date would
+    // restart the clock every time we confirmed.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_confirmed_at TIMESTAMP`);
     // When FCM last told us this device's token is dead — the app was
     // uninstalled, or the token was replaced and the old one retired. Stamped
     // rather than nulling the token: the account stays, and "had a device,
@@ -1585,7 +1594,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -1625,6 +1634,12 @@ async function loginUser(username, password) {
       // Never asked is not the same as declined, and only the first of those
       // should raise the consent popup.
       marketingAsked: user.marketing_asked_at != null,
+      // 정보통신망법 §50 ⑧: confirm the subscription every two years.
+      marketingConfirmDue:
+        user.marketing_push_enabled === true
+        && _marketingConfirmOverdue(
+          user.marketing_confirmed_at || user.marketing_consent_at),
+      marketingConsentAt: user.marketing_consent_at || null,
     };
   } catch (err) {
     console.error('Login error:', err);
@@ -3217,6 +3232,81 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
 /// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
 /// and combine.
 /// Every stored token, live or already marked dead, for the uninstall probe.
+/// How long a marketing consent stands before it has to be confirmed.
+/// 정보통신망법 §50 ⑧ — every two years from the date it was given.
+const MARKETING_CONFIRM_INTERVAL = '2 years';
+const MARKETING_CONFIRM_MS = 2 * 365 * 24 * 60 * 60 * 1000;
+
+/// Same rule as the SQL above, for the login payload — that one row is already
+/// in hand and a second round trip to ask the database a date question would
+/// be on the critical path of every login.
+function _marketingConfirmOverdue(since) {
+  if (!since) return false;
+  return Date.now() - new Date(since).getTime() >= MARKETING_CONFIRM_MS;
+}
+
+/// Is this account due the biennial "you are still subscribed" notice?
+///
+/// Counted from the last confirmation, or from the original consent if there
+/// has never been one. Only opted-in accounts are due it — there is nothing to
+/// confirm to someone who declined.
+async function isMarketingConfirmDue(nickname) {
+  const r = await pool.query(
+    `SELECT marketing_push_enabled AS enabled,
+            marketing_consent_at AS consented,
+            COALESCE(marketing_confirmed_at, marketing_consent_at)
+              < (NOW() AT TIME ZONE 'UTC') - INTERVAL '${MARKETING_CONFIRM_INTERVAL}'
+              AS due
+     FROM tc_users WHERE nickname = $1`,
+    [nickname],
+  );
+  const row = r.rows[0];
+  if (!row || row.enabled !== true) return { due: false, consentAt: null };
+  return { due: row.due === true, consentAt: row.consented };
+}
+
+/// Record that the notice was shown and answered.
+///
+/// [keep] false is a withdrawal made in response to the notice, which is
+/// exactly what the notice has to offer — so it goes through the same path any
+/// other withdrawal does.
+async function confirmMarketingConsent(nickname, keep) {
+  if (!keep) {
+    const off = await setMarketingConsent(nickname, false);
+    // Stamped even on a withdrawal: it closes out this cycle, and if they opt
+    // back in later the clock restarts from that new consent anyway.
+    await pool.query(
+      `UPDATE tc_users SET marketing_confirmed_at = (NOW() AT TIME ZONE 'UTC')
+       WHERE nickname = $1`, [nickname]);
+    return { success: off.success === true, enabled: false };
+  }
+  const r = await pool.query(
+    `UPDATE tc_users SET marketing_confirmed_at = (NOW() AT TIME ZONE 'UTC')
+     WHERE nickname = $1 RETURNING marketing_push_enabled`,
+    [nickname],
+  );
+  if (r.rows.length === 0) return { success: false, messageKey: 'db_user_not_found' };
+  return { success: true, enabled: r.rows[0].marketing_push_enabled === true };
+}
+
+/// How many opted-in accounts are overdue their confirmation, for the
+/// backstage. A number that climbs means the notice is not reaching people —
+/// it only shows on launch, and someone who has not opened the app cannot be
+/// told anything.
+async function getMarketingConfirmStats() {
+  const r = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE marketing_push_enabled)::int AS opted_in,
+       COUNT(*) FILTER (
+         WHERE marketing_push_enabled
+           AND COALESCE(marketing_confirmed_at, marketing_consent_at)
+               < (NOW() AT TIME ZONE 'UTC') - INTERVAL '${MARKETING_CONFIRM_INTERVAL}'
+       )::int AS due
+     FROM tc_users WHERE is_deleted IS NOT TRUE`,
+  );
+  return r.rows[0];
+}
+
 async function getAllFcmTokenRows() {
   const r = await pool.query(
     `SELECT id, nickname, fcm_token, fcm_token_invalid_at
@@ -3306,7 +3396,12 @@ async function setMarketingConsent(nickname, enabled) {
          -- original date in place, since "consented on X, withdrew on Y" is
          -- the pair you have to be able to show.
          marketing_consent_at = CASE WHEN $2 THEN (NOW() AT TIME ZONE 'UTC')
-                                     ELSE marketing_consent_at END
+                                     ELSE marketing_consent_at END,
+         -- A fresh yes restarts the two-year clock. Without this, someone who
+         -- withdrew and later opted back in would be immediately overdue on a
+         -- confirmation date left over from their previous subscription.
+         marketing_confirmed_at = CASE WHEN $2 THEN NULL
+                                       ELSE marketing_confirmed_at END
      WHERE nickname = $1
      RETURNING marketing_push_enabled, marketing_consent_at`,
     [nickname, !!enabled],
@@ -7465,7 +7560,7 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
@@ -7493,6 +7588,12 @@ async function loginSocial(provider, providerUid) {
       // Never asked is not the same as declined, and only the first of those
       // should raise the consent popup.
       marketingAsked: user.marketing_asked_at != null,
+      // 정보통신망법 §50 ⑧: confirm the subscription every two years.
+      marketingConfirmDue:
+        user.marketing_push_enabled === true
+        && _marketingConfirmOverdue(
+          user.marketing_confirmed_at || user.marketing_consent_at),
+      marketingConsentAt: user.marketing_consent_at || null,
     };
   } catch (err) {
     console.error('Social login error:', err);
@@ -10411,6 +10512,10 @@ module.exports = {
   getAdminUserInventory,
   getShopItemHolderCounts,
   isKstNight,
+  MARKETING_CONFIRM_INTERVAL,
+  isMarketingConfirmDue,
+  confirmMarketingConsent,
+  getMarketingConfirmStats,
   getAllFcmTokenRows,
   markFcmTokensInvalid,
   getFcmTokenStats,

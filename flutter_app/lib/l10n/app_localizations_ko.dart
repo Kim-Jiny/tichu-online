@@ -4698,4 +4698,32 @@ class L10nKo extends L10n {
   @override
   String get settingsMarketingPushBlocked =>
       '푸시 알림이 꺼져 있어 지금은 보내지 않습니다. 위 알림을 켜면 다시 받습니다';
+
+  @override
+  String get marketingSenderName => '티츄 온라인';
+
+  @override
+  String get marketingConfirmTitle => '이벤트 알림, 계속 받으시겠어요?';
+
+  @override
+  String get marketingConfirmBody =>
+      '광고성 정보 수신에 동의하신 지 2년이 지나, 법에 따라 동의 여부를 다시 확인드립니다.';
+
+  @override
+  String get marketingConfirmSenderLabel => '보내는 곳';
+
+  @override
+  String get marketingConfirmDateLabel => '동의한 날';
+
+  @override
+  String get marketingConfirmStatusLabel => '현재 상태';
+
+  @override
+  String get marketingConfirmStatusValue => '수신 동의함';
+
+  @override
+  String get marketingConfirmKeep => '계속 받을게요';
+
+  @override
+  String get marketingConfirmStop => '그만 받을게요';
 }

@@ -1675,5 +1675,14 @@
   "pushRewardTitle": "Belohnung erhalten!",
   "pushRewardGold": "{gold} Gold wurden gutgeschrieben",
   "pushRewardItem": "Der Gegenstand wurde hinzugefügt",
-  "settingsMarketingPushBlocked": "Benachrichtigungen sind aus, es wird nichts gesendet. Oben wieder einschalten"
+  "settingsMarketingPushBlocked": "Benachrichtigungen sind aus, es wird nichts gesendet. Oben wieder einschalten",
+  "marketingSenderName": "Tichu Online",
+  "marketingConfirmTitle": "Event-News weiter erhalten?",
+  "marketingConfirmBody": "Deine Einwilligung in Werbenachrichten ist zwei Jahre alt. Wir sind verpflichtet, noch einmal nachzufragen.",
+  "marketingConfirmSenderLabel": "Absender",
+  "marketingConfirmDateLabel": "Eingewilligt",
+  "marketingConfirmStatusLabel": "Status",
+  "marketingConfirmStatusValue": "Angemeldet",
+  "marketingConfirmKeep": "Weiter erhalten",
+  "marketingConfirmStop": "Nicht mehr senden"
 }

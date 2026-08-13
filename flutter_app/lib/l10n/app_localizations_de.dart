@@ -4847,4 +4847,32 @@ class L10nDe extends L10n {
   @override
   String get settingsMarketingPushBlocked =>
       'Benachrichtigungen sind aus, es wird nichts gesendet. Oben wieder einschalten';
+
+  @override
+  String get marketingSenderName => 'Tichu Online';
+
+  @override
+  String get marketingConfirmTitle => 'Event-News weiter erhalten?';
+
+  @override
+  String get marketingConfirmBody =>
+      'Deine Einwilligung in Werbenachrichten ist zwei Jahre alt. Wir sind verpflichtet, noch einmal nachzufragen.';
+
+  @override
+  String get marketingConfirmSenderLabel => 'Absender';
+
+  @override
+  String get marketingConfirmDateLabel => 'Eingewilligt';
+
+  @override
+  String get marketingConfirmStatusLabel => 'Status';
+
+  @override
+  String get marketingConfirmStatusValue => 'Angemeldet';
+
+  @override
+  String get marketingConfirmKeep => 'Weiter erhalten';
+
+  @override
+  String get marketingConfirmStop => 'Nicht mehr senden';
 }

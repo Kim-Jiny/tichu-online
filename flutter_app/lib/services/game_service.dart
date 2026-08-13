@@ -432,6 +432,13 @@ class GameService extends ChangeNotifier {
   /// A campaign reward that just landed, for the UI to celebrate and clear.
   PushRewardOutcome? pendingPushReward;
 
+  /// The two-yearly confirmation is overdue for this account
+  /// (정보통신망법 §50 ⑧). Decided by the server from the consent date.
+  bool marketingConfirmDue = false;
+
+  /// When they originally consented. The confirmation notice has to state it.
+  DateTime? marketingConsentAt;
+
   double sfxVolume = 0.7;
 
   // Admin
@@ -767,6 +774,10 @@ class GameService extends ChangeNotifier {
         pushAdminPaymentEnabled = data['pushAdminPayment'] != false;
         marketingPushEnabled = data['marketingPushEnabled'] == true;
         marketingAsked = data['marketingAsked'] == true;
+        marketingConfirmDue = data['marketingConfirmDue'] == true;
+        marketingConsentAt = DateTime.tryParse(
+          data['marketingConsentAt']?.toString() ?? '',
+        )?.toLocal();
         // A notification tapped before this connection existed — the cold
         // start case — has been waiting for a session to send it under.
         _flushPushRewardClaims();
@@ -2410,6 +2421,7 @@ class GameService extends ChangeNotifier {
         // account that opted out keeps receiving ads.
         marketingPushEnabled = data['enabled'] == true;
         marketingAsked = true;
+        marketingConfirmDue = false;
         notifyListeners();
         break;
 
@@ -4494,6 +4506,19 @@ class GameService extends ChangeNotifier {
     marketingAsked = true;
     if (playerId.isNotEmpty) {
       _network.send({'type': 'set_marketing_consent', 'enabled': enabled});
+    }
+    notifyListeners();
+  }
+
+  /// Answer the two-yearly confirmation: keep the subscription, or end it.
+  ///
+  /// Not the same call as [setMarketingConsent] even when the answer is yes —
+  /// this one records that the notice was given, which is the obligation.
+  void confirmMarketingConsent(bool keep) {
+    marketingConfirmDue = false;
+    marketingPushEnabled = keep;
+    if (playerId.isNotEmpty) {
+      _network.send({'type': 'confirm_marketing_consent', 'keep': keep});
     }
     notifyListeners();
   }

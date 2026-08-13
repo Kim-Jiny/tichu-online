@@ -27,7 +27,7 @@ const {
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   redeemCoupon, normalizeCouponCode,
-  setMarketingConsent, claimPushCampaign,
+  setMarketingConsent, claimPushCampaign, confirmMarketingConsent,
   getWallet, getGoldHistory, getShopItems, getVisualCatalog, getUserItems, buyItem, equipItem, useItem, changeNickname,
   getActiveGoldProducts, getGoldProductByProductId, grantIapGold, logIapAttempt, autoRefundByTransaction,
   createBankDeposit, countPendingBankDeposits,
@@ -3434,6 +3434,9 @@ async function handleMessage(ws, data) {
     case 'set_marketing_consent':
       await handleSetMarketingConsent(ws, data);
       break;
+    case 'confirm_marketing_consent':
+      await handleConfirmMarketingConsent(ws, data);
+      break;
     case 'claim_push_reward':
       await handleClaimPushReward(ws, data);
       break;
@@ -3735,6 +3738,8 @@ async function handleLogin(ws, data) {
   ws.pushAdminPayment = result.pushAdminPayment !== false;
   ws.marketingPushEnabled = result.marketingPushEnabled === true;
   ws.marketingAsked = result.marketingAsked === true;
+  ws.marketingConfirmDue = result.marketingConfirmDue === true;
+  ws.marketingConsentAt = result.marketingConsentAt || null;
   const deviceInfo = data.deviceInfo || {};
   ws.appVersion = deviceInfo.appVersion || null;
   ws.locale = deviceInfo.locale || null;
@@ -3808,8 +3813,14 @@ async function handleSocialLogin(ws, data) {
       ws.pushAdminPayment = result.pushAdminPayment !== false;
       ws.marketingPushEnabled = result.marketingPushEnabled === true;
       ws.marketingAsked = result.marketingAsked === true;
+      ws.marketingConfirmDue = result.marketingConfirmDue === true;
+      ws.marketingConsentAt = result.marketingConsentAt || null;
+  ws.marketingConfirmDue = result.marketingConfirmDue === true;
+  ws.marketingConsentAt = result.marketingConsentAt || null;
   ws.marketingPushEnabled = result.marketingPushEnabled === true;
   ws.marketingAsked = result.marketingAsked === true;
+  ws.marketingConfirmDue = result.marketingConfirmDue === true;
+  ws.marketingConsentAt = result.marketingConsentAt || null;
       const socialDeviceInfo = data.deviceInfo || {};
       ws.appVersion = socialDeviceInfo.appVersion || null;
       ws.locale = socialDeviceInfo.locale || null;
@@ -3907,6 +3918,8 @@ async function handleSocialRegister(ws, data) {
     ws.pushAdminPayment = true;
     ws.marketingPushEnabled = false;
     ws.marketingAsked = false;
+    ws.marketingConfirmDue = false;
+    ws.marketingConsentAt = null;
     const regDeviceInfo = data.deviceInfo || {};
     ws.appVersion = regDeviceInfo.appVersion || null;
     ws.locale = regDeviceInfo.locale || null;
@@ -4082,6 +4095,10 @@ async function handleReconnection(ws) {
           pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4122,6 +4139,10 @@ async function handleReconnection(ws) {
           pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4190,6 +4211,10 @@ async function handleReconnection(ws) {
           pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4230,6 +4255,10 @@ async function handleReconnection(ws) {
           pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4292,6 +4321,10 @@ async function handleReconnection(ws) {
             pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
             maintenanceStatus: getMaintenanceStatus(ws.locale),
             cardViewPref: ws.cardViewPref || 'ask',
           });
@@ -4354,6 +4387,10 @@ async function handleReconnection(ws) {
           pushAdminPayment: ws.pushAdminPayment !== false,
           marketingPushEnabled: ws.marketingPushEnabled === true,
           marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
+          marketingConfirmDue: ws.marketingConfirmDue === true,
+          marketingConsentAt: ws.marketingConsentAt || null,
           maintenanceStatus: getMaintenanceStatus(ws.locale),
           cardViewPref: ws.cardViewPref || 'ask',
         });
@@ -4393,6 +4430,8 @@ async function handleReconnection(ws) {
     pushAdminPayment: ws.pushAdminPayment !== false,
     marketingPushEnabled: ws.marketingPushEnabled === true,
     marketingAsked: ws.marketingAsked === true,
+    marketingConfirmDue: ws.marketingConfirmDue === true,
+    marketingConsentAt: ws.marketingConsentAt || null,
     maintenanceStatus: getMaintenanceStatus(ws.locale),
     cardViewPref: ws.cardViewPref || 'ask',
     photoUrl: ws.photoUrl || null,
@@ -9746,6 +9785,30 @@ async function handleSetMarketingConsent(ws, data) {
     // flipping back on its own.
     ws.marketingPushEnabled = result.enabled === true;
     ws.marketingAsked = true;
+    ws.marketingConfirmDue = false;
+  }
+  sendTo(ws, {
+    type: 'marketing_consent_result',
+    success: result.success === true,
+    enabled: result.enabled === true,
+  });
+}
+
+/// The biennial "you are still subscribed" notice, answered.
+///
+/// 정보통신망법 §50 ⑧ requires the confirmation every two years, and it has to
+/// offer a way out — so `keep: false` is a withdrawal, handled by the same
+/// path as any other, not merely a dismissal.
+async function handleConfirmMarketingConsent(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const result = await confirmMarketingConsent(ws.nickname, data.keep === true);
+  if (result.success) {
+    ws.marketingPushEnabled = result.enabled === true;
+    // Answered, so this connection must stop reporting it as outstanding.
+    ws.marketingConfirmDue = false;
   }
   sendTo(ws, {
     type: 'marketing_consent_result',

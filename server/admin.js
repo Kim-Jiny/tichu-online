@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats,
@@ -4626,8 +4626,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   // ===== Shop Management =====
   if (pathname === '/tc-backstage/shop' && method === 'GET') {
-    const items = await getAllShopItemsAdmin();
+    const [items, holders] = await Promise.all([
+      getAllShopItemsAdmin(),
+      getShopItemHolderCounts(),
+    ]);
     const now = new Date();
+
+    /// "쓰고 있는 사람" for one item.
+    ///
+    /// Live holders first, since that is the question — an item with 200 sales
+    /// and 3 live holders is a different item from one with 200 of each. The
+    /// worn count only appears for things you equip; for a pass, holding it IS
+    /// using it. The lapsed count only appears when there are any, so the cell
+    /// stays quiet for items that have never expired on anyone.
+    function holderCell(item) {
+      if (item.effect_type === 'profile_photo') {
+        // Both tiers extend one expiry on tc_users, so the number belongs to
+        // the capability. Shown on each tier with a note rather than split
+        // between them, which would be a made-up split.
+        return `<div style="font-weight:700">${formatNumber(holders.profilePhotoActive)}</div>
+          <div style="font-size:11px;color:#999">7일·30일 합계</div>`;
+      }
+      const h = holders.byKey[item.item_key];
+      if (!h || h.total === 0) return '<span style="color:#bbb">-</span>';
+      const lapsed = h.total - h.active;
+      const equippable = ['banner', 'title', 'theme', 'card_skin'].includes(item.category);
+      return `<div style="font-weight:700;color:${h.active > 0 ? '#2e7d32' : '#bbb'}">${formatNumber(h.active)}</div>
+        <div style="font-size:11px;color:#999">
+          ${equippable ? `착용 ${formatNumber(h.equipped)}` : ''}${equippable && lapsed > 0 ? ' · ' : ''}${lapsed > 0 ? `만료 ${formatNumber(lapsed)}` : ''}
+        </div>`;
+    }
 
     function saleWindow(item) {
       if (!item.sale_start && !item.sale_end) return '';
@@ -4678,6 +4706,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       <td style="text-align:right;font-weight:600;color:#d07a16">${formatNumber(item.price || 0)}</td>
       <td style="font-size:12px">${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
       <td style="font-size:12px">${saleWindow(item)}${item.is_season ? ' <span class="badge" style="background:#fff8e1;color:#8d6e00">시즌</span>' : ''}</td>
+      <td style="text-align:right;font-size:12px">${holderCell(item)}</td>
       <td>${saleButton(item)}</td>
       <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">수정</a></td>
     </tr>`;
@@ -4692,7 +4721,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </h3>
         ${g.hint ? `<div style="font-size:12px;color:#999;margin-bottom:10px">${escapeHtml(g.hint)}</div>` : '<div style="height:8px"></div>'}
         <div class="table-wrap"><table>
-          <tr><th>아이템</th><th>효과</th><th style="text-align:right">가격</th><th>기간</th><th>판매기간</th><th>판매</th><th></th></tr>
+          <tr><th>아이템</th><th>효과</th><th style="text-align:right">가격</th><th>기간</th><th>판매기간</th><th style="text-align:right">쓰는 중</th><th>판매</th><th></th></tr>
           ${rows.map(row).join('')}
         </table></div>
       </div>`;
@@ -4705,7 +4734,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const content = `
       ${pageHeader(
         '상점 아이템',
-        '판매 여부는 목록에서 바로 켜고 끌 수 있습니다. 분류·효과 같은 구조는 수정 화면에서 잠금을 풀어야 바뀝니다.',
+        '판매 여부는 목록에서 바로 켜고 끌 수 있습니다. 분류·효과 같은 구조는 수정 화면에서 잠금을 풀어야 바뀝니다.'
+        + '<br><b>쓰는 중</b>은 지금 기간이 남아 있는 보유자 수입니다. 배너·칭호처럼 장착하는 것은 그중 실제로 착용한 수를, 만료된 보유자가 있으면 그 수를 아래에 같이 적습니다.',
         `<a href="/tc-backstage/shop/add" class="btn btn-primary">+ 아이템 추가</a>`
       )}
       ${summaryStrip([

@@ -3122,6 +3122,67 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
 /// rather than tc_user_items (the upload gate reads it there), so an inventory
 /// built from tc_user_items alone silently omits the one entitlement people
 /// pay real attention to.
+/// How many people are actually holding each shop item right now, for the
+/// backstage's item list.
+///
+/// Three numbers because "쓰고 있다" means two different things depending on
+/// the item. A pass is being used if its days have not run out; a banner is
+/// being used if it is also equipped — plenty of people own five and wear one.
+/// `total` includes lapsed holders, which is what says whether an item ever
+/// sold at all versus is merely between renewals.
+///
+/// The equipped count only counts people whose entitlement is still live. An
+/// equip row is not cleared when the item lapses, so counting the equips table
+/// alone reports banners nobody can actually see.
+async function getShopItemHolderCounts() {
+  const client = await pool.connect();
+  try {
+    const held = await client.query(
+      `SELECT item_key,
+              COUNT(*) FILTER (
+                WHERE expires_at IS NULL
+                   OR expires_at >= (NOW() AT TIME ZONE 'UTC')
+              )::int AS active,
+              COUNT(*)::int AS total
+       FROM tc_user_items
+       GROUP BY item_key`,
+    );
+    const worn = await client.query(
+      `SELECT ui.item_key, COUNT(*)::int AS equipped
+       FROM tc_user_items ui
+       JOIN tc_user_equips e ON e.nickname = ui.nickname
+       WHERE (ui.expires_at IS NULL
+              OR ui.expires_at >= (NOW() AT TIME ZONE 'UTC'))
+         AND ui.item_key IN (e.banner_key, e.title_key, e.theme_key, e.card_skin_key)
+       GROUP BY ui.item_key`,
+    );
+    const byKey = {};
+    for (const r of held.rows) {
+      byKey[r.item_key] = { active: r.active, total: r.total, equipped: 0 };
+    }
+    for (const r of worn.rows) {
+      if (byKey[r.item_key]) byKey[r.item_key].equipped = r.equipped;
+    }
+
+    // The profile-photo pass is on tc_users, not tc_user_items, so it would
+    // read as zero holders forever. Both duration tiers extend one expiry, so
+    // this is a count of the capability — the caller attributes it to every
+    // profile_photo tier and says so.
+    const photo = await client.query(
+      `SELECT COUNT(*)::int AS n FROM tc_users
+       WHERE profile_photo_status = 'active'
+         AND (profile_photo_expires_at IS NULL
+              OR profile_photo_expires_at >= (NOW() AT TIME ZONE 'UTC'))`,
+    );
+    return { success: true, byKey, profilePhotoActive: photo.rows[0]?.n || 0 };
+  } catch (err) {
+    console.error('Get shop item holder counts error:', err);
+    return { success: false, byKey: {}, profilePhotoActive: 0 };
+  } finally {
+    client.release();
+  }
+}
+
 async function getAdminUserInventory(nickname) {
   const client = await pool.connect();
   try {
@@ -9783,6 +9844,7 @@ module.exports = {
   getAdminGoldHistory,
   getAdminPurchaseHistory,
   getAdminUserInventory,
+  getShopItemHolderCounts,
   adminExtendUserItem,
   getShopItems,
   getUserItems,

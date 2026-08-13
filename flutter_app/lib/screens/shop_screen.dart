@@ -10,6 +10,7 @@ import '../services/ad_service.dart';
 import '../utils/gold_format.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/coupon_redeem.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/title_chip.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -305,6 +306,23 @@ class _ShopScreenState extends State<ShopScreen> {
               // space: the count is on the profile this button opens, and the
               // shop refetches itself on open and after every purchase — the
               // button existed for a staleness that does not happen.
+              // Left of the avatar: someone holding a code opens the shop
+              // expecting to spend it, so the way in belongs where they
+              // already are. Absent on the iOS app — see couponRedeemAllowed.
+              if (couponRedeemAllowed) ...[
+                Tooltip(
+                  message: l10n.couponRedeemTitle,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => showCouponRedeemDialog(context),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: couponIcon(size: 26),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
               _buildMyProfileButton(game),
             ],
           ),

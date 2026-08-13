@@ -102,7 +102,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              localizeServiceMessage(game.noticesError!, L10n.of(context)),
+                              localizeServiceMessage(
+                                game.noticesError!,
+                                L10n.of(context),
+                              ),
                               style: const TextStyle(color: Color(0xFFCC6666)),
                               textAlign: TextAlign.center,
                             ),
@@ -172,7 +175,8 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final hasCoupon = (item['coupon_code']?.toString() ?? '').isNotEmpty;
     final publishedAt = _formatShortDate(item['published_at']);
     final noticeId = item['id'];
-    final isNew = noticeId is int &&
+    final isNew =
+        noticeId is int &&
         widget.unreadIds.contains(noticeId) &&
         !_openedThisVisit.contains(noticeId);
 
@@ -208,7 +212,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
                 ),
                 child: const Text(
                   'NEW',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             if (isPinned)
@@ -220,10 +228,9 @@ class _NoticesScreenState extends State<NoticesScreen> {
             // worth as much on iOS, where the code itself is withheld and the
             // reader has to ask.
             if (hasCoupon)
-              const Padding(
-                padding: EdgeInsets.only(right: 8),
-                child: Icon(Icons.confirmation_number,
-                    size: 16, color: Color(0xFFB07B2E)),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: couponIcon(size: 18),
               ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -258,7 +265,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
                   const SizedBox(height: 2),
                   Text(
                     publishedAt,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9A8E8A),
+                    ),
                   ),
                 ],
               ),
@@ -276,11 +286,9 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final content = item['content']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
     final publishedAt = _formatShortDate(item['published_at']);
-    final rawCoupon = item['coupon_code']?.toString() ?? '';
-    // The code itself is withheld on the iOS app; that the post carries one is
-    // not — see NoticeCouponMuted.
-    final couponCode = couponUiVisible ? rawCoupon : '';
-    final hasCoupon = rawCoupon.isNotEmpty;
+    // Shown everywhere now: the ticket prints the code on every platform and
+    // only its redeem stub is gated.
+    final couponCode = item['coupon_code']?.toString() ?? '';
 
     Navigator.push(
       context,
@@ -291,7 +299,6 @@ class _NoticesScreenState extends State<NoticesScreen> {
           category: category,
           publishedAt: publishedAt,
           couponCode: couponCode,
-          hasCoupon: hasCoupon,
         ),
       ),
     );
@@ -308,28 +315,40 @@ class _NoticesScreenState extends State<NoticesScreen> {
 
   String _categoryLabel(L10n l10n, String value) {
     switch (value) {
-      case 'release': return l10n.noticeCategoryRelease;
-      case 'update': return l10n.noticeCategoryUpdate;
-      case 'preview': return l10n.noticeCategoryPreview;
-      default: return l10n.noticeCategoryGeneral;
+      case 'release':
+        return l10n.noticeCategoryRelease;
+      case 'update':
+        return l10n.noticeCategoryUpdate;
+      case 'preview':
+        return l10n.noticeCategoryPreview;
+      default:
+        return l10n.noticeCategoryGeneral;
     }
   }
 
   Color _categoryBgColor(String value) {
     switch (value) {
-      case 'release': return const Color(0xFFE3F2FD);
-      case 'update': return const Color(0xFFE8F5E9);
-      case 'preview': return const Color(0xFFFFF3E0);
-      default: return const Color(0xFFECEFF1);
+      case 'release':
+        return const Color(0xFFE3F2FD);
+      case 'update':
+        return const Color(0xFFE8F5E9);
+      case 'preview':
+        return const Color(0xFFFFF3E0);
+      default:
+        return const Color(0xFFECEFF1);
     }
   }
 
   Color _categoryTextColor(String value) {
     switch (value) {
-      case 'release': return const Color(0xFF1565C0);
-      case 'update': return const Color(0xFF2E7D32);
-      case 'preview': return const Color(0xFFE65100);
-      default: return const Color(0xFF546E7A);
+      case 'release':
+        return const Color(0xFF1565C0);
+      case 'update':
+        return const Color(0xFF2E7D32);
+      case 'preview':
+        return const Color(0xFFE65100);
+      default:
+        return const Color(0xFF546E7A);
     }
   }
 }
@@ -340,12 +359,8 @@ class _NoticeDetailPage extends StatelessWidget {
   final String category;
   final String publishedAt;
 
-  /// The coupon this notice hands out. Empty on the iOS app even when the
-  /// notice carries one — see couponUiVisible.
+  /// The coupon this notice hands out, if any.
   final String couponCode;
-
-  /// Whether a coupon exists at all, regardless of whether it may be shown.
-  final bool hasCoupon;
 
   const _NoticeDetailPage({
     required this.title,
@@ -353,7 +368,6 @@ class _NoticeDetailPage extends StatelessWidget {
     required this.category,
     required this.publishedAt,
     this.couponCode = '',
-    this.hasCoupon = false,
   });
 
   @override
@@ -418,7 +432,10 @@ class _NoticeDetailPage extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: categoryBg,
                         borderRadius: BorderRadius.circular(8),
@@ -461,7 +478,10 @@ class _NoticeDetailPage extends StatelessWidget {
                     children: [
                       Text(
                         publishedAt,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9A8E8A),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       const Divider(height: 1),
@@ -473,7 +493,11 @@ class _NoticeDetailPage extends StatelessWidget {
                             children: [
                               Text(
                                 content,
-                                style: const TextStyle(fontSize: 14, height: 1.7, color: Color(0xFF5A4038)),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.7,
+                                  color: Color(0xFF5A4038),
+                                ),
                               ),
                               // Below the text, not above it: the post says
                               // what the coupon is for, and the code is what
@@ -481,9 +505,6 @@ class _NoticeDetailPage extends StatelessWidget {
                               if (couponCode.isNotEmpty) ...[
                                 const SizedBox(height: 18),
                                 NoticeCouponBlock(code: couponCode),
-                              ] else if (hasCoupon) ...[
-                                const SizedBox(height: 18),
-                                const NoticeCouponMuted(),
                               ],
                             ],
                           ),

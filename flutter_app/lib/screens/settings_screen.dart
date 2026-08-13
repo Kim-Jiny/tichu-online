@@ -1041,12 +1041,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Widget? trailing,
     VoidCallback? onTap,
     bool enabled = true,
+
+    /// Drawn in place of [icon] when a row wants artwork rather than a glyph.
+    /// [icon] stays required so every row still declares a sensible fallback.
+    Widget? leading,
   }) {
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Icon(icon, color: iconColor ?? const Color(0xFF8A7A72)),
+          leading ?? Icon(icon, color: iconColor ?? const Color(0xFF8A7A72)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1532,11 +1536,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             // Coupons sit with the support rows because that is
                             // where someone goes when they have a code and no
                             // idea what to do with it. Absent on the iOS app —
-                            // see couponUiVisible.
-                            if (couponUiVisible) ...[
+                            // see couponRedeemAllowed.
+                            if (couponRedeemAllowed) ...[
                               _buildRow(
                                 icon: Icons.confirmation_number_outlined,
                                 iconColor: const Color(0xFFB07B2E),
+                                leading: couponIcon(size: 22),
                                 title: l10n.couponRedeemTitle,
                                 onTap: () => showCouponRedeemDialog(context),
                                 trailing: const Icon(
@@ -1544,7 +1549,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   color: Color(0xFFB0A8A4),
                                 ),
                               ),
-                              const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
                             ],
                             _buildRow(
                               icon: Icons.help_outline,

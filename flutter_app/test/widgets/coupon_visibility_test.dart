@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tichu_online/widgets/coupon_redeem.dart';
 
-/// Where coupon UI is allowed to appear.
+/// Where the redeem entry points are allowed to appear.
 ///
-/// The iOS app hides it because App Review can read "type a code, receive
-/// gold" as a purchase flow. That rule is one boolean, and one boolean written
-/// the wrong way round ships a coupon field to the exact platform that must
+/// The iOS app hides them because App Review can read "type a code, receive
+/// gold" as a purchase flow. The code itself is printed everywhere; only the
+/// ways to redeem are gated. That rule is one boolean, and one boolean written
+/// the wrong way round ships a redeem field to the exact platform that must
 /// not have one — so it gets a test rather than a comment.
 ///
 /// iOS Safari is the case worth being careful about: it reports
@@ -19,15 +20,15 @@ void main() {
     debugDefaultTargetPlatformOverride = original;
   });
 
-  test('the iOS app shows nothing about coupons', () {
+  test('the iOS app offers no way to redeem', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     // In a widget test kIsWeb is false, so this is the installed-app case.
-    expect(couponUiVisible, isFalse);
+    expect(couponRedeemAllowed, isFalse);
   });
 
-  test('the Android app shows them', () {
+  test('the Android app does', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    expect(couponUiVisible, isTrue);
+    expect(couponRedeemAllowed, isTrue);
   });
 
   for (final platform in [
@@ -37,7 +38,7 @@ void main() {
   ]) {
     test('$platform shows them', () {
       debugDefaultTargetPlatformOverride = platform;
-      expect(couponUiVisible, isTrue);
+      expect(couponRedeemAllowed, isTrue);
     });
   }
 

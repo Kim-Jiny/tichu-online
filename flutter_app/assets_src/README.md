@@ -15,6 +15,7 @@ bundled path, so they stay in the repo without riding along in the build.
 | `skSymbol.png` (1024×1536 RGBA) | `assets/icons/skSymbol.webp` (88×144) | 1.1 MB → 6.1 KB |
 | `mtSymbol.png` (1024×1536 RGBA) | `assets/icons/mtSymbol.webp` (114×144) | 1.1 MB → 3.6 KB |
 | `llSymbol.png` (1024×1536 RGBA) | `assets/icons/llSymbol.webp` (144×131) | 965 KB → 3.3 KB |
+| `coupon.png` (1254×1254 **RGB**) | `assets/icons/coupon.webp` (144×92) | 830 KB → 8.7 KB |
 
 ## Converting a new one
 
@@ -39,6 +40,16 @@ covers a 30px slot at 3x with room to spare.
 
 ## Two ways this went wrong before
 
+- **A master with no alpha at all needs the background keyed out.** `coupon.png`
+  arrived as RGB artwork on a black field. Trimming does nothing to that — the
+  black is opaque — and the icon lands as a black tile on a cream card. Build
+  the alpha from luminance instead of colour-keying pure black, so the dark
+  parts *inside* the artwork survive:
+  ```python
+  rgba = src.convert('RGBA')
+  lum = src.convert('L')
+  rgba.putalpha(lum.point(lambda v: 0 if v < 10 else min(255, int(v * 3))))
+  ```
 - **Don't flatten with `.convert('RGB')`.** It composites the alpha onto black,
   and the icon arrives with a black tile behind it.
 - **Trim on a threshold (`alpha > 8`), not on `getbbox()` alone.** These

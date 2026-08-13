@@ -927,6 +927,15 @@ function renderUserMatchTable(matches) {
 /// numbered pager: neither list has a total to number against — the gold
 /// ledger is a UNION that would need a second full scan to count, and the
 /// match list only knows whether one more page exists.
+/// "2페이지 51–57번째" — or just the page number when the page is empty, since
+/// an out-of-range page would otherwise announce "101–100번째".
+function pageRangeLabel(page, offset, count) {
+  const range = count > 0
+    ? ` <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + count}번째</span>`
+    : '';
+  return `${page}페이지${range}`;
+}
+
 function pagerLinks(basePath, page, hasMore) {
   const link = (p, label, enabled) => enabled
     ? `<a class="btn" href="${basePath}?page=${p}">${label}</a>`
@@ -935,6 +944,39 @@ function pagerLinks(basePath, page, hasMore) {
     ${link(page - 1, '← 이전', page > 1)}
     ${link(page + 1, '다음 →', hasMore)}
   </div>`;
+}
+
+/// A user's shop purchases as table rows. Shared by the five-row card on their
+/// detail page and the full list behind it.
+function renderPurchaseTable(purchases) {
+  return `<div class="table-wrap"><table>
+    <tr><th>구매일</th><th>아이템</th><th>분류</th><th>가격</th><th>구분</th><th>상태</th><th>만료</th></tr>
+    ${purchases.map(item => {
+              const categoryColors = {
+                banner: '#e3f2fd;color:#1565c0',
+                title: '#fff3e0;color:#e65100',
+                theme: '#e8eaf6;color:#283593',
+                utility: '#fce4ec;color:#880e4f',
+                card_skin: '#f1f8e9;color:#33691e',
+              };
+              const statusBadge = item.isActive
+                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">활성</span>'
+                : '<span class="badge" style="background:#f5f5f5;color:#777">비활성</span>';
+              const typeLabel = item.isPermanent ? '영구' : `${item.durationDays || '-'}일`;
+              return `<tr>
+                <td style="font-size:12px;color:#888">${formatDate(item.acquiredAt)}</td>
+                <td>
+                  <div style="font-weight:700">${escapeHtml(item.name)}</div>
+                  <div class="muted mono" style="font-size:11px">${escapeHtml(item.itemKey)}</div>
+                </td>
+                <td><span class="badge" style="background:${categoryColors[item.category] || '#f5f5f5;color:#333'}">${escapeHtml(item.category)}</span>${item.isSeason ? ' <span class="badge" style="background:#e8f5e9;color:#2e7d32">시즌</span>' : ''}</td>
+                <td style="font-weight:700;color:#d07a16">${formatNumber(item.price)}</td>
+                <td>${typeLabel}</td>
+                <td>${statusBadge}</td>
+                <td style="font-size:12px;color:#888">${item.expiresAt ? formatDate(item.expiresAt) : '-'}</td>
+              </tr>`;
+    }).join('')}
+  </table></div>`;
 }
 
 function formatDate(d) {
@@ -4104,7 +4146,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         // heading.
         getRecentMatches(nickname, 5, { offset: 0 }),
         getAdminGoldHistory(nickname, 5),
-        getAdminPurchaseHistory(nickname, 30),
+        getAdminPurchaseHistory(nickname, 5),
         getAttendanceForNickname(nickname),
         getAdminUserInventory(nickname),
       ]);
@@ -4296,39 +4338,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
 
       <div class="card">
-        <h3>상점 구매 내역 <span style="font-size:13px;color:#888;font-weight:400">(${purchaseHistory?.purchases?.length || 0})</span></h3>
-        ${purchaseHistory?.success && purchaseHistory.purchases.length > 0 ? `
-          <div class="table-wrap"><table>
-            <tr><th>구매일</th><th>아이템</th><th>분류</th><th>가격</th><th>구분</th><th>상태</th><th>만료</th></tr>
-            ${purchaseHistory.purchases.map(item => {
-              const categoryColors = {
-                banner: '#e3f2fd;color:#1565c0',
-                title: '#fff3e0;color:#e65100',
-                theme: '#e8eaf6;color:#283593',
-                utility: '#fce4ec;color:#880e4f',
-                card_skin: '#f1f8e9;color:#33691e',
-              };
-              const statusBadge = item.isActive
-                ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">활성</span>'
-                : '<span class="badge" style="background:#f5f5f5;color:#777">비활성</span>';
-              const typeLabel = item.isPermanent ? '영구' : `${item.durationDays || '-'}일`;
-              return `<tr>
-                <td style="font-size:12px;color:#888">${formatDate(item.acquiredAt)}</td>
-                <td>
-                  <div style="font-weight:700">${escapeHtml(item.name)}</div>
-                  <div class="muted mono" style="font-size:11px">${escapeHtml(item.itemKey)}</div>
-                </td>
-                <td><span class="badge" style="background:${categoryColors[item.category] || '#f5f5f5;color:#333'}">${escapeHtml(item.category)}</span>${item.isSeason ? ' <span class="badge" style="background:#e8f5e9;color:#2e7d32">시즌</span>' : ''}</td>
-                <td style="font-weight:700;color:#d07a16">${formatNumber(item.price)}</td>
-                <td>${typeLabel}</td>
-                <td>${statusBadge}</td>
-                <td style="font-size:12px;color:#888">${item.expiresAt ? formatDate(item.expiresAt) : '-'}</td>
-              </tr>`;
-            }).join('')}
-          </table></div>
-        ` : `
-          <div class="empty">${escapeHtml(purchaseHistory?.message || '상점 구매 내역이 없습니다')}</div>
-        `}
+        <h3>상점 구매 내역
+          <span style="font-size:13px;color:#888;font-weight:400">최근 ${purchaseHistory?.purchases?.length || 0}건</span>
+          <a href="/tc-backstage/users/${encodeURIComponent(user.nickname)}/purchases"
+             style="font-size:13px;font-weight:600;margin-left:8px">전체 보기 →</a>
+        </h3>
+        ${purchaseHistory?.success && purchaseHistory.purchases.length > 0
+          ? renderPurchaseTable(purchaseHistory.purchases)
+          : `<div class="empty">${escapeHtml(purchaseHistory?.message || '상점 구매 내역이 없습니다')}</div>`}
       </div>
 
       ${user.fcm_token ? `<div class="card">
@@ -7056,9 +7073,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
       </div>
       <div class="card">
-        <h3>${page}페이지 <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + rows.length}번째</span></h3>
+        <h3>${pageRangeLabel(page, offset, rows.length)}</h3>
         ${rows.length ? renderGoldHistoryTable(rows) : '<div class="empty">더 표시할 내역이 없습니다</div>'}
         ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/gold-history`, page, hasMore)}
+      </div>
+    `, 'users'));
+  }
+
+  const purchasePageMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/purchases$/);
+  if (purchasePageMatch && method === 'GET') {
+    const nickname = decodeURIComponent(purchasePageMatch[1]);
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const offset = (page - 1) * PAGE_ROWS;
+    const bought = await getAdminPurchaseHistory(nickname, PAGE_ROWS, offset);
+    const rows = bought?.purchases || [];
+    const sum = bought?.summary;
+    return html(res, layout(`상점 구매 내역 · ${escapeHtml(nickname)}`, `
+      ${pageHeader(`상점 구매 내역 <span class="mono" style="font-size:15px;color:var(--muted)">${escapeHtml(nickname)}</span>`,
+        '골드로 산 것만 나옵니다. 쿠폰·어드민 지급·시즌 보상까지 지금 들고 있는 것 전부는 유저 상세의 <b>보유 아이템</b>에 있습니다.')}
+      <div class="card">
+        <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
+      </div>
+      ${sum ? summaryStrip([
+        { label: '누적 구매', value: formatNumber(sum.totalPurchases), meta: '전체 기간' },
+        { label: '사용한 골드', value: formatNumber(sum.totalSpent), valueColor: '#d07a16' },
+        { label: '영구 / 기간제', value: `${formatNumber(sum.permanentCount)} / ${formatNumber(sum.temporaryCount)}` },
+      ]) : ''}
+      <div class="card">
+        <h3>${pageRangeLabel(page, offset, rows.length)}</h3>
+        ${rows.length ? renderPurchaseTable(rows) : '<div class="empty">더 표시할 구매가 없습니다</div>'}
+        ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/purchases`, page, bought?.hasMore === true)}
       </div>
     `, 'users'));
   }
@@ -7080,7 +7124,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <a class="btn" href="/tc-backstage/users/${encodeURIComponent(nickname)}">← 유저 상세로</a>
       </div>
       <div class="card">
-        <h3>${page}페이지 <span style="font-size:13px;color:#888;font-weight:400">${offset + 1}–${offset + rows.length}번째</span></h3>
+        <h3>${pageRangeLabel(page, offset, rows.length)}</h3>
         ${rows.length ? renderUserMatchTable(rows) : '<div class="empty">더 표시할 경기가 없습니다</div>'}
         ${pagerLinks(`/tc-backstage/users/${encodeURIComponent(nickname)}/matches`, page, paged?.hasMore === true)}
       </div>

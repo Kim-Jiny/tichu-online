@@ -3325,7 +3325,13 @@ async function adminExtendUserItem(nickname, itemKey, days, adminActor = 'admin'
   }
 }
 
-async function getAdminPurchaseHistory(nickname, limit = 30) {
+/// One page of a user's shop purchases, plus a summary of ALL of them.
+///
+/// The summary is its own aggregate rather than a reduce over the page. It
+/// feeds the "누적 구매 / 총 N 골드 사용" figures at the top of the user's
+/// detail page, and those have to be about the account, not about however many
+/// rows this call happened to fetch — which is now five.
+async function getAdminPurchaseHistory(nickname, limit = 30, offset = 0) {
   const client = await pool.connect();
   try {
     const result = await client.query(
@@ -3347,30 +3353,40 @@ async function getAdminPurchaseHistory(nickname, limit = 30) {
       WHERE ui.nickname = $1
         AND ui.source = 'shop'
       ORDER BY ui.acquired_at DESC
-      LIMIT $2
+      LIMIT $2 OFFSET $3
       `,
-      [nickname, limit]
+      [nickname, limit + 1, Math.max(0, offset)]
     );
 
-    const rows = result.rows;
-    const summary = rows.reduce((acc, row) => {
-      acc.totalSpent += parseInt(row.price, 10) || 0;
-      acc.totalPurchases += 1;
-      if (row.is_permanent) acc.permanentCount += 1;
-      if (!row.is_permanent) acc.temporaryCount += 1;
-      if (row.is_active) acc.activeCount += 1;
-      return acc;
-    }, {
-      totalSpent: 0,
-      totalPurchases: 0,
-      permanentCount: 0,
-      temporaryCount: 0,
-      activeCount: 0,
-    });
+    // One row past the page: the cheapest "is there a next page", and cheaper
+    // than a second COUNT on a table this one already scanned.
+    const rows = result.rows.slice(0, limit);
+    const hasMore = result.rows.length > limit;
+
+    const agg = await client.query(
+      `SELECT COUNT(*)::int AS purchases,
+              COALESCE(SUM(si.price), 0)::int AS spent,
+              COUNT(*) FILTER (WHERE si.is_permanent)::int AS permanent,
+              COUNT(*) FILTER (WHERE NOT si.is_permanent)::int AS temporary,
+              COUNT(*) FILTER (WHERE ui.is_active)::int AS active
+       FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND ui.source = 'shop'`,
+      [nickname],
+    );
+    const a = agg.rows[0];
+    const summary = {
+      totalSpent: a.spent,
+      totalPurchases: a.purchases,
+      permanentCount: a.permanent,
+      temporaryCount: a.temporary,
+      activeCount: a.active,
+    };
 
     return {
       success: true,
       summary,
+      hasMore,
       purchases: rows.map((row) => ({
         itemKey: row.item_key,
         acquiredAt: row.acquired_at,

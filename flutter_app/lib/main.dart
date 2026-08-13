@@ -127,17 +127,22 @@ void main() async {
   runApp(const TichuApp());
 }
 
-/// Campaign ids from notifications tapped before GameService exists.
+/// Campaign ids from tapped notifications, waiting to be claimed.
 ///
-/// Read once by the app shell after the provider is up. A plain global rather
-/// than something passed through the widget tree: the tap is known before
-/// runApp on a cold start, which is earlier than any widget.
-final Set<int> pendingCampaignTaps = <int>{};
+/// A notifier, not a plain set, and that is the whole point. A tap can arrive
+/// at two very different moments: before runApp on a cold start (earlier than
+/// any widget, so it has to be a global), or while the app is sitting in the
+/// background with everything already built. In the second case nothing else
+/// changes — the socket is still up, no state moves — so a passive collection
+/// would sit there unread and the reward would silently never be claimed.
+/// Listeners are woken either way.
+final ValueNotifier<List<int>> pendingCampaignTaps = ValueNotifier(const []);
 
 void _rememberCampaignTap(RemoteMessage message) {
   if (message.data['type'] != 'campaign') return;
   final id = int.tryParse('${message.data['campaignId']}');
-  if (id != null) pendingCampaignTaps.add(id);
+  if (id == null || pendingCampaignTaps.value.contains(id)) return;
+  pendingCampaignTaps.value = [...pendingCampaignTaps.value, id];
 }
 
 /// Firebase backs Google and Apple sign-in on every platform, web included —

@@ -49,7 +49,21 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
   @override
   void initState() {
     super.initState();
+    // A tap while the app is backgrounded changes nothing else — the socket
+    // stays up, no state moves — so without listening here the queued campaign
+    // would sit unread until something unrelated happened to rebuild this.
+    pendingCampaignTaps.addListener(_onTap);
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  @override
+  void dispose() {
+    pendingCampaignTaps.removeListener(_onTap);
+    super.dispose();
+  }
+
+  void _onTap() {
+    if (mounted) WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
   }
 
   @override
@@ -65,11 +79,11 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
     // Notifications tapped before GameService existed. Handing them over is
     // idempotent — the server pays once — so no bookkeeping is needed beyond
     // clearing the set.
-    if (pendingCampaignTaps.isNotEmpty && game.playerId.isNotEmpty) {
-      for (final id in pendingCampaignTaps.toList()) {
+    if (pendingCampaignTaps.value.isNotEmpty && game.playerId.isNotEmpty) {
+      for (final id in pendingCampaignTaps.value) {
         game.claimPushReward(id);
       }
-      pendingCampaignTaps.clear();
+      pendingCampaignTaps.value = const [];
     }
 
     // The reward comes first. Someone who just tapped a notification is

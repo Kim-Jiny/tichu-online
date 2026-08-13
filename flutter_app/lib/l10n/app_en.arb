@@ -2796,5 +2796,21 @@
         "type": "int"
       }
     }
+  },
+  "chatToday": "Today",
+  "chatYesterday": "Yesterday",
+  "chatDate": "{m}/{d}/{y}",
+  "@chatDate": {
+    "placeholders": {
+      "y": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      },
+      "d": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -4750,4 +4750,15 @@ class L10nKo extends L10n {
 
   @override
   String get friendsLastSeenLongAgo => '한 달 이상 전 접속';
+
+  @override
+  String get chatToday => '오늘';
+
+  @override
+  String get chatYesterday => '어제';
+
+  @override
+  String chatDate(int y, int m, int d) {
+    return '$y년 $m월 $d일';
+  }
 }

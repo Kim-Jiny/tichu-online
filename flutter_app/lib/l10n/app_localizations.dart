@@ -8606,6 +8606,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Last on over a month ago'**
   String get friendsLastSeenLongAgo;
+
+  /// No description provided for @chatToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get chatToday;
+
+  /// No description provided for @chatYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get chatYesterday;
+
+  /// No description provided for @chatDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{m}/{d}/{y}'**
+  String chatDate(int y, int m, int d);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

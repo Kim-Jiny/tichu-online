@@ -1690,5 +1690,8 @@
   "friendsLastSeenMinutes": "Vor {n} Min. online",
   "friendsLastSeenHours": "Vor {n} Std. online",
   "friendsLastSeenDays": "Vor {n} T. online",
-  "friendsLastSeenLongAgo": "Vor über einem Monat online"
+  "friendsLastSeenLongAgo": "Vor über einem Monat online",
+  "chatToday": "Heute",
+  "chatYesterday": "Gestern",
+  "chatDate": "{d}.{m}.{y}"
 }

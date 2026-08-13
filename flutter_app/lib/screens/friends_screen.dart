@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/chat_day.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -1123,7 +1124,17 @@ class _FriendsScreenState extends State<FriendsScreen>
                         final msgIndex = _dmLoadingMore ? index - 1 : index;
                         final msg = messages[msgIndex];
                         final isMine = msg['sender'] == game.playerName;
-                        return _buildMessageBubble(msg, isMine);
+                        final bubble = _buildMessageBubble(msg, isMine);
+                        // Bubbles carry a clock time and nothing else, so a
+                        // conversation spread over weeks read as one long
+                        // afternoon. The divider is what says which day you
+                        // are looking at.
+                        if (!needsDayDivider(messages, msgIndex, _dmSentAt)) {
+                          return bubble;
+                        }
+                        return Column(
+                          children: [_buildDayDivider(_dmSentAt(msg)!), bubble],
+                        );
                       },
                     );
                   },
@@ -1194,17 +1205,54 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
+  /// A message's local send time, or null when it has none.
+  ///
+  /// Parsed as UTC: the server sends an ISO string without an offset, and
+  /// reading it as local time would put every message nine hours out on a KST
+  /// phone — enough to file a late-evening message under the following day.
+  DateTime? _dmSentAt(Map<String, dynamic> msg) {
+    final raw = msg['createdAt']?.toString() ?? '';
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw.endsWith('Z') ? raw : '${raw}Z')?.toLocal();
+  }
+
+  /// The "오늘 / 어제 / 2026년 8월 13일" rule above a day's first message.
+  Widget _buildDayDivider(DateTime day) {
+    final l10n = L10n.of(context);
+    final label = switch (chatDayLabel(day, DateTime.now())) {
+      ChatDayLabel.today => l10n.chatToday,
+      ChatDayLabel.yesterday => l10n.chatYesterday,
+      ChatDayLabel.date => l10n.chatDate(day.year, day.month, day.day),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: Color(0xFFE6DDD8), height: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF9A8E8A),
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: Color(0xFFE6DDD8), height: 1)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMine) {
     final message = msg['message'] as String? ?? '';
-    final createdAt = msg['createdAt']?.toString() ?? '';
-    String timeStr = '';
-    if (createdAt.isNotEmpty) {
-      try {
-        final dt = DateTime.parse(createdAt).toLocal();
-        timeStr =
-            '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-      } catch (_) {}
-    }
+    final dt = _dmSentAt(msg);
+    final timeStr = dt == null
+        ? ''
+        : '${dt.hour.toString().padLeft(2, '0')}'
+              ':${dt.minute.toString().padLeft(2, '0')}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),

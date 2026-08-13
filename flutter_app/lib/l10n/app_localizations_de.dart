@@ -4900,4 +4900,15 @@ class L10nDe extends L10n {
 
   @override
   String get friendsLastSeenLongAgo => 'Vor über einem Monat online';
+
+  @override
+  String get chatToday => 'Heute';
+
+  @override
+  String get chatYesterday => 'Gestern';
+
+  @override
+  String chatDate(int y, int m, int d) {
+    return '$d.$m.$y';
+  }
 }

@@ -1690,5 +1690,8 @@
   "friendsLastSeenMinutes": "{n}분 전 접속",
   "friendsLastSeenHours": "{n}시간 전 접속",
   "friendsLastSeenDays": "{n}일 전 접속",
-  "friendsLastSeenLongAgo": "한 달 이상 전 접속"
+  "friendsLastSeenLongAgo": "한 달 이상 전 접속",
+  "chatToday": "오늘",
+  "chatYesterday": "어제",
+  "chatDate": "{y}년 {m}월 {d}일"
 }

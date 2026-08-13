@@ -18,6 +18,7 @@ const {
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
   getBroadcastFcmTokens, insertPushHistory, getPushHistory, clearInvalidFcmToken, insertPushRecipients, getPushHistoryDetail,
+  upsertCoupon, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
 const minioClient = require('./storage/minioClient');
@@ -624,6 +625,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   <div class="nav-section">
     <div class="nav-section-label">Comms</div>
     <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
+    <a href="/tc-backstage/coupons" class="${activePage === 'coupons' ? 'active' : ''}" onclick="closeSidebar()">쿠폰</a>
     <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
   </div>
   <div class="nav-section">
@@ -6963,6 +6965,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
             <textarea name="content" rows="8" placeholder="내용 입력" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">${content}</textarea>
           </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">쿠폰 코드 (선택)</label>
+            <input type="text" name="coupon_code" value="${escapeHtml(notice?.coupon_code || '')}" placeholder="예: WELCOME2026 — 비워두면 쿠폰 없는 공지" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%;text-transform:uppercase">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              여기에 코드를 넣으면 공지 안에 등록 버튼이 함께 나옵니다.
+              쿠폰은 <a href="/tc-backstage/coupons">쿠폰 관리</a>에서 먼저 만들어 두세요.
+              iOS 앱에서는 이 영역이 보이지 않습니다.
+            </div>
+          </div>
           <div style="display:flex;gap:16px;align-items:center">
             <label><input type="checkbox" name="is_pinned" value="1" ${isPinned}> 상단 고정</label>
             <select name="status" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px">
@@ -6973,6 +6984,189 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div><button type="submit" class="btn btn-primary">${notice ? '수정' : '등록'}</button></div>
         </div>
       </div>`;
+  }
+
+  // ===== Coupons =====
+  //
+  // A code handed out in a notice or on a blog. The list is the operating
+  // view: how many seats are left and when it stops working are the two
+  // things you check while a giveaway is running.
+  if (pathname === '/tc-backstage/coupons' && method === 'GET') {
+    const coupons = await listCoupons();
+    const items = await getAllShopItemsAdmin();
+    const editCode = url.searchParams.get('edit');
+    const editing = editCode
+      ? coupons.find((c) => c.code === normalizeCouponCode(editCode))
+      : null;
+
+    const rows = coupons.map((c) => {
+      const used = Number(c.redeemed_count) || 0;
+      const cap = c.max_redemptions == null ? null : Number(c.max_redemptions);
+      const left = cap == null ? '무제한' : `${cap - used}장 남음`;
+      // The stored counter is what the cap is enforced against; the row count
+      // is the truth about who got one. They should never differ — if they do,
+      // say so here rather than letting the number quietly lie.
+      const actual = Number(c.actual_redeemed) || 0;
+      const drift = actual !== used
+        ? ` <span class="badge" style="background:#ffebee;color:#c62828">기록 ${actual}건과 불일치</span>`
+        : '';
+      const expired = c.expires_at && new Date(c.expires_at) < new Date();
+      const state = !c.is_active
+        ? '<span class="badge" style="background:#f5f5f5;color:#888">중지</span>'
+        : expired
+          ? '<span class="badge" style="background:#f3e5f5;color:#6a1b9a">기간 종료</span>'
+          : (cap != null && used >= cap)
+            ? '<span class="badge" style="background:#fff3e0;color:#e65100">소진</span>'
+            : '<span class="badge" style="background:#e8f5e9;color:#2e7d32">사용 가능</span>';
+      const reward = c.reward_type === 'gold'
+        ? `골드 ${Number(c.reward_gold || 0).toLocaleString()}`
+        : `${escapeHtml(c.reward_item_key || '')}${c.reward_days ? ` (${c.reward_days}일)` : ''}`;
+      return `<tr>
+        <td><b>${escapeHtml(c.code)}</b></td>
+        <td>${state}</td>
+        <td>${reward}</td>
+        <td>${used}${cap != null ? ` / ${cap}` : ''} <span style="color:#888">${left}</span>${drift}</td>
+        <td style="font-size:12px;color:#888">${c.expires_at ? formatDate(c.expires_at) : '만료 없음'}</td>
+        <td style="font-size:12px;color:#888">${escapeHtml(c.memo || '')}</td>
+        <td>
+          <a class="btn btn-secondary" href="/tc-backstage/coupons?edit=${encodeURIComponent(c.code)}">수정</a>
+          <a class="btn btn-secondary" href="/tc-backstage/coupons/${encodeURIComponent(c.code)}/redemptions">등록자</a>
+          <form method="POST" action="/tc-backstage/coupons/${encodeURIComponent(c.code)}/delete" style="display:inline"
+                onsubmit="return confirm('${escapeHtml(c.code)} 쿠폰을 지웁니다. 이미 받은 사람의 보상은 그대로 남고, 등록 기록만 함께 사라집니다.')">
+            <button class="btn" style="background:#c62828;color:#fff">삭제</button>
+          </form>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const itemOptions = items.map((i) =>
+      `<option value="${escapeHtml(i.item_key)}" ${editing?.reward_item_key === i.item_key ? 'selected' : ''}>`
+      + `${escapeHtml(i.name_ko || i.item_key)} (${i.is_permanent ? '영구' : (i.duration_days ? i.duration_days + '일' : '기간 미설정')})`
+      + `</option>`).join('');
+
+    const f = editing || {};
+    const content = `
+      ${pageHeader('쿠폰', '공지나 블로그에 뿌리는 코드. iOS 앱에서는 등록 UI가 보이지 않습니다.')}
+      <div class="card">
+        <h3 style="margin-top:0">${editing ? `쿠폰 수정 — ${escapeHtml(editing.code)}` : '새 쿠폰'}</h3>
+        <form method="POST" action="/tc-backstage/coupons">
+          <div style="display:grid;gap:14px">
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">코드</label>
+              <input type="text" name="code" value="${escapeHtml(f.code || '')}" ${editing ? 'readonly' : ''}
+                     placeholder="WELCOME2026" required
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%;text-transform:uppercase">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">대소문자와 공백은 무시됩니다. 사용자가 블로그에서 보고 손으로 칩니다.</div>
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">보상</label>
+              <select name="reward_type" id="rewardType" onchange="syncReward()" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+                <option value="gold" ${f.reward_type !== 'item' ? 'selected' : ''}>골드</option>
+                <option value="item" ${f.reward_type === 'item' ? 'selected' : ''}>아이템</option>
+              </select>
+            </div>
+            <div id="goldRow">
+              <label style="font-weight:600;display:block;margin-bottom:4px">골드 수량</label>
+              <input type="number" name="reward_gold" min="1" value="${f.reward_gold || ''}"
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+            </div>
+            <div id="itemRow">
+              <label style="font-weight:600;display:block;margin-bottom:4px">아이템</label>
+              <select name="reward_item_key" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+                <option value="">— 선택 —</option>
+                ${itemOptions}
+              </select>
+              <label style="font-weight:600;display:block;margin:10px 0 4px">기간 (일) — 비우면 상점 기본값</label>
+              <input type="number" name="reward_days" min="1" value="${f.reward_days || ''}"
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">최대 등록 인원 — 비우면 무제한</label>
+              <input type="number" name="max_redemptions" min="1" value="${f.max_redemptions || ''}"
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">마감 일시 — 비우면 만료 없음</label>
+              <input type="datetime-local" name="expires_at" value="${f.expires_at ? formatDateInput(f.expires_at) : ''}"
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">브라우저의 현지 시각으로 입력하고 UTC 로 저장됩니다.</div>
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">메모 (운영용, 사용자에게 안 보임)</label>
+              <input type="text" name="memo" value="${escapeHtml(f.memo || '')}"
+                     style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+            </div>
+            <label><input type="checkbox" name="is_active" value="1" ${f.code == null || f.is_active ? 'checked' : ''}> 사용 가능</label>
+            <div>
+              <button type="submit" class="btn btn-primary">${editing ? '수정' : '만들기'}</button>
+              ${editing ? '<a href="/tc-backstage/coupons" class="btn btn-secondary">취소</a>' : ''}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        ${coupons.length === 0 ? '<div class="empty">아직 쿠폰이 없습니다</div>' : `
+        <table>
+          <tr><th>코드</th><th>상태</th><th>보상</th><th>등록</th><th>마감</th><th>메모</th><th></th></tr>
+          ${rows}
+        </table>`}
+      </div>
+
+      <script>
+        function syncReward() {
+          var isItem = document.getElementById('rewardType').value === 'item';
+          document.getElementById('goldRow').style.display = isItem ? 'none' : '';
+          document.getElementById('itemRow').style.display = isItem ? '' : 'none';
+        }
+        syncReward();
+      </script>
+    `;
+    return html(res, layout('쿠폰', content, 'coupons'));
+  }
+
+  if (pathname === '/tc-backstage/coupons' && method === 'POST') {
+    const body = await parseBody(req);
+    await upsertCoupon({
+      code: body.code,
+      rewardType: body.reward_type,
+      rewardGold: body.reward_gold,
+      rewardItemKey: body.reward_item_key,
+      rewardDays: body.reward_days,
+      maxRedemptions: body.max_redemptions,
+      expiresAt: body.expires_at || null,
+      isActive: body.is_active === '1',
+      memo: body.memo,
+    }, sessionInfo.session.username || 'admin');
+    return redirect(res, '/tc-backstage/coupons');
+  }
+
+  const couponRedemptionsMatch = pathname.match(/^\/tc-backstage\/coupons\/([^/]+)\/redemptions$/);
+  if (couponRedemptionsMatch && method === 'GET') {
+    const code = decodeURIComponent(couponRedemptionsMatch[1]);
+    const rows = await getCouponRedemptions(code, 300);
+    const content = `
+      ${pageHeader(`${escapeHtml(code)} 등록자`, `${rows.length}명`)}
+      <div class="card">
+        ${rows.length === 0 ? '<div class="empty">아직 아무도 등록하지 않았습니다</div>' : `
+        <table>
+          <tr><th>닉네임</th><th>받은 것</th><th>시각</th></tr>
+          ${rows.map((r) => `<tr>
+            <td>${escapeHtml(r.nickname)}</td>
+            <td style="font-size:12px;color:#888">${escapeHtml(r.reward_summary || '')}</td>
+            <td style="font-size:12px;color:#888">${formatDate(r.redeemed_at)}</td>
+          </tr>`).join('')}
+        </table>`}
+      </div>
+      <a href="/tc-backstage/coupons" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
+    `;
+    return html(res, layout('쿠폰 등록자', content, 'coupons'));
+  }
+
+  const couponDeleteMatch = pathname.match(/^\/tc-backstage\/coupons\/([^/]+)\/delete$/);
+  if (couponDeleteMatch && method === 'POST') {
+    await deleteCoupon(decodeURIComponent(couponDeleteMatch[1]));
+    return redirect(res, '/tc-backstage/coupons');
   }
 
   if (pathname === '/tc-backstage/notices' && method === 'GET') {
@@ -7034,7 +7228,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // Create notice
   if (pathname === '/tc-backstage/notices/new' && method === 'POST') {
     const body = await parseBody(req);
-    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft');
+    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', body.coupon_code || null);
     return redirect(res, '/tc-backstage/notices');
   }
 
@@ -7056,7 +7250,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // Update notice
   if (noticeEditMatch && method === 'POST') {
     const body = await parseBody(req);
-    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft');
+    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', body.coupon_code || null);
     return redirect(res, '/tc-backstage/notices');
   }
 

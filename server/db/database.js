@@ -8131,7 +8131,7 @@ async function getPublishedNotices() {
   const client = await pool.connect();
   try {
     const res = await client.query(
-      `SELECT id, category, title, content, is_pinned, published_at
+      `SELECT id, category, title, content, is_pinned, published_at, coupon_code
        FROM tc_notices
        WHERE status = 'published'
        ORDER BY is_pinned DESC, published_at DESC
@@ -8178,14 +8178,21 @@ async function getNoticeById(id) {
   }
 }
 
-async function createNotice(category, title, content, isPinned, status) {
+async function createNotice(category, title, content, isPinned, status, couponCode = null) {
   const client = await pool.connect();
   try {
-    const publishedAt = status === 'published' ? new Date() : null;
+    // UTC text, not a JS Date: this column is `timestamp without time zone`
+    // and node-pg would serialize the Date in the process timezone, filing
+    // every notice nine hours out on a KST host.
+    const publishedAt = status === 'published'
+      ? toUtcTimestampText(new Date())
+      : null;
     const res = await client.query(
-      `INSERT INTO tc_notices (category, title, content, is_pinned, status, published_at)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [category, title, content, isPinned, status, publishedAt]
+      `INSERT INTO tc_notices
+         (category, title, content, is_pinned, status, published_at, coupon_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [category, title, content, isPinned, status, publishedAt,
+        couponCode ? normalizeCouponCode(couponCode) : null]
     );
     return { success: true, id: res.rows[0].id };
   } catch (err) {
@@ -8196,18 +8203,22 @@ async function createNotice(category, title, content, isPinned, status) {
   }
 }
 
-async function updateNotice(id, category, title, content, isPinned, status) {
+async function updateNotice(id, category, title, content, isPinned, status, couponCode = null) {
   const client = await pool.connect();
   try {
     const existing = await client.query('SELECT status, published_at FROM tc_notices WHERE id = $1', [id]);
     if (existing.rows.length === 0) return { success: false };
     const oldStatus = existing.rows[0].status;
     const oldPublishedAt = existing.rows[0].published_at;
-    const publishedAt = (status === 'published' && oldStatus !== 'published') ? new Date() : oldPublishedAt;
+    const publishedAt = (status === 'published' && oldStatus !== 'published')
+      ? toUtcTimestampText(new Date())
+      : oldPublishedAt;
     await client.query(
-      `UPDATE tc_notices SET category=$1, title=$2, content=$3, is_pinned=$4, status=$5, published_at=$6, updated_at=NOW()
-       WHERE id=$7`,
-      [category, title, content, isPinned, status, publishedAt, id]
+      `UPDATE tc_notices SET category=$1, title=$2, content=$3, is_pinned=$4,
+              status=$5, published_at=$6, coupon_code=$7, updated_at=NOW()
+       WHERE id=$8`,
+      [category, title, content, isPinned, status, publishedAt,
+        couponCode ? normalizeCouponCode(couponCode) : null, id]
     );
     return { success: true };
   } catch (err) {

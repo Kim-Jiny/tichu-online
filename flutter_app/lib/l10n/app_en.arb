@@ -2759,5 +2759,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsMarketingPushBlocked": "Notifications are off, so nothing is sent. Turn them on above to resume"
 }

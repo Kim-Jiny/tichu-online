@@ -1249,14 +1249,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             // one is "notify me at all"; this one is consent to
                             // advertising, which is a legal record and has to
                             // be withdrawable on its own.
+                            //
+                            // With notifications off it goes inactive rather
+                            // than off. The server already requires both
+                            // (getMarketingAudience), so an enabled-looking
+                            // switch here promised something that could not
+                            // happen. Turning it off instead would be worse:
+                            // that is a withdrawal of consent, and it would
+                            // silently come back when notifications were
+                            // re-enabled — consent nobody gave a second time.
                             _buildRow(
                               icon: Icons.campaign_outlined,
-                              iconColor: const Color(0xFFE08A1E),
+                              iconColor: game.pushEnabled
+                                  ? const Color(0xFFE08A1E)
+                                  : const Color(0xFFC9BFB9),
                               title: l10n.settingsMarketingPush,
-                              subtitle: l10n.settingsMarketingPushHint,
+                              subtitle: game.pushEnabled
+                                  ? l10n.settingsMarketingPushHint
+                                  : l10n.settingsMarketingPushBlocked,
+                              enabled: game.pushEnabled,
                               trailing: Switch(
-                                value: game.marketingPushEnabled,
-                                onChanged: (v) => game.setMarketingConsent(v),
+                                value:
+                                    game.marketingPushEnabled &&
+                                    game.pushEnabled,
+                                onChanged: game.pushEnabled
+                                    ? (v) => game.setMarketingConsent(v)
+                                    : null,
                               ),
                             ),
                             if (game.isAdminUser) ...[

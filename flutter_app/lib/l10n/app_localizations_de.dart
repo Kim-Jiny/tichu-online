@@ -4843,4 +4843,8 @@ class L10nDe extends L10n {
 
   @override
   String get pushRewardItem => 'Der Gegenstand wurde hinzugefügt';
+
+  @override
+  String get settingsMarketingPushBlocked =>
+      'Benachrichtigungen sind aus, es wird nichts gesendet. Oben wieder einschalten';
 }

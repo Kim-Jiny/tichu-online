@@ -81,6 +81,21 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('"never asked" is distinguishable from "said no"',
     never.asked === false && never.enabled === false);
 
+  // The settings screen greys the marketing switch out when notifications are
+  // off and tells the player nothing will be sent. That claim is only true
+  // because of this clause.
+  await db.pool.query(
+    'UPDATE tc_users SET push_enabled = FALSE WHERE nickname = $1', [nick(1)]);
+  check('turning notifications off takes them out of the audience too',
+    mine(await db.getMarketingAudience('all')).length === 0);
+  const stillConsented = await db.getMarketingConsentState(nick(1));
+  check('without touching their marketing consent', stillConsented.enabled === true,
+    'switching notifications back on must not need consent given again');
+  await db.pool.query(
+    'UPDATE tc_users SET push_enabled = TRUE WHERE nickname = $1', [nick(1)]);
+  check('and turning them back on restores the audience',
+    mine(await db.getMarketingAudience('all')).length === 1);
+
   console.log('\n[보상 지급]');
   const camp = await db.createPushCampaign({
     title: '(광고) 테스트', body: '눌러서 50골드', rewardGold: 50,

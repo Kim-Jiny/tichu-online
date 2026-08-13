@@ -1674,5 +1674,6 @@
   "settingsMarketingPushHint": "Werbenachrichten. Nie zwischen 21 und 8 Uhr",
   "pushRewardTitle": "Belohnung erhalten!",
   "pushRewardGold": "{gold} Gold wurden gutgeschrieben",
-  "pushRewardItem": "Der Gegenstand wurde hinzugefügt"
+  "pushRewardItem": "Der Gegenstand wurde hinzugefügt",
+  "settingsMarketingPushBlocked": "Benachrichtigungen sind aus, es wird nichts gesendet. Oben wieder einschalten"
 }

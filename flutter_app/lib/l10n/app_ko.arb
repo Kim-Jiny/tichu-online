@@ -1674,5 +1674,6 @@
   "settingsMarketingPushHint": "광고성 정보 수신 동의. 밤 9시~아침 8시에는 보내지 않습니다",
   "pushRewardTitle": "보상을 받았어요!",
   "pushRewardGold": "{gold} 골드가 지급되었어요",
-  "pushRewardItem": "아이템이 지급되었어요"
+  "pushRewardItem": "아이템이 지급되었어요",
+  "settingsMarketingPushBlocked": "푸시 알림이 꺼져 있어 지금은 보내지 않습니다. 위 알림을 켜면 다시 받습니다"
 }

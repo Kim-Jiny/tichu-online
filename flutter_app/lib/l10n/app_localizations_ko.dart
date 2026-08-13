@@ -4694,4 +4694,8 @@ class L10nKo extends L10n {
 
   @override
   String get pushRewardItem => '아이템이 지급되었어요';
+
+  @override
+  String get settingsMarketingPushBlocked =>
+      '푸시 알림이 꺼져 있어 지금은 보내지 않습니다. 위 알림을 켜면 다시 받습니다';
 }

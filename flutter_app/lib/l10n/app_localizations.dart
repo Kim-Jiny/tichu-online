@@ -8510,6 +8510,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'The item has been added'**
   String get pushRewardItem;
+
+  /// No description provided for @settingsMarketingPushBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are off, so nothing is sent. Turn them on above to resume'**
+  String get settingsMarketingPushBlocked;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -4807,4 +4807,8 @@ class L10nEn extends L10n {
 
   @override
   String get pushRewardItem => 'The item has been added';
+
+  @override
+  String get settingsMarketingPushBlocked =>
+      'Notifications are off, so nothing is sent. Turn them on above to resume';
 }

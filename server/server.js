@@ -80,7 +80,6 @@ const {
   getBroadcastFcmTokens,
   insertPushHistory,
   getPushHistory,
-  clearInvalidFcmToken,
   loadTitleTranslations,
   adminClearProfilePhoto,
   getReportedPhotoKeys,
@@ -206,6 +205,64 @@ async function sendBroadcastPush(tokenRows, title, body, data = null) {
     }
   }
   return { successCount, failCount, invalidUserIds, results };
+}
+
+/// Ask FCM which stored tokens are dead, without sending anything.
+///
+/// An uninstalled app has no other tell. FCM answers
+/// `registration-token-not-registered` for a token whose app is gone, but only
+/// in reply to a send — so the only way to find out is to ask, and the only
+/// polite way to ask is not to deliver anything.
+///
+/// This uses FCM's validate-only mode (the dryRun flag), so nothing reaches
+/// any phone: no notification, no data message, no wakeup. A data-only "silent
+/// push" would also work but actually wakes every device to deliver a payload
+/// that does nothing.
+///
+/// The signal lags reality. Google marks a token unregistered after its own
+/// delivery attempts fail, so an app deleted this morning may still validate
+/// today. It is the only mechanism there is; treat a death as "gone by now",
+/// not "gone just then".
+async function probeFcmTokens(rows) {
+  if (!firebaseAdmin) {
+    return { checked: 0, dead: [], errors: rows.length, error: 'Firebase not configured' };
+  }
+  const BATCH = 500;
+  const dead = [];
+  let checked = 0;
+  let errors = 0;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH);
+    try {
+      const result = await firebaseAdmin.messaging().sendEachForMulticast(
+        {
+          tokens: batch.map((r) => r.fcm_token),
+          // Validate-only still wants a body to validate.
+          data: { type: 'token_probe' },
+        },
+        true, // dryRun — validate, deliver nothing
+      );
+      checked += batch.length;
+      result.responses.forEach((resp, idx) => {
+        if (resp.success) return;
+        const code = resp.error?.code;
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+        ) {
+          dead.push(batch[idx]);
+        } else {
+          // A quota or network error says nothing about the token. Counting it
+          // as dead would retire a device over a bad minute.
+          errors++;
+        }
+      });
+    } catch (err) {
+      console.error('Token probe batch error:', err.message);
+      errors += batch.length;
+    }
+  }
+  return { checked, dead, errors };
 }
 
 const { handleAdminRoute } = require('./admin');
@@ -1056,7 +1113,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });

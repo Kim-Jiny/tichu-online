@@ -364,6 +364,12 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_push_enabled BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_asked_at TIMESTAMP`);
+    // When FCM last told us this device's token is dead — the app was
+    // uninstalled, or the token was replaced and the old one retired. Stamped
+    // rather than nulling the token: the account stays, and "had a device,
+    // lost it on this date" is a different fact from "never had one", which is
+    // what an empty column would say.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS fcm_token_invalid_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS device_platform VARCHAR(20)`);
@@ -3210,6 +3216,44 @@ async function getAdminGoldHistory(nickname, limit = 50, offset = 0) {
 ///
 /// [opts] — { itemKey, nickname, limit, offset }. Both filters are optional
 /// and combine.
+/// Every stored token, live or already marked dead, for the uninstall probe.
+async function getAllFcmTokenRows() {
+  const r = await pool.query(
+    `SELECT id, nickname, fcm_token, fcm_token_invalid_at
+     FROM tc_users
+     WHERE is_deleted IS NOT TRUE
+       AND fcm_token IS NOT NULL AND fcm_token <> ''
+       AND fcm_token_invalid_at IS NULL
+     ORDER BY id`,
+  );
+  return r.rows;
+}
+
+/// Mark a batch of tokens dead in one statement.
+async function markFcmTokensInvalid(userIds) {
+  if (!userIds.length) return 0;
+  const r = await pool.query(
+    `UPDATE tc_users SET fcm_token_invalid_at = (NOW() AT TIME ZONE 'UTC')
+     WHERE id = ANY($1) AND fcm_token_invalid_at IS NULL`,
+    [userIds],
+  );
+  return r.rowCount;
+}
+
+/// How many devices are reachable, and how many have gone away.
+async function getFcmTokenStats() {
+  const r = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (
+         WHERE fcm_token IS NOT NULL AND fcm_token <> ''
+           AND fcm_token_invalid_at IS NULL)::int AS live,
+       COUNT(*) FILTER (WHERE fcm_token_invalid_at IS NOT NULL)::int AS dead,
+       MAX(fcm_token_invalid_at) AS last_death
+     FROM tc_users WHERE is_deleted IS NOT TRUE`,
+  );
+  return r.rows[0];
+}
+
 // ===== Marketing push campaigns =====
 
 /// Whether [when] falls in the window 광고성 정보 may not be sent in — 21:00 to
@@ -3242,7 +3286,8 @@ async function getMarketingAudience(targetFilter = 'all') {
            WHERE marketing_push_enabled = TRUE
              AND push_enabled = TRUE
              AND is_deleted IS NOT TRUE
-             AND fcm_token IS NOT NULL AND fcm_token <> ''`;
+             AND fcm_token IS NOT NULL AND fcm_token <> ''
+             AND fcm_token_invalid_at IS NULL`;
   if (targetFilter === 'ios' || targetFilter === 'android') {
     params.push(targetFilter);
     q += ` AND device_platform = $1`;
@@ -7589,6 +7634,12 @@ async function updateDeviceInfo(nickname, deviceInfo) {
     await client.query(
       `UPDATE tc_users
        SET fcm_token = COALESCE($2, fcm_token),
+           -- A token arriving from a live app clears the death mark. This is
+           -- the reinstall path: same account, new install, new token. Only
+           -- when a token is actually supplied — a login that sends none must
+           -- not resurrect a device that is gone.
+           fcm_token_invalid_at = CASE WHEN $2::text IS NULL
+                                       THEN fcm_token_invalid_at ELSE NULL END,
            device_platform = COALESCE($3, device_platform),
            device_model = COALESCE($4, device_model),
            os_version = COALESCE($5, os_version),
@@ -9005,7 +9056,10 @@ async function getMaintenanceHistory(limit = 50) {
 
 // Get FCM tokens for broadcast push
 async function getBroadcastFcmTokens(targetFilter = 'all') {
-  let query = `SELECT id, fcm_token, nickname FROM tc_users WHERE push_enabled = true AND is_deleted IS NOT TRUE AND fcm_token IS NOT NULL AND fcm_token != ''`;
+  let query = `SELECT id, fcm_token, nickname FROM tc_users
+    WHERE push_enabled = true AND is_deleted IS NOT TRUE
+      AND fcm_token IS NOT NULL AND fcm_token != ''
+      AND fcm_token_invalid_at IS NULL`;
   const params = [];
   if (targetFilter === 'ios') {
     query += ` AND device_platform = $1`;
@@ -9041,9 +9095,6 @@ async function getPushHistory(page = 1, limit = 20) {
 }
 
 // Clear invalid FCM token for a user
-async function clearInvalidFcmToken(userId) {
-  await pool.query(`UPDATE tc_users SET fcm_token = NULL WHERE id = $1`, [userId]);
-}
 
 // Insert push recipients
 async function insertPushRecipients(historyId, recipients) {
@@ -10360,6 +10411,9 @@ module.exports = {
   getAdminUserInventory,
   getShopItemHolderCounts,
   isKstNight,
+  getAllFcmTokenRows,
+  markFcmTokensInvalid,
+  getFcmTokenStats,
   getMarketingAudience,
   setMarketingConsent,
   getMarketingConsentState,
@@ -10489,7 +10543,6 @@ module.exports = {
   getBroadcastFcmTokens,
   insertPushHistory,
   getPushHistory,
-  clearInvalidFcmToken,
   insertPushRecipients,
   getPushHistoryDetail,
   updateCardViewPref,

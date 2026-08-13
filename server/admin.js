@@ -7,7 +7,7 @@ const {
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
-  isKstNight, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
+  isKstNight, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   deletePushCampaign, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
@@ -19,7 +19,7 @@ const {
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
-  getBroadcastFcmTokens, insertPushHistory, getPushHistory, clearInvalidFcmToken, insertPushRecipients, getPushHistoryDetail,
+  getBroadcastFcmTokens, insertPushHistory, getPushHistory, insertPushRecipients, getPushHistoryDetail,
   upsertCoupon, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
@@ -1885,7 +1885,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, runGoogleVoidedPoll, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -4663,6 +4663,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   if (pathname === '/tc-backstage/campaigns' && method === 'GET') {
     const campaigns = await listPushCampaigns(50);
     const audience = await getMarketingAudience('all');
+    const tokenStats = await getFcmTokenStats();
     const night = isKstNight();
     const notice = url.searchParams.get('msg');
     const failed = url.searchParams.get('r') === 'fail';
@@ -4710,9 +4711,30 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${notice ? `<div class="card" style="border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};color:${failed ? '#c62828' : '#2e7d32'};font-weight:700">${escapeHtml(notice)}</div>` : ''}
       ${summaryStrip([
         { label: '수신동의', value: formatNumber(audience.length), meta: '지금 발송 가능한 인원' },
+        { label: '살아있는 기기', value: formatNumber(tokenStats.live),
+          meta: `앱 삭제 감지 ${formatNumber(tokenStats.dead)}건` },
         { label: '발송 가능 시간', value: night ? '아니오' : '예',
           meta: night ? '21~08시(KST)에는 광고성 푸시를 보내지 않습니다' : '광고 허용 시간대입니다' },
       ])}
+      <div class="card">
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <h3 style="margin:0 0 4px">앱 삭제 감지</h3>
+            <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
+              저장된 토큰이 아직 살아있는지 FCM 에 물어봅니다. <b>아무것도 전송되지 않습니다</b> —
+              검증 전용(dry run) 이라 알림도, 데이터 메시지도, 기기를 깨우는 일도 없습니다.<br>
+              앱을 지운 기기는 토큰이 죽은 것으로 표시되고 이후 발송 대상에서 빠집니다.
+              <b>계정은 그대로 둡니다.</b> 다시 설치해 새 토큰이 올라오면 자동으로 되살아납니다.<br>
+              구글이 자체 전송 실패를 겪은 뒤에야 죽은 토큰으로 바꾸므로 <b>실제 삭제보다 늦게 잡힙니다</b>.
+              ${tokenStats.last_death ? `마지막 감지: ${formatDate(tokenStats.last_death)}` : ''}
+            </div>
+          </div>
+          <form method="POST" action="/tc-backstage/campaigns/probe-tokens"
+                onsubmit="return confirm('저장된 토큰 ${formatNumber(tokenStats.live)}개를 검사합니다. 전송되는 것은 없습니다.')">
+            <button class="btn btn-primary">지금 검사</button>
+          </form>
+        </div>
+      </div>
       ${night ? `<div class="card" style="border-left:4px solid #ef6c00;color:#ef6c00;line-height:1.6">
         지금은 <b>야간(21~08시 KST)</b>이라 발송이 막혀 있습니다. 정보통신망법상 야간 광고성 정보는 별도의 야간 수신동의가 필요한데,
         받지 않기로 했습니다. 아침 8시 이후에 보내주세요.
@@ -4806,6 +4828,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent('저장했습니다.'));
   }
 
+  if (pathname === '/tc-backstage/campaigns/probe-tokens' && method === 'POST') {
+    const rows = await getAllFcmTokenRows();
+    if (rows.length === 0) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('검사할 토큰이 없습니다.'));
+    }
+    const probe = await probeFcmTokens(rows);
+    const marked = await markFcmTokensInvalid(probe.dead.map((r) => r.id));
+    const msg = probe.error
+      ? `검사하지 못했습니다: ${probe.error}`
+      : `${formatNumber(probe.checked)}개 검사, ${formatNumber(marked)}개가 앱을 지운 것으로 확인됐습니다.`
+        + (probe.errors ? ` (판정 불가 ${formatNumber(probe.errors)}개 — 다음 검사 때 다시 봅니다)` : '');
+    return redirect(res, '/tc-backstage/campaigns?r='
+      + (probe.error ? 'fail' : 'ok') + '&msg=' + encodeURIComponent(msg));
+  }
+
   const campaignSendMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)\/send$/);
   if (campaignSendMatch && method === 'POST') {
     const id = parseInt(campaignSendMatch[1], 10);
@@ -4835,9 +4873,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       camp.body,
       { type: 'campaign', campaignId: id },
     );
-    for (const userId of push.invalidUserIds || []) {
-      await clearInvalidFcmToken(userId);
-    }
+    await markFcmTokensInvalid(push.invalidUserIds || []);
     const byId = new Map(audience.map((u) => [u.id, u.nickname]));
     await recordCampaignSend(id, (push.results || []).map((r) => ({
       nickname: byId.get(r.userId),
@@ -8007,10 +8043,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const result = await sendBroadcastPush(tokenRows, title, pushBody);
 
-    // Clear invalid tokens
-    for (const userId of result.invalidUserIds) {
-      await clearInvalidFcmToken(userId);
-    }
+    // Anything FCM rejected as unregistered is a device that is gone. Marked,
+    // not erased — see markFcmTokensInvalid.
+    await markFcmTokensInvalid(result.invalidUserIds || []);
 
     // Build nickname map from tokenRows
     const nicknameMap = {};

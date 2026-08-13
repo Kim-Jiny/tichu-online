@@ -96,6 +96,39 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('and turning them back on restores the audience',
     mine(await db.getMarketingAudience('all')).length === 1);
 
+  console.log('\n[앱을 지운 기기]');
+  // FCM answers "not registered" for a token whose app is gone. The account
+  // stays; only the device is retired.
+  const gone = (await db.getAllFcmTokenRows())
+    .filter((r) => r.nickname === nick(1)).map((r) => r.id);
+  check('the probe offers the live token for checking', gone.length === 1);
+  await db.markFcmTokensInvalid(gone);
+  check('a dead token drops out of the marketing audience',
+    !mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
+  const kept = await db.pool.query(
+    `SELECT fcm_token, fcm_token_invalid_at, marketing_push_enabled
+     FROM tc_users WHERE nickname = $1`, [nick(1)]);
+  check('the account is untouched', kept.rows.length === 1);
+  check('and the token is kept, so "uninstalled" stays distinguishable from "never installed"',
+    kept.rows[0].fcm_token != null && kept.rows[0].fcm_token_invalid_at != null);
+  check('their marketing consent is not withdrawn by an uninstall',
+    kept.rows[0].marketing_push_enabled === true);
+  check('and it is not offered to the next probe',
+    !(await db.getAllFcmTokenRows()).some((r) => r.nickname === nick(1)));
+
+  // Reinstall: the app comes back with a new token.
+  await db.updateDeviceInfo(nick(1), { fcmToken: `token_${run}_1_new` });
+  check('a new token from a reinstall revives the device',
+    mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
+  // A login that carries no token must not resurrect a device that is gone.
+  await db.markFcmTokensInvalid(
+    (await db.pool.query('SELECT id FROM tc_users WHERE nickname = $1', [nick(1)]))
+      .rows.map((r) => r.id));
+  await db.updateDeviceInfo(nick(1), { locale: 'ko' });
+  check('a login with no token does not',
+    !mine(await db.getMarketingAudience('all')).some((u) => u.nickname === nick(1)));
+  await db.updateDeviceInfo(nick(1), { fcmToken: `token_${run}_1` });
+
   console.log('\n[보상 지급]');
   const camp = await db.createPushCampaign({
     title: '(광고) 테스트', body: '눌러서 50골드', rewardGold: 50,

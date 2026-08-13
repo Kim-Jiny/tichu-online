@@ -1069,9 +1069,13 @@ async function runMigrations() {
       [
         `category = 'banner'`,
         [],
+        '대기실과 게임 화면, 그리고 다른 사람이 보는 내 프로필 팝업의 배경으로 적용됩니다. 닉네임과 칭호 색도 배너에 맞춰 자동으로 조정됩니다.',
+        'Applied as the background of your name slot in the waiting room and in game, and behind your profile popup when someone opens it. Nickname and title colours adjust to the banner automatically.',
+        'Wird als Hintergrund deines Namensfelds im Warteraum und im Spiel angezeigt sowie hinter deinem Profil-Popup, wenn es jemand öffnet. Nickname- und Titelfarbe passen sich dem Banner automatisch an.',
+        // The line this replaces. Without it the 33 banners already carrying
+        // the old copy would keep it forever — the update below only fills
+        // blanks, so that admin edits survive.
         '대기실과 게임 화면에서 내 이름 칸의 배경으로 적용됩니다. 닉네임 색도 배너에 맞춰 자동으로 조정됩니다.',
-        'Applied as the background of your name slot in the waiting room and in game. The nickname colour adjusts to the banner automatically.',
-        'Wird als Hintergrund deines Namensfelds im Warteraum und im Spiel angezeigt. Die Nickname-Farbe passt sich dem Banner automatisch an.',
       ],
       [
         `category = 'title'`,
@@ -1158,13 +1162,18 @@ async function runMigrations() {
         'Löscht die Ranglisten-Bilanz dieser Saison für das jeweilige Spiel und setzt die Wertung zurück.',
       ],
     ];
-    for (const [predicate, params, ko, en, de] of SHOP_DESCRIPTIONS) {
+    for (const [predicate, params, ko, en, de, supersedes] of SHOP_DESCRIPTIONS) {
+      // Blank descriptions always get filled. `supersedes` additionally
+      // replaces one specific older default — the way to correct copy that has
+      // already shipped without trampling anything an admin wrote, since
+      // anything else in the column is by definition not the old default.
       await client.query(
         `UPDATE tc_shop_items
          SET description_ko = $1, description_en = $2, description_de = $3
          WHERE ${predicate}
-           AND (description_ko IS NULL OR description_ko = '')`,
-        [ko, en, de, ...params],
+           AND (description_ko IS NULL OR description_ko = ''
+                OR ($4::text IS NOT NULL AND description_ko = $4))`,
+        [ko, en, de, supersedes ?? null, ...params],
       );
     }
 

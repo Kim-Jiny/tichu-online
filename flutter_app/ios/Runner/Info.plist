@@ -72,6 +72,14 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- iOS 14 gates local-network access behind a privacy permission that is
+	     separate from ATS. Without this key the system denies it with no
+	     prompt and no error: the app launches, the WebSocket never connects,
+	     and it sits on the splash forever. Only ever hit while developing —
+	     release builds reach the server over a public domain, so the prompt
+	     never appears for a player. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>개발 중인 로컬 서버에 연결할 때만 사용합니다.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

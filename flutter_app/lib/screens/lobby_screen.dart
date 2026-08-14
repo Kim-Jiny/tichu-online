@@ -2643,7 +2643,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         room.name,
                                         style: TextStyle(
                                           fontSize: 18,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w500,
                                           color: nameColor,
                                         ),
                                         maxLines: 1,

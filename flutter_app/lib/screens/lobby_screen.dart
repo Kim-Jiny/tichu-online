@@ -818,15 +818,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    // 44 square (26 glyph + 9 either side). The header keeps its width by
+    // giving back what the box padding and the gaps between buttons were
+    // using — a tap target that reads as a button beats air around it.
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: color, size: 22),
+        child: Icon(icon, color: color, size: 26),
       ),
     );
   }
@@ -1923,10 +1926,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildLobbyHeader(GameService game, {required bool isLandscape}) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isLandscape ? 14 : 16,
-        vertical: isLandscape ? 12 : 10,
-      ),
+      // Same both ways round now. Landscape used to be roomier horizontally
+      // and tighter vertically for no reason that survived the buttons
+      // growing; a ternary that returns the same number twice only reads as
+      // an intention nobody has.
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
@@ -1945,8 +1949,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Align(
               alignment: Alignment.centerRight,
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 5,
+                runSpacing: 5,
                 alignment: WrapAlignment.end,
                 children: _buildLobbyActionButtons(game),
               ),

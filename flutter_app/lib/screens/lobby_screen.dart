@@ -2952,7 +2952,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomBody(GameService game) {
     if (!_roomChatDocked) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+        padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
         child: _buildRoomPlayersPanel(game),
       );
     }
@@ -2961,7 +2961,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // every frame; handing it the same widget instances lets updateChild take
     // its identity fast path instead of rebuilding six seats per frame.
     final seats = SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 6),
       child: _buildRoomPlayersPanel(game),
     );
     final chat = _buildDockedRoomChat(game);
@@ -3551,6 +3551,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildSeatGrid(GameService game) {
     // Tight on purpose: the seats already read as separate cards (each has its
     // own fill and border), so the gap only has to keep them from touching.
+    //
+    // The same 6 is used for the screen edge (see _buildRoomBody). A larger
+    // edge inset reads as the left and right margins being bigger than the top
+    // and bottom ones, because next to a 6 gap that is exactly what it is.
     const gap = 6.0;
     final slots = game.roomPlayers;
     final rows = <Widget>[];

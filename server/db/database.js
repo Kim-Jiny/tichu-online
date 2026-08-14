@@ -4771,6 +4771,16 @@ async function adminRevokeUserItem(nickname, itemKey, { refundGold = false, admi
   }
 }
 
+/**
+ * Move a user's item expiry from the backstage.
+ *
+ * Deliberately does NOT check is_purchasable or is_season, unlike buyItem.
+ * The shop refuses both — a player cannot buy or extend a season reward or a
+ * withdrawn item at any price, including the 0 they are priced at — and that
+ * is the door that has to stay shut. This is the other side: support fixing a
+ * season banner that ended a day early, or topping up something that is no
+ * longer sold. Closing it here would only mean editing the row by hand.
+ */
 async function adminExtendUserItem(nickname, itemKey, days, adminActor = 'admin') {
   const n = Math.trunc(Number(days));
   if (!Number.isFinite(n) || n === 0) {

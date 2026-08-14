@@ -9,7 +9,6 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
-import 'dart:typed_data' show ByteData;
 import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:flutter/semantics.dart';
@@ -109,19 +108,7 @@ void main() async {
       );
     });
 
-    // Tapping a campaign notification is what pays out, so the tap has to be
-    // caught in both of the states Firebase reports it in. They are different
-    // callbacks and neither covers the other: getInitialMessage is the launch
-    // that started the process, onMessageOpenedApp is a tap while the app was
-    // already in the background. Missing either one means a notification that
-    // silently does nothing.
-    //
-    // The campaign id is only recorded here. Sending it needs a logged-in
-    // socket, which on a cold start does not exist yet — GameService holds it
-    // and flushes on login.
-    final initial = await FirebaseMessaging.instance.getInitialMessage();
-    if (initial != null) _rememberCampaignTap(initial);
-    FirebaseMessaging.onMessageOpenedApp.listen(_rememberCampaignTap);
+    _startCampaignTapListeners();
   }
 
   runApp(const TichuApp());
@@ -143,6 +130,30 @@ void _rememberCampaignTap(RemoteMessage message) {
   final id = int.tryParse('${message.data['campaignId']}');
   if (id == null || pendingCampaignTaps.value.contains(id)) return;
   pendingCampaignTaps.value = [...pendingCampaignTaps.value, id];
+}
+
+/// Tapping a campaign notification is what pays out, so the tap has to be
+/// caught in both of the states Firebase reports it in. They are different
+/// callbacks and neither covers the other: getInitialMessage is the launch
+/// that started the process, onMessageOpenedApp is a tap while the app was
+/// already in the background.
+///
+/// Deliberately not awaited by main(): on iOS this plugin call can be slow or
+/// stall while Firebase/APNs state settles. Waiting before runApp means Flutter
+/// never paints its first frame, so iOS keeps showing the previous app snapshot
+/// and it looks like the app is frozen on the last screen.
+void _startCampaignTapListeners() {
+  FirebaseMessaging.onMessageOpenedApp.listen(_rememberCampaignTap);
+  FirebaseMessaging.instance
+      .getInitialMessage()
+      .timeout(const Duration(seconds: 2))
+      .then((initial) {
+        if (initial != null) _rememberCampaignTap(initial);
+      })
+      .catchError((Object error) {
+        debugPrint('Initial campaign message unavailable: $error');
+        return null;
+      });
 }
 
 /// Firebase backs Google and Apple sign-in on every platform, web included —

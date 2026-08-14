@@ -787,31 +787,47 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   /// Lobby header button that opens your own profile.
   ///
-  /// The same 38px box as _buildIconButton (22px glyph + 8px padding), but the
-  /// photo *is* the box rather than a small square floating inside it — a
-  /// bordered frame around an already-framed avatar read as two nested boxes.
-  /// The fallback keeps the tinted plate and the inset glyph so an empty
-  /// profile still matches the neighbouring buttons.
+  /// The same box as _buildIconButton (26px glyph + 9px padding), but the photo
+  /// *is* the box rather than a small square floating inside it — a bordered
+  /// frame around an already-framed avatar read as two nested boxes. The
+  /// fallback keeps the tinted plate and the inset glyph so an empty profile
+  /// still matches the neighbouring buttons.
+  ///
+  /// [_headerButtonBox] is shared with those buttons on purpose: this sits in
+  /// the same row, and a profile a few pixels short of its neighbours is the
+  /// kind of thing you cannot unsee once noticed.
   Widget _buildMyProfileButton(GameService game) {
     const accent = Color(0xFFFF8A65);
-    const box = 38.0;
     return GestureDetector(
       onTap: () => _showUserProfileDialog(game.playerName, game),
       child: ProfileAvatar(
         photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
-        size: box,
-        borderRadius: 10,
+        size: _headerButtonBox,
+        borderRadius: _headerButtonRadius,
         fallback: Container(
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(_headerButtonRadius),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.person, color: accent, size: 22),
+          child: const Icon(
+            Icons.person,
+            color: accent,
+            size: _headerButtonGlyph,
+          ),
         ),
       ),
     );
   }
+
+  /// One size for everything in the lobby header row — the four icon buttons
+  /// and the profile photo. They sit shoulder to shoulder, so the numbers have
+  /// to come from one place or they drift the next time one of them changes.
+  static const double _headerButtonGlyph = 26;
+  static const double _headerButtonPad = 9;
+  static const double _headerButtonBox =
+      _headerButtonGlyph + _headerButtonPad * 2;
+  static const double _headerButtonRadius = 12;
 
   Widget _buildIconButton({
     required IconData icon,
@@ -824,12 +840,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(9),
+        padding: const EdgeInsets.all(_headerButtonPad),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(_headerButtonRadius),
         ),
-        child: Icon(icon, color: color, size: 26),
+        child: Icon(icon, color: color, size: _headerButtonGlyph),
       ),
     );
   }

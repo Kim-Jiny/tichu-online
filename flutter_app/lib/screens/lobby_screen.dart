@@ -796,25 +796,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// [_headerButtonBox] is shared with those buttons on purpose: this sits in
   /// the same row, and a profile a few pixels short of its neighbours is the
   /// kind of thing you cannot unsee once noticed.
-  Widget _buildMyProfileButton(GameService game) {
+  Widget _buildMyProfileButton(GameService game, double box) {
     const accent = Color(0xFFFF8A65);
     return GestureDetector(
       onTap: () => _showUserProfileDialog(game.playerName, game),
       child: ProfileAvatar(
         photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
-        size: _headerButtonBox,
-        borderRadius: _headerButtonRadius,
+        size: box,
+        borderRadius: _headerRadiusFor(box),
         fallback: Container(
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(_headerButtonRadius),
+            borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
           ),
           alignment: Alignment.center,
-          child: const Icon(
-            Icons.person,
-            color: accent,
-            size: _headerButtonGlyph,
-          ),
+          child: Icon(Icons.person, color: accent, size: _headerGlyphFor(box)),
         ),
       ),
     );
@@ -823,16 +819,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// One size for everything in the lobby header row — the four icon buttons
   /// and the profile photo. They sit shoulder to shoulder, so the numbers have
   /// to come from one place or they drift the next time one of them changes.
-  static const double _headerButtonGlyph = 26;
-  static const double _headerButtonPad = 9;
-  static const double _headerButtonBox =
-      _headerButtonGlyph + _headerButtonPad * 2;
-  static const double _headerButtonRadius = 12;
+  ///
+  /// The size is measured, not fixed. Five buttons at a hard 44 fit a normal
+  /// phone and nothing else: on a narrow one they wrap onto a second line and
+  /// the header grows a row, and on a fold or a browser window there is no
+  /// reason for them to keep growing — a 60px store icon is not easier to hit,
+  /// it just looks like something went wrong. So the row asks how much space
+  /// it actually has and clamps between the two.
+  static const double _headerButtonMax = 44;
+  static const double _headerButtonMin = 34;
+  static const int _headerButtonCount = 5;
+  static const double _headerButtonGap = 5;
+
+  /// What the logo is guaranteed, and what it may not exceed. It is the
+  /// flexible half of this row: on a small phone it gives way so the buttons
+  /// stay on one line, on a wide one it stops growing long before the window
+  /// does.
+  static const double _headerLogoMinWidth = 60;
+  static const double _headerLogoMaxWidth = 132;
+  static const double _headerLogoGap = 12;
+
+  /// Glyph and corner as a share of the box, so a shrunk button keeps its
+  /// proportions instead of a big icon in a small plate.
+  static double _headerGlyphFor(double box) => box * (26 / 44);
+  static double _headerRadiusFor(double box) => box * (12 / 44);
 
   Widget _buildIconButton({
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    required double box,
   }) {
     // 44 square (26 glyph + 9 either side). The header keeps its width by
     // giving back what the box padding and the gaps between buttons were
@@ -840,12 +856,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(_headerButtonPad),
+        width: box,
+        height: box,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(_headerButtonRadius),
+          borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
         ),
-        child: Icon(icon, color: color, size: _headerButtonGlyph),
+        child: Icon(icon, color: color, size: _headerGlyphFor(box)),
       ),
     );
   }
@@ -1953,31 +1971,70 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       margin: EdgeInsets.all(isLandscape ? 12 : 16),
       clipBehavior: Clip.none,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: isLandscape ? 36 : 44),
-            child: Image.asset('assets/logo2.webp', fit: BoxFit.contain),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Wrap(
-                spacing: 5,
-                runSpacing: 5,
-                alignment: WrapAlignment.end,
-                children: _buildLobbyActionButtons(game),
+      // The row is measured before it is built. Five buttons at a fixed size
+      // fit a normal phone and nothing else: narrower and they wrap onto a
+      // second line, wider (a fold, a browser) and there is no reason for them
+      // to keep growing — a 60px store icon is not easier to hit.
+      //
+      // The buttons are served first and the logo takes what is left, because
+      // the buttons are what the header is FOR. Reversed, a wide logo pushed
+      // them onto their own line on a 320px phone.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const gaps = _headerButtonGap * (_headerButtonCount - 1);
+          final forButtons =
+              constraints.maxWidth -
+              _headerLogoMinWidth -
+              _headerLogoGap -
+              gaps;
+          final box = (forButtons / _headerButtonCount).clamp(
+            _headerButtonMin,
+            _headerButtonMax,
+          );
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    // Capped so it does not sprawl on a wide window, and
+                    // free to shrink below that on a narrow one.
+                    constraints: BoxConstraints(
+                      maxHeight: isLandscape ? 36 : _headerButtonMax,
+                      maxWidth: _headerLogoMaxWidth,
+                    ),
+                    child: Image.asset(
+                      'assets/logo2.webp',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+              const SizedBox(width: _headerLogoGap),
+              // A Row, not a Wrap: the size above is chosen so they fit, and a
+              // Wrap would quietly hide a miscalculation by growing a second
+              // line instead of showing it.
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (i, button) in _buildLobbyActionButtons(
+                    game,
+                    box,
+                  ).indexed) ...[
+                    if (i > 0) const SizedBox(width: _headerButtonGap),
+                    button,
+                  ],
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  List<Widget> _buildLobbyActionButtons(GameService game) {
+  List<Widget> _buildLobbyActionButtons(GameService game, double box) {
     final attendance = game.attendanceState;
     // Never on the web: the attendance banner inside the shop is hidden there
     // (the daily reward needs a rewarded ad, and AdMob has no web build), so a
@@ -1997,6 +2054,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 MaterialPageRoute(builder: (_) => const ShopScreen()),
               );
             },
+            box: box,
           ),
           if (attendanceUnclaimed)
             Positioned(
@@ -2025,6 +2083,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 MaterialPageRoute(builder: (_) => const FriendsScreen()),
               );
             },
+            box: box,
           ),
           if ((game.pendingFriendRequestCount + game.totalUnreadDmCount) > 0)
             Positioned(
@@ -2059,13 +2118,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
             MaterialPageRoute(builder: (_) => const RankingScreen()),
           );
         },
+        box: box,
       ),
       // Own profile, in the slot the rulebook used to sit in. The rulebook
       // moved into settings: it is read once and then never again, while your
       // own profile is the thing you actually reach for from the lobby.
       // Shows the player's photo when they have one so the row reads as
       // "you" rather than as another generic icon.
-      _buildMyProfileButton(game),
+      _buildMyProfileButton(game, box),
       Stack(
         clipBehavior: Clip.none,
         children: [
@@ -2089,6 +2149,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               );
             },
+            box: box,
           ),
           // Badge covers BOTH unread notices and unread inquiry replies, so an
           // answered inquiry is discoverable on the room-list page (settings →

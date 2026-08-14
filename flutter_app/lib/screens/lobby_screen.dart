@@ -4407,9 +4407,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   : Colors.white.withValues(alpha: 0.72);
               return Container(
                 width: double.infinity,
-                // Grows with the avatar: 46dp photo + the corner level chip.
-                height: 68,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                // Sized off the avatar: a 46dp photo with 7 above and below,
+                // which is enough for the level chip that overhangs its bottom
+                // corner by 3. Anything tighter starts clipping the chip
+                // rather than trimming space.
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: bannerGradient == null ? fallbackColor : null,
                   gradient: bannerGradient,
@@ -4855,9 +4858,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Positioned.fill(
               child: IgnorePointer(
                 child: Center(
+                  // Scaled with the seat (was 56 in a 68-tall row). A watermark
+                  // that reaches the edges stops reading as a background mark.
                   child: Icon(
                     Icons.check_circle,
-                    size: 56,
+                    size: 48,
                     color: const Color(0xFF43A047).withValues(alpha: 0.18),
                   ),
                 ),

@@ -4997,4 +4997,15 @@ class L10nDe extends L10n {
 
   @override
   String get goldHistoryMailClaimed => 'Abgeholt';
+
+  @override
+  String get lobbyTakeSeat => 'Platz nehmen';
+
+  @override
+  String get lobbySpectatorLabel => 'Zuschauer';
+
+  @override
+  String lobbySpectatorMore(int count) {
+    return '+$count weitere';
+  }
 }

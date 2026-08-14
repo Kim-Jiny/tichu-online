@@ -27,6 +27,12 @@ class DraggableChatPanel extends StatefulWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
 
+  /// A fixed strip directly under the chat header — who is watching the room.
+  /// Inside the chat rather than above it because that is where the people
+  /// who are not at the table belong, and pinned rather than posted as a
+  /// message because it must not scroll away.
+  final Widget? banner;
+
   /// Put the chat back into the page layout. Supplied only where a docked
   /// form exists (the waiting room); elsewhere the header has no pin button
   /// because there would be nowhere to pin it to.
@@ -48,6 +54,7 @@ class DraggableChatPanel extends StatefulWidget {
     required this.onClose,
     required this.itemCount,
     required this.itemBuilder,
+    this.banner,
     this.onDock,
     this.persistKey = 'chat',
   });
@@ -321,6 +328,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
               children: [
                 _buildHeader(width, height),
                 if (_showOpacitySlider) _buildOpacitySlider(),
+                ?widget.banner,
                 Expanded(
                   child: ChatPanelBody(
                     scrollController: widget.scrollController,

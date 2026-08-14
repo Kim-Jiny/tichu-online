@@ -2872,5 +2872,15 @@
   "mailboxDeleted": "Letter deleted",
   "mailboxCancel": "Cancel",
   "goldHistoryMailClaim": "Mailbox reward",
-  "goldHistoryMailClaimed": "Claimed"
+  "goldHistoryMailClaimed": "Claimed",
+  "lobbyTakeSeat": "Sit",
+  "lobbySpectatorLabel": "Watching",
+  "lobbySpectatorMore": "+{count} more",
+  "@lobbySpectatorMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

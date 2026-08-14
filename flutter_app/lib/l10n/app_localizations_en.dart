@@ -4961,4 +4961,15 @@ class L10nEn extends L10n {
 
   @override
   String get goldHistoryMailClaimed => 'Claimed';
+
+  @override
+  String get lobbyTakeSeat => 'Sit';
+
+  @override
+  String get lobbySpectatorLabel => 'Watching';
+
+  @override
+  String lobbySpectatorMore(int count) {
+    return '+$count more';
+  }
 }

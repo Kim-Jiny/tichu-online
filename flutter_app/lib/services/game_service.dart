@@ -604,6 +604,15 @@ class GameService extends ChangeNotifier {
   bool get hasRoom => currentRoomId.isNotEmpty;
   bool get hasSpectatorRoom => isSpectator && hasRoom;
   bool get isInWaitingRoom => hasRoom && !isSpectator && !hasActiveGame;
+
+  /// In a room with no game running — as a player OR as a spectator.
+  ///
+  /// Both see the same waiting room now: the four bespoke spectator waiting
+  /// rooms were the same seats, the same chat and the same room settings drawn
+  /// four more times, and they drifted from the real one every time it changed.
+  /// [isInWaitingRoom] stays player-only because the things that ask it —
+  /// inviting a friend, being invited — are things a spectator cannot do.
+  bool get isInRoomWithoutGame => hasRoom && !hasActiveGame;
   bool get hasActiveGame {
     if (mightyGameState != null &&
         mightyGameState!.phase.isNotEmpty &&
@@ -633,6 +642,12 @@ class GameService extends ChangeNotifier {
       _profiles.profileFor(nickname);
   AppDestination get currentDestination {
     if (isSpectator && hasRoom) {
+      // Watching a room with nothing being played yet: that is the waiting
+      // room, and it is the same waiting room the players are looking at.
+      // Only a running match needs the game screens.
+      if (!hasActiveGame && !hasSpectatorGameState) {
+        return AppDestination.waitingRoom;
+      }
       if (currentGameType == 'skull_king') return AppDestination.skGame;
       if (currentGameType == 'love_letter') return AppDestination.llGame;
       if (currentGameType == 'mighty') return AppDestination.mightyGame;

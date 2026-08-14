@@ -4846,4 +4846,15 @@ class L10nKo extends L10n {
 
   @override
   String get goldHistoryMailClaimed => '수령완료';
+
+  @override
+  String get lobbyTakeSeat => '착석';
+
+  @override
+  String get lobbySpectatorLabel => '관전자';
+
+  @override
+  String lobbySpectatorMore(int count) {
+    return '외 $count명';
+  }
 }

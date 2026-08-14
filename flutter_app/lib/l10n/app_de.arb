@@ -1718,5 +1718,8 @@
   "mailboxDeleted": "Brief gelöscht",
   "mailboxCancel": "Abbrechen",
   "goldHistoryMailClaim": "Postfach-Belohnung",
-  "goldHistoryMailClaimed": "Abgeholt"
+  "goldHistoryMailClaimed": "Abgeholt",
+  "lobbyTakeSeat": "Platz nehmen",
+  "lobbySpectatorLabel": "Zuschauer",
+  "lobbySpectatorMore": "+{count} weitere"
 }

@@ -1718,5 +1718,8 @@
   "mailboxDeleted": "편지를 지웠습니다",
   "mailboxCancel": "취소",
   "goldHistoryMailClaim": "우편함 수령",
-  "goldHistoryMailClaimed": "수령완료"
+  "goldHistoryMailClaimed": "수령완료",
+  "lobbyTakeSeat": "착석",
+  "lobbySpectatorLabel": "관전자",
+  "lobbySpectatorMore": "외 {count}명"
 }

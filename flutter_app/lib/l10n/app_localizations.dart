@@ -8774,6 +8774,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Claimed'**
   String get goldHistoryMailClaimed;
+
+  /// No description provided for @lobbyTakeSeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Sit'**
+  String get lobbyTakeSeat;
+
+  /// No description provided for @lobbySpectatorLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Watching'**
+  String get lobbySpectatorLabel;
+
+  /// No description provided for @lobbySpectatorMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String lobbySpectatorMore(int count);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

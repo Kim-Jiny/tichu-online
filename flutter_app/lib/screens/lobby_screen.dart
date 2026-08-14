@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../utils/spectator_line.dart';
 import '../services/locale_service.dart';
 import '../services/session_service.dart';
 import '../models/player.dart';
@@ -1837,7 +1838,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       (_) => _onInquiryUpdate(),
                     );
                   }
-                  if (game.isInWaitingRoom && !_inRoom) {
+                  // Spectators land here too now — the waiting room is one
+                  // screen for both.
+                  if (game.isInRoomWithoutGame && !_inRoom) {
                     _inRoom = true;
                   }
 
@@ -3377,12 +3380,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     MaterialPageRoute(builder: (_) => const FriendsScreen()),
                   ),
                 ),
-                // Changes what YOU are in the room.
-                _roomMoreItem(
-                  icon: Icons.swap_horiz,
-                  label: l10n.lobbySwitchToSpectator,
-                  onTap: () => game.switchToSpectator(),
-                ),
+                // Changes what YOU are in the room. A spectator is already
+                // one, and their way back is the 착석 button on a seat.
+                if (!game.isSpectator)
+                  _roomMoreItem(
+                    icon: Icons.swap_horiz,
+                    label: l10n.lobbySwitchToSpectator,
+                    onTap: () => game.switchToSpectator(),
+                  ),
                 // Shows who else is watching.
                 _roomMoreItem(
                   icon: Icons.people_outline,
@@ -3597,10 +3602,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 }
               }),
             ),
-          _roomIconButton(
-            icon: Icons.person_add_alt_1,
-            onTap: () => _showInviteFriendsDialog(game),
-          ),
+          // Inviting is a seat-holder's business: an invitee joins the room,
+          // and a spectator has no standing to fill it.
+          if (!game.isSpectator)
+            _roomIconButton(
+              icon: Icons.person_add_alt_1,
+              onTap: () => _showInviteFriendsDialog(game),
+            ),
           // Host-only anyway, so it belongs in the row — hiding it behind ⋯ did
           // not save a non-host anything.
           if (game.isHost)
@@ -3867,7 +3875,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             _buildFillEmptyBotsRow(game),
             const SizedBox(height: 12),
           ],
-          if (game.isHost) ...[
+          // Ready and start belong to whoever is sitting down. A spectator
+          // gets neither — the way in is the 착석 button on a seat.
+          if (game.isSpectator)
+            const SizedBox.shrink()
+          else if (game.isHost) ...[
             Builder(
               builder: (_) {
                 final canStart =
@@ -3972,11 +3984,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onDock: () => _setRoomChatDocked(true, game),
       itemCount: game.chatMessages.length,
       itemBuilder: (context, index) => _buildRoomChatItem(game, index),
+      banner: _buildSpectatorStrip(game),
     );
   }
 
-  /// The default: chat held in the page under the start/ready button, rather
-  /// than floating over it.
   Widget _buildDockedRoomChat(GameService game) {
     _followNewChatMessages(game);
     final accent = _gameAccentColor(game.currentGameType);
@@ -3993,6 +4004,88 @@ class _LobbyScreenState extends State<LobbyScreen> {
       onResizeEnd: _saveDockedChatHeight,
       itemCount: game.chatMessages.length,
       itemBuilder: (context, index) => _buildRoomChatItem(game, index),
+      banner: _buildSpectatorStrip(game),
+    );
+  }
+
+  /// Who is watching, pinned under the chat header.
+  ///
+  /// A label and then names, comma-separated and small. A spectator is not at
+  /// the table — giving them seats or avatars made the waiting room look like
+  /// a ten-player game, which is what the old spectator-only waiting rooms
+  /// did. A name is enough to know who is there, and tapping one opens the
+  /// same profile popup a seat does.
+  ///
+  /// A popular room is the case that decides the shape: twenty names would
+  /// push the chat off the screen, so the line is cut to a character budget
+  /// and the rest becomes "외 N명", which opens the full list. Two lines is
+  /// the most this can ever take.
+  Widget? _buildSpectatorStrip(GameService game) {
+    final watchers = game.spectators;
+    if (watchers.isEmpty) return null;
+    final names = [
+      for (final w in watchers) (w['nickname'] ?? '').toString(),
+    ].where((n) => n.isNotEmpty).toList();
+    if (names.isEmpty) return null;
+
+    final line = spectatorLine(names);
+    final shown = line.shown;
+    final hidden = line.hidden;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F3F1),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Text(
+              L10n.of(context).lobbySpectatorLabel,
+              style: const TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFA1887F),
+              ),
+            ),
+          ),
+          // Separate names rather than one joined string: each has to be
+          // tappable on its own. The comma travels with the name before it, so
+          // it still reads as one flowing line.
+          for (var i = 0; i < shown.length; i++)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showUserProfileDialog(shown[i], game),
+              child: Text(
+                '${shown[i]}${i < shown.length - 1 || hidden > 0 ? ', ' : ''}',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+            ),
+          if (hidden > 0)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showSpectatorListDialog(context, game),
+              child: Text(
+                L10n.of(context).lobbySpectatorMore(hidden),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF7E57C2),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -4458,6 +4551,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     return GestureDetector(
       onTap: () {
+        // A spectator has no seat to move, so an empty one is an invitation to
+        // sit down rather than somewhere to slide across to. Taking it is the
+        // same switch_to_player the old spectator waiting room offered, minus
+        // the screen it used to live on.
+        if (game.isSpectator) {
+          if (isEmpty && !isSlotBlocked) {
+            game.switchToPlayer(slotIndex);
+          } else if (!isEmpty && !isBot) {
+            _showUserProfileDialog(player.name, game);
+          }
+          return;
+        }
         if (canUnblockSlot) {
           game.unblockSlot(slotIndex);
         } else if (canMove) {
@@ -4763,8 +4868,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                       ),
                     ),
+                    // 착석. A spectator's way into the game, on the seat
+                    // itself rather than as a button somewhere else asking
+                    // which seat you meant. Tapping the row does the same
+                    // thing; this is the part that says so.
+                    if (game.isSpectator && isEmpty && !isSlotBlocked)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => game.switchToPlayer(slotIndex),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF66BB6A),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            L10n.of(context).lobbyTakeSeat,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     // Add bot button on empty slots (host only, not ranked, not blocked)
-                    if (isEmpty &&
+                    if (!game.isSpectator &&
+                        isEmpty &&
                         game.isHost &&
                         !game.isRankedRoom &&
                         !isSlotBlocked)

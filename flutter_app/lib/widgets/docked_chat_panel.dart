@@ -30,6 +30,12 @@ class DockedChatPanel extends StatefulWidget {
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
 
+  /// A fixed strip directly under the chat header — who is watching the room.
+  /// Inside the chat rather than above it because that is where the people
+  /// who are not at the table belong, and pinned rather than posted as a
+  /// message because it must not scroll away.
+  final Widget? banner;
+
   /// Dragging the header reports the height the user is asking for, in
   /// logical pixels. The caller decides what to do with it — it can only ask,
   /// because only the caller knows what the seats above still need.
@@ -50,6 +56,7 @@ class DockedChatPanel extends StatefulWidget {
     required this.onUndock,
     required this.itemCount,
     required this.itemBuilder,
+    this.banner,
     this.onResize,
     this.onResizeEnd,
   });
@@ -109,6 +116,7 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       child: Column(
         children: [
           _buildHeader(),
+          ?widget.banner,
           Expanded(
             child: ChatPanelBody(
               scrollController: widget.scrollController,

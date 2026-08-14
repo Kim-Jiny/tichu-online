@@ -577,7 +577,7 @@ async function runMigrations() {
         transaction_id VARCHAR(255) UNIQUE NOT NULL,
         gold_granted INT NOT NULL,
         environment VARCHAR(12) NOT NULL DEFAULT 'production',
-        status VARCHAR(12) NOT NULL DEFAULT 'granted',
+        status VARCHAR(20) NOT NULL DEFAULT 'granted',
         refunded_at TIMESTAMP,
         refund_admin VARCHAR(100),
         verified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -587,16 +587,38 @@ async function runMigrations() {
     // Idempotent guards for dev DBs that already had the pre-refund schema.
     // production table is created fresh so these are no-ops there.
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS environment VARCHAR(12) NOT NULL DEFAULT 'production'`);
-    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(12) NOT NULL DEFAULT 'granted'`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'granted'`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_admin VARCHAR(100)`);
     // status: 'granted' | 'refunded' | 'refund_failed'. refund_failed = store
     // refunded the money but we could NOT claw back gold (user spent it) →
     // lands in the admin triage queue. refund_detected_at = when the store
     // refund was seen/processed; refunded_at = when gold was actually pulled.
-    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_source VARCHAR(12)`);
+    await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_source VARCHAR(20)`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_reason VARCHAR(160)`);
     await client.query(`ALTER TABLE tc_iap_receipts ADD COLUMN IF NOT EXISTS refund_detected_at TIMESTAMP`);
+    // 'refund_failed' is 13 characters and the column was 12, so the one write
+    // that matters most — parking a store refund we could not claw back — threw
+    // 22001 and rolled back, every 30 minutes, forever: the Voided Purchases
+    // poll re-listed the same purchase, failed to mark it, and the row never
+    // reached the admin triage queue. Widening is a catalog-only change for
+    // varchar, so it costs nothing on a live table. refund_source goes with it:
+    // 'admin_google' already sits exactly on its 12-character limit, which is
+    // the same accident waiting for the next source name.
+    // Only when it is actually narrower: ALTER COLUMN TYPE takes an exclusive
+    // lock, and this runs on every boot.
+    const narrow = await client.query(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'tc_iap_receipts'
+          AND column_name IN ('status', 'refund_source')
+          AND character_maximum_length < 20`
+    );
+    for (const row of narrow.rows) {
+      await client.query(
+        `ALTER TABLE tc_iap_receipts ALTER COLUMN ${row.column_name} TYPE VARCHAR(20)`
+      );
+      console.log(`[migration] tc_iap_receipts.${row.column_name} → VARCHAR(20)`);
+    }
 
     // Every verify_iap_purchase attempt is appended here regardless of outcome
     // (granted / already_granted / rejected / error). No idempotency key — this
@@ -3748,8 +3770,8 @@ async function deletePushCampaign(id) {
 /// fails, and everyone who taps is told the reward is not theirs.
 ///
 /// Rows start as 'pending'; recordCampaignSend settles them to sent/failed
-/// once FCM has answered. claimPushCampaign does not look at status — it only
-/// needs the row to exist — so a reward is claimable either way.
+/// once FCM has answered. claimPushCampaign also checks the campaign itself is
+/// open, so a reserved row is not enough to claim before any delivery happened.
 async function reserveCampaignRecipients(campaignId, nicknames) {
   if (!nicknames.length) return { success: true, reserved: 0 };
   const client = await pool.connect();

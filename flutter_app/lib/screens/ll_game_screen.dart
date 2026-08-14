@@ -538,20 +538,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
       blocked: game.blockedUsers.contains(name),
       fallback: isBot
           ? BotAvatar(size: size, name: name, showBadge: true, speed: botSpeed)
-          : Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0E7E3),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.person,
-                size: 26,
-                color: Color(0xFF9C8B84),
-              ),
-            ),
+          : DefaultAvatar(size: size),
     );
     if (isBot || level == null) return avatar;
     return SizedBox(

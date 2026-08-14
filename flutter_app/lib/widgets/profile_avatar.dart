@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+/// Corner radius for an avatar drawn at [size].
+///
+/// Avatars are rounded squares, not circles. The shape was settled on the
+/// profile popup — a 60px avatar with a 14px radius — and this keeps that
+/// proportion at every other size, so a 24px row and a 92px seat read as the
+/// same shape rather than as two different ones.
+///
+/// Everything that draws a face goes through here: the photo, the default
+/// silhouette, and the bot art. If they disagree, a table shows round bots
+/// beside square players.
+double avatarCornerRadius(double size) => size * (14 / 60);
+
 /// Circular profile avatar for a player.
 ///
 /// Shows the paid profile photo when [photoUrl] is a non-empty absolute URL
@@ -28,9 +40,9 @@ class DefaultAvatar extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF0E7E3),
-        shape: BoxShape.circle,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0E7E3),
+        borderRadius: BorderRadius.circular(avatarCornerRadius(size)),
       ),
       alignment: Alignment.center,
       child: Icon(
@@ -57,8 +69,8 @@ class ProfileAvatar extends StatelessWidget {
   /// Optional ring around the avatar (only drawn when a photo is shown).
   final BoxBorder? border;
 
-  /// Corner radius. Null → a circle; a value → a rounded square (to match a
-  /// host surface whose default avatar is a rounded rect).
+  /// Corner radius. Null → [avatarCornerRadius] for this size, which is the
+  /// shape everywhere; pass a value only to match a surface that has its own.
   final double? borderRadius;
 
   const ProfileAvatar({
@@ -90,12 +102,11 @@ class ProfileAvatar extends StatelessWidget {
       placeholder: (_, _) => fallback,
       errorWidget: (_, _, _) => fallback,
     );
-    final clipped = borderRadius == null
-        ? ClipOval(child: image)
-        : ClipRRect(
-            borderRadius: BorderRadius.circular(borderRadius!),
-            child: image,
-          );
+    final radius = borderRadius ?? avatarCornerRadius(size);
+    final clipped = ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: image,
+    );
     if (border == null) {
       return SizedBox(width: size, height: size, child: clipped);
     }
@@ -103,10 +114,7 @@ class ProfileAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: borderRadius == null ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: borderRadius == null
-            ? null
-            : BorderRadius.circular(borderRadius!),
+        borderRadius: BorderRadius.circular(radius),
         border: border,
       ),
       child: clipped,

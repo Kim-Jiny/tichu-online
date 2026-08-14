@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'profile_avatar.dart' show avatarCornerRadius;
 
 /// Avatar for a bot seat.
 ///
@@ -68,22 +69,20 @@ class BotAvatar extends StatelessWidget {
 
   int get _slot => _number <= 0 ? 0 : (_number - 1) % _artCount;
 
-  Widget _clip({required Widget child}) {
-    final radius = borderRadius;
-    return radius == null
-        ? ClipOval(child: child)
-        : ClipRRect(borderRadius: BorderRadius.circular(radius), child: child);
-  }
+  /// Same shape as a human's avatar — see [avatarCornerRadius]. A round bot
+  /// next to a square player looks like two different kinds of thing.
+  double get _radius => borderRadius ?? avatarCornerRadius(size);
+
+  Widget _clip({required Widget child}) =>
+      ClipRRect(borderRadius: BorderRadius.circular(_radius), child: child);
 
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = _palette[_slot];
-    final radius = borderRadius;
     final glyph = DecoratedBox(
       decoration: BoxDecoration(
         color: background,
-        shape: radius == null ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: radius == null ? null : BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(_radius),
       ),
       child: Center(
         child: Icon(

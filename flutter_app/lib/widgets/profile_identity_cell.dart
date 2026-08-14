@@ -130,20 +130,7 @@ class ProfileIdentityCell extends StatelessWidget {
                     ProfileAvatar(
                       photoUrl: photo,
                       size: avatarSize,
-                      fallback: Container(
-                        width: avatarSize,
-                        height: avatarSize,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF0E7E3),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.person,
-                          size: 24,
-                          color: Color(0xFF9C8B84),
-                        ),
-                      ),
+                      fallback: DefaultAvatar(size: avatarSize),
                     ),
                     // A private account has no level to show, so the corner
                     // stays empty rather than claiming level 1.

@@ -756,20 +756,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               showBadge: true,
               speed: player.botSpeed,
             )
-          : Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0E7E3),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.person,
-                size: 26,
-                color: Color(0xFF9C8B84),
-              ),
-            ),
+          : DefaultAvatar(size: size),
     );
     if (player.isBot || player.level == null) return avatar;
     return SizedBox(
@@ -1751,9 +1738,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // the match; say so rather than warning about the wrong outcome.
         content: Text(
           game.canLeaveInProgress
-              ? L10n.of(context).midLeaveConfirmBody(
-                  kMidGameJoinCooldownMinutes,
-                )
+              ? L10n.of(
+                  context,
+                ).midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : L10n.of(context).mtLeaveConfirm,
         ),
         actions: [
@@ -7432,7 +7419,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       ),
     );
   }
-
 
   void _showScoreHistoryDialog(MightyGameStateData state, GameService game) {
     final suitSymbol = {

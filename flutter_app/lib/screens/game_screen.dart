@@ -3474,7 +3474,7 @@ class _GameScreenState extends State<GameScreen> {
             fallback: isBot
                 ? BotAvatar(size: avatarSize * s, name: name)
                 // Reached while the photo loads, or if it's blocked/expired —
-                // a blank circle there reads as a broken image.
+                // a blank square there reads as a broken image.
                 : DefaultAvatar(size: avatarSize * s),
           )
         : null;

@@ -312,9 +312,9 @@ class _SpectatorRow extends StatelessWidget {
                 size: 30,
                 fallback: Container(
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE0D8F5),
-                    shape: BoxShape.circle,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0D8F5),
+                    borderRadius: BorderRadius.circular(avatarCornerRadius(30)),
                   ),
                   child: Text(
                     initial,

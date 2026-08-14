@@ -52,8 +52,10 @@ class ChatBubble extends StatelessWidget {
     this.mineColor = const Color(0xFF64B5F6),
     this.theirsColor = const Color(0xFFF0F0F0),
     this.theirsBorder,
-    this.bubblePadding =
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    this.bubblePadding = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
   });
 
   @override
@@ -74,9 +76,16 @@ class ChatBubble extends StatelessWidget {
             photoUrl: game.chatPhotoUrlFor(sender),
             size: avatarRadius * 2,
             blocked: game.blockedUsers.contains(sender),
-            fallback: CircleAvatar(
-              radius: avatarRadius,
-              backgroundColor: avatarBackground,
+            fallback: Container(
+              width: avatarRadius * 2,
+              height: avatarRadius * 2,
+              decoration: BoxDecoration(
+                color: avatarBackground,
+                borderRadius: BorderRadius.circular(
+                  avatarCornerRadius(avatarRadius * 2),
+                ),
+              ),
+              alignment: Alignment.center,
               child: Icon(
                 Icons.person,
                 size: avatarRadius * 1.15,
@@ -88,8 +97,9 @@ class ChatBubble extends StatelessWidget {
         ],
         Flexible(
           child: Column(
-            crossAxisAlignment:
-                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: isMe
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
               if (!isMe && hasSender)
                 Padding(

@@ -4481,20 +4481,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             photoUrl: resolved,
                             size: avatarSize,
                             blocked: hidden,
-                            fallback: Container(
-                              width: avatarSize,
-                              height: avatarSize,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF0E7E3),
-                                shape: BoxShape.circle,
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.person,
-                                size: 27,
-                                color: Color(0xFF9C8B84),
-                              ),
-                            ),
+                            fallback: DefaultAvatar(size: avatarSize),
                           );
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),

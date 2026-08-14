@@ -7,6 +7,7 @@ import '../utils/chat_day.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -892,9 +893,18 @@ class _FriendsScreenState extends State<FriendsScreen>
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: const Color(0xFFCE93D8),
+                  // A friend request has no photo to show yet, so this stands
+                  // in for one — same shape as every other avatar.
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCE93D8),
+                      borderRadius: BorderRadius.circular(
+                        avatarCornerRadius(32),
+                      ),
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
                       nickname.isNotEmpty ? nickname[0] : '?',
                       style: const TextStyle(

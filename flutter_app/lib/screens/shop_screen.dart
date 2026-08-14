@@ -430,32 +430,19 @@ class _ShopScreenState extends State<ShopScreen> {
     return Tooltip(
       message: L10n.of(context).lobbyPlayerProfile,
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(avatarCornerRadius(44)),
         onTap: () => showPlayerProfileDialog(context, nickname, game),
         child: Padding(
           padding: const EdgeInsets.all(2),
           child: Container(
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(avatarCornerRadius(40)),
               border: Border.all(color: const Color(0xFFE0D8D4), width: 1.5),
             ),
             child: ProfileAvatar(
               photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
               size: 40,
-              fallback: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF0E7E3),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.person,
-                  size: 24,
-                  color: Color(0xFF9C8B84),
-                ),
-              ),
+              fallback: const DefaultAvatar(size: 40),
             ),
           ),
         ),
@@ -3671,20 +3658,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 ProfileAvatar(
                   photoUrl: photo,
                   size: avatarSize,
-                  fallback: Container(
-                    width: avatarSize,
-                    height: avatarSize,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF0E7E3),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.person,
-                      size: 23,
-                      color: Color(0xFF9C8B84),
-                    ),
-                  ),
+                  fallback: DefaultAvatar(size: avatarSize),
                 ),
                 Positioned(
                   right: -3,

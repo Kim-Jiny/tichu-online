@@ -549,20 +549,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       blocked: game.blockedUsers.contains(name),
       fallback: isBot
           ? BotAvatar(size: size, name: name, showBadge: true, speed: botSpeed)
-          : Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0E7E3),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.person,
-                size: 26,
-                color: Color(0xFF9C8B84),
-              ),
-            ),
+          : DefaultAvatar(size: size),
     );
     if (isBot || level == null) return avatar;
     return SizedBox(
@@ -813,7 +800,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
       ),
     );
   }
-
 
   // ── Top Bar ──
   Widget _buildTopBar(SKGameStateData state, GameService game) {
@@ -1663,9 +1649,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
         // the match; say so rather than warning about the wrong outcome.
         content: Text(
           game.canLeaveInProgress
-              ? L10n.of(context).midLeaveConfirmBody(
-                  kMidGameJoinCooldownMinutes,
-                )
+              ? L10n.of(
+                  context,
+                ).midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : L10n.of(context).skGameLeaveConfirm,
           style: const TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
         ),

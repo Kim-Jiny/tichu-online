@@ -582,20 +582,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               showBadge: true,
               speed: player.botSpeed,
             )
-          : Container(
-              width: size,
-              height: size,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0E7E3),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.person,
-                size: 25,
-                color: Color(0xFF9C8B84),
-              ),
-            ),
+          : DefaultAvatar(size: size),
     );
     if (player.isBot || player.level == null) return avatar;
     return SizedBox(

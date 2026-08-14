@@ -291,10 +291,6 @@ async function runMigrations() {
       CREATE INDEX IF NOT EXISTS idx_tc_coupon_redemptions_code
         ON tc_coupon_redemptions (code, redeemed_at DESC)
     `);
-    // A notice can carry a coupon: the post announces it and the reader
-    // redeems from the same screen.
-    await client.query(`ALTER TABLE tc_notices ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40)`);
-
     // User stats columns
     // Snapshot of the target's profile photo at the moment of the report.
     // Report-side hiding keys off this (a NEW photo shows again), and the
@@ -1482,6 +1478,12 @@ async function runMigrations() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // A notice can carry a coupon: the post announces it and the reader
+    // redeems from the same screen. Has to sit here rather than up with the
+    // coupon tables — on a database that already has tc_notices the order
+    // makes no difference, but on an empty one the ALTER ran first and threw,
+    // which aborts the whole migration and the server never starts.
+    await client.query(`ALTER TABLE tc_notices ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40)`);
 
     // Maintenance history table
     await client.query(`

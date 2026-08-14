@@ -164,5 +164,53 @@ console.log('\n[migration round-trip]');
     ranked?.allowMidGameJoin === false);
 }
 
+/**
+ * The end of the match must not delete the person who joined during it.
+ *
+ * SK / Love Letter / Mighty play on a compacted roster and put the slot array
+ * back when the game ends. That restore used to look up each pre-game slot's
+ * occupant by id, and a mid-game joiner's id is in no snapshot — so their
+ * chair came back empty and they vanished from the room while still holding a
+ * socket pointed at it. Nothing then broadcast to them, and their client sat
+ * on a finished game screen forever. Tichu never compacts, which is exactly
+ * why this was invisible there.
+ */
+console.log('\n[the match ends]');
+function runEndCase(gameType, maxPlayers, seats) {
+  const room = makeRoom(gameType, maxPlayers, seats - 1);
+  if (gameType === 'mighty' && maxPlayers > seats) {
+    // A 6-seat mighty room playing 5-handed: the empty chair must stay empty
+    // afterwards, which is the case the newcomer must not be parked in.
+    room.blockSlot('player_host', maxPlayers - 1);
+  }
+  if (!room.startGame()) { failures++; console.log(`  FAIL ${gameType} did not start`); return; }
+  const botSlot = room.getBotSeatSlots()[0];
+  const botId = room.players[botSlot].id;
+  const took = room.takeOverBotSeat(botId, 'player_joiner', '난입');
+  if (!took.success) { failures++; console.log(`  FAIL ${gameType} takeover: ${took.messageKey}`); return; }
+
+  room.game = null;
+  room.resetReady();
+
+  const seatOf = (id) => room.players.findIndex((p) => p !== null && p.id === id);
+  check(`${gameType}: the joiner still has a seat`, seatOf('player_joiner') !== -1);
+  check(`${gameType}: the host is still seated`, seatOf('player_host') !== -1);
+  check(`${gameType}: the roster is back to ${maxPlayers} slots`,
+    room.players.length === maxPlayers, `got ${room.players.length}`);
+  check(`${gameType}: everyone who was playing is still here`,
+    room.players.filter((p) => p !== null).length === seats,
+    `got ${room.players.filter((p) => p !== null).length}, want ${seats}`);
+  check(`${gameType}: nobody is seated twice`,
+    new Set(room.players.filter(Boolean).map((p) => p.id)).size
+      === room.players.filter(Boolean).length);
+  // getState is what broadcastRoomState sends; the bug was invisible until a
+  // room_state failed to reach the joiner.
+  check(`${gameType}: room_state lists the joiner`,
+    room.getState().players.some((p) => p !== null && p.id === 'player_joiner'));
+}
+runEndCase('skull_king', 4, 4);
+runEndCase('love_letter', 4, 4);
+runEndCase('mighty', 6, 5);
+
 console.log(failures === 0 ? '\nPASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

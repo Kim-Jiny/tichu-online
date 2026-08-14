@@ -4784,8 +4784,15 @@ function handleReturnToRoom(ws) {
     sendTo(ws, { type: 'room_closed' });
     return;
   }
-  // Already in lobby (auto-return or another player already triggered it)
-  if (!room.game) return;
+  // Already in lobby (auto-return or another player already triggered it).
+  // Answer anyway instead of dropping it: the asker is a client that still
+  // believes a game is running — SK and mighty send this on a timer once the
+  // board says game_end — and silence leaves it sitting on a finished board.
+  // Repeating the room state is cheap and puts it back in the waiting room.
+  if (!room.game) {
+    sendTo(ws, { type: 'room_state', room: personalizeRoomState(room.getState(), ws) });
+    return;
+  }
   // Only allow when game has ended
   if (room.game.state !== 'game_end') {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'game_still_in_progress') });

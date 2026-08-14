@@ -833,17 +833,7 @@ class GameRoom {
 
     // Restore pre-game slot structure if a previous game rearranged them
     // (e.g. game was abandoned via player removal without full resetReady)
-    if (this._preGamePlayers) {
-      const currentPlayerMap = new Map();
-      for (const p of this.players) {
-        if (p !== null) currentPlayerMap.set(p.id, p);
-      }
-      this.players = this._preGamePlayers.map(slot => {
-        if (slot === null) return null;
-        return currentPlayerMap.get(slot.id) || null;
-      });
-      this._preGamePlayers = null;
-    }
+    this._restorePreGameSlots();
 
     if (this.gameType === 'love_letter') {
       // Love Letter: all non-null players participate
@@ -978,21 +968,54 @@ class GameRoom {
     return true;
   }
 
+  /**
+   * Put the maxPlayers-sized slot array back after a game that compacted it.
+   *
+   * SK / Love Letter / Mighty play on a gap-free roster, so startGame stashes
+   * the pre-game layout and hands the engine the squeezed one. Undoing that is
+   * a matter of putting the people who are still here back in the chairs they
+   * came from.
+   *
+   * The catch is that the roster can change while the game runs: a spectator
+   * takes over a bot's seat, a bot inherits a deserter's. Those people were
+   * never in the snapshot, so matching purely by id dropped them — which meant
+   * a mid-game joiner was deleted from the room the moment the match ended.
+   * They kept a live socket pointing at a room that no longer listed them, so
+   * no room_state ever reached them and their client sat on the game screen
+   * for good. Anyone unmatched is therefore seated in one of the chairs whose
+   * original occupant is gone: seat changes swap one person for another in
+   * place, so the leftovers and the emptied slots pair up one-for-one.
+   */
+  _restorePreGameSlots() {
+    if (!this._preGamePlayers) return;
+    const seated = this.players.filter((p) => p !== null);
+    const byId = new Map(seated.map((p) => [p.id, p]));
+    const restored = this._preGamePlayers.map((slot) => (
+      slot === null ? null : byId.get(slot.id) || null
+    ));
+    const placed = new Set(restored.filter(Boolean).map((p) => p.id));
+    const newcomers = seated.filter((p) => !placed.has(p.id));
+    for (let i = 0; i < restored.length && newcomers.length > 0; i++) {
+      // Only chairs that were occupied before the game: an empty slot stays
+      // empty, and a blocked one must stay blocked.
+      if (this._preGamePlayers[i] !== null && restored[i] === null) {
+        restored[i] = newcomers.shift();
+      }
+    }
+    // Nothing should be left over, but losing someone is the failure that
+    // strands a client — park them in any free, unblocked chair instead.
+    for (let i = 0; i < restored.length && newcomers.length > 0; i++) {
+      if (restored[i] === null && !this.blockedSlots.has(i)) {
+        restored[i] = newcomers.shift();
+      }
+    }
+    this.players = restored;
+    this._preGamePlayers = null;
+  }
+
   resetReady() {
     // Restore original slot structure for SK rooms after game ends
-    if (this._preGamePlayers) {
-      // Rebuild maxPlayers-sized array with current active players in their original slots
-      const currentPlayerMap = new Map();
-      for (const p of this.players) {
-        if (p !== null) currentPlayerMap.set(p.id, p);
-      }
-      this.players = this._preGamePlayers.map(slot => {
-        if (slot === null) return null;
-        // Use current reference if player is still present, otherwise null (they left)
-        return currentPlayerMap.get(slot.id) || null;
-      });
-      this._preGamePlayers = null;
-    }
+    this._restorePreGameSlots();
     // Release slots that were auto-blocked at startGame (e.g., 6-seat Mighty
     // filled with 5 players). Host-applied blocks stay put.
     this._releaseAutoBlockedSlots();

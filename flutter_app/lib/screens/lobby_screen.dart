@@ -2952,7 +2952,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildRoomBody(GameService game) {
     if (!_roomChatDocked) {
       return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
         child: _buildRoomPlayersPanel(game),
       );
     }
@@ -2961,7 +2961,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // every frame; handing it the same widget instances lets updateChild take
     // its identity fast path instead of rebuilding six seats per frame.
     final seats = SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 6),
       child: _buildRoomPlayersPanel(game),
     );
     final chat = _buildDockedRoomChat(game);
@@ -3549,7 +3549,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// seat across both columns — full width at the bottom of a grid reads as a
   /// different kind of thing (a button, a banner) than the seats above it.
   Widget _buildSeatGrid(GameService game) {
-    const gap = 8.0;
+    // Tight on purpose: the seats already read as separate cards (each has its
+    // own fill and border), so the gap only has to keep them from touching.
+    const gap = 6.0;
     final slots = game.roomPlayers;
     final rows = <Widget>[];
     for (int i = 0; i < slots.length; i += 2) {
@@ -3588,7 +3590,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // and wrapping them in a white panel on a tinted page just added a border to
     // look past.
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         children: [
           if (game.isRankedRoom) ...[
@@ -3636,7 +3638,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   slotIndex: i,
                   game: game,
                 ),
-                if (i < game.roomPlayers.length - 1) const SizedBox(height: 8),
+                if (i < game.roomPlayers.length - 1) const SizedBox(height: 6),
               ]
             else
               _buildSeatGrid(game),

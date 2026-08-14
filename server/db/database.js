@@ -4134,14 +4134,33 @@ async function getMailbox(nickname, limit = 50) {
   }
 }
 
+/**
+ * Letters still wanting something from the player.
+ *
+ * Unread ones, and read ones whose reward is still sitting there. Reading is
+ * not the point of a letter that has gold in it — a badge that clears on open
+ * lets someone read it, mean to claim later, and never see a reminder again.
+ * The mark comes off when the reward does.
+ *
+ * A reward past its deadline stops counting: there is nothing left to collect,
+ * so keeping the badge would only be nagging about something already lost.
+ */
 async function getUnreadMailCount(nickname) {
   try {
     const r = await pool.query(
       `SELECT COUNT(*)::int AS n
          FROM tc_mail_recipients r
+         JOIN tc_mail m ON m.id = r.mail_id
          JOIN tc_users u ON u.nickname = r.nickname
-        WHERE r.nickname = $1 AND r.read_at IS NULL AND r.created_at >= u.created_at
-          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($2 || ' days')::interval`,
+        WHERE r.nickname = $1 AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($2 || ' days')::interval
+          AND (
+            r.read_at IS NULL
+            OR (r.claimed_at IS NULL
+                AND (m.reward_gold > 0 OR m.reward_item_key IS NOT NULL)
+                AND (m.expires_at IS NULL
+                     OR m.expires_at >= (NOW() AT TIME ZONE 'UTC')))
+          )`,
       [nickname, MAIL_RETENTION_DAYS]);
     return r.rows[0].n;
   } catch (err) {

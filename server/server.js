@@ -78,7 +78,7 @@ const {
   getSKRecentMatches,
   getPublishedNotices,
   getBroadcastFcmTokens,
-  getMailbox, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
+  getMailbox, getUnreadMailCount, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getPushHistory,
   loadTitleTranslations,
@@ -9961,7 +9961,10 @@ async function handleGetMailbox(ws) {
     type: 'mailbox_result',
     success: result.success !== false,
     mail: result.mail || [],
-    unread: (result.mail || []).filter((m) => !m.read_at).length,
+    // The same rule getUnreadMailCount uses: a letter with an unclaimed reward
+    // still counts, however many times it has been opened.
+    unread: await getUnreadMailCount(ws.nickname),
+    retentionDays: result.retentionDays ?? null,
   });
 }
 

@@ -184,6 +184,42 @@ const goldOf = async (n) => Number((await db.pool.query(
     JSON.stringify(long));
   for (const m of [named, blank, plain, long]) await db.deleteMail(m.id);
 
+  console.log('\n[보상이 있으면 읽어도 알림이 안 사라진다]');
+  // 읽었다고 배지가 사라지면 "나중에 받아야지" 하고 잊는다. 보상이 빠져나갈
+  // 때까지 세어야 한다 — 클라이언트도 같은 규칙을 쓴다(mailNeedsAttention).
+  const plainMail = await db.sendMail({
+    title: `그냥편지 ${run}`, body: 'x', targetKind: 'user', nicknames: [B], createdBy: 'tester',
+  });
+  const base = await db.getUnreadMailCount(B);
+  await db.markMailRead(B, plainMail.id);
+  check('보상 없는 편지는 읽으면 빠진다',
+    (await db.getUnreadMailCount(B)) === base - 1, `${base} → ${await db.getUnreadMailCount(B)}`);
+
+  const rewardMail = await db.sendMail({
+    title: `보상편지 ${run}`, body: 'x', rewardGold: 100,
+    targetKind: 'user', nicknames: [B], createdBy: 'tester',
+  });
+  const withUnread = await db.getUnreadMailCount(B);
+  await db.markMailRead(B, rewardMail.id);
+  check('보상 있는 편지는 읽어도 그대로 센다',
+    (await db.getUnreadMailCount(B)) === withUnread,
+    `${withUnread} → ${await db.getUnreadMailCount(B)}`);
+  await db.claimMail(B, rewardMail.id);
+  check('받고 나서야 빠진다',
+    (await db.getUnreadMailCount(B)) === withUnread - 1,
+    `${withUnread} → ${await db.getUnreadMailCount(B)}`);
+
+  const deadMail = await db.sendMail({
+    title: `기한지난보상 ${run}`, body: 'x', rewardGold: 100,
+    expiresAt: '2020-01-01 00:00:00', targetKind: 'user', nicknames: [B], createdBy: 'tester',
+  });
+  const beforeDead = await db.getUnreadMailCount(B);
+  await db.markMailRead(B, deadMail.id);
+  check('기한이 지난 보상은 읽으면 빠진다 (받을 게 없으니 재촉하지 않는다)',
+    (await db.getUnreadMailCount(B)) === beforeDead - 1,
+    `${beforeDead} → ${await db.getUnreadMailCount(B)}`);
+  for (const m of [plainMail, rewardMail, deadMail]) await db.deleteMail(m.id);
+
   console.log('\n[유저가 직접 지우기]');
   const readOnly = await db.sendMail({
     title: `읽기만 ${run}`, body: 'x', targetKind: 'user', nicknames: [A], createdBy: 'tester',

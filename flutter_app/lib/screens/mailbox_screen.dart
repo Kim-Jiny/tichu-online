@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../utils/gold_format.dart';
+import '../utils/mail_status.dart';
 import '../utils/server_time.dart';
 
 /// 운영자 우편함 — letters the staff sent to this player.
@@ -231,6 +232,9 @@ class _MailboxScreenState extends State<MailboxScreen> {
     final id = (mail['id'] as num).toInt();
     final unread = mail['read_at'] == null;
     final claimed = mail['claimed_at'] != null;
+    // Read is not the same as done: a letter holding a reward keeps its
+    // highlight until the reward is out of it.
+    final pending = mailNeedsAttention(mail);
     final rewardLabel = _rewardLabel(l10n, mail);
     final hasReward = rewardLabel.isNotEmpty;
     final expiresAt = parseServerUtc(mail['expires_at']);
@@ -268,7 +272,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
             },
             title: Row(
               children: [
-                if (unread)
+                if (pending)
                   Container(
                     margin: const EdgeInsets.only(right: 7),
                     padding: const EdgeInsets.symmetric(
@@ -279,8 +283,10 @@ class _MailboxScreenState extends State<MailboxScreen> {
                       color: const Color(0xFFEF6C00),
                       borderRadius: BorderRadius.circular(999),
                     ),
+                    // Says which of the two it is: still unopened, or opened
+                    // and still holding something.
                     child: Text(
-                      l10n.mailboxUnreadBadge,
+                      unread ? l10n.mailboxUnreadBadge : l10n.mailboxClaim,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -293,7 +299,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     (mail['title'] ?? '').toString(),
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: pending ? FontWeight.w800 : FontWeight.w600,
                       color: const Color(0xFF5A4038),
                     ),
                   ),

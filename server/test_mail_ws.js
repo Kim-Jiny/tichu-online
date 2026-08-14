@@ -84,7 +84,10 @@ function client() {
   c.forget('mailbox_result');
   c.send({ type: 'get_mailbox' });
   const afterRead = await c.wait('mailbox_result');
-  check('읽음이 반영된다', afterRead.unread === 0 && afterRead.mail[0].read_at !== null);
+  check('읽음 시각이 남는다', afterRead.mail[0].read_at !== null);
+  // 보상이 들어 있는 편지라 읽었다고 배지가 꺼지면 안 된다 — 그러면
+  // "나중에 받아야지" 하고 잊는다. 수령해야 빠진다.
+  check('보상이 남아 있으니 알림 수는 그대로', afterRead.unread === 1, `${afterRead.unread}`);
 
   c.send({ type: 'claim_mail', mailId: mail.id });
   const claim = await c.wait('mail_claim_result');
@@ -94,6 +97,10 @@ function client() {
   const wallet = await c.wait('wallet_result');
   check('지갑이 새로 내려온다', Number(wallet.wallet?.gold) === goldAtLogin + 300,
     `${goldAtLogin} → ${wallet.wallet?.gold}`);
+  c.forget('mailbox_result');
+  c.send({ type: 'get_mailbox' });
+  const afterClaim = await c.wait('mailbox_result');
+  check('수령하고 나서야 알림 수가 0이 된다', afterClaim.unread === 0, `${afterClaim.unread}`);
 
   console.log('\n[두 번은 안 된다]');
   c.forget('mail_claim_result');

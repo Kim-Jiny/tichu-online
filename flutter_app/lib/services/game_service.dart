@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'iap_service.dart';
 import '../models/player.dart';
+import '../utils/mail_status.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
@@ -402,10 +403,12 @@ class GameService extends ChangeNotifier {
     return count;
   }
 
-  /// Unread letters. Joins the same badge as notices and inquiry replies —
-  /// three different things arrive in the same place, and a player should not
-  /// have to learn which is which to know something is waiting.
-  int get unreadMailCount => mailbox.where((m) => m['read_at'] == null).length;
+  /// Letters still wanting something — unread, or holding a reward nobody has
+  /// taken out yet (see [mailNeedsAttention]). Joins the same badge as notices
+  /// and inquiry replies: three different things arrive in the same place, and
+  /// a player should not have to learn which is which to know something is
+  /// waiting.
+  int get unreadMailCount => mailbox.where(mailNeedsAttention).length;
 
   /// Count of answered inquiries the user hasn't read yet. Drives a persistent
   /// badge so the reply is discoverable — the transient lobby banner alone left

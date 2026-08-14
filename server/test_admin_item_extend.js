@@ -136,6 +136,69 @@ async function give(itemKey, daysFromNow) {
   check('the row is still there afterwards',
     (await hoursLeft(tempItem)) < 0);
 
+  // ── 회수 ────────────────────────────────────────────────────────────────
+  // The mirror of extending, and the part that is easy to half-do: the row
+  // goes but the seat keeps drawing the banner, or a duplicate row survives
+  // and the item is still there after support said they took it.
+  console.log('\n[회수]');
+  await give(tempItem, 30);
+  await db.pool.query(
+    `INSERT INTO tc_user_equips (nickname, banner_key) VALUES ($1, $2)
+     ON CONFLICT (nickname) DO UPDATE SET banner_key = EXCLUDED.banner_key`,
+    [NICK, tempItem],
+  );
+  const rev = await db.adminRevokeUserItem(NICK, tempItem, { adminActor: 'tester' });
+  check('회수가 성공한다', rev.success === true, rev.message);
+  check('아이템 행이 사라진다', (await hoursLeft(tempItem)) === null);
+  const equipAfter = (await db.pool.query(
+    'SELECT banner_key FROM tc_user_equips WHERE nickname = $1', [NICK])).rows[0];
+  check('착용 중이던 슬롯이 비워진다', equipAfter?.banner_key === null, `${equipAfter?.banner_key}`);
+  check('인벤토리에서도 안 보인다',
+    !(await db.getAdminUserInventory(NICK)).items.some((i) => i.item_key === tempItem));
+
+  console.log('\n[중복 보유를 회수하면]');
+  await give(tempItem, 10);
+  await db.pool.query(
+    `INSERT INTO tc_user_items (nickname, item_key, expires_at, source)
+     VALUES ($1, $2, (NOW() AT TIME ZONE 'UTC') + INTERVAL '5 days', 'coupon')`,
+    [NICK, tempItem],
+  );
+  const dup = await db.adminRevokeUserItem(NICK, tempItem, { adminActor: 'tester' });
+  check('한 번에 다 없어진다', dup.success === true && dup.removed === 2, `removed=${dup.removed}`);
+  check('정말 하나도 안 남는다', (await hoursLeft(tempItem)) === null);
+
+  console.log('\n[골드 환불을 선택하면]');
+  const price = Number((await db.pool.query(
+    'SELECT price FROM tc_shop_items WHERE item_key = $1', [tempItem])).rows[0].price);
+  await db.pool.query('UPDATE tc_users SET gold = 100 WHERE nickname = $1', [NICK]);
+  await give(tempItem, 10);
+  const refunded = await db.adminRevokeUserItem(NICK, tempItem, { refundGold: true, adminActor: 'tester' });
+  const goldNow = Number((await db.pool.query(
+    'SELECT gold FROM tc_users WHERE nickname = $1', [NICK])).rows[0].gold);
+  check('구매가만큼 돌려준다', refunded.refunded === price && goldNow === 100 + price,
+    `refunded=${refunded.refunded} gold=${goldNow} price=${price}`);
+  const ledger = (await db.pool.query(
+    `SELECT gold_delta, title FROM tc_gold_history
+      WHERE nickname = $1 ORDER BY id DESC LIMIT 1`, [NICK])).rows[0];
+  check('골드 내역에 사유가 남는다',
+    ledger && Number(ledger.gold_delta) === price && ledger.title === 'item_revoke_refund',
+    JSON.stringify(ledger));
+
+  console.log('\n[환불을 선택하지 않으면]');
+  await give(tempItem, 10);
+  const goldBefore = Number((await db.pool.query(
+    'SELECT gold FROM tc_users WHERE nickname = $1', [NICK])).rows[0].gold);
+  await db.adminRevokeUserItem(NICK, tempItem, { adminActor: 'tester' });
+  const goldAfter = Number((await db.pool.query(
+    'SELECT gold FROM tc_users WHERE nickname = $1', [NICK])).rows[0].gold);
+  check('골드는 그대로다', goldAfter === goldBefore, `${goldBefore} → ${goldAfter}`);
+
+  console.log('\n[없는 아이템을 회수하려 하면]');
+  const missing = await db.adminRevokeUserItem(NICK, tempItem, { adminActor: 'tester' });
+  check('가지고 있지 않다고 답한다', missing.success === false, JSON.stringify(missing));
+
+  await db.pool.query('DELETE FROM tc_user_equips WHERE nickname = $1', [NICK]);
+  await db.pool.query('DELETE FROM tc_gold_history WHERE nickname = $1', [NICK]);
   await db.pool.query('DELETE FROM tc_user_items WHERE nickname = $1', [NICK]);
   await db.pool.query('DELETE FROM tc_users WHERE nickname = $1', [NICK]);
 })()

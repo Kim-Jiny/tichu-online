@@ -4285,6 +4285,124 @@ async function getAdminUserInventory(nickname) {
 /// without time zone` holding UTC, and reading one into JS to add days puts the
 /// result back through node-pg in the process timezone — nine hours out on a
 /// KST host.
+/**
+ * Take an item back off a user.
+ *
+ * The mirror of adminExtendUserItem, and it has to know the same three homes:
+ * the profile-photo pass lives on tc_users, everything else is a tc_user_items
+ * row, and whichever slot it is equipped in has to be cleared or the seat keeps
+ * drawing a banner the user no longer owns.
+ *
+ * [refundGold] pays back the shop price of the item. Off by default: most
+ * revocations are a correction (a mis-issued coupon, a duplicate grant), and
+ * handing gold over for an item they never should have had is the opposite of
+ * the intent. It exists because the other case — "sorry, we're taking this
+ * back" — reads badly without it.
+ */
+async function adminRevokeUserItem(nickname, itemKey, { refundGold = false, adminActor = 'admin' } = {}) {
+  if (!nickname || !itemKey) {
+    return { success: false, message: '유저와 아이템을 확인해 주세요.' };
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (itemKey === 'profile_photo') {
+      const r = await client.query(
+        `UPDATE tc_users
+            SET profile_photo_status = 'none', profile_photo_expires_at = NULL
+          WHERE nickname = $1
+          RETURNING profile_photo_key`,
+        [nickname],
+      );
+      if (r.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '유저를 찾을 수 없습니다.' };
+      }
+      await client.query('COMMIT');
+      console.log(`[admin] ${adminActor} revoked profile_photo from ${nickname}`);
+      // The uploaded file itself is left alone — the pass is what was revoked,
+      // and deleting someone's photo is a separate, louder decision.
+      return { success: true, refunded: 0, photoKey: r.rows[0].profile_photo_key || null };
+    }
+
+    const owned = await client.query(
+      `SELECT ui.id, si.name_ko, si.price, si.effect_type
+         FROM tc_user_items ui
+         JOIN tc_shop_items si ON si.item_key = ui.item_key
+        WHERE ui.nickname = $1 AND ui.item_key = $2
+        FOR UPDATE OF ui`,
+      [nickname, itemKey],
+    );
+    if (owned.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: '이 유저가 가지고 있지 않은 아이템입니다.' };
+    }
+
+    // Every row, not just the newest: duplicates exist (an extension that
+    // inserted instead of extending, a coupon granted twice), and leaving one
+    // behind means the revoke visibly did nothing.
+    const del = await client.query(
+      `DELETE FROM tc_user_items WHERE nickname = $1 AND item_key = $2`,
+      [nickname, itemKey],
+    );
+
+    // Unequip wherever it sat. Each slot is checked by key rather than by the
+    // item's category, so a mis-categorised item cannot survive in a slot.
+    await client.query(
+      `UPDATE tc_user_equips
+          SET banner_key    = CASE WHEN banner_key    = $2 THEN NULL ELSE banner_key END,
+              title_key     = CASE WHEN title_key     = $2 THEN NULL ELSE title_key END,
+              theme_key     = CASE WHEN theme_key     = $2 THEN NULL ELSE theme_key END,
+              card_skin_key = CASE WHEN card_skin_key = $2 THEN NULL ELSE card_skin_key END,
+              updated_at    = (NOW() AT TIME ZONE 'UTC')
+        WHERE nickname = $1`,
+      [nickname, itemKey],
+    );
+
+    // Feature passes (top-card counter and friends) are gated by an items row
+    // plus an on/off preference. The row is gone; drop the stale preference so
+    // a re-purchase starts from the default instead of an old "off".
+    const effectType = owned.rows[0].effect_type;
+    if (effectType) {
+      await client.query(
+        `DELETE FROM tc_user_feature_off WHERE nickname = $1 AND effect_type = $2`,
+        [nickname, effectType],
+      );
+    }
+
+    let refunded = 0;
+    if (refundGold) {
+      const price = parseInt(owned.rows[0].price, 10) || 0;
+      // One item's price, not one per duplicate row: the duplicates are the
+      // bug being cleaned up, and paying for each would reward it.
+      if (price > 0) {
+        await client.query(
+          `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+          [nickname, price],
+        );
+        await client.query(
+          `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+           VALUES ($1, $2, 'admin', 'item_revoke_refund', $3)`,
+          [nickname, price, `${owned.rows[0].name_ko || itemKey} 회수 환불 (${adminActor})`],
+        );
+        refunded = price;
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`[admin] ${adminActor} revoked ${itemKey} x${del.rowCount} from ${nickname}`
+      + (refunded ? ` (refunded ${refunded}g)` : ''));
+    return { success: true, removed: del.rowCount, refunded, name: owned.rows[0].name_ko || itemKey };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Admin revoke user item error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 async function adminExtendUserItem(nickname, itemKey, days, adminActor = 'admin') {
   const n = Math.trunc(Number(days));
   if (!Number.isFinite(n) || n === 0) {
@@ -10965,6 +11083,7 @@ module.exports = {
   getShopPurchaseLog,
   getShopPurchaseLogSummary,
   adminExtendUserItem,
+  adminRevokeUserItem,
   getShopItems,
   getUserItems,
   buyItem,

@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
@@ -4314,7 +4314,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </div>
         ${inventory?.items?.length ? `
           <div class="table-wrap"><table>
-            <tr><th>아이템</th><th>분류</th><th>출처</th><th>획득</th><th>만료</th><th>상태</th><th>연장</th></tr>
+            <tr><th>아이템</th><th>분류</th><th>출처</th><th>획득</th><th>만료</th><th>상태</th><th>연장</th><th>회수</th></tr>
             ${inventory.items.map(it => {
               const expires = it.expires_at ? new Date(it.expires_at) : null;
               const live = it.is_permanent || !expires || expires.getTime() > Date.now();
@@ -4349,6 +4349,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                            style="width:70px;padding:5px 7px;border:1px solid var(--line);border-radius:7px">
                     <button class="btn" style="padding:5px 11px">적용</button>
                   </form>` : '<span class="muted" style="font-size:12px">-</span>'}</td>
+                <td>
+                  <form method="POST" action="/tc-backstage/users/${encodeURIComponent(user.nickname)}/items/revoke"
+                        style="display:flex;gap:6px;align-items:center"
+                        onsubmit="return confirm('${escapeHtml((it.name_ko || it.item_key).replace(/'/g, ''))} 을(를) 회수합니다. 착용 중이면 해제됩니다. 되돌릴 수 없습니다.')">
+                    <input type="hidden" name="item_key" value="${escapeHtml(it.item_key)}">
+                    <label style="font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:3px;white-space:nowrap">
+                      <input type="checkbox" name="refund_gold" value="1"${it.price ? '' : ' disabled'}>
+                      ${it.price ? `${formatNumber(it.price)}G 환불` : '환불 없음'}
+                    </label>
+                    <button class="btn btn-danger" style="padding:5px 11px">회수</button>
+                  </form>
+                </td>
               </tr>`;
             }).join('')}
           </table></div>
@@ -7640,6 +7652,26 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const msg = result.success
       ? `${days > 0 ? `${days}일 연장` : `${-days}일 단축`}했습니다. 새 만료: ${formatDate(result.expiresAt)} (KST)`
       : result.message || '연장하지 못했습니다.';
+    return redirect(
+      res,
+      `/tc-backstage/users/${encodeURIComponent(nickname)}`
+        + `?extended=${result.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(msg)}`,
+    );
+  }
+
+  const itemRevokeMatch = pathname.match(/^\/tc-backstage\/users\/([^/]+)\/items\/revoke$/);
+  if (itemRevokeMatch && method === 'POST') {
+    const nickname = decodeURIComponent(itemRevokeMatch[1]);
+    const body = await parseBody(req);
+    const result = await adminRevokeUserItem(nickname, String(body.item_key || ''), {
+      refundGold: body.refund_gold === '1',
+      adminActor: sessionInfo.session.username || 'admin',
+    });
+    const msg = result.success
+      ? `${result.name || body.item_key} 회수했습니다.`
+        + (result.removed > 1 ? ` (중복 ${result.removed}건)` : '')
+        + (result.refunded ? ` ${formatNumber(result.refunded)}골드를 돌려줬습니다.` : '')
+      : result.message || '회수하지 못했습니다.';
     return redirect(
       res,
       `/tc-backstage/users/${encodeURIComponent(nickname)}`

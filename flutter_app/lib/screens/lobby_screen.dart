@@ -2476,7 +2476,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: sorted.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 6),
       itemBuilder: (context, index) {
         final room = sorted[index];
         return _buildRoomItem(room);
@@ -2576,15 +2576,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 children: [
                   // Left color strip — stretches to cell height. Square-cornered
                   // on purpose; the ClipRRect above gives it the card's curve.
-                  Container(width: 6, color: stripColor),
+                  Container(width: 7, color: stripColor),
                   Expanded(
                     child: Padding(
-                      // Tightened from 12/14/16/14. The row's tallest item is a
-                      // 30px action box, so 14 top and bottom was padding the
-                      // card out well past what its content needed, and the
-                      // right inset stacked on top of the last chip's own
-                      // margin.
-                      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+                      // Tightened again (was 11/9). What the padding gives
+                      // up goes into the type and the icons below: the row is
+                      // read at arm's length in a list of a dozen, so legible
+                      // content beats air around it.
+                      padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
                       child: Row(
                         children: [
                           Expanded(
@@ -2595,10 +2594,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
+                                        horizontal: 8,
                                         vertical: 3,
                                       ),
-                                      margin: const EdgeInsets.only(right: 8),
+                                      margin: const EdgeInsets.only(right: 7),
                                       decoration: BoxDecoration(
                                         color: badgeBgColor,
                                         borderRadius: BorderRadius.circular(8),
@@ -2606,7 +2605,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       child: Text(
                                         badgeText,
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                           color: badgeTextColor,
                                         ),
@@ -2624,8 +2623,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         // Taller than wide (113x144), so it
                                         // ran past the cap height of the room
                                         // name beside it at the old 16.
-                                        width: 11,
-                                        height: 13,
+                                        width: 12,
+                                        height: 14,
                                         fit: BoxFit.contain,
                                       ),
                                       const SizedBox(width: 4),
@@ -2633,8 +2632,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     if (room.isRanked) ...[
                                       Image.asset(
                                         'assets/icons/lankIcon.webp',
-                                        width: 18,
-                                        height: 16,
+                                        width: 20,
+                                        height: 18,
                                         fit: BoxFit.contain,
                                       ),
                                       const SizedBox(width: 4),
@@ -2643,8 +2642,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       child: Text(
                                         room.name,
                                         style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
                                           color: nameColor,
                                         ),
                                         maxLines: 1,
@@ -2653,7 +2652,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 3),
                                 Wrap(
                                   spacing: 4,
                                   runSpacing: 2,
@@ -2671,7 +2670,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 room.targetScore,
                                               ),
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           color: subTextColor,
                                         ),
                                       ),
@@ -2698,7 +2697,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           child: Text(
                                             _skExpansionShortLabel(exp, l10n),
                                             style: const TextStyle(
-                                              fontSize: 9,
+                                              fontSize: 10,
                                               color: Color(0xFFFFD54F),
                                               fontWeight: FontWeight.bold,
                                               height: 1.0,
@@ -2753,7 +2752,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 // Bare artwork — no plate, no border. Four
                                 // boxed chips in a row read as a toolbar; the
                                 // icons alone read as what the room is.
-                                padding: const EdgeInsets.only(right: 10),
+                                padding: const EdgeInsets.only(right: 8),
                                 // Availability rides on opacity, since artwork
                                 // can't be recoloured and a second symbol would
                                 // undo the point of using this one: full when a
@@ -2763,8 +2762,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   opacity: room.canJoinInProgress ? 1.0 : 0.4,
                                   child: Image.asset(
                                     'assets/icons/allowBotReplacement.webp',
-                                    width: 26,
-                                    height: 21,
+                                    width: 28,
+                                    height: 23,
                                     fit: BoxFit.contain,
                                   ),
                                 ),
@@ -2777,14 +2776,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 // Still the tap target that opens spectating —
                                 // the padding keeps it thumb-sized without a
                                 // border drawing a button around it.
-                                padding: const EdgeInsets.fromLTRB(2, 4, 10, 4),
+                                padding: const EdgeInsets.fromLTRB(2, 4, 8, 4),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Image.asset(
                                       'assets/icons/allowSpectators.webp',
-                                      width: 26,
-                                      height: 20,
+                                      width: 28,
+                                      height: 22,
                                       fit: BoxFit.contain,
                                     ),
                                     if (room.spectatorCount > 0) ...[
@@ -2792,7 +2791,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Text(
                                         '${room.spectatorCount}',
                                         style: const TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w700,
                                           color: Color(0xFF7A6A62),
                                         ),
@@ -2811,17 +2810,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 : l10n.lobbyRoomWaiting,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                                horizontal: 11,
+                                vertical: 7,
                               ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF6F3F2),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(11),
                               ),
                               child: Text(
                                 '${room.playerCount}/${room.effectiveMaxPlayers}',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   // Green when there is no seat left, amber
                                   // while there is.

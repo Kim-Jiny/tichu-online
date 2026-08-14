@@ -78,7 +78,7 @@ const {
   getSKRecentMatches,
   getPublishedNotices,
   getBroadcastFcmTokens,
-  getMailbox, markMailRead, claimMail,
+  getMailbox, markMailRead, claimMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getPushHistory,
   loadTitleTranslations,
@@ -2818,6 +2818,13 @@ setTimeout(runGoogleVoidedPoll, 60 * 1000);
 const PUSH_PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 setInterval(() => { purgePushLogs().catch(() => {}); }, PUSH_PURGE_INTERVAL_MS);
 setTimeout(() => { purgePushLogs().catch(() => {}); }, 5 * 60 * 1000);
+
+// Lapsed cosmetics, and the equip slots still pointing at them. The per-user
+// cleanup only fires when that user opens their inventory — but their banner
+// is drawn from their profile, which anybody can pull up, so a player who
+// never opens the shop again would wear an expired one indefinitely.
+setInterval(() => { sweepExpiredCosmetics().catch(() => {}); }, 6 * 60 * 60 * 1000);
+setTimeout(() => { sweepExpiredCosmetics().catch(() => {}); }, 3 * 60 * 1000);
 
 /**
  * Failed-login throttle.

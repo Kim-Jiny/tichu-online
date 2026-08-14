@@ -3647,8 +3647,34 @@ async function getFcmTokenStats() {
 /// [days] overrides the shop's own duration (a coupon can hand out a week of
 /// something the shop sells by the month). Runs on the caller's client so it
 /// joins their transaction.
+/**
+ * Hand an item to a user from a coupon, a campaign, or a letter.
+ *
+ * [days] decides the shape of the grant, NOT the item's catalogue flag. A
+ * permanent item given with days is a trial — a pioneer theme for a day, a
+ * one-shot ticket that has to be used this week — which is a thing the staff
+ * want to be able to do, and the reason days is honoured here even for
+ * is_permanent rows. Without days it is permanent, whatever the item is.
+ *
+ * The one thing a timed grant must never do is take permanence away. Someone
+ * who already owns the theme outright and then gets handed a one-day trial of
+ * it keeps the theme: the trial is a no-op, not a downgrade.
+ */
 async function grantItemToUser(client, nickname, item, days, source) {
-  const permanent = item.is_permanent === true || !days;
+  const n = parseInt(days, 10);
+  const timed = Number.isFinite(n) && n > 0;
+  if (timed) {
+    // Already held forever? Nothing a trial can add.
+    const forever = await client.query(
+      `SELECT 1 FROM tc_user_items
+        WHERE nickname = $1 AND item_key = $2 AND expires_at IS NULL LIMIT 1`,
+      [nickname, item.item_key],
+    );
+    if (forever.rows.length > 0) {
+      return { itemKey: item.item_key, expiresAt: null, alreadyOwned: true };
+    }
+  }
+  const permanent = !timed;
   if (permanent) {
     const owned = await client.query(
       'SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
@@ -3669,19 +3695,20 @@ async function grantItemToUser(client, nickname, item, days, source) {
   // buyItem and the backstage's extend button use — adding days to a date in
   // the past hands over nothing.
   const existing = await client.query(
-    'SELECT id FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
+    `SELECT id FROM tc_user_items
+      WHERE nickname = $1 AND item_key = $2 AND expires_at IS NOT NULL LIMIT 1`,
     [nickname, item.item_key],
   );
   if (existing.rows.length > 0) {
     const r = await client.query(
       `UPDATE tc_user_items
        SET expires_at = CASE
-         WHEN expires_at IS NULL OR expires_at < (NOW() AT TIME ZONE 'UTC')
+         WHEN expires_at < (NOW() AT TIME ZONE 'UTC')
            THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
          ELSE expires_at + ($2 || ' days')::interval END
        WHERE id = $1
        RETURNING expires_at`,
-      [existing.rows[0].id, days],
+      [existing.rows[0].id, n],
     );
     return {
       itemKey: item.item_key,
@@ -3694,7 +3721,7 @@ async function grantItemToUser(client, nickname, item, days, source) {
      VALUES ($1, $2, (NOW() AT TIME ZONE 'UTC') + ($3 || ' days')::interval,
              FALSE, $4)
      RETURNING expires_at`,
-    [nickname, item.item_key, days, source],
+    [nickname, item.item_key, n, source],
   );
   return { itemKey: item.item_key, expiresAt: r.rows[0].expires_at };
 }
@@ -5037,14 +5064,92 @@ async function getShopItems() {
   }
 }
 
+/**
+ * Drop this user's lapsed items — and take off whatever they were wearing.
+ *
+ * Deleting the row alone was not enough: tc_user_equips still pointed at the
+ * key, and every display path reads the equip slot without checking ownership,
+ * so an expired banner kept being drawn on the seat forever. The item was gone
+ * from the inventory and still on the player's face.
+ *
+ * The title slot is special. A custom title lives there as `custom:<colour>`
+ * with its text on tc_users and no tc_user_items row behind it, so matching it
+ * against the inventory would strip a title the user is entitled to wear.
+ */
 async function cleanupExpiredItems(client, nickname) {
-  await client.query(
+  const removed = await client.query(
     `
     DELETE FROM tc_user_items
-    WHERE nickname = $1 AND expires_at IS NOT NULL AND expires_at < NOW()
+    WHERE nickname = $1 AND expires_at IS NOT NULL AND expires_at < (NOW() AT TIME ZONE 'UTC')
+    RETURNING item_key
     `,
     [nickname]
   );
+  if (removed.rowCount === 0) return;
+  await clearEquipsNotOwned(client, nickname);
+}
+
+/**
+ * Blank any equip slot holding something the user no longer has.
+ *
+ * Written against the inventory rather than against a list of just-expired
+ * keys so it also repairs slots left behind by anything else — an admin
+ * revoke, a hand-edited row, an older build that expired an item without
+ * unequipping it.
+ */
+async function clearEquipsNotOwned(client, nickname) {
+  await client.query(
+    `
+    UPDATE tc_user_equips e
+       SET banner_key    = CASE WHEN e.banner_key    IS NULL OR owned.banner    THEN e.banner_key    ELSE NULL END,
+           theme_key     = CASE WHEN e.theme_key     IS NULL OR owned.theme     THEN e.theme_key     ELSE NULL END,
+           card_skin_key = CASE WHEN e.card_skin_key IS NULL OR owned.card_skin THEN e.card_skin_key ELSE NULL END,
+           -- 'custom:…' has no inventory row by design; leave it alone.
+           title_key     = CASE WHEN e.title_key IS NULL
+                                  OR e.title_key LIKE 'custom:%'
+                                  OR owned.title THEN e.title_key ELSE NULL END,
+           updated_at    = (NOW() AT TIME ZONE 'UTC')
+      FROM (SELECT
+              EXISTS (SELECT 1 FROM tc_user_items i WHERE i.nickname = $1 AND i.item_key = eq.banner_key)    AS banner,
+              EXISTS (SELECT 1 FROM tc_user_items i WHERE i.nickname = $1 AND i.item_key = eq.theme_key)     AS theme,
+              EXISTS (SELECT 1 FROM tc_user_items i WHERE i.nickname = $1 AND i.item_key = eq.card_skin_key) AS card_skin,
+              EXISTS (SELECT 1 FROM tc_user_items i WHERE i.nickname = $1 AND i.item_key = eq.title_key)     AS title
+            FROM tc_user_equips eq WHERE eq.nickname = $1) AS owned
+     WHERE e.nickname = $1
+    `,
+    [nickname]
+  );
+}
+
+/**
+ * The same repair for everyone, on a timer.
+ *
+ * Per-user cleanup only runs when that user opens their inventory or equips
+ * something — but the face other players see is read from their profile, which
+ * anyone can pull up at any time. Someone who never opens the shop again would
+ * otherwise wear a lapsed banner indefinitely.
+ */
+async function sweepExpiredCosmetics() {
+  const client = await pool.connect();
+  try {
+    const removed = await client.query(
+      `DELETE FROM tc_user_items
+        WHERE expires_at IS NOT NULL AND expires_at < (NOW() AT TIME ZONE 'UTC')
+        RETURNING nickname`);
+    const touched = [...new Set(removed.rows.map((r) => r.nickname))];
+    for (const nickname of touched) {
+      await clearEquipsNotOwned(client, nickname);
+    }
+    if (touched.length > 0) {
+      console.log(`[items] expired ${removed.rowCount} row(s), unequipped for ${touched.length} user(s)`);
+    }
+    return { success: true, expired: removed.rowCount, users: touched.length };
+  } catch (err) {
+    console.error('sweepExpiredCosmetics error:', err.message);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
 }
 
 // Inventory
@@ -11711,6 +11816,8 @@ module.exports = {
   adminRevokeUserItem,
   getShopItems,
   getUserItems,
+  sweepExpiredCosmetics,
+  grantItemToUser,
   buyItem,
   equipItem,
   useItem,

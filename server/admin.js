@@ -4804,8 +4804,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             </div>
             <div>
               <label style="font-weight:600;display:block;margin-bottom:4px">아이템 기간(일)</label>
-              <input type="number" name="reward_days" min="1" placeholder="상품 기본값"
-                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <input type="number" name="reward_days" min="1" placeholder="비우면 영구/상품 기본값"
+                style="width:170px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">
+                영구 아이템에 일수를 넣으면 <b>그 기간만 쓰는 체험</b>으로 나갑니다. 비우면 영구.
+                이미 영구로 가진 사람에게는 아무 일도 일어나지 않습니다(뺏지 않음).
+              </div>
             </div>
             <div>
               <label style="font-weight:600;display:block;margin-bottom:4px">수령 마감 (KST)</label>
@@ -5059,8 +5063,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             </div>
             <div>
               <label>아이템 기간(일)</label>
-              <input type="number" name="reward_days" min="1" placeholder="상품 기본값"
-                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <input type="number" name="reward_days" min="1" placeholder="비우면 영구/상품 기본값"
+                style="width:170px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">
+                영구 아이템에 일수를 넣으면 <b>그 기간만 쓰는 체험</b>으로 나갑니다. 비우면 영구.
+                이미 영구로 가진 사람에게는 아무 일도 일어나지 않습니다(뺏지 않음).
+              </div>
             </div>
           </div>
           <div>
@@ -8153,9 +8161,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 <option value="">— 선택 —</option>
                 ${itemOptions}
               </select>
-              <label style="font-weight:600;display:block;margin:10px 0 4px">기간 (일) — 비우면 상점 기본값</label>
+              <label style="font-weight:600;display:block;margin:10px 0 4px">기간 (일) — 비우면 영구 / 상점 기본값</label>
               <input type="number" name="reward_days" min="1" value="${f.reward_days || ''}"
                      style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">
+                영구 아이템에 일수를 넣으면 <b>그 기간만 쓰는 체험</b>으로 나갑니다. 비우면 영구.
+                이미 영구로 가진 사람에게는 아무 일도 일어나지 않습니다(뺏지 않음).
+              </div>
             </div>
             <div>
               <label style="font-weight:600;display:block;margin-bottom:4px">최대 등록 인원 — 비우면 무제한</label>

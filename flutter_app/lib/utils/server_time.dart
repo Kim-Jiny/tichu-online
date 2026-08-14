@@ -1,15 +1,20 @@
 /// Reading timestamps the server sends.
 ///
-/// The database columns are `timestamp without time zone` holding UTC, so what
-/// arrives on the wire is a naked `2026-08-14 03:22:57` with nothing saying
-/// which zone it is in. `DateTime.parse` reads that as LOCAL time, which is
-/// silently correct on a UTC device and nine hours out in Seoul: a claim
-/// deadline moves into the future, a "last seen" jumps forward, a sent date
-/// shows tomorrow. Marking it as UTC before parsing is the whole fix.
+/// A guard, not a fix for anything currently broken. Today every timestamp
+/// leaves the server marked: the columns are `timestamp without time zone`
+/// holding UTC, the pool pins its session to UTC, and node-pg therefore builds
+/// a Date that JSON.stringify writes as `2026-08-14T03:22:57.000Z` — verified
+/// identical under TZ=UTC, Asia/Seoul and America/New_York, since the session
+/// zone decides it rather than the host's.
 ///
-/// Strings that already carry a marker (`…Z`, `…+09:00`) are left alone — some
-/// payloads are serialized by node-pg with an offset attached, and adding a
-/// second one would corrupt what was already right.
+/// What this protects against is a payload that arrives NAKED —
+/// `2026-08-14 03:22:57` with nothing saying which zone it is in — which is
+/// what any hand-built timestamp string would be. `DateTime.parse` reads that
+/// as LOCAL, silently correct on a UTC device and nine hours out in Seoul: a
+/// claim deadline moves into the future, a sent date shows tomorrow.
+///
+/// Strings that already carry a marker (`…Z`, `…+09:00`) are passed through
+/// untouched — adding a second one would corrupt what was already right.
 library;
 
 DateTime? parseServerUtc(Object? value) {

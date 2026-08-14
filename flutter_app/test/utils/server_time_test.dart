@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tichu_online/utils/server_time.dart';
 
-/// Timestamps arrive from the server as naked UTC — `2026-08-14 03:22:57`,
-/// with nothing in the string saying so. Every consumer that reads one with
-/// plain DateTime.parse gets it right on a UTC machine and wrong by the
-/// device's offset everywhere else, which is why this keeps coming back:
-/// a mail deadline that has not passed reads as expired, a letter sent this
-/// morning is dated tomorrow.
+/// Server timestamps arrive marked today (`…Z`) because the pool pins its
+/// session to UTC and node-pg serializes accordingly. This covers the case
+/// that marking protects against: a NAKED `2026-08-14 03:22:57`, which
+/// DateTime.parse reads as local — right on a UTC machine, wrong by the
+/// device's offset everywhere else. A mail deadline that has not passed then
+/// reads as expired, and a letter sent this morning is dated tomorrow.
 ///
 /// The tests compare instants, not wall-clock text, so they hold whatever
 /// timezone the machine running them is in.

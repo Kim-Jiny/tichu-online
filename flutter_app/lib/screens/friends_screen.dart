@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/chat_day.dart';
+import '../utils/friend_order.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -325,20 +326,15 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _buildFriendsTab() {
     return Consumer<GameService>(
       builder: (context, game, _) {
-        final sorted = List<Map<String, dynamic>>.from(game.friendsData);
-        sorted.sort((a, b) {
-          final aOnline = a['isOnline'] == true ? 0 : 1;
-          final bOnline = b['isOnline'] == true ? 0 : 1;
-          return aOnline.compareTo(bOnline);
-        });
-
-        // Merge unread counts from conversations
+        // Unread counts first: they decide the order, not just the badge.
         final unreadMap = <String, int>{};
         for (final c in game.dmConversations) {
           final partner = c['partner'] as String? ?? '';
           final count = c['unread_count'] as int? ?? 0;
           if (partner.isNotEmpty && count > 0) unreadMap[partner] = count;
         }
+        // Waiting for a reply → online → most recently seen. See sortFriends.
+        final sorted = sortFriends(game.friendsData, unreadMap);
 
         Future<void> onRefresh() async {
           _refreshFriends();

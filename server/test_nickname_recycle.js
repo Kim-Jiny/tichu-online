@@ -38,6 +38,14 @@ async function main() {
   const NICK = '재활용닉';
   const raw = new Client({ connectionString: TEST_DB_URL });
   await raw.connect();
+  // The fixtures below rely on DEFAULT CURRENT_TIMESTAMP, which records the
+  // session's wall clock into a `timestamp without time zone` column. The app
+  // pins its pool to UTC (see the pool's connect hook); this client is not
+  // that pool, so on a host whose Postgres runs in KST the fixture rows land
+  // nine hours ahead of the account rows and the created_at bound this test
+  // exists to check appears broken. Pin it the same way, so the test measures
+  // the code rather than the machine's timezone.
+  await raw.query("SET TIME ZONE 'UTC'");
 
   try {
     // ── first owner: one match, one gold ledger row, one report ──────────

@@ -4415,8 +4415,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // which is enough for the level chip that overhangs its bottom
                 // corner by 3. Anything tighter starts clipping the chip
                 // rather than trimming space.
+                //
+                // The side padding is that same 7, so the gap from the avatar
+                // to the box is identical on all four edges. At 8 it wasn't,
+                // and one pixel of difference is visible when the thing it
+                // frames is a square.
                 height: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 7),
                 decoration: BoxDecoration(
                   color: bannerGradient == null ? fallbackColor : null,
                   gradient: bannerGradient,

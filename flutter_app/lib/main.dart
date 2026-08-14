@@ -142,17 +142,23 @@ void _rememberCampaignTap(RemoteMessage message) {
 /// stall while Firebase/APNs state settles. Waiting before runApp means Flutter
 /// never paints its first frame, so iOS keeps showing the previous app snapshot
 /// and it looks like the app is frozen on the last screen.
+///
+/// No deadline on it either. Not awaiting is what keeps the first frame free —
+/// a timeout would add nothing there (it cannot cancel the plugin call, only
+/// stop listening to it) and would throw away a real tap: the launch that is
+/// slowest to answer is exactly the one that started from a notification. The
+/// id it carries is only queued here and sent once a logged-in socket exists,
+/// which takes longer than this call ever will, so a late answer still pays
+/// out and a discarded one never can.
 void _startCampaignTapListeners() {
   FirebaseMessaging.onMessageOpenedApp.listen(_rememberCampaignTap);
   FirebaseMessaging.instance
       .getInitialMessage()
-      .timeout(const Duration(seconds: 2))
       .then((initial) {
         if (initial != null) _rememberCampaignTap(initial);
       })
       .catchError((Object error) {
         debugPrint('Initial campaign message unavailable: $error');
-        return null;
       });
 }
 

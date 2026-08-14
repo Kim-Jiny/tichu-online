@@ -187,6 +187,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
     final expiresAt = parseServerUtc(mail['expires_at']);
     final expired = expiresAt != null && expiresAt.isBefore(DateTime.now());
     final sentAt = parseServerUtc(mail['created_at']);
+    final sender = (mail['sender_name'] ?? '').toString().trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -245,7 +246,9 @@ class _MailboxScreenState extends State<MailboxScreen> {
             padding: const EdgeInsets.only(top: 3),
             child: Text(
               [
-                l10n.mailboxFrom,
+                // A letter can name its own sender — an event, a person —
+                // otherwise it comes from the team, in the reader's language.
+                sender.isEmpty ? l10n.mailboxFrom : sender,
                 if (sentAt != null) _shortDate(sentAt),
               ].join(' · '),
               style: const TextStyle(fontSize: 11.5, color: Color(0xFFA1887F)),

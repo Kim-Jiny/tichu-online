@@ -4763,6 +4763,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div style="font-weight:700">${escapeHtml(m.title)}</div>
           <div class="muted" style="font-size:12px">${escapeHtml(
             m.body.length > 60 ? `${m.body.slice(0, 60)}…` : m.body)}</div>
+          ${m.sender_name
+            ? `<div style="font-size:11px;color:#6a1b9a">보내는 사람: ${escapeHtml(m.sender_name)}</div>`
+            : ''}
         </td>
         <td style="font-size:12.5px">${target}</td>
         <td>${reward}</td>
@@ -4800,10 +4803,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               </div>
             </div>
           </div>
-          <div>
-            <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
-            <input type="text" name="title" required maxlength="200" placeholder="예: 문의하신 건 처리했습니다"
-              style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:260px">
+              <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
+              <input type="text" name="title" required maxlength="200" placeholder="예: 문의하신 건 처리했습니다"
+                style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+            <div style="min-width:200px">
+              <label style="font-weight:600;display:block;margin-bottom:4px">보내는 사람</label>
+              <input type="text" name="sender_name" maxlength="60" placeholder="비우면 운영팀 이름"
+                style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">
+                비우면 앱이 각 언어로 <b>티츄 온라인 운영팀</b>이라고 보여줍니다.
+                여기에 적으면 그 글자 그대로 나갑니다(번역되지 않음).
+              </div>
+            </div>
           </div>
           <div>
             <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
@@ -4881,6 +4895,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       rewardDays: body.reward_days || null,
       expiresAt: parseKstDateTimeInput(body.expires_at),
       targetKind, nicknames,
+      senderName: body.sender_name,
       createdBy: sessionInfo.session.username || 'admin',
     });
     if (!result.success) {
@@ -4927,6 +4942,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div>읽음 <b>${formatNumber(readCount)}</b></div>
           <div>수령 <b style="color:#0f6c5c">${formatNumber(claimedCount)}</b></div>
           <div>보낸이 ${escapeHtml(mail.created_by || '-')}</div>
+          <div>표시 이름 ${mail.sender_name
+            ? escapeHtml(mail.sender_name)
+            : '<span class="muted">운영팀(기본)</span>'}</div>
           <div>${formatDate(mail.created_at)}</div>
         </div>
       </div>

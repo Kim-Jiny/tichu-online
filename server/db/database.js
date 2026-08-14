@@ -1571,6 +1571,11 @@ async function runMigrations() {
         -- Claim deadline, stored UTC. NULL = no deadline. After it passes the
         -- letter still reads; only the reward is closed.
         expires_at TIMESTAMP,
+        -- Who it reads as. NULL = the app's own localized default ("티츄
+        -- 온라인 운영팀" / "Tichu Online Team" / …), which is what almost
+        -- every letter wants; a value here overrides it for one letter, for
+        -- when the sender is a person or an event rather than the team.
+        sender_name VARCHAR(60),
         target_kind VARCHAR(10) DEFAULT 'user',
         target_note VARCHAR(200),
         created_by VARCHAR(50),
@@ -1592,6 +1597,7 @@ async function runMigrations() {
         UNIQUE (mail_id, nickname)
       )
     `);
+    await client.query(`ALTER TABLE tc_mail ADD COLUMN IF NOT EXISTS sender_name VARCHAR(60)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_box
       ON tc_mail_recipients (nickname, created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_unread
@@ -4006,6 +4012,7 @@ async function recordCampaignSend(campaignId, results) {
 async function sendMail({
   title, body, rewardGold = 0, rewardItemKey = null, rewardDays = null,
   expiresAt = null, targetKind = 'user', nicknames = [], createdBy = 'admin',
+  senderName = null,
 }) {
   const cleanTitle = (title || '').trim();
   const cleanBody = (body || '').trim();
@@ -4052,15 +4059,18 @@ async function sendMail({
     const mail = await client.query(
       `INSERT INTO tc_mail
          (title, body, reward_gold, reward_item_key, reward_days, expires_at,
-          target_kind, target_note, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7, $8, $9)
+          target_kind, target_note, created_by, sender_name)
+       VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7, $8, $9, $10)
        RETURNING id`,
       [cleanTitle, cleanBody, gold, rewardItemKey || null,
         rewardDays != null ? parseInt(rewardDays, 10) : null,
         expiresAt ? toUtcTimestampText(expiresAt) : null, targetKind,
         targetKind === 'all' ? '전체' : targets.slice(0, 5).join(', ')
           + (targets.length > 5 ? ` 외 ${targets.length - 5}명` : ''),
-        createdBy],
+        createdBy,
+        // Blank stays NULL rather than becoming an empty string: the client
+        // decides between "a name was given" and "use the default" by null.
+        (senderName || '').trim().slice(0, 60) || null],
     );
     const mailId = mail.rows[0].id;
     // One statement rather than a loop: 500 round trips for a mail to
@@ -4087,7 +4097,7 @@ async function getMailbox(nickname, limit = 50) {
   try {
     const res = await pool.query(
       `SELECT m.id, m.title, m.body, m.reward_gold, m.reward_item_key, m.reward_days,
-              m.expires_at, m.created_at, r.read_at, r.claimed_at,
+              m.expires_at, m.created_at, m.sender_name, r.read_at, r.claimed_at,
               si.name_ko AS item_name_ko, si.name_en AS item_name_en, si.name_de AS item_name_de,
               si.is_permanent AS item_permanent
          FROM tc_mail_recipients r

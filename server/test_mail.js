@@ -153,6 +153,37 @@ const goldOf = async (n) => Number((await db.pool.query(
     `UPDATE tc_users SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 day'
       WHERE nickname = $1`, [B]);
 
+  console.log('\n[보내는 사람 이름]');
+  const named = await db.sendMail({
+    title: `이벤트 ${run}`, body: 'x', senderName: '여름 이벤트 운영진',
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  const namedRow = (await db.getMailbox(A)).mail.find((m) => m.id === named.id);
+  check('지정한 이름이 그대로 내려간다',
+    namedRow.sender_name === '여름 이벤트 운영진', `${namedRow.sender_name}`);
+  const blank = await db.sendMail({
+    title: `기본 ${run}`, body: 'x', senderName: '   ',
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  const blankRow = (await db.getMailbox(A)).mail.find((m) => m.id === blank.id);
+  check('공백만 넣으면 비운 것으로 본다 (앱이 기본 이름을 쓴다)',
+    blankRow.sender_name === null, `${JSON.stringify(blankRow.sender_name)}`);
+  const plain = await db.sendMail({
+    title: `무지정 ${run}`, body: 'x',
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  check('아예 안 넣어도 비어 있다',
+    (await db.getMailbox(A)).mail.find((m) => m.id === plain.id).sender_name === null);
+  const long = await db.sendMail({
+    title: `긴이름 ${run}`, body: 'x', senderName: '가'.repeat(200),
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  check('너무 긴 이름은 잘려서 들어간다 (컬럼을 넘기지 않는다)',
+    long.success === true
+      && (await db.getMailbox(A)).mail.find((m) => m.id === long.id).sender_name.length === 60,
+    JSON.stringify(long));
+  for (const m of [named, blank, plain, long]) await db.deleteMail(m.id);
+
   console.log('\n[어드민 목록]');
   const list = await db.listMail({ limit: 100 });
   const row = list.rows.find((r) => r.id === gift.id);

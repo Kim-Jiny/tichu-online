@@ -1241,6 +1241,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ]),
                           const SizedBox(height: 12),
+                          _buildSection(L10n.of(context).settingsNotices, [
+                            _buildRow(
+                              icon: Icons.campaign,
+                              iconColor: const Color(0xFF42A5F5),
+                              title: L10n.of(context).settingsNotices,
+                              onTap: _openNoticesPage,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (game.unreadNoticeCount > 0)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE53935),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(999),
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Text(
+                                        game.unreadNoticeCount > 9
+                                            ? '9+'
+                                            : '${game.unreadNoticeCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            // 운영자 우편함. Sits with notices rather than with
+                            // support: both are things the team sent that are
+                            // waiting to be read, and a player looking for
+                            // "did they get back to me" checks the same place.
+                            _buildRow(
+                              icon: Icons.mark_email_unread,
+                              iconColor: const Color(0xFFEF6C00),
+                              title: L10n.of(context).mailboxTitle,
+                              onTap: _openMailbox,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (game.unreadMailCount > 0)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE53935),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(999),
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Text(
+                                        game.unreadMailCount > 9
+                                            ? '9+'
+                                            : '${game.unreadMailCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]),
+                          const SizedBox(height: 12),
                           _buildSection(l10n.settingsNotificationsSection, [
                             _buildRow(
                               icon: Icons.notifications,
@@ -1522,102 +1618,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               trailing: const Icon(
                                 Icons.chevron_right,
                                 color: Color(0xFFB0A8A4),
-                              ),
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                          _buildSection(L10n.of(context).settingsNotices, [
-                            _buildRow(
-                              icon: Icons.campaign,
-                              iconColor: const Color(0xFF42A5F5),
-                              title: L10n.of(context).settingsNotices,
-                              onTap: _openNoticesPage,
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (game.unreadNoticeCount > 0)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
-                                      ),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFE53935),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(999),
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 18,
-                                        minHeight: 18,
-                                      ),
-                                      child: Text(
-                                        game.unreadNoticeCount > 9
-                                            ? '9+'
-                                            : '${game.unreadNoticeCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            // 운영자 우편함. Sits with notices rather than with
-                            // support: both are things the team sent that are
-                            // waiting to be read, and a player looking for
-                            // "did they get back to me" checks the same place.
-                            _buildRow(
-                              icon: Icons.mark_email_unread,
-                              iconColor: const Color(0xFFEF6C00),
-                              title: L10n.of(context).mailboxTitle,
-                              onTap: _openMailbox,
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (game.unreadMailCount > 0)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
-                                      ),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFE53935),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(999),
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 18,
-                                        minHeight: 18,
-                                      ),
-                                      child: Text(
-                                        game.unreadMailCount > 9
-                                            ? '9+'
-                                            : '${game.unreadMailCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ],
                               ),
                             ),
                           ]),

@@ -304,5 +304,7 @@
   "mail_already_claimed": "You have already claimed this reward",
   "mail_expired": "The window for claiming this reward has closed",
   "mail_not_found": "Letter not found",
-  "mail_claim_failed": "Could not claim the reward. Please try again shortly"
+  "mail_claim_failed": "Could not claim the reward. Please try again shortly",
+  "mail_claim_first": "Claim the reward before deleting this letter",
+  "mail_delete_failed": "Could not delete the letter"
 }

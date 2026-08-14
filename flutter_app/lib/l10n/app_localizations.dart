@@ -8726,6 +8726,42 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Could not load your mail'**
   String get mailboxLoadFailed;
+
+  /// No description provided for @mailboxRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters are removed automatically {days} days after they arrive.'**
+  String mailboxRetention(int days);
+
+  /// No description provided for @mailboxDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get mailboxDelete;
+
+  /// No description provided for @mailboxDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this letter?'**
+  String get mailboxDeleteConfirm;
+
+  /// No description provided for @mailboxDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It will be removed from your mailbox. This cannot be undone.'**
+  String get mailboxDeleteConfirmBody;
+
+  /// No description provided for @mailboxDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Letter deleted'**
+  String get mailboxDeleted;
+
+  /// No description provided for @mailboxCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mailboxCancel;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

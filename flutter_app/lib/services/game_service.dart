@@ -2526,6 +2526,17 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'mail_delete_result':
+        if (data['success'] != true) {
+          // The optimistic removal was wrong (an unclaimed reward, a letter
+          // that had already gone). Put the mailbox back the way the server
+          // sees it rather than guessing.
+          mailboxError = data['message'] as String?;
+          loadMailbox();
+        }
+        notifyListeners();
+        break;
+
       case 'mail_claim_result':
         final claimedId = data['mailId'];
         if (data['success'] == true) {
@@ -3676,6 +3687,15 @@ class GameService extends ChangeNotifier {
 
   void claimMail(int mailId) {
     _network.send({'type': 'claim_mail', 'mailId': mailId});
+  }
+
+  /// Throw a letter away. Removed locally first — the row is gone server-side
+  /// by the time the reply lands, and a list that keeps showing what you just
+  /// deleted reads as the button not working.
+  void deleteMail(int mailId) {
+    mailbox.removeWhere((m) => m['id'] == mailId);
+    notifyListeners();
+    _network.send({'type': 'delete_mail', 'mailId': mailId});
   }
 
   /// The reward from the most recent successful claim, for the screen to show

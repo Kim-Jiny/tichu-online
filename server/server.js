@@ -78,7 +78,7 @@ const {
   getSKRecentMatches,
   getPublishedNotices,
   getBroadcastFcmTokens,
-  getMailbox, markMailRead, claimMail, sweepExpiredCosmetics,
+  getMailbox, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getPushHistory,
   loadTitleTranslations,
@@ -2850,6 +2850,12 @@ setTimeout(() => { purgePushLogs().catch(() => {}); }, 5 * 60 * 1000);
 setInterval(() => { sweepExpiredCosmetics().catch(() => {}); }, 6 * 60 * 60 * 1000);
 setTimeout(() => { sweepExpiredCosmetics().catch(() => {}); }, 3 * 60 * 1000);
 
+// Letters past their 30 days. The mailbox query already hides them the moment
+// the window passes, so this is the storage side of a promise the app has
+// already kept — and it snapshots the read/claim counts before the copies go.
+setInterval(() => { purgeOldMail().catch(() => {}); }, 24 * 60 * 60 * 1000);
+setTimeout(() => { purgeOldMail().catch(() => {}); }, 4 * 60 * 1000);
+
 /**
  * Failed-login throttle.
  *
@@ -3374,6 +3380,9 @@ async function handleMessage(ws, data) {
       break;
     case 'claim_mail':
       await handleClaimMail(ws, data);
+      break;
+    case 'delete_mail':
+      await handleDeleteMail(ws, data);
       break;
     case 'redeem_coupon':
       await handleRedeemCoupon(ws, data);
@@ -9961,6 +9970,17 @@ async function handleReadMail(ws, data) {
   await markMailRead(ws.nickname, data?.mailId);
   // No reply: the client marks it read locally the moment it opens the letter,
   // and a round trip just to confirm what it already drew is noise.
+}
+
+async function handleDeleteMail(ws, data) {
+  if (!ws.nickname) return;
+  const result = await deleteMailForUser(ws.nickname, data?.mailId);
+  sendTo(ws, {
+    type: 'mail_delete_result',
+    success: result.success === true,
+    mailId: data?.mailId,
+    message: result.success ? null : t(ws.locale, result.messageKey || 'mail_delete_failed'),
+  });
 }
 
 async function handleClaimMail(ws, data) {

@@ -4934,4 +4934,25 @@ class L10nEn extends L10n {
 
   @override
   String get mailboxLoadFailed => 'Could not load your mail';
+
+  @override
+  String mailboxRetention(int days) {
+    return 'Letters are removed automatically $days days after they arrive.';
+  }
+
+  @override
+  String get mailboxDelete => 'Delete';
+
+  @override
+  String get mailboxDeleteConfirm => 'Delete this letter?';
+
+  @override
+  String get mailboxDeleteConfirmBody =>
+      'It will be removed from your mailbox. This cannot be undone.';
+
+  @override
+  String get mailboxDeleted => 'Letter deleted';
+
+  @override
+  String get mailboxCancel => 'Cancel';
 }

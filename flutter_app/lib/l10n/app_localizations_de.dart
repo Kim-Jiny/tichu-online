@@ -4970,4 +4970,25 @@ class L10nDe extends L10n {
 
   @override
   String get mailboxLoadFailed => 'Postfach konnte nicht geladen werden';
+
+  @override
+  String mailboxRetention(int days) {
+    return 'Briefe werden $days Tage nach Erhalt automatisch gelöscht.';
+  }
+
+  @override
+  String get mailboxDelete => 'Löschen';
+
+  @override
+  String get mailboxDeleteConfirm => 'Diesen Brief löschen?';
+
+  @override
+  String get mailboxDeleteConfirmBody =>
+      'Er verschwindet aus deinem Postfach. Das lässt sich nicht rückgängig machen.';
+
+  @override
+  String get mailboxDeleted => 'Brief gelöscht';
+
+  @override
+  String get mailboxCancel => 'Abbrechen';
 }

@@ -4820,4 +4820,24 @@ class L10nKo extends L10n {
 
   @override
   String get mailboxLoadFailed => '우편함을 불러오지 못했습니다';
+
+  @override
+  String mailboxRetention(int days) {
+    return '편지는 받은 지 $days일이 지나면 자동으로 삭제됩니다.';
+  }
+
+  @override
+  String get mailboxDelete => '삭제';
+
+  @override
+  String get mailboxDeleteConfirm => '이 편지를 지울까요?';
+
+  @override
+  String get mailboxDeleteConfirmBody => '우편함에서 사라지며 되돌릴 수 없습니다.';
+
+  @override
+  String get mailboxDeleted => '편지를 지웠습니다';
+
+  @override
+  String get mailboxCancel => '취소';
 }

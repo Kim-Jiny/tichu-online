@@ -58,6 +58,41 @@ class _MailboxScreenState extends State<MailboxScreen> {
     });
   }
 
+  /// Kept in step with the server's MAIL_RETENTION_DAYS. Shown to the player,
+  /// so it is a promise: after this the letter is gone and its reward with it.
+  static const int _retentionDays = 30;
+
+  Future<void> _confirmDelete(GameService game, int id, L10n l10n) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.mailboxDeleteConfirm),
+        content: Text(l10n.mailboxDeleteConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.mailboxCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFC62828),
+            ),
+            child: Text(l10n.mailboxDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    game.deleteMail(id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.mailboxDeleted),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   String _rewardLabel(L10n l10n, Map<String, dynamic> mail) {
     final gold = (mail['reward_gold'] as num?)?.toInt() ?? 0;
     if (gold > 0) return l10n.mailboxRewardGold(formatGold(gold));
@@ -164,9 +199,23 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     }
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                      itemCount: game.mailbox.length,
-                      itemBuilder: (_, i) =>
-                          _letter(game, game.mailbox[i], l10n),
+                      // +1 for the retention note, which belongs under the
+                      // letters: it is a rule to know, not the first thing to
+                      // read on opening the screen.
+                      itemCount: game.mailbox.length + 1,
+                      itemBuilder: (_, i) => i < game.mailbox.length
+                          ? _letter(game, game.mailbox[i], l10n)
+                          : Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                              child: Text(
+                                l10n.mailboxRetention(_retentionDays),
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFFA1887F),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                     );
                   },
                 ),
@@ -189,155 +238,188 @@ class _MailboxScreenState extends State<MailboxScreen> {
     final sentAt = parseServerUtc(mail['created_at']);
     final sender = (mail['sender_name'] ?? '').toString().trim();
 
+    // Material, not a decorated Container: an ExpansionTile is a ListTile, and
+    // a ListTile paints its highlight and ink splash onto the nearest Material
+    // ancestor. A coloured box in between hides them — Flutter asserts about
+    // exactly this — so the fill and the border live on the Material itself.
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+      child: Material(
         color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(16),
-        border: unread
-            ? Border.all(color: const Color(0xFFEF6C00), width: 1.4)
-            : null,
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          // Opening the letter is what marks it read — the same gesture a
-          // person would call "reading it".
-          onExpansionChanged: (open) {
-            if (open && unread) game.markMailRead(id);
-          },
-          title: Row(
-            children: [
-              if (unread)
-                Container(
-                  margin: const EdgeInsets.only(right: 7),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: unread
+              ? const BorderSide(color: Color(0xFFEF6C00), width: 1.4)
+              : BorderSide.none,
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 2,
+            ),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            // Opening the letter is what marks it read — the same gesture a
+            // person would call "reading it".
+            onExpansionChanged: (open) {
+              if (open && unread) game.markMailRead(id);
+            },
+            title: Row(
+              children: [
+                if (unread)
+                  Container(
+                    margin: const EdgeInsets.only(right: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF6C00),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      l10n.mailboxUnreadBadge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF6C00),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                Expanded(
                   child: Text(
-                    l10n.mailboxUnreadBadge,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
+                    (mail['title'] ?? '').toString(),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                      color: const Color(0xFF5A4038),
                     ),
                   ),
                 ),
-              Expanded(
-                child: Text(
-                  (mail['title'] ?? '').toString(),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
-                    color: const Color(0xFF5A4038),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              [
-                // A letter can name its own sender — an event, a person —
-                // otherwise it comes from the team, in the reader's language.
-                sender.isEmpty ? l10n.mailboxFrom : sender,
-                if (sentAt != null) _shortDate(sentAt),
-              ].join(' · '),
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFFA1887F)),
+              ],
             ),
-          ),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 3),
               child: Text(
-                (mail['body'] ?? '').toString(),
+                [
+                  // A letter can name its own sender — an event, a person —
+                  // otherwise it comes from the team, in the reader's language.
+                  sender.isEmpty ? l10n.mailboxFrom : sender,
+                  if (sentAt != null) _shortDate(sentAt),
+                ].join(' · '),
                 style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.65,
-                  color: Color(0xFF5A4038),
+                  fontSize: 11.5,
+                  color: Color(0xFFA1887F),
                 ),
               ),
             ),
-            if (hasReward) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(12),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  (mail['body'] ?? '').toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.65,
+                    color: Color(0xFF5A4038),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.card_giftcard,
-                      size: 20,
-                      color: Color(0xFFEF6C00),
+              ),
+              // Deleting is for letters you are done with: read, and with
+              // nothing left inside. A letter still holding a reward keeps the
+              // claim button instead — the server refuses that delete anyway,
+              // and offering a button that will be refused is worse than not
+              // offering it.
+              if (!unread && (!hasReward || claimed || expired))
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _confirmDelete(game, id, l10n),
+                    icon: const Icon(Icons.delete_outline, size: 17),
+                    label: Text(l10n.mailboxDelete),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFA1887F),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            rewardLabel,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF5A4038),
-                            ),
-                          ),
-                          if (expiresAt != null && !claimed)
+                  ),
+                ),
+              if (hasReward) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.card_giftcard,
+                        size: 20,
+                        color: Color(0xFFEF6C00),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              l10n.mailboxExpiresAt(_shortDate(expiresAt)),
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: expired
-                                    ? const Color(0xFFC62828)
-                                    : const Color(0xFFA1887F),
+                              rewardLabel,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF5A4038),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (claimed)
-                      _stateChip(l10n.mailboxClaimed, const Color(0xFF2E7D32))
-                    else if (expired)
-                      _stateChip(l10n.mailboxExpired, const Color(0xFF8A7A72))
-                    else
-                      ElevatedButton(
-                        onPressed: _claiming == id
-                            ? null
-                            : () => _claim(game, id),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF6C00),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 9,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.mailboxClaim,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                            if (expiresAt != null && !claimed)
+                              Text(
+                                l10n.mailboxExpiresAt(_shortDate(expiresAt)),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: expired
+                                      ? const Color(0xFFC62828)
+                                      : const Color(0xFFA1887F),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                  ],
+                      const SizedBox(width: 8),
+                      if (claimed)
+                        _stateChip(l10n.mailboxClaimed, const Color(0xFF2E7D32))
+                      else if (expired)
+                        _stateChip(l10n.mailboxExpired, const Color(0xFF8A7A72))
+                      else
+                        ElevatedButton(
+                          onPressed: _claiming == id
+                              ? null
+                              : () => _claim(game, id),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF6C00),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 9,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            l10n.mailboxClaim,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

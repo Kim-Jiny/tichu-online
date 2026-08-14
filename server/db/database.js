@@ -1598,6 +1598,11 @@ async function runMigrations() {
       )
     `);
     await client.query(`ALTER TABLE tc_mail ADD COLUMN IF NOT EXISTS sender_name VARCHAR(60)`);
+    // Filled in when the addressee rows are purged (see purgeOldMail), so the
+    // backstage still knows how far a letter got after the copies are gone.
+    await client.query(`ALTER TABLE tc_mail ADD COLUMN IF NOT EXISTS final_recipients INT`);
+    await client.query(`ALTER TABLE tc_mail ADD COLUMN IF NOT EXISTS final_read INT`);
+    await client.query(`ALTER TABLE tc_mail ADD COLUMN IF NOT EXISTS final_claimed INT`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_box
       ON tc_mail_recipients (nickname, created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_unread
@@ -4092,6 +4097,16 @@ async function sendMail({
   }
 }
 
+/**
+ * How long a letter stays in a mailbox.
+ *
+ * Told to the player on the mailbox screen, so it is a promise: after this the
+ * letter is gone from their app AND unclaimable, not merely hidden. The rows
+ * are swept on the same schedule (purgeOldMail) — the filter is what makes the
+ * promise true the moment it passes, without waiting for the sweep.
+ */
+const MAIL_RETENTION_DAYS = 30;
+
 /** One player's mailbox, newest first. */
 async function getMailbox(nickname, limit = 50) {
   try {
@@ -4107,11 +4122,12 @@ async function getMailbox(nickname, limit = 50) {
         WHERE r.nickname = $1
           -- A recycled nickname must not inherit the previous owner's post.
           AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
         ORDER BY m.created_at DESC
         LIMIT $2`,
-      [nickname, Math.max(1, Math.min(parseInt(limit, 10) || 50, 200))],
+      [nickname, Math.max(1, Math.min(parseInt(limit, 10) || 50, 200)), MAIL_RETENTION_DAYS],
     );
-    return { success: true, mail: res.rows };
+    return { success: true, mail: res.rows, retentionDays: MAIL_RETENTION_DAYS };
   } catch (err) {
     console.error('getMailbox error:', err);
     return { success: false, mail: [], message: err.message };
@@ -4124,8 +4140,9 @@ async function getUnreadMailCount(nickname) {
       `SELECT COUNT(*)::int AS n
          FROM tc_mail_recipients r
          JOIN tc_users u ON u.nickname = r.nickname
-        WHERE r.nickname = $1 AND r.read_at IS NULL AND r.created_at >= u.created_at`,
-      [nickname]);
+        WHERE r.nickname = $1 AND r.read_at IS NULL AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($2 || ' days')::interval`,
+      [nickname, MAIL_RETENTION_DAYS]);
     return r.rows[0].n;
   } catch (err) {
     console.error('getUnreadMailCount error:', err.message);
@@ -4163,8 +4180,9 @@ async function claimMail(nickname, mailId) {
       `SELECT r.id, r.claimed_at FROM tc_mail_recipients r
          JOIN tc_users u ON u.nickname = r.nickname
         WHERE r.mail_id = $1 AND r.nickname = $2 AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
         FOR UPDATE OF r`,
-      [parseInt(mailId, 10), nickname]);
+      [parseInt(mailId, 10), nickname, MAIL_RETENTION_DAYS]);
     if (rec.rows.length === 0) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'mail_not_yours' };
@@ -4234,6 +4252,95 @@ async function claimMail(nickname, mailId) {
   }
 }
 
+/**
+ * A player throwing away a letter they are done with.
+ *
+ * Only their own copy goes; the letter itself and everyone else's copy stay.
+ * Refused while a reward is still sitting in it — deleting is a tidy-up
+ * gesture, and a tidy-up that silently costs you 500 gold is a trap. Once the
+ * reward is claimed (or its deadline has passed, so there is nothing left to
+ * lose) it can go.
+ */
+async function deleteMailForUser(nickname, mailId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const rec = await client.query(
+      `SELECT r.id, r.read_at, r.claimed_at,
+              m.reward_gold, m.reward_item_key, m.expires_at,
+              (m.expires_at IS NOT NULL
+                AND m.expires_at < (NOW() AT TIME ZONE 'UTC')) AS reward_closed
+         FROM tc_mail_recipients r
+         JOIN tc_mail m ON m.id = r.mail_id
+        WHERE r.mail_id = $1 AND r.nickname = $2
+        FOR UPDATE OF r`,
+      [parseInt(mailId, 10), nickname]);
+    if (rec.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'mail_not_yours' };
+    }
+    const row = rec.rows[0];
+    const hasReward = row.reward_gold > 0 || !!row.reward_item_key;
+    if (hasReward && !row.claimed_at && !row.reward_closed) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'mail_claim_first' };
+    }
+    await client.query('DELETE FROM tc_mail_recipients WHERE id = $1', [row.id]);
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('deleteMailForUser error:', err);
+    return { success: false, messageKey: 'mail_delete_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Drop addressee rows past the retention window.
+ *
+ * The counts are written onto the letter first. The backstage's "how many read
+ * it, how many claimed" is derived from these rows, so deleting them without a
+ * snapshot would quietly rewrite history to zero a month after every send.
+ *
+ * The letter row itself is kept — it is the record that it was sent at all.
+ */
+async function purgeOldMail(days = MAIL_RETENTION_DAYS) {
+  const n = Math.max(1, parseInt(days, 10) || MAIL_RETENTION_DAYS);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE tc_mail m
+          SET final_recipients = COALESCE(m.final_recipients, c.total),
+              final_read       = COALESCE(m.final_read, c.read_n),
+              final_claimed    = COALESCE(m.final_claimed, c.claimed_n)
+         FROM (SELECT mail_id,
+                      COUNT(*)::int AS total,
+                      COUNT(*) FILTER (WHERE read_at IS NOT NULL)::int AS read_n,
+                      COUNT(*) FILTER (WHERE claimed_at IS NOT NULL)::int AS claimed_n
+                 FROM tc_mail_recipients
+                WHERE created_at < (NOW() AT TIME ZONE 'UTC') - ($1 || ' days')::interval
+                GROUP BY mail_id) c
+        WHERE m.id = c.mail_id`,
+      [n]);
+    const gone = await client.query(
+      `DELETE FROM tc_mail_recipients
+        WHERE created_at < (NOW() AT TIME ZONE 'UTC') - ($1 || ' days')::interval`,
+      [n]);
+    await client.query('COMMIT');
+    if (gone.rowCount) console.log(`[mail] purged ${gone.rowCount} letter copies older than ${n}d`);
+    return { success: true, purged: gone.rowCount };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('purgeOldMail error:', err.message);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 /** Sent mail with how far it got, for the backstage list. */
 async function listMail({ page = 1, limit = 25 } = {}) {
   const lim = Math.max(1, Math.min(parseInt(limit, 10) || 25, 100));
@@ -4242,11 +4349,16 @@ async function listMail({ page = 1, limit = 25 } = {}) {
     const total = parseInt((await pool.query('SELECT COUNT(*) FROM tc_mail')).rows[0].count, 10);
     const rows = await pool.query(
       `SELECT m.*,
-              (SELECT COUNT(*) FROM tc_mail_recipients r WHERE r.mail_id = m.id)::int AS recipients,
-              (SELECT COUNT(*) FROM tc_mail_recipients r
-                WHERE r.mail_id = m.id AND r.read_at IS NOT NULL)::int AS read_count,
-              (SELECT COUNT(*) FROM tc_mail_recipients r
-                WHERE r.mail_id = m.id AND r.claimed_at IS NOT NULL)::int AS claimed_count,
+              -- Snapshot first: after the copies are purged it is all that is
+              -- left, and a live count would read as nobody having got it.
+              COALESCE(m.final_recipients,
+                (SELECT COUNT(*) FROM tc_mail_recipients r WHERE r.mail_id = m.id)::int) AS recipients,
+              COALESCE(m.final_read,
+                (SELECT COUNT(*) FROM tc_mail_recipients r
+                  WHERE r.mail_id = m.id AND r.read_at IS NOT NULL)::int) AS read_count,
+              COALESCE(m.final_claimed,
+                (SELECT COUNT(*) FROM tc_mail_recipients r
+                  WHERE r.mail_id = m.id AND r.claimed_at IS NOT NULL)::int) AS claimed_count,
               si.name_ko AS item_name_ko
          FROM tc_mail m
          LEFT JOIN tc_shop_items si ON si.item_key = m.reward_item_key
@@ -11816,6 +11928,9 @@ module.exports = {
   getUnreadMailCount,
   markMailRead,
   claimMail,
+  deleteMailForUser,
+  purgeOldMail,
+  MAIL_RETENTION_DAYS,
   listMail,
   getMailDetail,
   deleteMail,

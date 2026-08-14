@@ -184,6 +184,66 @@ const goldOf = async (n) => Number((await db.pool.query(
     JSON.stringify(long));
   for (const m of [named, blank, plain, long]) await db.deleteMail(m.id);
 
+  console.log('\n[유저가 직접 지우기]');
+  const readOnly = await db.sendMail({
+    title: `읽기만 ${run}`, body: 'x', targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  const unread = await db.deleteMailForUser(A, readOnly.id);
+  check('안 읽어도 지울 수 있다 (보상이 없으므로)', unread.success === true, JSON.stringify(unread));
+  check('우편함에서 사라진다',
+    !(await db.getMailbox(A)).mail.some((m) => m.id === readOnly.id));
+  check('남의 편지는 못 지운다',
+    (await db.deleteMailForUser(`엉뚱${run}`, readOnly.id)).success === false);
+
+  const withReward = await db.sendMail({
+    title: `보상있음 ${run}`, body: 'x', rewardGold: 200,
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  const tooSoon = await db.deleteMailForUser(A, withReward.id);
+  check('보상이 남아 있으면 거절한다',
+    tooSoon.success === false && tooSoon.messageKey === 'mail_claim_first', JSON.stringify(tooSoon));
+  check('거절됐으니 편지도 그대로 있다',
+    (await db.getMailbox(A)).mail.some((m) => m.id === withReward.id));
+  await db.claimMail(A, withReward.id);
+  check('받고 나면 지울 수 있다',
+    (await db.deleteMailForUser(A, withReward.id)).success === true);
+
+  const closed = await db.sendMail({
+    title: `기한지남 ${run}`, body: 'x', rewardGold: 200, expiresAt: '2020-01-01 00:00:00',
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  check('기한이 지난 보상은 안 받고도 지울 수 있다 (잃을 게 없다)',
+    (await db.deleteMailForUser(A, closed.id)).success === true);
+  check('내가 지워도 남에게 간 사본은 남는다',
+    (await db.pool.query(
+      'SELECT COUNT(*)::int n FROM tc_mail WHERE id = $1', [closed.id])).rows[0].n === 1);
+
+  console.log('\n[30일 보존]');
+  const old = await db.sendMail({
+    title: `오래된 ${run}`, body: 'x', rewardGold: 100,
+    targetKind: 'user', nicknames: [A], createdBy: 'tester',
+  });
+  // 이 계정에는 앞선 단계에서 안 읽은 편지가 이미 있으므로, 절대값이 아니라
+  // 이 한 통이 빠지는지를 본다.
+  const unreadBefore = await db.getUnreadMailCount(A);
+  await db.pool.query(
+    `UPDATE tc_mail_recipients SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '31 days'
+      WHERE mail_id = $1`, [old.id]);
+  check('31일 지난 편지는 우편함에 안 보인다',
+    !(await db.getMailbox(A)).mail.some((m) => m.id === old.id));
+  const unreadAfter = await db.getUnreadMailCount(A);
+  check('안 읽음 수에서도 빠진다', unreadAfter === unreadBefore - 1,
+    `${unreadBefore} → ${unreadAfter}`);
+  const lateClaim = await db.claimMail(A, old.id);
+  check('수령도 안 된다', lateClaim.success === false, JSON.stringify(lateClaim));
+  const purged = await db.purgeOldMail(30);
+  check('정리 작업이 사본을 지운다', purged.purged >= 1, JSON.stringify(purged));
+  const snap = (await db.listMail({ limit: 200 })).rows.find((r) => r.id === old.id);
+  check('그래도 어드민 통계는 남는다 (스냅샷)',
+    snap && snap.recipients === 1, JSON.stringify(snap && { r: snap.recipients }));
+  await db.deleteMail(old.id);
+  for (const m of [readOnly, withReward, closed]) await db.deleteMail(m.id);
+
   console.log('\n[어드민 목록]');
   const list = await db.listMail({ limit: 100 });
   const row = list.rows.find((r) => r.id === gift.id);

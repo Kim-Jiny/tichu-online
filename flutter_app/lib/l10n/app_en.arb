@@ -2857,5 +2857,18 @@
   },
   "mailboxClaimedToast": "Reward claimed",
   "mailboxFrom": "Tichu Online Team",
-  "mailboxLoadFailed": "Could not load your mail"
+  "mailboxLoadFailed": "Could not load your mail",
+  "mailboxRetention": "Letters are removed automatically {days} days after they arrive.",
+  "@mailboxRetention": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "mailboxDelete": "Delete",
+  "mailboxDeleteConfirm": "Delete this letter?",
+  "mailboxDeleteConfirmBody": "It will be removed from your mailbox. This cannot be undone.",
+  "mailboxDeleted": "Letter deleted",
+  "mailboxCancel": "Cancel"
 }

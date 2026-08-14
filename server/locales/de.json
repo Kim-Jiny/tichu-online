@@ -304,5 +304,7 @@
   "mail_already_claimed": "Du hast diese Belohnung bereits erhalten",
   "mail_expired": "Der Zeitraum für diese Belohnung ist abgelaufen",
   "mail_not_found": "Brief nicht gefunden",
-  "mail_claim_failed": "Belohnung konnte nicht abgeholt werden. Bitte versuche es später erneut"
+  "mail_claim_failed": "Belohnung konnte nicht abgeholt werden. Bitte versuche es später erneut",
+  "mail_claim_first": "Hol dir erst die Belohnung, bevor du den Brief löschst",
+  "mail_delete_failed": "Brief konnte nicht gelöscht werden"
 }

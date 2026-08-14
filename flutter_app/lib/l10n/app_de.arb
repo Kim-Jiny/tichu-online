@@ -1710,5 +1710,11 @@
   "mailboxExpiresAt": "Abholen bis {date}",
   "mailboxClaimedToast": "Belohnung abgeholt",
   "mailboxFrom": "Tichu Online Team",
-  "mailboxLoadFailed": "Postfach konnte nicht geladen werden"
+  "mailboxLoadFailed": "Postfach konnte nicht geladen werden",
+  "mailboxRetention": "Briefe werden {days} Tage nach Erhalt automatisch gelöscht.",
+  "mailboxDelete": "Löschen",
+  "mailboxDeleteConfirm": "Diesen Brief löschen?",
+  "mailboxDeleteConfirmBody": "Er verschwindet aus deinem Postfach. Das lässt sich nicht rückgängig machen.",
+  "mailboxDeleted": "Brief gelöscht",
+  "mailboxCancel": "Abbrechen"
 }

@@ -359,6 +359,12 @@ class GameService extends ChangeNotifier {
   // Inquiry
   String? inquiryResultMessage;
   bool? inquiryResultSuccess;
+
+  /// 운영자 우편함. Letters the staff sent to this account, newest first.
+  List<Map<String, dynamic>> mailbox = [];
+  bool mailboxLoading = false;
+  String? mailboxError;
+
   List<Map<String, dynamic>> inquiries = [];
   bool inquiriesLoading = false;
   String? inquiriesError;
@@ -395,6 +401,11 @@ class GameService extends ChangeNotifier {
     }
     return count;
   }
+
+  /// Unread letters. Joins the same badge as notices and inquiry replies —
+  /// three different things arrive in the same place, and a player should not
+  /// have to learn which is which to know something is waiting.
+  int get unreadMailCount => mailbox.where((m) => m['read_at'] == null).length;
 
   /// Count of answered inquiries the user hasn't read yet. Drives a persistent
   /// badge so the reply is discoverable — the transient lobby banner alone left
@@ -846,6 +857,9 @@ class GameService extends ChangeNotifier {
         _sendFcmTokenAsync();
         // Prefetch notices so the unread badge is accurate immediately.
         requestNotices();
+        // Same for the mailbox: a letter with a reward in it is worth nothing
+        // if the badge only appears after the player happens to open settings.
+        loadMailbox();
         // Prefetch the visual catalog so banners/titles/themes render with
         // the admin-edited gradient config from the moment slots appear.
         requestVisualCatalog();
@@ -2497,6 +2511,40 @@ class GameService extends ChangeNotifier {
         }
         break;
 
+      case 'mailbox_result':
+        mailboxLoading = false;
+        if (data['success'] == true) {
+          mailbox =
+              (data['mail'] as List?)
+                  ?.map((e) => (e as Map).cast<String, dynamic>())
+                  .toList() ??
+              [];
+          mailboxError = null;
+        } else {
+          mailboxError = data['message'] as String?;
+        }
+        notifyListeners();
+        break;
+
+      case 'mail_claim_result':
+        final claimedId = data['mailId'];
+        if (data['success'] == true) {
+          // Reflect it locally instead of refetching the whole box: the server
+          // has already committed, and a list that visibly lags behind the
+          // button reads as the claim not having worked.
+          for (final m in mailbox) {
+            if (m['id'] == claimedId) {
+              m['claimed_at'] = DateTime.now().toUtc().toIso8601String();
+              m['read_at'] ??= m['claimed_at'];
+            }
+          }
+          lastMailReward = data['reward'] as Map<String, dynamic>?;
+        } else {
+          mailboxError = data['message'] as String?;
+        }
+        notifyListeners();
+        break;
+
       case 'notices_result':
         noticesLoading = false;
         if (data['success'] == true) {
@@ -3607,6 +3655,38 @@ class GameService extends ChangeNotifier {
   }
 
   // SK actions
+  void loadMailbox() {
+    mailboxLoading = true;
+    mailboxError = null;
+    notifyListeners();
+    _network.send({'type': 'get_mailbox'});
+  }
+
+  /// Mark a letter read. Applied locally first — the badge has to drop the
+  /// moment the letter opens, not a round trip later.
+  void markMailRead(int mailId) {
+    for (final m in mailbox) {
+      if (m['id'] == mailId && m['read_at'] == null) {
+        m['read_at'] = DateTime.now().toUtc().toIso8601String();
+      }
+    }
+    notifyListeners();
+    _network.send({'type': 'read_mail', 'mailId': mailId});
+  }
+
+  void claimMail(int mailId) {
+    _network.send({'type': 'claim_mail', 'mailId': mailId});
+  }
+
+  /// The reward from the most recent successful claim, for the screen to show
+  /// once. Cleared by the reader.
+  Map<String, dynamic>? lastMailReward;
+  Map<String, dynamic>? takeMailReward() {
+    final r = lastMailReward;
+    lastMailReward = null;
+    return r;
+  }
+
   /// Tell the server a notification was opened. Statistics only — there is no
   /// reply and nothing depends on it arriving.
   void reportPushOpened(String kind, int pushId) {

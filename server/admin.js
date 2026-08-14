@@ -20,7 +20,8 @@ const {
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
   getBroadcastFcmTokens, insertPushHistory, updatePushHistoryCounts, getPushHistory,
-  getUnifiedPushHistory, getPushHistoryCounts, PUSH_LOG_RETENTION_DAYS, insertPushRecipients, getPushHistoryDetail,
+  getUnifiedPushHistory, getPushHistoryCounts, PUSH_LOG_RETENTION_DAYS,
+  sendMail, listMail, getMailDetail, deleteMail, getMailPushTokens, insertPushRecipients, getPushHistoryDetail,
   upsertCoupon, getCouponByCode, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
@@ -640,6 +641,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/coupons" class="${activePage === 'coupons' ? 'active' : ''}" onclick="closeSidebar()">쿠폰</a>
     <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
     <a href="/tc-backstage/push-history" class="${activePage === 'push-history' ? 'active' : ''}" onclick="closeSidebar()">푸시 히스토리</a>
+    <a href="/tc-backstage/mail" class="${activePage === 'mail' ? 'active' : ''}" onclick="closeSidebar()">운영자 우편함</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">System</div>
@@ -4703,6 +4705,232 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // on each user's detail page; this is the same log without the user filter
   // fixed, which is what answers "did that item actually sell" and "what did
   // this person spend on".
+  // ── 운영자 우편함 ────────────────────────────────────────────────────
+  //
+  // The one thing the staff could not do: start a conversation. Inquiries are
+  // opened by the player, notices are the same text for everybody, and a DM
+  // needs the two accounts to be friends first (see the friends-only guard in
+  // handleSendDm) — which a disciplinary notice obviously cannot rely on.
+  //
+  // A letter is per-person state — read, claimed — which is what separates it
+  // from a notice, and it can carry a payout, which is what separates it from
+  // an inquiry reply.
+  if (pathname === '/tc-backstage/mail' && method === 'GET') {
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const data = await listMail({ page, limit: 25 });
+    const items = await getAllShopItemsAdmin();
+    const notice = url.searchParams.get('msg');
+    const failed = url.searchParams.get('r') === 'fail';
+    const preset = url.searchParams.get('to') || '';
+
+    const rows = data.rows.map((m) => {
+      const reward = m.reward_gold > 0
+        ? `<b>${formatNumber(m.reward_gold)}</b> 골드`
+        : m.reward_item_key
+        ? `${escapeHtml(m.item_name_ko || m.reward_item_key)}${m.reward_days ? ` (${m.reward_days}일)` : ''}`
+        : '<span class="muted">없음</span>';
+      const target = m.target_kind === 'all'
+        ? '<span class="badge" style="background:#ede7f6;color:#4527a0">전체</span>'
+        : escapeHtml(m.target_note || '-');
+      const deadline = m.expires_at
+        ? `${formatDate(m.expires_at)}${new Date(m.expires_at) < new Date()
+            ? ' <span class="badge" style="background:#ffebee;color:#c62828">마감</span>' : ''}`
+        : '<span class="muted">없음</span>';
+      return `<tr>
+        <td><a href="/tc-backstage/mail/${m.id}">${m.id}</a></td>
+        <td>
+          <div style="font-weight:700">${escapeHtml(m.title)}</div>
+          <div class="muted" style="font-size:12px">${escapeHtml(
+            m.body.length > 60 ? `${m.body.slice(0, 60)}…` : m.body)}</div>
+        </td>
+        <td style="font-size:12.5px">${target}</td>
+        <td>${reward}</td>
+        <td style="font-size:12.5px">${deadline}</td>
+        <td style="text-align:right">${formatNumber(m.recipients)}</td>
+        <td style="text-align:right">${formatNumber(m.read_count)}</td>
+        <td style="text-align:right;font-weight:700;color:#0f6c5c">${formatNumber(m.claimed_count)}</td>
+        <td style="font-size:12px;color:#888">${escapeHtml(m.created_by || '-')}<br>${formatDate(m.created_at)}</td>
+      </tr>`;
+    }).join('');
+
+    const content = `
+      ${pageHeader('운영자 우편함',
+        `운영진이 먼저 보내는 편지입니다. 공지와 달리 <b>받는 사람마다 읽음·수령이 따로</b> 남고, 골드나 아이템을 담아 보낼 수 있습니다.
+         제재 안내나 개별 사과처럼 상대의 수락 없이 반드시 전해야 하는 연락에 쓰세요 — 친구 DM 은 서로 친구여야만 갑니다.`)}
+      ${notice ? `<div class="card" style="background:${failed ? '#ffebee' : '#e8f5e9'};border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};margin-bottom:14px;font-weight:600">${escapeHtml(notice)}</div>` : ''}
+      <div class="card">
+        <h3>편지 쓰기</h3>
+        <form method="POST" action="/tc-backstage/mail/send" style="display:grid;gap:13px;margin-top:10px"
+              onsubmit="return confirm('보내면 되돌릴 수 없습니다. 보낼까요?')">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">받는 사람</label>
+              <select name="target_kind" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+                <option value="list">지정한 사람</option>
+                <option value="all">전체 유저</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:260px">
+              <label style="font-weight:600;display:block;margin-bottom:4px">닉네임 (쉼표·줄바꿈으로 여러 명)</label>
+              <input type="text" name="nicknames" value="${escapeHtml(preset)}" placeholder="닉네임1, 닉네임2"
+                style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">
+                <b>전체 유저</b>를 고르면 이 칸은 무시합니다. 없는 닉네임이 섞여 있으면 발송 후 알려줍니다.
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
+            <input type="text" name="title" required maxlength="200" placeholder="예: 문의하신 건 처리했습니다"
+              style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
+            <textarea name="body" required rows="5" placeholder="유저에게 보일 본문입니다."
+              style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px"></textarea>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">골드 첨부</label>
+              <input type="number" name="reward_gold" value="0" min="0" step="10"
+                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">또는 아이템</label>
+              <select name="reward_item_key" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+                <option value="">없음</option>
+                ${items.map((i) => `<option value="${escapeHtml(i.item_key)}">${escapeHtml(i.name_ko)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">아이템 기간(일)</label>
+              <input type="number" name="reward_days" min="1" placeholder="상품 기본값"
+                style="width:130px;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+            <div>
+              <label style="font-weight:600;display:block;margin-bottom:4px">수령 마감 (KST)</label>
+              <input type="datetime-local" name="expires_at"
+                style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+            <label style="display:flex;gap:6px;align-items:center">
+              <input type="checkbox" name="send_push" value="1" checked> 푸시 알림도 함께 보내기
+            </label>
+            <span style="font-size:12px;color:var(--muted)">
+              알림을 꺼둔 유저에게는 편지만 남습니다. 광고가 아니므로 마케팅 수신동의와는 무관합니다.
+            </span>
+          </div>
+          <div><button type="submit" class="btn btn-primary">보내기</button></div>
+        </form>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>보낸 편지</h3>
+        ${data.rows.length ? `
+          <div class="table-wrap"><table>
+            <tr><th>ID</th><th>내용</th><th>받는 사람</th><th>첨부</th><th>마감</th>
+                <th style="text-align:right">발송</th><th style="text-align:right">읽음</th>
+                <th style="text-align:right">수령</th><th>보낸이</th></tr>
+            ${rows}
+          </table></div>
+          ${pagination(data.page, data.total, data.limit, '/tc-backstage/mail')}
+        ` : '<div class="empty">보낸 편지가 없습니다</div>'}
+      </div>
+    `;
+    return html(res, layout('운영자 우편함', content, 'mail'));
+  }
+
+  if (pathname === '/tc-backstage/mail/send' && method === 'POST') {
+    const body = await parseBody(req);
+    const targetKind = body.target_kind === 'all' ? 'all' : 'list';
+    const nicknames = String(body.nicknames || '')
+      .split(/[,\n]/).map((n) => n.trim()).filter(Boolean);
+    if ((parseInt(body.reward_gold, 10) || 0) > 0 && body.reward_item_key) {
+      return redirect(res, '/tc-backstage/mail?r=fail&msg='
+        + encodeURIComponent('골드와 아이템은 함께 담을 수 없습니다. 하나만 고르세요.'));
+    }
+    const result = await sendMail({
+      title: body.title, body: body.body,
+      rewardGold: body.reward_gold,
+      rewardItemKey: body.reward_item_key || null,
+      rewardDays: body.reward_days || null,
+      expiresAt: parseKstDateTimeInput(body.expires_at),
+      targetKind, nicknames,
+      createdBy: sessionInfo.session.username || 'admin',
+    });
+    if (!result.success) {
+      return redirect(res, '/tc-backstage/mail?r=fail&msg='
+        + encodeURIComponent(result.message || '보내지 못했습니다.'));
+    }
+
+    // The letter is already saved; the notification is a courtesy on top. A
+    // push failure must therefore never read as a failed send.
+    let pushNote = '';
+    if (body.send_push === '1' && sendBroadcastPush) {
+      const tokens = await getMailPushTokens(result.targets);
+      if (tokens.length === 0) {
+        pushNote = ' 알림을 켠 대상이 없어 푸시는 보내지 않았습니다.';
+      } else {
+        const push = await sendBroadcastPush(
+          tokens, body.title, '운영자 우편함에서 확인하세요.', { type: 'mail', mailId: result.id });
+        await markFcmTokensInvalid(push.invalidUserIds || []);
+        pushNote = ` 푸시 ${formatNumber(push.successCount)}명 전송`
+          + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + '.';
+      }
+    }
+    const missNote = result.missing?.length
+      ? ` 없는 닉네임: ${result.missing.join(', ')}.` : '';
+    return redirect(res, '/tc-backstage/mail?r=ok&msg='
+      + encodeURIComponent(`${formatNumber(result.sent)}명에게 보냈습니다.${missNote}${pushNote}`));
+  }
+
+  const mailDetailMatch = pathname.match(/^\/tc-backstage\/mail\/(\d+)$/);
+  if (mailDetailMatch && method === 'GET') {
+    const detail = await getMailDetail(parseInt(mailDetailMatch[1], 10));
+    if (!detail) {
+      return redirect(res, '/tc-backstage/mail?r=fail&msg=' + encodeURIComponent('없는 편지입니다.'));
+    }
+    const { mail, recipients } = detail;
+    const readCount = recipients.filter((r) => r.read_at).length;
+    const claimedCount = recipients.filter((r) => r.claimed_at).length;
+    const content = `
+      ${pageHeader(`편지 #${mail.id}`, escapeHtml(mail.title))}
+      <div class="card">
+        <div style="white-space:pre-wrap;line-height:1.7">${escapeHtml(mail.body)}</div>
+        <div style="margin-top:14px;display:flex;gap:22px;flex-wrap:wrap;font-size:13px">
+          <div>받는 사람 <b>${formatNumber(recipients.length)}</b></div>
+          <div>읽음 <b>${formatNumber(readCount)}</b></div>
+          <div>수령 <b style="color:#0f6c5c">${formatNumber(claimedCount)}</b></div>
+          <div>보낸이 ${escapeHtml(mail.created_by || '-')}</div>
+          <div>${formatDate(mail.created_at)}</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>받는 사람</h3>
+        <div class="table-wrap"><table>
+          <tr><th>닉네임</th><th>읽음</th><th>수령</th></tr>
+          ${recipients.map((r) => `<tr>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname)}</a></td>
+            <td style="font-size:12px;color:#888">${r.read_at ? formatDate(r.read_at) : '-'}</td>
+            <td style="font-size:12px;color:#888">${r.claimed_at ? formatDate(r.claimed_at) : '-'}</td>
+          </tr>`).join('')}
+        </table></div>
+      </div>
+      <form method="POST" action="/tc-backstage/mail/${mail.id}/delete" style="margin-top:14px"
+            onsubmit="return confirm('편지를 지우면 받은 사람의 우편함에서도 사라지고, 아직 안 받은 보상은 받을 수 없게 됩니다. 지울까요?')">
+        <button class="btn btn-danger">편지 삭제</button>
+        <a class="btn btn-secondary" href="/tc-backstage/mail" style="margin-left:8px">목록으로</a>
+      </form>
+    `;
+    return html(res, layout(`편지 #${mail.id}`, content, 'mail'));
+  }
+
+  const mailDeleteMatch = pathname.match(/^\/tc-backstage\/mail\/(\d+)\/delete$/);
+  if (mailDeleteMatch && method === 'POST') {
+    await deleteMail(parseInt(mailDeleteMatch[1], 10));
+    return redirect(res, '/tc-backstage/mail?r=ok&msg=' + encodeURIComponent('편지를 지웠습니다.'));
+  }
+
   // ── 마케팅 푸시 캠페인 ───────────────────────────────────────────────
   //
   // Tokens, not an FCM topic. A topic cannot answer any of the three questions

@@ -1553,6 +1553,50 @@ async function runMigrations() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_push_recipients_history ON tc_push_recipients(push_history_id)`);
 
+    // 운영자 우편함. A message the staff send to a player — with a reward
+    // attached if they want one — that waits in the app until it is read.
+    //
+    // Not the inquiry table: an inquiry is a thread the PLAYER opened and it
+    // has no notion of a payout. Not a notice either: a notice is the same
+    // text for everybody with no per-person state. What is per-person here is
+    // exactly what makes it a mailbox — read, and claimed.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_mail (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        reward_gold INTEGER DEFAULT 0,
+        reward_item_key VARCHAR(80),
+        reward_days INT,
+        -- Claim deadline, stored UTC. NULL = no deadline. After it passes the
+        -- letter still reads; only the reward is closed.
+        expires_at TIMESTAMP,
+        target_kind VARCHAR(10) DEFAULT 'user',
+        target_note VARCHAR(200),
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // One row per addressee, written at send time even for a mail to everyone
+    // (a few hundred rows). The alternative — deriving the audience at read
+    // time — cannot answer "who has read it" and would silently widen the
+    // audience as new accounts appear.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_mail_recipients (
+        id SERIAL PRIMARY KEY,
+        mail_id INTEGER NOT NULL REFERENCES tc_mail(id) ON DELETE CASCADE,
+        nickname VARCHAR(50) NOT NULL,
+        read_at TIMESTAMP,
+        claimed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (mail_id, nickname)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_box
+      ON tc_mail_recipients (nickname, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_unread
+      ON tc_mail_recipients (nickname) WHERE read_at IS NULL`);
+
     // Every push that goes to ONE user: a friend request, an inquiry reply, a
     // gold grant, an admin's one-off message. None of these were recorded
     // anywhere, so "did the notification actually go out?" had no answer.
@@ -3918,6 +3962,297 @@ async function recordCampaignSend(campaignId, results) {
 /// The open is recorded even when the reward is refused. "500 sent, 300
 /// opened, 12 claimed" is the shape of a deadline that was too short, and you
 /// cannot see it if a late tap leaves no trace.
+// ─── 운영자 우편함 ──────────────────────────────────────────────────────────
+
+/**
+ * Send one letter to one, several, or every player.
+ *
+ * Addressees are written as rows at send time even for "everyone". Deriving
+ * the audience at read time instead would keep silently adding people — an
+ * account made next month would find a letter about last month's incident in
+ * its mailbox — and could never answer how many have read it.
+ *
+ * Unknown nicknames are reported back rather than skipped: sending a
+ * compensation letter to a name with a typo in it should not look like it
+ * worked.
+ */
+async function sendMail({
+  title, body, rewardGold = 0, rewardItemKey = null, rewardDays = null,
+  expiresAt = null, targetKind = 'user', nicknames = [], createdBy = 'admin',
+}) {
+  const cleanTitle = (title || '').trim();
+  const cleanBody = (body || '').trim();
+  if (!cleanTitle || !cleanBody) {
+    return { success: false, message: '제목과 내용을 입력해 주세요.' };
+  }
+  const gold = Math.max(0, parseInt(rewardGold, 10) || 0);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    if (rewardItemKey) {
+      const item = await client.query(
+        'SELECT 1 FROM tc_shop_items WHERE item_key = $1', [rewardItemKey]);
+      if (item.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '없는 아이템입니다.' };
+      }
+    }
+
+    let targets = [];
+    let missing = [];
+    if (targetKind === 'all') {
+      targets = (await client.query(
+        `SELECT nickname FROM tc_users WHERE is_deleted IS NOT TRUE`)).rows.map((r) => r.nickname);
+    } else {
+      const wanted = [...new Set((nicknames || [])
+        .map((n) => String(n || '').trim()).filter(Boolean))];
+      if (wanted.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: '받는 사람을 지정해 주세요.' };
+      }
+      const found = (await client.query(
+        `SELECT nickname FROM tc_users
+          WHERE nickname = ANY($1) AND is_deleted IS NOT TRUE`, [wanted])).rows.map((r) => r.nickname);
+      targets = found;
+      missing = wanted.filter((n) => !found.includes(n));
+      if (found.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: `받는 사람을 찾을 수 없습니다: ${missing.join(', ')}` };
+      }
+    }
+
+    const mail = await client.query(
+      `INSERT INTO tc_mail
+         (title, body, reward_gold, reward_item_key, reward_days, expires_at,
+          target_kind, target_note, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7, $8, $9)
+       RETURNING id`,
+      [cleanTitle, cleanBody, gold, rewardItemKey || null,
+        rewardDays != null ? parseInt(rewardDays, 10) : null,
+        expiresAt ? toUtcTimestampText(expiresAt) : null, targetKind,
+        targetKind === 'all' ? '전체' : targets.slice(0, 5).join(', ')
+          + (targets.length > 5 ? ` 외 ${targets.length - 5}명` : ''),
+        createdBy],
+    );
+    const mailId = mail.rows[0].id;
+    // One statement rather than a loop: 500 round trips for a mail to
+    // everybody is the difference between instant and a visible stall.
+    await client.query(
+      `INSERT INTO tc_mail_recipients (mail_id, nickname)
+       SELECT $1, UNNEST($2::varchar[])
+       ON CONFLICT (mail_id, nickname) DO NOTHING`,
+      [mailId, targets],
+    );
+    await client.query('COMMIT');
+    return { success: true, id: mailId, sent: targets.length, missing, targets };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('sendMail error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+/** One player's mailbox, newest first. */
+async function getMailbox(nickname, limit = 50) {
+  try {
+    const res = await pool.query(
+      `SELECT m.id, m.title, m.body, m.reward_gold, m.reward_item_key, m.reward_days,
+              m.expires_at, m.created_at, r.read_at, r.claimed_at,
+              si.name_ko AS item_name_ko, si.name_en AS item_name_en, si.name_de AS item_name_de,
+              si.is_permanent AS item_permanent
+         FROM tc_mail_recipients r
+         JOIN tc_mail m ON m.id = r.mail_id
+         JOIN tc_users u ON u.nickname = r.nickname
+         LEFT JOIN tc_shop_items si ON si.item_key = m.reward_item_key
+        WHERE r.nickname = $1
+          -- A recycled nickname must not inherit the previous owner's post.
+          AND r.created_at >= u.created_at
+        ORDER BY m.created_at DESC
+        LIMIT $2`,
+      [nickname, Math.max(1, Math.min(parseInt(limit, 10) || 50, 200))],
+    );
+    return { success: true, mail: res.rows };
+  } catch (err) {
+    console.error('getMailbox error:', err);
+    return { success: false, mail: [], message: err.message };
+  }
+}
+
+async function getUnreadMailCount(nickname) {
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*)::int AS n
+         FROM tc_mail_recipients r
+         JOIN tc_users u ON u.nickname = r.nickname
+        WHERE r.nickname = $1 AND r.read_at IS NULL AND r.created_at >= u.created_at`,
+      [nickname]);
+    return r.rows[0].n;
+  } catch (err) {
+    console.error('getUnreadMailCount error:', err.message);
+    return 0;
+  }
+}
+
+async function markMailRead(nickname, mailId) {
+  try {
+    await pool.query(
+      `UPDATE tc_mail_recipients
+          SET read_at = COALESCE(read_at, (NOW() AT TIME ZONE 'UTC'))
+        WHERE mail_id = $1 AND nickname = $2`,
+      [parseInt(mailId, 10), nickname]);
+    return { success: true };
+  } catch (err) {
+    console.error('markMailRead error:', err.message);
+    return { success: false };
+  }
+}
+
+/**
+ * Take the reward out of a letter.
+ *
+ * Same discipline as the campaign claim below, for the same reasons: the row
+ * is locked before anything is granted, an already-claimed row answers so
+ * without paying twice, and the nickname must have belonged to this account
+ * when the letter was sent.
+ */
+async function claimMail(nickname, mailId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const rec = await client.query(
+      `SELECT r.id, r.claimed_at FROM tc_mail_recipients r
+         JOIN tc_users u ON u.nickname = r.nickname
+        WHERE r.mail_id = $1 AND r.nickname = $2 AND r.created_at >= u.created_at
+        FOR UPDATE OF r`,
+      [parseInt(mailId, 10), nickname]);
+    if (rec.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'mail_not_yours' };
+    }
+    await client.query(
+      `UPDATE tc_mail_recipients SET read_at = COALESCE(read_at, (NOW() AT TIME ZONE 'UTC'))
+        WHERE id = $1`, [rec.rows[0].id]);
+    if (rec.rows[0].claimed_at) {
+      await client.query('COMMIT');
+      return { success: false, messageKey: 'mail_already_claimed' };
+    }
+    const mail = (await client.query('SELECT * FROM tc_mail WHERE id = $1', [mailId])).rows[0];
+    if (!mail) {
+      await client.query('ROLLBACK');
+      return { success: false, messageKey: 'mail_not_found' };
+    }
+    const expired = (await client.query(
+      `SELECT $1::timestamp IS NOT NULL
+              AND $1::timestamp < (NOW() AT TIME ZONE 'UTC') AS expired`,
+      [mail.expires_at])).rows[0].expired;
+    if (expired) {
+      await client.query('COMMIT'); // it still counts as read
+      return { success: false, messageKey: 'mail_expired' };
+    }
+
+    let reward = null;
+    if (mail.reward_gold > 0) {
+      const updated = await client.query(
+        'UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1 RETURNING gold',
+        [nickname, mail.reward_gold]);
+      if (updated.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_user_not_found' };
+      }
+      await client.query(
+        `INSERT INTO tc_gold_history (nickname, gold_delta, source, title, description)
+         VALUES ($1, $2, 'mail', $3, $4)`,
+        [nickname, mail.reward_gold, mail.title, `mail:${mail.id}`]);
+      reward = { type: 'gold', gold: mail.reward_gold, newGold: updated.rows[0].gold };
+    } else if (mail.reward_item_key) {
+      const item = (await client.query(
+        `SELECT item_key, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1`,
+        [mail.reward_item_key])).rows[0];
+      if (!item) {
+        await client.query('ROLLBACK');
+        return { success: false, messageKey: 'db_item_not_found' };
+      }
+      const days = mail.reward_days != null ? mail.reward_days : item.duration_days;
+      const granted = await grantItemToUser(client, nickname, item, days, 'mail');
+      reward = {
+        type: 'item', itemKey: granted.itemKey, days: days ?? null,
+        alreadyOwned: granted.alreadyOwned === true,
+      };
+    }
+
+    await client.query(
+      `UPDATE tc_mail_recipients SET claimed_at = (NOW() AT TIME ZONE 'UTC') WHERE id = $1`,
+      [rec.rows[0].id]);
+    await client.query('COMMIT');
+    return { success: true, reward, title: mail.title };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('claimMail error:', err);
+    return { success: false, messageKey: 'mail_claim_failed' };
+  } finally {
+    client.release();
+  }
+}
+
+/** Sent mail with how far it got, for the backstage list. */
+async function listMail({ page = 1, limit = 25 } = {}) {
+  const lim = Math.max(1, Math.min(parseInt(limit, 10) || 25, 100));
+  const off = (Math.max(1, parseInt(page, 10) || 1) - 1) * lim;
+  try {
+    const total = parseInt((await pool.query('SELECT COUNT(*) FROM tc_mail')).rows[0].count, 10);
+    const rows = await pool.query(
+      `SELECT m.*,
+              (SELECT COUNT(*) FROM tc_mail_recipients r WHERE r.mail_id = m.id)::int AS recipients,
+              (SELECT COUNT(*) FROM tc_mail_recipients r
+                WHERE r.mail_id = m.id AND r.read_at IS NOT NULL)::int AS read_count,
+              (SELECT COUNT(*) FROM tc_mail_recipients r
+                WHERE r.mail_id = m.id AND r.claimed_at IS NOT NULL)::int AS claimed_count,
+              si.name_ko AS item_name_ko
+         FROM tc_mail m
+         LEFT JOIN tc_shop_items si ON si.item_key = m.reward_item_key
+        ORDER BY m.created_at DESC LIMIT $1 OFFSET $2`,
+      [lim, off]);
+    return { success: true, rows: rows.rows, total, page: Math.max(1, parseInt(page, 10) || 1), limit: lim };
+  } catch (err) {
+    console.error('listMail error:', err);
+    return { success: false, rows: [], total: 0, page: 1, limit: lim, message: err.message };
+  }
+}
+
+async function getMailDetail(id, { limit = 200 } = {}) {
+  try {
+    const mail = (await pool.query('SELECT * FROM tc_mail WHERE id = $1', [id])).rows[0];
+    if (!mail) return null;
+    const recipients = await pool.query(
+      `SELECT nickname, read_at, claimed_at FROM tc_mail_recipients
+        WHERE mail_id = $1 ORDER BY claimed_at DESC NULLS LAST, read_at DESC NULLS LAST, nickname
+        LIMIT $2`, [id, limit]);
+    return { mail, recipients: recipients.rows };
+  } catch (err) {
+    console.error('getMailDetail error:', err);
+    return null;
+  }
+}
+
+/**
+ * Delete a letter and everyone's copy of it (ON DELETE CASCADE).
+ *
+ * Rewards go with it: a claimed row disappearing is only safe because the
+ * letter it belonged to is gone too, so there is nothing left to claim from.
+ */
+async function deleteMail(id) {
+  try {
+    await pool.query('DELETE FROM tc_mail WHERE id = $1', [id]);
+    return { success: true };
+  } catch (err) {
+    console.error('deleteMail error:', err);
+    return { success: false, message: err.message };
+  }
+}
+
 async function claimPushCampaign(nickname, campaignId) {
   const client = await pool.connect();
   try {
@@ -9752,6 +10087,32 @@ async function getBroadcastFcmTokens(targetFilter = 'all') {
 }
 
 /**
+ * Tokens for the people a letter just went to.
+ *
+ * Same filter as a broadcast (a device that can receive, an account that
+ * exists) but restricted to the addressees. Marketing consent is deliberately
+ * NOT consulted: a letter from the staff is a service message — a reply, a
+ * correction, a disciplinary notice — not advertising, and the marketing flag
+ * covers advertising.
+ */
+async function getMailPushTokens(nicknames) {
+  const list = (nicknames || []).filter(Boolean);
+  if (list.length === 0) return [];
+  try {
+    const r = await pool.query(
+      `SELECT id, fcm_token, nickname FROM tc_users
+        WHERE nickname = ANY($1)
+          AND push_enabled = true AND is_deleted IS NOT TRUE
+          AND fcm_token IS NOT NULL AND fcm_token != ''
+          AND fcm_token_invalid_at IS NULL`, [list]);
+    return r.rows;
+  } catch (err) {
+    console.error('getMailPushTokens error:', err.message);
+    return [];
+  }
+}
+
+/**
  * Record one push to one user.
  *
  * Written BEFORE the send so the row's id can ride along in the notification's
@@ -11324,6 +11685,15 @@ module.exports = {
   openCampaignForClaims,
   recordCampaignSend,
   claimPushCampaign,
+  sendMail,
+  getMailbox,
+  getMailPushTokens,
+  getUnreadMailCount,
+  markMailRead,
+  claimMail,
+  listMail,
+  getMailDetail,
+  deleteMail,
   getCampaignRecipients,
   getShopPurchaseLog,
   getShopPurchaseLogSummary,

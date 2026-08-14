@@ -1696,5 +1696,19 @@
   "chatDate": "{d}.{m}.{y}",
   "shopSheetCreateTitle": "Titel erstellen",
   "shopSheetRegisterPhoto": "Foto festlegen",
-  "shopSheetEquipped": "Ausgerüstet"
+  "shopSheetEquipped": "Ausgerüstet",
+  "mailboxTitle": "Postfach",
+  "mailboxEmpty": "Noch keine Post",
+  "mailboxEmptyHint": "Briefe vom Team erscheinen hier.",
+  "mailboxUnreadBadge": "Neu",
+  "mailboxRewardGold": "{amount} Gold",
+  "mailboxRewardItem": "{item}",
+  "mailboxRewardDays": "{days} Tage",
+  "mailboxClaim": "Abholen",
+  "mailboxClaimed": "Abgeholt",
+  "mailboxExpired": "Beendet",
+  "mailboxExpiresAt": "Abholen bis {date}",
+  "mailboxClaimedToast": "Belohnung abgeholt",
+  "mailboxFrom": "Tichu Online Team",
+  "mailboxLoadFailed": "Postfach konnte nicht geladen werden"
 }

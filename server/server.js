@@ -78,6 +78,7 @@ const {
   getSKRecentMatches,
   getPublishedNotices,
   getBroadcastFcmTokens,
+  getMailbox, markMailRead, claimMail,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getPushHistory,
   loadTitleTranslations,
@@ -3333,6 +3334,15 @@ async function handleMessage(ws, data) {
       break;
     case 'get_notices':
       await handleGetNotices(ws);
+      break;
+    case 'get_mailbox':
+      await handleGetMailbox(ws);
+      break;
+    case 'read_mail':
+      await handleReadMail(ws, data);
+      break;
+    case 'claim_mail':
+      await handleClaimMail(ws, data);
       break;
     case 'redeem_coupon':
       await handleRedeemCoupon(ws, data);
@@ -9893,6 +9903,59 @@ async function handleClaimPushReward(ws, data) {
 
 /// Config key for the App Review kill switch. See handleGetNotices.
 const COUPON_HIDE_IOS_KEY = 'coupon_hide_ios';
+
+/**
+ * 운영자 우편함.
+ *
+ * The unread count rides along with the list because the badge and the list
+ * are read at the same moment by the same screen, and a second round trip for
+ * one integer is the kind of thing that makes a screen feel slow.
+ */
+async function handleGetMailbox(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'mailbox_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const result = await getMailbox(ws.nickname);
+  sendTo(ws, {
+    type: 'mailbox_result',
+    success: result.success !== false,
+    mail: result.mail || [],
+    unread: (result.mail || []).filter((m) => !m.read_at).length,
+  });
+}
+
+async function handleReadMail(ws, data) {
+  if (!ws.nickname) return;
+  await markMailRead(ws.nickname, data?.mailId);
+  // No reply: the client marks it read locally the moment it opens the letter,
+  // and a round trip just to confirm what it already drew is noise.
+}
+
+async function handleClaimMail(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'mail_claim_result', success: false, message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const result = await claimMail(ws.nickname, data?.mailId);
+  if (!result.success) {
+    sendTo(ws, {
+      type: 'mail_claim_result', success: false, mailId: data?.mailId,
+      message: t(ws.locale, result.messageKey || 'mail_claim_failed'),
+    });
+    return;
+  }
+  sendTo(ws, {
+    type: 'mail_claim_result', success: true, mailId: data?.mailId,
+    reward: result.reward || null, title: result.title || '',
+  });
+  // The wallet the app is showing is now stale — pushed rather than waited
+  // for, the same way a coupon redemption and a campaign reward do it.
+  if (result.reward) {
+    const wallet = await getWallet(ws.nickname);
+    if (wallet.success) sendTo(ws, { type: 'wallet_result', ...wallet });
+  }
+}
 
 async function handleGetNotices(ws) {
   const result = await getPublishedNotices();

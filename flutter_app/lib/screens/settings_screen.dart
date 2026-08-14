@@ -19,6 +19,7 @@ import '../services/session_service.dart';
 import '../services/ad_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'admin_center_screen.dart';
+import 'mailbox_screen.dart';
 import 'notices_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -259,6 +260,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _deleteAccount() {
     final game = context.read<GameService>();
     game.deleteAccount().whenComplete(_logout);
+  }
+
+  void _openMailbox() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MailboxScreen()),
+    );
   }
 
   void _openNoticesPage() {
@@ -1548,6 +1556,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         game.unreadNoticeCount > 9
                                             ? '9+'
                                             : '${game.unreadNoticeCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  const Icon(
+                                    Icons.chevron_right,
+                                    color: Color(0xFFB0A8A4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            // 운영자 우편함. Sits with notices rather than with
+                            // support: both are things the team sent that are
+                            // waiting to be read, and a player looking for
+                            // "did they get back to me" checks the same place.
+                            _buildRow(
+                              icon: Icons.mark_email_unread,
+                              iconColor: const Color(0xFFEF6C00),
+                              title: L10n.of(context).mailboxTitle,
+                              onTap: _openMailbox,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (game.unreadMailCount > 0)
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFE53935),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(999),
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Text(
+                                        game.unreadMailCount > 9
+                                            ? '9+'
+                                            : '${game.unreadMailCount}',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 10,

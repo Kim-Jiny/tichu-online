@@ -299,5 +299,10 @@
   "push_reward_already_claimed": "You have already claimed this reward",
   "push_reward_expired": "The window for claiming this reward has closed",
   "push_reward_not_found": "That notification could not be found",
-  "push_reward_failed": "Could not grant the reward. Please try again shortly"
+  "push_reward_failed": "Could not grant the reward. Please try again shortly",
+  "mail_not_yours": "This letter was not sent to your account",
+  "mail_already_claimed": "You have already claimed this reward",
+  "mail_expired": "The window for claiming this reward has closed",
+  "mail_not_found": "Letter not found",
+  "mail_claim_failed": "Could not claim the reward. Please try again shortly"
 }

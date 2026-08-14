@@ -299,5 +299,10 @@
   "push_reward_already_claimed": "Du hast diese Belohnung bereits erhalten",
   "push_reward_expired": "Der Zeitraum für diese Belohnung ist abgelaufen",
   "push_reward_not_found": "Diese Benachrichtigung wurde nicht gefunden",
-  "push_reward_failed": "Belohnung konnte nicht vergeben werden. Bitte versuche es gleich noch einmal"
+  "push_reward_failed": "Belohnung konnte nicht vergeben werden. Bitte versuche es gleich noch einmal",
+  "mail_not_yours": "Dieser Brief wurde nicht an dein Konto gesendet",
+  "mail_already_claimed": "Du hast diese Belohnung bereits erhalten",
+  "mail_expired": "Der Zeitraum für diese Belohnung ist abgelaufen",
+  "mail_not_found": "Brief nicht gefunden",
+  "mail_claim_failed": "Belohnung konnte nicht abgeholt werden. Bitte versuche es später erneut"
 }

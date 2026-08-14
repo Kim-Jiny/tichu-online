@@ -8642,6 +8642,90 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Equipped'**
   String get shopSheetEquipped;
+
+  /// No description provided for @mailboxTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mail'**
+  String get mailboxTitle;
+
+  /// No description provided for @mailboxEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No mail yet'**
+  String get mailboxEmpty;
+
+  /// No description provided for @mailboxEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters from the team will appear here.'**
+  String get mailboxEmptyHint;
+
+  /// No description provided for @mailboxUnreadBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get mailboxUnreadBadge;
+
+  /// No description provided for @mailboxRewardGold.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} gold'**
+  String mailboxRewardGold(String amount);
+
+  /// No description provided for @mailboxRewardItem.
+  ///
+  /// In en, this message translates to:
+  /// **'{item}'**
+  String mailboxRewardItem(String item);
+
+  /// No description provided for @mailboxRewardDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String mailboxRewardDays(int days);
+
+  /// No description provided for @mailboxClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim'**
+  String get mailboxClaim;
+
+  /// No description provided for @mailboxClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed'**
+  String get mailboxClaimed;
+
+  /// No description provided for @mailboxExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get mailboxExpired;
+
+  /// No description provided for @mailboxExpiresAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim by {date}'**
+  String mailboxExpiresAt(String date);
+
+  /// No description provided for @mailboxClaimedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward claimed'**
+  String get mailboxClaimedToast;
+
+  /// No description provided for @mailboxFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Tichu Online Team'**
+  String get mailboxFrom;
+
+  /// No description provided for @mailboxLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your mail'**
+  String get mailboxLoadFailed;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

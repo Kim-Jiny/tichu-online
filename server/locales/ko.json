@@ -299,5 +299,10 @@
   "push_reward_already_claimed": "이미 받은 보상입니다",
   "push_reward_expired": "보상 받는 기간이 지났습니다",
   "push_reward_not_found": "알림 정보를 찾을 수 없습니다",
-  "push_reward_failed": "보상을 지급하지 못했습니다. 잠시 후 다시 시도해 주세요"
+  "push_reward_failed": "보상을 지급하지 못했습니다. 잠시 후 다시 시도해 주세요",
+  "mail_not_yours": "이 편지의 수신자가 아닙니다",
+  "mail_already_claimed": "이미 받은 보상입니다",
+  "mail_expired": "보상 받는 기간이 지났습니다",
+  "mail_not_found": "편지를 찾을 수 없습니다",
+  "mail_claim_failed": "보상을 받지 못했습니다. 잠시 후 다시 시도해 주세요"
 }

@@ -4920,4 +4920,54 @@ class L10nDe extends L10n {
 
   @override
   String get shopSheetEquipped => 'Ausgerüstet';
+
+  @override
+  String get mailboxTitle => 'Postfach';
+
+  @override
+  String get mailboxEmpty => 'Noch keine Post';
+
+  @override
+  String get mailboxEmptyHint => 'Briefe vom Team erscheinen hier.';
+
+  @override
+  String get mailboxUnreadBadge => 'Neu';
+
+  @override
+  String mailboxRewardGold(String amount) {
+    return '$amount Gold';
+  }
+
+  @override
+  String mailboxRewardItem(String item) {
+    return '$item';
+  }
+
+  @override
+  String mailboxRewardDays(int days) {
+    return '$days Tage';
+  }
+
+  @override
+  String get mailboxClaim => 'Abholen';
+
+  @override
+  String get mailboxClaimed => 'Abgeholt';
+
+  @override
+  String get mailboxExpired => 'Beendet';
+
+  @override
+  String mailboxExpiresAt(String date) {
+    return 'Abholen bis $date';
+  }
+
+  @override
+  String get mailboxClaimedToast => 'Belohnung abgeholt';
+
+  @override
+  String get mailboxFrom => 'Tichu Online Team';
+
+  @override
+  String get mailboxLoadFailed => 'Postfach konnte nicht geladen werden';
 }

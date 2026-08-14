@@ -4884,4 +4884,54 @@ class L10nEn extends L10n {
 
   @override
   String get shopSheetEquipped => 'Equipped';
+
+  @override
+  String get mailboxTitle => 'Mail';
+
+  @override
+  String get mailboxEmpty => 'No mail yet';
+
+  @override
+  String get mailboxEmptyHint => 'Letters from the team will appear here.';
+
+  @override
+  String get mailboxUnreadBadge => 'New';
+
+  @override
+  String mailboxRewardGold(String amount) {
+    return '$amount gold';
+  }
+
+  @override
+  String mailboxRewardItem(String item) {
+    return '$item';
+  }
+
+  @override
+  String mailboxRewardDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String get mailboxClaim => 'Claim';
+
+  @override
+  String get mailboxClaimed => 'Claimed';
+
+  @override
+  String get mailboxExpired => 'Closed';
+
+  @override
+  String mailboxExpiresAt(String date) {
+    return 'Claim by $date';
+  }
+
+  @override
+  String get mailboxClaimedToast => 'Reward claimed';
+
+  @override
+  String get mailboxFrom => 'Tichu Online Team';
+
+  @override
+  String get mailboxLoadFailed => 'Could not load your mail';
 }

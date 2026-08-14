@@ -269,6 +269,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       game.requestFriends();
       game.requestPendingFriendRequests();
       game.requestInquiries();
+      game.loadMailbox();
       // Auto-show the reply popup once the inquiry list arrives (or already has
       // an unread reply). Listener so it fires when requestInquiries resolves.
       _inquiryGameRef = game;
@@ -2072,7 +2073,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // Badge covers BOTH unread notices and unread inquiry replies, so an
           // answered inquiry is discoverable on the room-list page (settings →
           // 문의내역) instead of relying on the transient banner.
-          if (game.unreadNoticeCount + game.unreadInquiryReplyCount > 0)
+          if (game.unreadNoticeCount +
+                  game.unreadInquiryReplyCount +
+                  game.unreadMailCount >
+              0)
             Positioned(
               right: -4,
               top: -4,
@@ -2084,9 +2088,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: Text(
-                  (game.unreadNoticeCount + game.unreadInquiryReplyCount) > 9
+                  (game.unreadNoticeCount +
+                              game.unreadInquiryReplyCount +
+                              game.unreadMailCount) >
+                          9
                       ? '9+'
-                      : '${game.unreadNoticeCount + game.unreadInquiryReplyCount}',
+                      : '${game.unreadNoticeCount + game.unreadInquiryReplyCount + game.unreadMailCount}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,

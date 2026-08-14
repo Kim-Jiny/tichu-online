@@ -2815,5 +2815,47 @@
   },
   "shopSheetCreateTitle": "Create title",
   "shopSheetRegisterPhoto": "Set photo",
-  "shopSheetEquipped": "Equipped"
+  "shopSheetEquipped": "Equipped",
+  "mailboxTitle": "Mail",
+  "mailboxEmpty": "No mail yet",
+  "mailboxEmptyHint": "Letters from the team will appear here.",
+  "mailboxUnreadBadge": "New",
+  "mailboxRewardGold": "{amount} gold",
+  "@mailboxRewardGold": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "mailboxRewardItem": "{item}",
+  "@mailboxRewardItem": {
+    "placeholders": {
+      "item": {
+        "type": "String"
+      }
+    }
+  },
+  "mailboxRewardDays": "{days} days",
+  "@mailboxRewardDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "mailboxClaim": "Claim",
+  "mailboxClaimed": "Claimed",
+  "mailboxExpired": "Closed",
+  "mailboxExpiresAt": "Claim by {date}",
+  "@mailboxExpiresAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "mailboxClaimedToast": "Reward claimed",
+  "mailboxFrom": "Tichu Online Team",
+  "mailboxLoadFailed": "Could not load your mail"
 }

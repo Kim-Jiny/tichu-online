@@ -4770,4 +4770,54 @@ class L10nKo extends L10n {
 
   @override
   String get shopSheetEquipped => '장착 중';
+
+  @override
+  String get mailboxTitle => '우편함';
+
+  @override
+  String get mailboxEmpty => '받은 편지가 없습니다';
+
+  @override
+  String get mailboxEmptyHint => '운영진이 보낸 편지가 여기에 도착합니다.';
+
+  @override
+  String get mailboxUnreadBadge => '새 편지';
+
+  @override
+  String mailboxRewardGold(String amount) {
+    return '$amount 골드';
+  }
+
+  @override
+  String mailboxRewardItem(String item) {
+    return '$item';
+  }
+
+  @override
+  String mailboxRewardDays(int days) {
+    return '$days일';
+  }
+
+  @override
+  String get mailboxClaim => '받기';
+
+  @override
+  String get mailboxClaimed => '받음';
+
+  @override
+  String get mailboxExpired => '기간 종료';
+
+  @override
+  String mailboxExpiresAt(String date) {
+    return '$date까지 받기';
+  }
+
+  @override
+  String get mailboxClaimedToast => '보상을 받았습니다';
+
+  @override
+  String get mailboxFrom => '티츄 온라인 운영팀';
+
+  @override
+  String get mailboxLoadFailed => '우편함을 불러오지 못했습니다';
 }

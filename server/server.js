@@ -1015,7 +1015,7 @@ async function cleanupExpiredProfilePhotos() {
     // and is neither cleared nor has their fresh object deleted.
     const cleared = await pool.query(
       `WITH victims AS (
-         SELECT id, profile_photo_key FROM tc_users
+         SELECT id, nickname, profile_photo_key FROM tc_users
          WHERE profile_photo_status = 'active'
            AND profile_photo_expires_at IS NOT NULL
            AND profile_photo_expires_at < NOW()
@@ -1024,14 +1024,20 @@ async function cleanupExpiredProfilePhotos() {
          UPDATE tc_users SET profile_photo_key = NULL, profile_photo_status = 'none'
          FROM victims WHERE tc_users.id = victims.id
        )
-       SELECT profile_photo_key FROM victims`,
+       SELECT nickname, profile_photo_key FROM victims`,
     );
     for (const u of cleared.rows) {
       if (u.profile_photo_key) await deletePhotoObjectUnlessReported(u.profile_photo_key);
+      // ws.photoUrl is resolved once, at login, and every seat in the room
+      // reads that copy. Without this the photo stays on the table for the
+      // rest of the session — and once the object above is deleted, it stays
+      // there as a URL that no longer resolves.
+      if (u.nickname) forgetPhotoOnLiveSocket(u.nickname);
     }
     if (cleared.rows.length) {
       console.log(`[profile-photo] cleaned up ${cleared.rows.length} expired photo(s)`);
     }
+    return { cleared: cleared.rows.length };
   } catch (e) {
     console.error('[profile-photo] cleanup error:', e && e.message);
   }
@@ -1087,6 +1093,32 @@ async function deletePhotoObjectUnlessReported(key) {
   }
 }
 
+/**
+ * Take the photo off a live session.
+ *
+ * The URL is resolved once at login into ws.photoUrl, and the room's seat
+ * objects hold their own copy of it, so clearing the database is not enough
+ * for anyone already connected: their face stays on the table until they
+ * reconnect. Used by the self-delete path and by the expiry sweep.
+ */
+function dropPhotoFromSession(ws) {
+  if (!ws) return;
+  ws.photoUrl = null;
+  sendTo(ws, { type: 'profile_photo_updated', playerId: ws.playerId, url: null });
+  if (!ws.roomId) return;
+  const room = lobby.getRoom(ws.roomId);
+  const player = room?.players?.find((p) => p && p.id === ws.playerId);
+  if (player) player.photoUrl = null;
+  broadcastRoomState(ws.roomId);
+  if (room?.game) sendGameStateToAll(ws.roomId);
+}
+
+/** Same, addressed by nickname — the sweep works from rows, not sockets. */
+function forgetPhotoOnLiveSocket(nickname) {
+  const ws = findWsByNickname(nickname);
+  if (ws) dropPhotoFromSession(ws);
+}
+
 async function handleDeleteProfilePhoto(ws) {
   if (!ws.userId) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
@@ -1094,15 +1126,7 @@ async function handleDeleteProfilePhoto(ws) {
   }
   const { oldKey } = await adminClearProfilePhoto(ws.nickname);
   if (oldKey) deletePhotoObjectUnlessReported(oldKey); // best-effort
-  ws.photoUrl = null;
-  sendTo(ws, { type: 'profile_photo_updated', playerId: ws.playerId, url: null });
-  if (ws.roomId) {
-    const room = lobby.getRoom(ws.roomId);
-    const player = room?.players?.find((p) => p && p.id === ws.playerId);
-    if (player) player.photoUrl = null;
-    broadcastRoomState(ws.roomId);
-    if (room?.game) sendGameStateToAll(ws.roomId);
-  }
+  dropPhotoFromSession(ws);
   console.log(`[profile-photo] self-deleted by ${ws.nickname}`);
 }
 
@@ -1132,7 +1156,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });

@@ -1896,7 +1896,7 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -3835,8 +3835,29 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ? '<div class="empty">노출 중인 프로필 사진이 없습니다</div>'
         : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">${cards}</div>`}
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/profile-photos')}
+      <div class="card" style="margin-top:16px">
+        <h3>만료 사진 정리</h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:10px">
+          사진권이 끝난 사람의 사진을 내리고 저장소에서도 지웁니다. 평소에는
+          <b>한 시간마다</b> 저절로 돕니다 — 이 버튼은 기다리지 않고 지금 돌리는 용도입니다.
+          접속 중인 사람은 자리에서도 바로 기본 아바타로 바뀝니다.
+        </div>
+        <form method="POST" action="/tc-backstage/profile-photos/sweep">
+          <button class="btn btn-secondary">지금 정리</button>
+        </form>
+      </div>
     `;
     return html(res, layout('프로필 사진', content, 'profile-photos'));
+  }
+
+  if (pathname === '/tc-backstage/profile-photos/sweep' && method === 'POST') {
+    const r = cleanupExpiredProfilePhotos
+      ? await cleanupExpiredProfilePhotos()
+      : null;
+    const msg = !r
+      ? '정리 기능을 쓸 수 없습니다 (스토리지 미설정).'
+      : `${formatNumber(r.cleared || 0)}건 정리했습니다.`;
+    return redirect(res, '/tc-backstage/profile-photos?msg=' + encodeURIComponent(msg));
   }
 
   if (pathname === '/tc-backstage/reports' && method === 'GET') {

@@ -19,7 +19,8 @@ const {
   getConfig, updateConfig,
   getNotices, getNoticeById, createNotice, updateNotice, deleteNotice,
   insertMaintenanceHistory, getMaintenanceHistory,
-  getBroadcastFcmTokens, insertPushHistory, getPushHistory, insertPushRecipients, getPushHistoryDetail,
+  getBroadcastFcmTokens, insertPushHistory, updatePushHistoryCounts, getPushHistory,
+  getUnifiedPushHistory, getPushHistoryCounts, PUSH_LOG_RETENTION_DAYS, insertPushRecipients, getPushHistoryDetail,
   upsertCoupon, getCouponByCode, listCoupons, getCouponRedemptions, deleteCoupon, normalizeCouponCode,
 } = require('./db/database');
 const { refundGoogleOrder } = require('./iap/GoogleVerify');
@@ -638,6 +639,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
     <a href="/tc-backstage/coupons" class="${activePage === 'coupons' ? 'active' : ''}" onclick="closeSidebar()">쿠폰</a>
     <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
+    <a href="/tc-backstage/push-history" class="${activePage === 'push-history' ? 'active' : ''}" onclick="closeSidebar()">푸시 히스토리</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">System</div>
@@ -3639,7 +3641,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         const title = '문의 답변이 도착했어요';
         const inquiryTitle = resolved.inquiry.title || '';
         const message = inquiryTitle ? `제목: ${inquiryTitle}` : '앱에서 확인해주세요.';
-        await sendPushNotification(user.fcm_token, title, message);
+        await sendPushNotification(user.fcm_token, title, message,
+          { event: 'inquiry_reply', nickname: targetNickname,
+            actor: sessionInfo.session.username || 'admin' });
       }
     }
     return redirect(res, `/tc-backstage/inquiries/${resolveMatch[1]}`);
@@ -4682,7 +4686,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, `${redirectBase}?push=fail&reason=${encodeURIComponent('사용자 알림이 비활성화되어 있어 전송할 수 없습니다')}`);
     }
     if (sendPushNotification) {
-      const result = await sendPushNotification(user.fcm_token, body.title || '', body.body || '');
+      const result = await sendPushNotification(user.fcm_token, body.title || '', body.body || '',
+        { kind: 'admin_direct', event: 'direct', nickname,
+          actor: sessionInfo.session.username || 'admin' });
       if (result.success) {
         return redirect(res, `${redirectBase}?push=ok`);
       } else {
@@ -6719,7 +6725,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           await sendPushNotification(
             user.fcm_token,
             '입금이 확인되었어요',
-            `+${Number(result.gold).toLocaleString()} 골드가 지급되었어요.`
+            `+${Number(result.gold).toLocaleString()} 골드가 지급되었어요.`,
+            { event: 'bank_deposit', nickname: result.nickname,
+              actor: sessionInfo.session.username || 'admin' }
           );
         }
       } catch (e) {
@@ -7698,7 +7706,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             await sendPushNotification(
               user.fcm_token,
               '골드가 지급되었어요',
-              `+${amount.toLocaleString()} 골드가 지급되었어요. 앱에서 확인해주세요.`
+              `+${amount.toLocaleString()} 골드가 지급되었어요. 앱에서 확인해주세요.`,
+              { event: 'gold_grant', nickname,
+                actor: sessionInfo.session.username || 'admin' }
             );
           }
         } catch (e) {
@@ -8217,6 +8227,116 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     return html(res, layout('푸시알림', content, 'push'));
   }
 
+  // ── 푸시 히스토리 ────────────────────────────────────────────────────
+  //
+  // Everything that was ever pushed, in one list: admin broadcasts, marketing
+  // campaigns, and the one-to-one notifications the server sends off the back
+  // of an event. They live in three tables (each owns semantics the others do
+  // not — a campaign row has to survive for its reward to be claimable), so
+  // this reads a union rather than a copy. Filters do the work of keeping it
+  // legible: system pushes outnumber everything else by orders of magnitude.
+  if (pathname === '/tc-backstage/push-history' && method === 'GET') {
+    const kind = url.searchParams.get('kind') || 'all';
+    const search = (url.searchParams.get('q') || '').trim();
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const [data, counts] = await Promise.all([
+      getUnifiedPushHistory({ kind, search, page, limit: 30 }),
+      getPushHistoryCounts(),
+    ]);
+
+    const kindMeta = {
+      broadcast: { label: '어드민 단체', bg: '#e3f2fd', fg: '#1565c0' },
+      marketing: { label: '마케팅', bg: '#f3e5f5', fg: '#6a1b9a' },
+      direct: { label: '어드민 개별', bg: '#fff3e0', fg: '#e65100' },
+      system: { label: '시스템', bg: '#eceff1', fg: '#455a64' },
+    };
+    const eventLabels = {
+      friend_request: '친구 요청', inquiry_reply: '문의 답변',
+      gold_grant: '골드 지급', bank_deposit: '입금 확인', direct: '개별 발송',
+    };
+    const qs = (over = {}) => {
+      const params = new URLSearchParams();
+      const k = over.kind !== undefined ? over.kind : kind;
+      if (k && k !== 'all') params.set('kind', k);
+      if (search) params.set('q', search);
+      return params.toString() ? `?${params}` : '';
+    };
+    const chip = (value, label, n) => `
+      <a href="/tc-backstage/push-history${qs({ kind: value })}"
+         class="btn ${kind === value ? 'btn-primary' : 'btn-secondary'}"
+         style="padding:6px 13px;font-size:13px">${label}${n !== undefined ? ` <b>${formatNumber(n)}</b>` : ''}</a>`;
+
+    const rowsHtml = data.rows.map((r) => {
+      const meta = kindMeta[r.kind] || kindMeta.system;
+      const isOneToOne = r.kind === 'system' || r.kind === 'direct';
+      const target = isOneToOne
+        ? `<a href="/tc-backstage/users/${encodeURIComponent(r.nickname || '')}">${escapeHtml(r.nickname || '-')}</a>`
+        : (r.target === 'ios' ? 'iOS' : r.target === 'android' ? 'Android' : '전체');
+      // One-to-one rows have no useful "of how many" — sent is 1 or 0, and the
+      // interesting bit is whether it landed at all.
+      const delivery = isOneToOne
+        ? (r.sent ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">전송</span>'
+                  : '<span class="badge" style="background:#ffebee;color:#c62828">실패</span>')
+        : `<b style="color:#2e7d32">${formatNumber(r.sent)}</b>`
+          + (r.failed ? ` <span style="color:#c62828;font-size:12px">/ 실패 ${formatNumber(r.failed)}</span>` : '');
+      const openRate = !isOneToOne && r.sent > 0
+        ? ` <span class="muted" style="font-size:11.5px">(${Math.round((r.opened / r.sent) * 100)}%)</span>`
+        : '';
+      const detailHref = r.kind === 'broadcast' ? `/tc-backstage/push/${r.id}`
+        : r.kind === 'marketing' ? `/tc-backstage/campaigns/${r.id}` : null;
+      const bodyShort = (r.body || '').length > 60 ? `${(r.body || '').slice(0, 60)}…` : (r.body || '');
+      return `<tr>
+        <td style="white-space:nowrap"><span class="badge" style="background:${meta.bg};color:${meta.fg}">${meta.label}</span></td>
+        <td>
+          <div style="font-weight:700">${escapeHtml(r.title || '(제목 없음)')}</div>
+          <div class="muted" style="font-size:12px">${escapeHtml(bodyShort)}</div>
+          ${r.event && eventLabels[r.event] ? `<div class="muted" style="font-size:11px">${eventLabels[r.event]}</div>` : ''}
+        </td>
+        <td style="font-size:12.5px">${target}</td>
+        <td>${delivery}</td>
+        <td>${isOneToOne
+          ? (r.opened ? '<span class="badge" style="background:#e1f5fe;color:#0277bd">열람</span>' : '<span class="muted">-</span>')
+          : `${formatNumber(r.opened)}${openRate}`}</td>
+        <td>${r.claimed !== null && r.claimed !== undefined ? formatNumber(r.claimed) : '<span class="muted">-</span>'}</td>
+        <td style="font-size:12px;color:#888">${escapeHtml(r.actor || '-')}</td>
+        <td style="font-size:12px;color:#888;white-space:nowrap">${formatDate(r.created_at)}</td>
+        <td>${detailHref ? `<a class="btn btn-secondary" style="font-size:12px;padding:4px 10px" href="${detailHref}">상세</a>` : ''}</td>
+      </tr>`;
+    }).join('');
+
+    const content = `
+      ${pageHeader('푸시 히스토리',
+        `유저에게 나간 모든 알림입니다 — 어드민 단체 발송, 마케팅 캠페인, 그리고 친구 요청·문의 답변처럼 서버가 자동으로 보내는 개별 알림까지.
+         <b>열람</b>은 알림을 눌러서 앱을 연 사람 수이고, 앱이 이 기능을 담은 버전부터 집계됩니다.
+         개별 알림과 단체 발송의 수신자 기록은 ${PUSH_LOG_RETENTION_DAYS}일 뒤 정리되며, 위의 요약 수치는 남습니다.`)}
+      <div class="card">
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          ${chip('all', '전체', counts.all)}
+          ${chip('broadcast', '어드민 단체', counts.broadcast)}
+          ${chip('marketing', '마케팅', counts.marketing)}
+          ${chip('direct', '어드민 개별', counts.direct)}
+          ${chip('system', '시스템', counts.system)}
+          <form method="GET" action="/tc-backstage/push-history" style="margin-left:auto;display:flex;gap:6px">
+            ${kind !== 'all' ? `<input type="hidden" name="kind" value="${escapeHtml(kind)}">` : ''}
+            <input type="text" name="q" value="${escapeHtml(search)}" placeholder="제목·내용·닉네임"
+                   style="padding:6px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;width:200px">
+            <button class="btn btn-secondary" style="padding:6px 13px;font-size:13px">검색</button>
+          </form>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        ${data.rows.length ? `
+          <div class="table-wrap"><table>
+            <tr><th>종류</th><th>내용</th><th>대상</th><th>발송</th><th>열람</th><th>수령</th><th>보낸이</th><th>일시</th><th></th></tr>
+            ${rowsHtml}
+          </table></div>
+          ${pagination(data.page, data.total, data.limit, `/tc-backstage/push-history${qs()}`)}
+        ` : `<div class="empty">${escapeHtml(data.message || '해당하는 발송 기록이 없습니다')}</div>`}
+      </div>
+    `;
+    return html(res, layout('푸시 히스토리', content, 'push-history'));
+  }
+
   // Send broadcast push
   if (pathname === '/tc-backstage/push/send' && method === 'POST') {
     const sessionData = getSessionFromCookie(req);
@@ -8235,7 +8355,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/push?result=' + encodeURIComponent('실패: 발송 대상이 없습니다'));
     }
 
-    const result = await sendBroadcastPush(tokenRows, title, pushBody);
+    // The history row goes in FIRST, empty, because its id has to ride along in
+    // the notification's data payload — that id is what comes back when someone
+    // taps, and there is no second chance to attach it once the push is out.
+    // Counts are filled in below; a row stuck at zero means the send itself
+    // died, which is worth seeing.
+    const historyId = await insertPushHistory({
+      adminUsername,
+      title,
+      body: pushBody,
+      targetFilter,
+      totalSent: tokenRows.length,
+      successCount: 0,
+      failCount: 0,
+      invalidTokens: 0,
+    });
+
+    const result = await sendBroadcastPush(tokenRows, title, pushBody,
+      { type: 'broadcast', pushId: historyId });
 
     // Anything FCM rejected as unregistered is a device that is gone. Marked,
     // not erased — see markFcmTokensInvalid.
@@ -8247,15 +8384,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       nicknameMap[row.id] = row.nickname;
     }
 
-    const historyId = await insertPushHistory({
-      adminUsername,
-      title,
-      body: pushBody,
-      targetFilter,
-      totalSent: tokenRows.length,
+    await updatePushHistoryCounts(historyId, {
       successCount: result.successCount,
       failCount: result.failCount,
-      invalidTokens: result.invalidUserIds.length,
+      invalidTokens: (result.invalidUserIds || []).length,
     });
 
     // Build and save recipients

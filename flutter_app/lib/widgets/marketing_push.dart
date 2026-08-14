@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
-import '../main.dart' show pendingCampaignTaps;
+import '../main.dart' show pendingCampaignTaps, pendingPushOpens;
 import '../services/game_service.dart';
 
 /// Whether to raise the first-time consent popup here.
@@ -53,12 +53,14 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
     // stays up, no state moves — so without listening here the queued campaign
     // would sit unread until something unrelated happened to rebuild this.
     pendingCampaignTaps.addListener(_onTap);
+    pendingPushOpens.addListener(_onTap);
     WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
   }
 
   @override
   void dispose() {
     pendingCampaignTaps.removeListener(_onTap);
+    pendingPushOpens.removeListener(_onTap);
     super.dispose();
   }
 
@@ -84,6 +86,16 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
         game.claimPushReward(id);
       }
       pendingCampaignTaps.value = const [];
+    }
+
+    // Taps on notifications that pay nothing. Purely a statistic, so it is
+    // fire-and-forget: the queue is cleared whether or not the socket is up,
+    // because a lost open is worth less than a queue that grows forever.
+    if (pendingPushOpens.value.isNotEmpty && game.playerId.isNotEmpty) {
+      for (final open in pendingPushOpens.value) {
+        game.reportPushOpened(open.kind, open.id);
+      }
+      pendingPushOpens.value = const [];
     }
 
     // The reward comes first. Someone who just tapped a notification is

@@ -78,7 +78,7 @@ const {
   getSKRecentMatches,
   getPublishedNotices,
   getBroadcastFcmTokens,
-  insertPushHistory,
+  insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getPushHistory,
   loadTitleTranslations,
   adminClearProfilePhoto,
@@ -144,17 +144,34 @@ async function verifyKakaoToken(accessToken) {
   };
 }
 // Push notification helper
-async function sendPushNotification(fcmToken, title, body) {
+/**
+ * One notification to one user.
+ *
+ * [meta] ({ event, nickname, kind, actor }) puts the send in tc_push_log, which
+ * is what the backstage push history reads. Logging happens here rather than at
+ * each of the eight call sites so a new kind of notification cannot be added
+ * without a record of it existing.
+ *
+ * The row is written before the send so its id can ride along in the data
+ * payload — that is what the app sends back when the user taps, and the only
+ * way an individual push ever gets an "opened" number. Sends with no meta (a
+ * caller that has nothing worth recording) skip all of it.
+ */
+async function sendPushNotification(fcmToken, title, body, meta = null) {
   if (!firebaseAdmin) return { success: false, message: 'Firebase not configured' };
+  const logId = meta ? await startPushLog({ ...meta, title, body }) : null;
   try {
     await firebaseAdmin.messaging().send({
       token: fcmToken,
       notification: { title, body },
+      ...(logId ? { data: { type: 'log', pushId: String(logId) } } : {}),
     });
-    return { success: true };
+    await finishPushLog(logId, true);
+    return { success: true, logId };
   } catch (err) {
     console.error('Push notification error:', err.message);
-    return { success: false, message: err.message };
+    await finishPushLog(logId, false, err.message);
+    return { success: false, message: err.message, logId };
   }
 }
 
@@ -280,7 +297,8 @@ async function sendFriendRequestPush(targetNickname, fromNickname) {
     const user = res.rows[0];
     if (!user.fcm_token || user.push_enabled === false || user.push_friend_invite === false) return;
     const body = t(user.locale, 'push_friend_request_body', { nickname: fromNickname });
-    await sendPushNotification(user.fcm_token, 'Tichu Online', body);
+    await sendPushNotification(user.fcm_token, 'Tichu Online', body,
+      { event: 'friend_request', nickname: targetNickname, actor: fromNickname });
   } catch (err) {
     console.error('Friend request push error:', err.message);
   }
@@ -2791,6 +2809,15 @@ setInterval(runGoogleVoidedPoll, GOOGLE_VOIDED_POLL_MS);
 // First run shortly after boot (let env/DB settle).
 setTimeout(runGoogleVoidedPoll, 60 * 1000);
 
+// Push detail rows are the only part of the push history that grows without
+// bound — one per notification, one per broadcast recipient. The summaries
+// they roll up into are kept forever; these are trimmed daily. Campaign
+// recipients are untouched on purpose: their rows carry whether the reward was
+// claimed (see purgePushLogs).
+const PUSH_PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+setInterval(() => { purgePushLogs().catch(() => {}); }, PUSH_PURGE_INTERVAL_MS);
+setTimeout(() => { purgePushLogs().catch(() => {}); }, 5 * 60 * 1000);
+
 /**
  * Failed-login throttle.
  *
@@ -3442,6 +3469,9 @@ async function handleMessage(ws, data) {
       break;
     case 'claim_push_reward':
       await handleClaimPushReward(ws, data);
+      break;
+    case 'push_opened':
+      await handlePushOpened(ws, data);
       break;
     case 'get_admin_dashboard':
       await handleGetAdminDashboard(ws);
@@ -9146,7 +9176,8 @@ async function notifyAdminUsers(kind, title, body, payload = {}) {
   const recipients = await getAdminPushRecipients(kind);
   for (const user of recipients) {
     if (user.fcm_token) {
-      await sendPushNotification(user.fcm_token, title, body);
+      await sendPushNotification(user.fcm_token, title, body,
+        { event: `admin_notify:${kind}`, nickname: user.nickname });
     }
   }
   for (const client of wss.clients) {
@@ -9358,7 +9389,8 @@ async function handleResolveAdminInquiry(ws, data) {
       const message = inquiryTitle
         ? t(user.locale, 'push_inquiry_reply_body_with_title', { title: inquiryTitle })
         : t(user.locale, 'push_inquiry_reply_body');
-      await sendPushNotification(user.fcm_token, title, message);
+      await sendPushNotification(user.fcm_token, title, message,
+        { event: 'inquiry_reply', nickname: targetNickname });
     }
   }
   sendTo(ws, { type: 'admin_inquiry_resolve_result', ...result });
@@ -9816,6 +9848,21 @@ async function handleConfirmMarketingConsent(ws, data) {
 /// got no answer for. Everything that decides whether to pay is in
 /// claimPushCampaign; this only carries the answer back so the app can show
 /// what arrived.
+/**
+ * The app reporting that a notification was tapped.
+ *
+ * Fire-and-forget from the client's side — there is nothing to answer. It is
+ * only a statistic, so a bad id is dropped silently rather than surfaced as an
+ * error the player would see for no reason. Campaign taps do NOT come through
+ * here: those carry a reward and go to claim_push_reward, which records the
+ * open as part of paying out.
+ */
+async function handlePushOpened(ws, data) {
+  if (!ws.nickname) return;
+  const kind = data?.kind === 'broadcast' ? 'broadcast' : 'log';
+  await markPushOpened(kind, data?.pushId, ws.nickname);
+}
+
 async function handleClaimPushReward(ws, data) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });

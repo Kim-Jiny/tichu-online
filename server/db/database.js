@@ -1553,6 +1553,39 @@ async function runMigrations() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_push_recipients_history ON tc_push_recipients(push_history_id)`);
 
+    // Every push that goes to ONE user: a friend request, an inquiry reply, a
+    // gold grant, an admin's one-off message. None of these were recorded
+    // anywhere, so "did the notification actually go out?" had no answer.
+    //
+    // One row per notification, unlike the two broadcast tables which keep one
+    // row per SEND and count their recipients separately. Individual pushes
+    // are low volume by nature (they follow a human action), and the row is
+    // what makes the unified history page able to show them at all.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_log (
+        id SERIAL PRIMARY KEY,
+        -- 'system' = the server sent it off the back of an event,
+        -- 'admin_direct' = a person typed it on the user detail page.
+        kind VARCHAR(20) NOT NULL DEFAULT 'system',
+        event VARCHAR(40),
+        nickname VARCHAR(50),
+        title VARCHAR(200),
+        body TEXT,
+        success BOOLEAN,
+        error TEXT,
+        actor VARCHAR(50),
+        opened_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_push_log_created ON tc_push_log (created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_push_log_nickname ON tc_push_log (nickname, created_at DESC)`);
+    // Taps, for the broadcast side. The per-recipient row carries the tap and
+    // the summary carries the count, because the recipient rows are the ones
+    // that get purged (see purgePushLogs) and the number has to outlive them.
+    await client.query(`ALTER TABLE tc_push_recipients ADD COLUMN IF NOT EXISTS opened_at TIMESTAMP`);
+    await client.query(`ALTER TABLE tc_push_history ADD COLUMN IF NOT EXISTS opened_count INTEGER DEFAULT 0`);
+
     // Marketing campaigns: a push that pays out when it is tapped.
     //
     // Separate from tc_push_history, which records an admin broadcast and
@@ -9718,6 +9751,202 @@ async function getBroadcastFcmTokens(targetFilter = 'all') {
   return result.rows;
 }
 
+/**
+ * Record one push to one user.
+ *
+ * Written BEFORE the send so the row's id can ride along in the notification's
+ * data payload — that id is what comes back when the user taps it. The outcome
+ * lands in a second write (finishPushLog), which is also why `success` is
+ * nullable: a row with success still null is a send that never reported back.
+ */
+async function startPushLog({ kind = 'system', event, nickname, title, body, actor = null }) {
+  try {
+    const r = await pool.query(
+      `INSERT INTO tc_push_log (kind, event, nickname, title, body, actor)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [kind, event || null, nickname || null, (title || '').slice(0, 200), body || '', actor],
+    );
+    return r.rows[0].id;
+  } catch (err) {
+    // Logging must never be the reason a notification does not go out.
+    console.error('startPushLog error:', err.message);
+    return null;
+  }
+}
+
+async function finishPushLog(id, success, error = null) {
+  if (!id) return;
+  try {
+    await pool.query(
+      `UPDATE tc_push_log SET success = $2, error = $3 WHERE id = $1`,
+      [id, !!success, error ? String(error).slice(0, 300) : null],
+    );
+  } catch (err) {
+    console.error('finishPushLog error:', err.message);
+  }
+}
+
+/**
+ * A user tapped a notification.
+ *
+ * [kind] says which table the id belongs to — the three push sources number
+ * their rows independently, so an id alone is ambiguous. Idempotent: the first
+ * tap wins, and a second one (two devices, or a re-open) must not inflate the
+ * count.
+ */
+async function markPushOpened(kind, id, nickname) {
+  const numeric = parseInt(id, 10);
+  if (!Number.isFinite(numeric)) return { success: false };
+  try {
+    if (kind === 'log') {
+      await pool.query(
+        `UPDATE tc_push_log
+            SET opened_at = COALESCE(opened_at, (NOW() AT TIME ZONE 'UTC'))
+          WHERE id = $1 AND ($2::varchar IS NULL OR nickname = $2)`,
+        [numeric, nickname || null],
+      );
+      return { success: true };
+    }
+    if (kind === 'broadcast') {
+      // Bump the summary only when this recipient had not already opened it.
+      const r = await pool.query(
+        `UPDATE tc_push_recipients
+            SET opened_at = (NOW() AT TIME ZONE 'UTC')
+          WHERE push_history_id = $1 AND nickname = $2 AND opened_at IS NULL
+          RETURNING id`,
+        [numeric, nickname],
+      );
+      if (r.rowCount > 0) {
+        await pool.query(
+          `UPDATE tc_push_history SET opened_count = COALESCE(opened_count, 0) + 1 WHERE id = $1`,
+          [numeric],
+        );
+      }
+      return { success: true };
+    }
+    return { success: false };
+  } catch (err) {
+    console.error('markPushOpened error:', err.message);
+    return { success: false };
+  }
+}
+
+/**
+ * Everything that was ever pushed, newest first, from all three sources.
+ *
+ * A UNION rather than one table: the broadcast and campaign rows already live
+ * in tables that own their own semantics (a campaign's row has to survive for
+ * its reward to be claimable), and copying them into a spine would give two
+ * places to disagree. The cost is this query; the benefit is that no writer
+ * has to remember to write twice.
+ */
+async function getUnifiedPushHistory({ kind = 'all', search = '', page = 1, limit = 30 } = {}) {
+  const lim = Math.max(1, Math.min(parseInt(limit, 10) || 30, 200));
+  const off = (Math.max(1, parseInt(page, 10) || 1) - 1) * lim;
+  const like = search ? `%${search}%` : null;
+  // $1 = kind filter, $2 = search
+  const union = `
+    SELECT 'broadcast'::text AS kind, id, created_at, title, body,
+           admin_username AS actor, NULL::varchar AS nickname,
+           target_filter AS target, NULL::text AS event,
+           success_count AS sent, fail_count AS failed,
+           COALESCE(opened_count, 0) AS opened, NULL::int AS claimed
+      FROM tc_push_history
+    UNION ALL
+    SELECT 'marketing'::text, c.id, COALESCE(c.sent_at, c.created_at), c.title, c.body,
+           c.created_by, NULL, c.target_filter, c.status,
+           c.sent_count, c.fail_count,
+           (SELECT COUNT(*) FROM tc_push_campaign_recipients r
+             WHERE r.campaign_id = c.id AND r.opened_at IS NOT NULL)::int,
+           (SELECT COUNT(*) FROM tc_push_campaign_recipients r
+             WHERE r.campaign_id = c.id AND r.claimed_at IS NOT NULL)::int
+      FROM tc_push_campaigns c
+     WHERE c.status = 'sent'
+    UNION ALL
+    SELECT CASE WHEN kind = 'admin_direct' THEN 'direct' ELSE 'system' END,
+           id, created_at, title, body, actor, nickname,
+           nickname, event,
+           CASE WHEN success THEN 1 ELSE 0 END,
+           CASE WHEN success = FALSE THEN 1 ELSE 0 END,
+           CASE WHEN opened_at IS NOT NULL THEN 1 ELSE 0 END, NULL
+      FROM tc_push_log`;
+  // Placeholders are numbered as the filters are added rather than reserved
+  // up front: an unused parameter has no type for Postgres to infer and the
+  // whole query is rejected (42P18).
+  const where = [];
+  const params = [];
+  if (kind && kind !== 'all') {
+    params.push(kind);
+    where.push(`kind = $${params.length}`);
+  }
+  if (like) {
+    params.push(like);
+    const i = params.length;
+    where.push(`(title ILIKE $${i} OR body ILIKE $${i} OR COALESCE(nickname, '') ILIKE $${i})`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  try {
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM (${union}) u ${whereSql}`, params);
+    const total = parseInt(countRes.rows[0].count, 10) || 0;
+    const rows = await pool.query(
+      `SELECT * FROM (${union}) u ${whereSql}
+       ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, lim, off],
+    );
+    return { success: true, rows: rows.rows, total, page: Math.max(1, parseInt(page, 10) || 1), limit: lim };
+  } catch (err) {
+    console.error('getUnifiedPushHistory error:', err);
+    return { success: false, rows: [], total: 0, page: 1, limit: lim, message: err.message };
+  }
+}
+
+/** Counts per source, for the filter chips. */
+async function getPushHistoryCounts() {
+  try {
+    const r = await pool.query(`
+      SELECT 'broadcast' AS kind, COUNT(*)::int AS n FROM tc_push_history
+      UNION ALL SELECT 'marketing', COUNT(*)::int FROM tc_push_campaigns WHERE status = 'sent'
+      UNION ALL SELECT 'direct', COUNT(*)::int FROM tc_push_log WHERE kind = 'admin_direct'
+      UNION ALL SELECT 'system', COUNT(*)::int FROM tc_push_log WHERE kind <> 'admin_direct'`);
+    const out = {};
+    for (const row of r.rows) out[row.kind] = row.n;
+    out.all = Object.values(out).reduce((a, b) => a + b, 0);
+    return out;
+  } catch (err) {
+    console.error('getPushHistoryCounts error:', err.message);
+    return { all: 0 };
+  }
+}
+
+/**
+ * Retention. The summary rows are a handful per month and stay forever; what
+ * grows without bound is the per-recipient and per-notification detail.
+ *
+ * Campaign recipients are deliberately NOT touched: their rows carry whether
+ * the reward was claimed, and deleting one would let the same person claim
+ * again the next time they tap an old notification.
+ */
+const PUSH_LOG_RETENTION_DAYS = 90;
+async function purgePushLogs(days = PUSH_LOG_RETENTION_DAYS) {
+  const n = Math.max(1, parseInt(days, 10) || PUSH_LOG_RETENTION_DAYS);
+  try {
+    const log = await pool.query(
+      `DELETE FROM tc_push_log
+        WHERE created_at < (NOW() AT TIME ZONE 'UTC') - ($1 || ' days')::interval`, [n]);
+    const recips = await pool.query(
+      `DELETE FROM tc_push_recipients
+        WHERE created_at < (NOW() AT TIME ZONE 'UTC') - ($1 || ' days')::interval`, [n]);
+    if (log.rowCount || recips.rowCount) {
+      console.log(`[push] purged ${log.rowCount} log + ${recips.rowCount} recipient rows older than ${n}d`);
+    }
+    return { success: true, log: log.rowCount, recipients: recips.rowCount };
+  } catch (err) {
+    console.error('purgePushLogs error:', err.message);
+    return { success: false, message: err.message };
+  }
+}
+
 // Insert push history record
 async function insertPushHistory({ adminUsername, title, body, targetFilter, totalSent, successCount, failCount, invalidTokens }) {
   const result = await pool.query(
@@ -9726,6 +9955,22 @@ async function insertPushHistory({ adminUsername, title, body, targetFilter, tot
     [adminUsername, title, body, targetFilter, totalSent, successCount, failCount, invalidTokens]
   );
   return result.rows[0].id;
+}
+
+/** Fill in a broadcast's outcome after the send (the row is created empty). */
+async function updatePushHistoryCounts(id, { successCount, failCount, invalidTokens }) {
+  try {
+    await pool.query(
+      `UPDATE tc_push_history
+          SET success_count = $2, fail_count = $3, invalid_tokens = $4
+        WHERE id = $1`,
+      [id, successCount || 0, failCount || 0, invalidTokens || 0],
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('updatePushHistoryCounts error:', err.message);
+    return { success: false };
+  }
 }
 
 // Get push history with pagination
@@ -11200,6 +11445,14 @@ module.exports = {
   getMaintenanceHistory,
   getBroadcastFcmTokens,
   insertPushHistory,
+  updatePushHistoryCounts,
+  startPushLog,
+  finishPushLog,
+  markPushOpened,
+  getUnifiedPushHistory,
+  getPushHistoryCounts,
+  purgePushLogs,
+  PUSH_LOG_RETENTION_DAYS,
   getPushHistory,
   insertPushRecipients,
   getPushHistoryDetail,

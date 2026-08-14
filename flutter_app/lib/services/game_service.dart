@@ -3607,6 +3607,12 @@ class GameService extends ChangeNotifier {
   }
 
   // SK actions
+  /// Tell the server a notification was opened. Statistics only — there is no
+  /// reply and nothing depends on it arriving.
+  void reportPushOpened(String kind, int pushId) {
+    _network.send({'type': 'push_opened', 'kind': kind, 'pushId': pushId});
+  }
+
   void submitBid(int bid) {
     _network.send({'type': 'submit_bid', 'bid': bid});
   }

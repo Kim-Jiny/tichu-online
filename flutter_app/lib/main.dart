@@ -125,11 +125,42 @@ void main() async {
 /// Listeners are woken either way.
 final ValueNotifier<List<int>> pendingCampaignTaps = ValueNotifier(const []);
 
-void _rememberCampaignTap(RemoteMessage message) {
-  if (message.data['type'] != 'campaign') return;
-  final id = int.tryParse('${message.data['campaignId']}');
-  if (id == null || pendingCampaignTaps.value.contains(id)) return;
-  pendingCampaignTaps.value = [...pendingCampaignTaps.value, id];
+/// Taps on notifications that pay nothing, waiting to be reported.
+///
+/// Same shape and same reason as [pendingCampaignTaps] — the tap can land
+/// before there is a socket to tell — but the payload is only a statistic, so
+/// nothing is shown to the player and a report that never lands costs nothing.
+/// Each entry is (kind, id): the three push sources number their rows
+/// independently, so the id alone would be ambiguous.
+final ValueNotifier<List<({String kind, int id})>> pendingPushOpens =
+    ValueNotifier(const []);
+
+void _rememberCampaignTap(RemoteMessage message) => recordPushTap(message.data);
+
+/// Route a tapped notification's data payload to the right queue.
+///
+/// Split from the Firebase callback so the routing rule can be tested with a
+/// plain map: which queue a tap lands in decides whether it pays a reward or
+/// merely counts, and getting it backwards is invisible until someone reports
+/// that their gold never arrived.
+void recordPushTap(Map<String, dynamic> data) {
+  final type = data['type'];
+  // A campaign tap is the one that pays out; it goes down the claim path,
+  // which records the open as part of paying.
+  if (type == 'campaign') {
+    final id = int.tryParse('${data['campaignId']}');
+    if (id == null || pendingCampaignTaps.value.contains(id)) return;
+    pendingCampaignTaps.value = [...pendingCampaignTaps.value, id];
+    return;
+  }
+  // Everything else: an admin broadcast or a one-to-one notification. Report
+  // that it was opened and stop there.
+  if (type != 'broadcast' && type != 'log') return;
+  final id = int.tryParse('${data['pushId']}');
+  if (id == null) return;
+  final entry = (kind: type == 'broadcast' ? 'broadcast' : 'log', id: id);
+  if (pendingPushOpens.value.contains(entry)) return;
+  pendingPushOpens.value = [...pendingPushOpens.value, entry];
 }
 
 /// Tapping a campaign notification is what pays out, so the tap has to be

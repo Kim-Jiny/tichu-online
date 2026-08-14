@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tichu_online/main.dart' show pendingCampaignTaps;
+import 'package:tichu_online/main.dart'
+    show pendingCampaignTaps, pendingPushOpens, recordPushTap;
 
 /// The queue a tapped campaign notification lands in.
 ///
@@ -14,7 +15,10 @@ import 'package:tichu_online/main.dart' show pendingCampaignTaps;
 ///    and shipped-adjacent; the listener is what fixes it.
 
 void main() {
-  setUp(() => pendingCampaignTaps.value = const []);
+  setUp(() {
+    pendingCampaignTaps.value = const [];
+    pendingPushOpens.value = const [];
+  });
 
   test('adding a tap notifies a listener', () {
     var woken = 0;
@@ -67,5 +71,49 @@ void main() {
     // must not fire.
     pendingCampaignTaps.value = const [];
     expect(woken, 0);
+  });
+
+  group('어떤 큐로 가는가', () {
+    // The routing decides whether a tap pays gold or merely counts. Swapping
+    // the two is invisible in testing and shows up as "I tapped the reward
+    // notification and got nothing".
+    test('보상 캠페인은 지급 큐로', () {
+      recordPushTap({'type': 'campaign', 'campaignId': '42'});
+      expect(pendingCampaignTaps.value, [42]);
+      expect(pendingPushOpens.value, isEmpty);
+    });
+
+    test('어드민 단체 발송은 집계 큐로', () {
+      recordPushTap({'type': 'broadcast', 'pushId': '7'});
+      expect(pendingCampaignTaps.value, isEmpty);
+      expect(pendingPushOpens.value, [(kind: 'broadcast', id: 7)]);
+    });
+
+    test('개별 알림도 집계 큐로, 종류를 구분해서', () {
+      recordPushTap({'type': 'log', 'pushId': '7'});
+      expect(pendingPushOpens.value, [(kind: 'log', id: 7)]);
+    });
+
+    test('같은 번호라도 종류가 다르면 다른 알림이다', () {
+      recordPushTap({'type': 'broadcast', 'pushId': '5'});
+      recordPushTap({'type': 'log', 'pushId': '5'});
+      expect(pendingPushOpens.value.length, 2);
+    });
+
+    test('같은 알림을 두 번 눌러도 한 번만 쌓인다', () {
+      recordPushTap({'type': 'log', 'pushId': '9'});
+      recordPushTap({'type': 'log', 'pushId': '9'});
+      expect(pendingPushOpens.value.length, 1);
+    });
+
+    test('아무 표식 없는 알림은 무시한다', () {
+      // A plain notification with no data payload — nothing to report, and
+      // inventing an id would corrupt someone else's count.
+      recordPushTap({});
+      recordPushTap({'type': 'broadcast'});
+      recordPushTap({'type': 'log', 'pushId': 'not-a-number'});
+      expect(pendingCampaignTaps.value, isEmpty);
+      expect(pendingPushOpens.value, isEmpty);
+    });
   });
 }

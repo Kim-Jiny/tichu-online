@@ -2870,5 +2870,7 @@
   "mailboxDeleteConfirm": "Delete this letter?",
   "mailboxDeleteConfirmBody": "It will be removed from your mailbox. This cannot be undone.",
   "mailboxDeleted": "Letter deleted",
-  "mailboxCancel": "Cancel"
+  "mailboxCancel": "Cancel",
+  "goldHistoryMailClaim": "Mailbox reward",
+  "goldHistoryMailClaimed": "Claimed"
 }

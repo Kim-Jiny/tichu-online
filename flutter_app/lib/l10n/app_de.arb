@@ -1716,5 +1716,7 @@
   "mailboxDeleteConfirm": "Diesen Brief löschen?",
   "mailboxDeleteConfirmBody": "Er verschwindet aus deinem Postfach. Das lässt sich nicht rückgängig machen.",
   "mailboxDeleted": "Brief gelöscht",
-  "mailboxCancel": "Abbrechen"
+  "mailboxCancel": "Abbrechen",
+  "goldHistoryMailClaim": "Postfach-Belohnung",
+  "goldHistoryMailClaimed": "Abgeholt"
 }

@@ -4955,4 +4955,10 @@ class L10nEn extends L10n {
 
   @override
   String get mailboxCancel => 'Cancel';
+
+  @override
+  String get goldHistoryMailClaim => 'Mailbox reward';
+
+  @override
+  String get goldHistoryMailClaimed => 'Claimed';
 }

@@ -132,6 +132,11 @@ String localizeAdRewardSuccess(int remaining, L10n l10n) {
 /// Localize a gold history title key to a user-facing string.
 /// For shop_purchase, the title contains pipe-separated localized names.
 String localizeGoldTitle(String? title, String? source, L10n l10n, String locale) {
+  // A mailbox reward stores the letter's own title, which is free text written
+  // by whoever sent it — it could be anything, in any language, and it says
+  // nothing about where the gold came from. The category is what belongs in a
+  // ledger, so it is decided by the source before the title is ever read.
+  if (source == 'mail') return l10n.goldHistoryMailClaim;
   if (title == null || title.isEmpty) return l10n.goldHistoryShopPurchase;
   // Shop purchase: title is "ko|en|de" item names
   if (source == 'shop_purchase' || title.contains('|')) {
@@ -231,6 +236,9 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
       return l10n.goldHistoryAttendance;
     case 'admin_adjust':
       return l10n.goldHistoryAdminBy(desc);
+    // desc holds 'mail:<id>' — an internal handle, useless to the reader.
+    case 'mail':
+      return l10n.goldHistoryMailClaimed;
     default:
       return desc;
   }

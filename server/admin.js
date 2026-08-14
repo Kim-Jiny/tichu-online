@@ -847,11 +847,23 @@ function renderGoldHistoryTable(history) {
     ${history.map(item => {
               const delta = parseInt(item.goldDelta || 0);
               const positive = delta >= 0;
+              // The app shows the player a localized category for each of
+              // these; the backstage shows the same idea in one language.
+              // Anything unmapped falls through as the raw source, which is
+              // how a new one announces itself here.
               const sourceMap = {
                 match: '게임',
                 ad_reward: '광고',
                 season_reward: '시즌',
                 shop_purchase: '상점',
+                mail: '우편함',
+                coupon: '쿠폰',
+                push_campaign: '캠페인',
+                attendance: '출석',
+                iap: '결제',
+                iap_refund: '환불',
+                admin: '어드민',
+                admin_adjust: '어드민',
               };
               const sourceLabel = sourceMap[item.source] || item.source || '-';
               return `<tr>

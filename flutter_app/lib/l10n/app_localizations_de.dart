@@ -4991,4 +4991,10 @@ class L10nDe extends L10n {
 
   @override
   String get mailboxCancel => 'Abbrechen';
+
+  @override
+  String get goldHistoryMailClaim => 'Postfach-Belohnung';
+
+  @override
+  String get goldHistoryMailClaimed => 'Abgeholt';
 }

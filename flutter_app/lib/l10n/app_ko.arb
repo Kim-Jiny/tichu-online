@@ -1716,5 +1716,7 @@
   "mailboxDeleteConfirm": "이 편지를 지울까요?",
   "mailboxDeleteConfirmBody": "우편함에서 사라지며 되돌릴 수 없습니다.",
   "mailboxDeleted": "편지를 지웠습니다",
-  "mailboxCancel": "취소"
+  "mailboxCancel": "취소",
+  "goldHistoryMailClaim": "우편함 수령",
+  "goldHistoryMailClaimed": "수령완료"
 }

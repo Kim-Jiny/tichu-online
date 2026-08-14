@@ -4840,4 +4840,10 @@ class L10nKo extends L10n {
 
   @override
   String get mailboxCancel => '취소';
+
+  @override
+  String get goldHistoryMailClaim => '우편함 수령';
+
+  @override
+  String get goldHistoryMailClaimed => '수령완료';
 }

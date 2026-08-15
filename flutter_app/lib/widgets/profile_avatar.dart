@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -91,25 +90,16 @@ class ProfileAvatar extends StatelessWidget {
         !blocked &&
         url != null &&
         (url.startsWith('http://') || url.startsWith('https://'));
-    final outerRadius = borderRadius ?? avatarCornerRadius(size);
-    // BoxDecoration.border 를 쓰면 Container 가 테두리 두께만큼 자동으로
-    // 자식을 padding 시킨다. 자식(이미지) 은 그대로 outerRadius 로 클립되니
-    // 코너 곡률(반경/변) 비율이 살짝 커져서 이미지 모서리가 테두리 안쪽
-    // 곡선보다 안쪽으로 파고 든다 — 사진과 테두리 사이 미세한 틈. 클립
-    // 반경을 (테두리 두께) 만큼 줄여서 두 곡선을 맞춘다.
-    final borderWidth = border == null
-        ? 0.0
-        : (border!.top.width); // Border.all 이라 상하좌우 동일
-    final innerRadius = math.max(0.0, outerRadius - borderWidth);
+    final radius = borderRadius ?? avatarCornerRadius(size);
     final Widget content;
     if (!showPhoto) {
       content = ClipRRect(
-        borderRadius: BorderRadius.circular(innerRadius),
+        borderRadius: BorderRadius.circular(radius),
         child: fallback,
       );
     } else {
       content = ClipRRect(
-        borderRadius: BorderRadius.circular(innerRadius),
+        borderRadius: BorderRadius.circular(radius),
         child: CachedNetworkImage(
           imageUrl: url,
           width: size,
@@ -124,11 +114,16 @@ class ProfileAvatar extends StatelessWidget {
     if (border == null) {
       return SizedBox(width: size, height: size, child: content);
     }
+    // background decoration 을 쓰면 Container 가 border 두께만큼 자식을
+    // 자동으로 안쪽 padding 시켜서 사진 클립 반경과 테두리 반경이 서로
+    // 다른 곡률로 계산돼 코너에 미세한 틈이 남는다.
+    // foregroundDecoration 은 자식 위에 얹기만 하고 padding 을 걸지 않아,
+    // 자식(사진)과 테두리가 같은 108×108 상자 위에 동일한 반경으로 그려진다.
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(outerRadius),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
         border: border,
       ),
       child: content,

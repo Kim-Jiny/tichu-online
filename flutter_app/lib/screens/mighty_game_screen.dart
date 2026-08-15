@@ -14,6 +14,7 @@ import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/spectator_controls.dart';
+import '../utils/spectator_line.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../widgets/mid_game_join.dart';
@@ -238,6 +239,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     );
                   },
                 ),
+                // 채팅창은 항상 제일 위 — 라운드/게임 결과 오버레이가 나와도
+                // 열려 있으면 그 위에 뜬다. 사용자가 명시적으로 연 UI 라
+                // 시스템 오버레이에 가려지면 안 된다.
+                if (_chatOpen)
+                  Consumer<GameService>(
+                    builder: (context, game, _) => _buildChatPanel(game),
+                  ),
               ],
             ),
           ),
@@ -503,7 +511,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             if (_moreOpen) _buildMoreMenu(game),
             if (_viewersOpen) _buildViewersPanel(game),
             if (_soundPanelOpen) _buildSoundPanel(game),
-            if (_chatOpen) _buildChatPanel(game),
+            // 채팅창은 outer stack (라운드 결과 오버레이 위)에서 그린다 —
+            // 여기 안에 두면 라운드 결과 dim/UI 에 덮여서 열려 있어도 안 보인다.
             if (game.hasIncomingCardViewRequests)
               _buildCardViewRequestPopup(game),
             if (game.timeoutPlayerName != null)
@@ -1321,6 +1330,78 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     _scrollChatToBottom();
   }
 
+  /// 관전자 명단 배너. 대기실과 같은 이름 목록 규칙(spectatorLine)을 써서
+  /// 표시할 예산이 넘치면 "+N 명"으로 접고, 눌러 전체 목록 다이얼로그를 연다.
+  Widget? _buildSpectatorStrip(GameService game) {
+    final watchers = game.spectators;
+    if (watchers.isEmpty) return null;
+    final names = [
+      for (final w in watchers) (w['nickname'] ?? '').toString(),
+    ].where((n) => n.isNotEmpty).toList();
+    if (names.isEmpty) return null;
+
+    final line = spectatorLine(names);
+    final shown = line.shown;
+    final hidden = line.hidden;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F3F1),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Text(
+              L10n.of(context).lobbySpectatorLabel,
+              style: const TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFA1887F),
+              ),
+            ),
+          ),
+          for (var i = 0; i < shown.length; i++)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showPlayerProfileDialog(
+                shown[i],
+                game,
+                isBot: false,
+              ),
+              child: Text(
+                '${shown[i]}${i < shown.length - 1 || hidden > 0 ? ', ' : ''}',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  color: Color(0xFF8A7A72),
+                ),
+              ),
+            ),
+          if (hidden > 0)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showSpectatorListDialog(context, game),
+              child: Text(
+                L10n.of(context).lobbySpectatorMore(hidden),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF7E57C2),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildChatPanel(GameService game) {
     if (game.chatMessages.length != _lastChatMessageCount) {
       _lastChatMessageCount = game.chatMessages.length;
@@ -1336,6 +1417,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       scrollController: _chatScrollController,
       onSend: () => _sendChatMessage(game),
       onClose: () => setState(() => _chatOpen = false),
+      // 관전자 명단은 채팅창 상단에 붙인다 — 대기실 채팅창과 같은 곳
+      // 이므로 관전 중 사용자도 여기서 누가 보고 있는지 한눈에 본다.
+      banner: _buildSpectatorStrip(game),
       itemCount: game.chatMessages.length,
       itemBuilder: (context, index) {
         final msg = game.chatMessages[game.chatMessages.length - 1 - index];
@@ -1542,188 +1626,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final seatMetrics = _mightySeatMetrics(seatWidth, seatHeight);
           final playedCardTopOffset =
               seatMetrics.photoCentre - playedCardHeight / 2;
-          final spectatorBoardDrop = _mightySmallDeviceBoardDrop(
-            width: width,
-            playerCount: state.players.length,
-            spectatorMode: true,
-            isLandscape: isLandscape,
-          );
-          final playerBoardDrop = _mightySmallDeviceBoardDrop(
-            // 전체 인원 기준 — 함수 안에서 5인 게임만 특별하게 아래로
-            // 내리는데, visiblePlayers 는 상대 수라 4가 넘어와서 5-인 검사가
-            // 매번 실패했다.
-            width: width,
-            playerCount: state.players.length,
-            spectatorMode: false,
-            isLandscape: isLandscape,
-          );
-
-          if (showAllSeats) {
-            final playerCount = state.players.length;
-            // Six seats stack three to a side, and the ring's vertical radius
-            // is what they have to share. It is capped by how far the centre
-            // sits from the top edge, so at six players the ring moves down —
-            // that is room the board has and the seats were not using.
-            final sixUp = playerCount >= 6;
-            final centerY =
-                height *
-                    (isLandscape
-                        ? (sixUp ? 0.42 : 0.39)
-                        : (sixUp ? 0.47 : 0.41)) +
-                spectatorBoardDrop;
-            final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
-            final seatRadiusX = math.min(
-              width * _mightySeatRadiusXFactor(playerCount),
-              math.min(
-                _mightySeatRadiusXCap(width, playerCount, spectator: true),
-                maxSeatRadiusX,
-              ),
-            );
-            final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
-            final seatRadiusY = math.min(
-              height * (isLandscape ? 0.34 : 0.35),
-              math.min(
-                _mightySeatRadiusYCap(height, spectator: true),
-                maxSeatRadiusY,
-              ),
-            );
-
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: Align(
-                    alignment: Alignment(
-                      0,
-                      isBidding || isKillSelect
-                          ? 0.10
-                          // Six seats take the middle of the board, so the
-                          // status line sits under the ring rather than inside
-                          // it — at the old height the lower two seats ran
-                          // straight through it.
-                          : sixUp
-                          ? (isLandscape ? 0.62 : 0.78)
-                          : (isLandscape ? 0.36 : 0.46),
-                    ),
-                    child: isBidding
-                        ? _buildBiddingCenterInfo(state)
-                        : isKillSelect
-                        ? _buildKillCenterInfo(state)
-                        : Transform.translate(
-                            offset: Offset(
-                              0,
-                              sixUp
-                                  ? spectatorBoardDrop
-                                  : (isLandscape ? -18 : -26) +
-                                        spectatorBoardDrop,
-                            ),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 260),
-                              child: state.phase == 'trick_end'
-                                  ? _buildTrickEndArea(state)
-                                  : _buildTrickArea(state, game),
-                            ),
-                          ),
-                  ),
-                ),
-                for (int i = 0; i < state.players.length; i++) ...[
-                  () {
-                    final p = state.players[i];
-                    final angle = _mightySpectatorSeatAngleForIndex(
-                      i,
-                      state.players.length,
-                    );
-                    final seatLift = _mightySeatVerticalLift(
-                      angle,
-                      isLandscape: isLandscape,
-                      spectatorMode: true,
-                    );
-                    final seatLeft =
-                        centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
-                    final seatTop =
-                        centerY +
-                        seatRadiusY * math.sin(angle) -
-                        seatHeight / 2 -
-                        seatLift;
-                    return Positioned(
-                      left: seatLeft,
-                      top: seatTop,
-                      width: seatWidth,
-                      height: seatHeight,
-                      child: _buildTableSeatCard(
-                        state,
-                        game,
-                        p,
-                        canRequestCardView: canRequestCardView,
-                        highlighted:
-                            _viewingPlayerId == p.id &&
-                            game.approvedCardViews.contains(p.id) &&
-                            p.canViewCards,
-                      ),
-                    );
-                  }(),
-                ],
-                if (!isBidding)
-                  for (int i = 0; i < state.players.length; i++) ...[
-                    () {
-                      final p = state.players[i];
-                      final angle = _mightySpectatorSeatAngleForIndex(
-                        i,
-                        state.players.length,
-                      );
-                      final seatLift = _mightySeatVerticalLift(
-                        angle,
-                        isLandscape: isLandscape,
-                        spectatorMode: true,
-                      );
-                      final seatLeft =
-                          centerX +
-                          seatRadiusX * math.cos(angle) -
-                          seatWidth / 2;
-                      final seatTop =
-                          centerY +
-                          seatRadiusY * math.sin(angle) -
-                          seatHeight / 2 -
-                          seatLift;
-                      final trickPlay = activeTrick
-                          .cast<MightyTrickPlay?>()
-                          .firstWhere(
-                            (play) => play?.playerId == p.id,
-                            orElse: () => null,
-                          );
-                      if (trickPlay == null) return const SizedBox.shrink();
-                      return Positioned(
-                        left: seatLeft + (seatWidth - playedCardWidth) / 2,
-                        top: seatTop + playedCardTopOffset,
-                        child: _buildTablePlayedCard(
-                          state,
-                          trickPlay,
-                          width: playedCardWidth,
-                          height: playedCardHeight,
-                          isWinner:
-                              winnerId != null &&
-                              trickPlay.playerId == winnerId,
-                        ),
-                      );
-                    }(),
-                  ],
-              ],
-            );
-          }
-
-          final opponents = visiblePlayers;
+          // 뷰어(관전자/플레이어) 상관없이 하나의 좌석 배치 코드를 쓴다 —
+          // 예전엔 완전히 분리된 두 갈래(showAllSeats 브랜치)였는데 두 곳이
+          // 서로 살짝씩 어긋나는 상수/함수 세트를 두고 있었다.
+          //
+          // 관전자는 자기가 앉지 않으니 상대 목록에 자신 필터를 걸지 않고
+          // 전원(state.players)을, 플레이어는 자신을 제외한 목록을 그린다.
+          final opponents = showAllSeats ? state.players : visiblePlayers;
           final opponentCount = opponents.length;
+          final boardDrop = _mightySmallDeviceBoardDrop(
+            width: width,
+            playerCount: state.players.length,
+            isLandscape: isLandscape,
+          );
           // Dropped from 0.41: the ring's vertical radius is capped by how far
           // the top seat can sit above centre, and with the taller seats that
           // cap was what pushed the two side seats into each other. There is
           // empty board below them to give.
           final centerY =
-              (isLandscape ? height * 0.42 : height * 0.47) + playerBoardDrop;
+              (isLandscape ? height * 0.42 : height * 0.47) + boardDrop;
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
           final seatRadiusY = math.min(
             height * (isLandscape ? 0.35 : 0.36),
             math.min(
-              _mightySeatRadiusYCap(height, spectator: false),
+              _mightySeatRadiusYCap(height),
               maxSeatRadiusY,
             ),
           );
@@ -1756,7 +1682,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final seatRadiusX = math.min(
             width * _mightySeatRadiusXFactor(opponentCount),
             math.min(
-              _mightySeatRadiusXCap(width, opponentCount, spectator: false),
+              _mightySeatRadiusXCap(width, opponentCount),
               maxSeatRadiusX,
             ),
           );
@@ -1782,7 +1708,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                         width: width,
                         playerCount: opponents.length,
-                        spectatorMode: false,
                         isLandscape: isLandscape,
                       ) +
                       seatHeight / 2 +
@@ -1803,14 +1728,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     0,
                     isBidding || isKillSelect
                         ? 0.10
+                        // 관전자 6인 게임은 링 안이 좌석으로 꽉 차서 트릭
+                        // 라벨이 좌석 위에 겹친다 — 그때만 아래로 밀어낸다.
+                        : (showAllSeats && state.players.length >= 6)
+                        ? (isLandscape ? 0.62 : 0.78)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
-                  child: isBidding || isKillSelect
-                      ? const SizedBox.shrink()
+                  // 하단 비딩/킬 시트가 없는 관전자는 중앙에 진행 상황을
+                  // 보여줘야 뭐가 벌어지는지 알 수 있다. 플레이어 모드는
+                  // 시트에 이미 같은 정보가 있어서 중앙은 비운다.
+                  child: isBidding
+                      ? (showAllSeats
+                          ? _buildBiddingCenterInfo(state)
+                          : const SizedBox.shrink())
+                      : isKillSelect
+                      ? (showAllSeats
+                          ? _buildKillCenterInfo(state)
+                          : const SizedBox.shrink())
                       : Transform.translate(
                           offset: Offset(
                             0,
-                            (isLandscape ? -18 : -26) + playerBoardDrop,
+                            (showAllSeats && state.players.length >= 6)
+                                ? boardDrop
+                                : (isLandscape ? -18 : -26) + boardDrop,
                           ),
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 260),
@@ -1844,7 +1784,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         angle,
                         width: width,
                         playerCount: opponents.length,
-                        spectatorMode: false,
                         isLandscape: isLandscape,
                       );
                   return Positioned(
@@ -1857,6 +1796,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       game,
                       p,
                       canRequestCardView: canRequestCardView,
+                      // 관전자가 승인받아 보고 있는 좌석은 나머지와 시각적으로
+                      // 구분되도록 하이라이트 파란 테두리를 준다. 승인 없이
+                      // 그냥 요청만 걸린 상태는 뱃지로 이미 표시된다.
+                      highlighted: _viewingPlayerId == p.id &&
+                          game.approvedCardViews.contains(p.id) &&
+                          p.canViewCards,
                     ),
                   );
                 }(),
@@ -1885,7 +1830,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           angle,
                           width: width,
                           playerCount: opponents.length,
-                          spectatorMode: false,
                           isLandscape: isLandscape,
                         );
                     final trickPlay = activeTrick
@@ -2484,45 +2428,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  double _mightySpectatorSeatAngleForIndex(int index, int count) {
-    final custom = _mightyCustomSpectatorSeatAnglesDeg(count);
-    if (custom != null) return custom[index] * math.pi / 180;
-    if (count <= 1) return math.pi * 1.5;
-    return _mightySeatAngleForIndex(index, count, includeBottomSeat: false);
-  }
-
-  double _mightySeatAngleForIndex(
-    int index,
-    int playerCount, {
-    bool includeBottomSeat = true,
-  }) {
-    if (includeBottomSeat) {
-      if (index == 0) return math.pi / 2;
-      final opponents = playerCount - 1;
-      if (opponents <= 1) return math.pi * 1.5;
-      final customOpponentAngles = _mightyCustomSeatAnglesDeg(opponents);
-      if (customOpponentAngles != null) {
-        return customOpponentAngles[index - 1] * math.pi / 180;
-      }
-      final startDeg = _mightySeatArcStartDeg(opponents);
-      final endDeg = _mightySeatArcEndDeg(opponents);
-      final progress = (index - 1) / (opponents - 1);
-      final angleDeg = startDeg + (endDeg - startDeg) * progress;
-      return angleDeg * math.pi / 180;
-    }
-
-    if (playerCount <= 1) return math.pi * 1.5;
-    final customAngles = _mightyCustomSeatAnglesDeg(playerCount);
-    if (customAngles != null) {
-      return customAngles[index] * math.pi / 180;
-    }
-    final startDeg = _mightySeatArcStartDeg(playerCount);
-    final endDeg = _mightySeatArcEndDeg(playerCount);
-    final progress = index / (playerCount - 1);
-    final angleDeg = startDeg + (endDeg - startDeg) * progress;
-    return angleDeg * math.pi / 180;
-  }
-
   /// [sideOffsetDeg] widens the two seats on each side away from the
   /// horizontal axis. The vertical gap between them is 2·R·sin(offset), so on a
   /// short board the caller passes a bigger angle rather than letting the seats
@@ -2599,6 +2504,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return angleDeg * math.pi / 180;
   }
 
+  /// 링에 seat 개수를 나열할 때 쓰는 고정 각도표.
+  ///
+  /// case 6 은 원래 관전용(_mightyCustomSpectatorSeatAnglesDeg)에만 있었지만,
+  /// 관전/플레이어 레이아웃을 하나로 합치면서 여기로 옮겼다 — 6인은 spectator
+  /// 만 볼 수 있고(플레이어는 최대 5명의 상대), 각도 자체는 뷰어와 무관하다.
   List<double>? _mightyCustomSeatAnglesDeg(int count) {
     switch (count) {
       case 4:
@@ -2613,13 +2523,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // seats on a side is 2·R·sin(offset), and with the taller seat boxes
         // ±17.5° left them ~4dp short of clearing each other.
         return const [145.0, 215.0, 270.0, 325.0, 395.0];
-      default:
-        return null;
-    }
-  }
-
-  List<double>? _mightyCustomSpectatorSeatAnglesDeg(int count) {
-    switch (count) {
       case 6:
         // Pushed away from the horizontal (was 142/188/236 a side): three seats
         // per side have to share the ring's vertical span, and the enlarged
@@ -2638,56 +2541,43 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return 0.38;
   }
 
-  double _mightySeatRadiusXCap(
-    double width,
-    int count, {
-    required bool spectator,
-  }) {
-    final base = spectator
-        ? (count >= 5 ? 228.0 : 182.0)
-        : (count >= 5 ? 236.0 : 188.0);
+  /// 링의 수평 반경 상한. 원래 spectator/player 별로 (228/236, 182/188) 이던
+  /// 두 세트가 있었는데 실질 차이가 8dp 뿐이었고 뷰어 종류로 갈릴 이유가
+  /// 없어서 큰 값(플레이어) 하나로 통일했다.
+  double _mightySeatRadiusXCap(double width, int count) {
+    final base = count >= 5 ? 236.0 : 188.0;
     if (width >= 1200) return base + 130;
     if (width >= 900) return base + 90;
     if (width >= 700) return base + 45;
     return base;
   }
 
-  double _mightySeatRadiusYCap(double height, {required bool spectator}) {
-    // Raised with the seat box: a 132-tall seat needs more room between rings
-    // than a 96-tall one, or the rows sit on top of each other.
-    final base = spectator ? 262.0 : 270.0;
+  /// 링의 수직 반경 상한. 좌석 박스가 커지면서 두 링(양쪽 3인 이상)이 겹치지
+  /// 않도록 넉넉히 잡는다.
+  double _mightySeatRadiusYCap(double height) {
+    final base = 270.0;
     if (height >= 1100) return base + 90;
     if (height >= 850) return base + 50;
     if (height >= 700) return base + 24;
     return base;
   }
 
-  double _mightySeatVerticalLift(
-    double angle, {
-    required bool isLandscape,
-    bool spectatorMode = false,
-  }) {
+  /// 각도별로 좌석을 살짝 위로 올리는 값. 코너·아래쪽에 있는 좌석이
+  /// 링 반경만 따라가면 시각적으로 모여 보이는 걸 상쇄한다.
+  double _mightySeatVerticalLift(double angle, {required bool isLandscape}) {
     final cornerWeight = math.pow(math.cos(angle).abs(), 1.15).toDouble();
     final lowerCornerWeight = math.max(0.0, math.sin(angle));
-    final baseLift =
-        cornerWeight * (isLandscape ? 24.0 : 30.0) +
+    return cornerWeight * (isLandscape ? 24.0 : 30.0) +
         lowerCornerWeight * (isLandscape ? 10.0 : 14.0);
-    if (!spectatorMode) return baseLift;
-    final upperWeight = math.max(0.0, -math.sin(angle));
-    final reduction = (1 - upperWeight) * (isLandscape ? 12.0 : 18.0);
-    return math.max(0.0, baseLift - reduction);
   }
 
   double _mightySmallDeviceSideSeatDrop(
     double angle, {
     required double width,
     required int playerCount,
-    required bool spectatorMode,
     required bool isLandscape,
   }) {
-    if (spectatorMode || isLandscape || playerCount != 4 || width > 430) {
-      return 0.0;
-    }
+    if (isLandscape || playerCount != 4 || width > 430) return 0.0;
     final horizontalWeight = (1 - (math.sin(angle).abs() / 0.45)).clamp(
       0.0,
       1.0,
@@ -2698,10 +2588,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   double _mightySmallDeviceBoardDrop({
     required double width,
     required int playerCount,
-    required bool spectatorMode,
     required bool isLandscape,
   }) {
-    if (spectatorMode || isLandscape || width > 430) return 0.0;
+    if (isLandscape || width > 430) return 0.0;
     // 5인 게임(상대 4명)은 좌석 각도가 모두 상반원에 몰려 있어서 링 중심을
     // 0.47·h 로 잡으면 상단에 뭉쳐 보인다. 링을 아래로 살짝 끌어내려
     // 남던 공간을 좌석이 채우되, 너무 내리면 이번엔 위쪽 여백이 커지므로

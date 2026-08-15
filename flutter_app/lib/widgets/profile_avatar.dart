@@ -11,7 +11,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 /// Everything that draws a face goes through here: the photo, the default
 /// silhouette, and the bot art. If they disagree, a table shows round bots
 /// beside square players.
-double avatarCornerRadius(double size) => size * (14 / 60);
+double avatarCornerRadius(double size) => size * (17 / 60);
 
 /// Circular profile avatar for a player.
 ///

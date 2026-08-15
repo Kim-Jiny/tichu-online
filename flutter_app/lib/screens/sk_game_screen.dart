@@ -1403,11 +1403,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
             children: [
               Positioned.fill(
                 child: Align(
-                  alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
+                  // 상대 3명(4인 게임) 은 옆 두 자리를 200°/340° 로 조금
+                  // 내렸으므로 트릭도 마이티 관전과 같은 위치(-0.15) 로
+                  // 올려 상단 좌석 라인 아래에 걸리게 한다.
+                  alignment: Alignment(
+                    0,
+                    opponents.length == 3
+                        ? (isLandscape ? -0.18 : -0.15)
+                        : (isLandscape ? 0.36 : 0.46),
+                  ),
                   child: Transform.translate(
                     offset: Offset(
                       0,
-                      (isLandscape ? -34 : -42) + twoOpponentTrickDrop,
+                      opponents.length == 3
+                          ? 0
+                          : (isLandscape ? -34 : -42) + twoOpponentTrickDrop,
                     ),
                     child: IgnorePointer(child: _buildTrickArea(state)),
                   ),
@@ -1560,6 +1570,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   List<double>? _customSeatAnglesDeg(int count) {
     switch (count) {
+      case 3:
+        // 4인 게임 플레이어 시점 — 옆 두 자리를 원래 arc 210°/330° 에서
+        // 200°/340° 로 살짝 낮춘다 (sin -0.5 → -0.34, 약 32dp 아래).
+        // 세 자리가 모두 위쪽에 뭉쳐 보이던 걸 살짝 풀어준다.
+        return const [200.0, 270.0, 340.0];
       case 4:
         return const [172, 238, 302, 368];
       case 5:

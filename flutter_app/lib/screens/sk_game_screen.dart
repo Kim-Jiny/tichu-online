@@ -343,8 +343,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildBoardStage({required Widget board, Widget? bottomOverlay}) {
+    // 관전자용 bottomPadding 을 110dp 로 맞춘다 (마이티와 동일). 예전엔
+    // 50dp 였는데, 상대 손패를 승인받아 볼 때 그 카드 행이 50dp 를 훨씬
+    // 넘어서 좌석을 덮었다. 좌석은 살짝 압축되지만 승인 상태에서 카드가
+    // 좌석 위로 뻗어가는 문제가 사라진다.
     final bottomPadding = bottomOverlay is _SKSpectatorHandAreaMarker
-        ? 50.0
+        ? 110.0
         : 120.0;
     return Expanded(
       child: Stack(

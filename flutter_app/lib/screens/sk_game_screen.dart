@@ -262,12 +262,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             if (state.phase == 'round_end')
                               _buildBoardStage(
                                 board: _buildSpectatorScoreboard(state, game),
-                                bottomOverlay: _buildRoundEndUI(state),
+                                // Marker 로 감싸서 좌석 영역(bottomPadding) 이
+                                // playing 상태와 동일하게 50dp 유지 — 라운드
+                                // 결과가 뜰 때마다 좌석이 밀리던 문제 해소.
+                                bottomOverlay: _buildSpectatorBottomOverlay(
+                                  _buildRoundEndUI(state),
+                                ),
                               ),
                             if (state.phase == 'game_end')
                               _buildBoardStage(
                                 board: _buildSpectatorScoreboard(state, game),
-                                bottomOverlay: _buildGameEndUI(state, game),
+                                bottomOverlay: _buildSpectatorBottomOverlay(
+                                  _buildGameEndUI(state, game),
+                                ),
                               ),
                           ],
                         ),
@@ -694,7 +701,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final playedCardW = playedCardHeight * 0.7;
           final playerCount = state.players.length;
           final centerX = width / 2;
-          final centerY = isLandscape ? height * 0.39 : height * 0.41;
+          // 6인 관전은 상·중·하 세 줄 링이라 centerY 를 살짝 아래로 내려
+          // 세로 반경 여유를 만든다 (마이티와 동일 규칙).
+          final centerY = playerCount >= 6
+              ? height * (isLandscape ? 0.50 : 0.53)
+              : height * (isLandscape ? 0.39 : 0.41);
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * _seatRadiusXFactor(playerCount),
@@ -704,8 +715,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           );
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+          // 6인은 링 자체를 세로로 크게. 마이티와 같은 비율.
+          final radiusYRatio = playerCount >= 6
+              ? (isLandscape ? 0.42 : 0.45)
+              : (isLandscape ? 0.34 : 0.35);
           final seatRadiusY = math.min(
-            height * (isLandscape ? 0.34 : 0.35),
+            height * radiusYRatio,
             math.min(_seatRadiusYCap(height, spectator: true), maxSeatRadiusY),
           );
 
@@ -720,11 +735,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
             children: [
               Positioned.fill(
                 child: Align(
-                  alignment: Alignment(0, isLandscape ? 0.36 : 0.46),
+                  // 6인 관전은 링 중단·하단 좌석 사이로 트릭이 올라오도록
+                  // 마이티와 같은 위치(-0.20)로 얹는다.
+                  alignment: Alignment(
+                    0,
+                    playerCount >= 6
+                        ? (isLandscape ? -0.22 : -0.20)
+                        : (isLandscape ? 0.36 : 0.46),
+                  ),
                   child: Transform.translate(
                     offset: Offset(
                       0,
-                      (isLandscape ? -34 : -42) + threePlayerSpectatorDrop,
+                      playerCount >= 6
+                          ? 0
+                          : (isLandscape ? -34 : -42) + threePlayerSpectatorDrop,
                     ),
                     child: IgnorePointer(child: _buildTrickArea(state)),
                   ),
@@ -1614,10 +1638,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// Where the photo's centre sits inside a seat box, measured from its top,
   /// and how big the photo is. The board places the played card from this and
   /// the seat sizes its avatar from it — one source, so they cannot drift.
-  /// SK 좌석 안의 아바타 반경 + 사진 중심. 마이티와 같은 공식(0.72 비율,
-  /// clamp 52-124) 을 써서 두 게임의 아바타 크기 감을 통일한다. 예전엔 SK
-  /// 만 0.56/[30-84] 라 같은 폰에서 SK 좌석이 마이티보다 눈에 띄게 작아
-  /// 보였다.
+  /// SK 좌석 안의 아바타 반경 + 사진 중심의 실제 렌더 y (좌석 top 기준).
+  ///
+  /// 좌석 카드의 Column 은 FittedBox(scaleDown) 에 감싸져 있어 seatHeight
+  /// 를 넘으면 축소된다. 낸 카드는 좌석 밖 별도 Positioned 로 그려지므로
+  /// 위치가 실제 사진 중심과 일치하려면 FittedBox 의 축소 비율을 반영해서
+  /// 계산해야 한다 (마이티와 동일 규칙).
   static ({double avatar, double photoCentre}) _skSeatMetrics(
     double seatWidth,
     double seatHeight, {
@@ -1627,20 +1653,43 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final compact = spectator
         ? (seatHeight <= 72 || seatWidth <= 90)
         : (seatHeight <= 70 || seatWidth <= 96);
-    final verticalPadding = compact ? 4.0 : (spectator ? 6.0 : 8.0);
-    final labelPadding = compact ? (spectator ? 3.0 : 2.0) : (spectator ? 4.0 : 3.0);
+    final seatScale = (seatWidth / 116.0).clamp(0.9, 1.5);
     final timeoutHeight = hasTimeoutRow
         ? (compact ? (spectator ? 12.0 : 11.0) : (spectator ? 16.0 : 12.0))
         : 0.0;
+    final spacing = compact ? 1.0 : 2.0;
+    // _buildSpectatorSeat / _buildPlayerSeat 의 값과 동일해야 사진 위치가
+    // 계산과 어긋나지 않는다.
+    final nameFontSize = spectator
+        ? (compact ? 11.5 : 13.0) * seatScale
+        : (compact ? 11.5 : 13.0) * seatScale;
+    final scoreFontSize = spectator
+        ? (compact ? 15.0 : 17.0) * seatScale
+        : (compact ? 15.0 : 17.0) * seatScale;
+    final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
     final avatar = kIsWeb
         ? math
               .min(seatHeight * 0.72, seatWidth * 0.74)
               .clamp(52.0, 180.0)
               .toDouble()
         : (seatHeight * 0.72).clamp(52.0, 124.0).toDouble();
+    // Column 자연 높이. (timeout row 는 hasTimeoutRow 로 반영, 나머지는 항상
+    // 노출된다.)
+    final scoreRowHeight = math.max(scoreFontSize * 1.35, bidHeight);
+    final intrinsicHeight =
+        timeoutHeight +
+        avatar +
+        spacing +
+        nameFontSize * 1.35 +
+        spacing +
+        scoreRowHeight;
+    final fittedScale = intrinsicHeight <= seatHeight
+        ? 1.0
+        : seatHeight / intrinsicHeight;
+    final unscaledPhotoCentre = timeoutHeight + avatar / 2;
     return (
       avatar: avatar,
-      photoCentre: verticalPadding + labelPadding + timeoutHeight + avatar / 2,
+      photoCentre: unscaledPhotoCentre * fittedScale,
     );
   }
 
@@ -2843,14 +2892,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
     if (state.currentTrick.isEmpty) {
       // Center 감싸면 부모 Align 이 자식을 무한 크기로 받아 alignment 가
       // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
+      // 배경 없이 아이콘·텍스트만 얹는다 — 좌석 링 안에 흰 상자가 떠 있는
+      // 모양이 무거워 보였다.
       return Container(
-          // Trimmed with the seat boxes so the side seats clear it.
           width: 164,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -3086,10 +3132,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

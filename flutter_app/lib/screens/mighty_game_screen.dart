@@ -1608,7 +1608,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final seatScale = math
               .min(boardScale, seatFit)
               .clamp(0.62, kIsWeb ? 1.95 : 1.6);
-          final seatWidth = 116.0 * seatScale;
+          // 6명이 링을 두르는 관전 화면은 좌석 여섯 개가 좌우로 나란히
+          // 밀리는데, seatWidth 를 116 그대로 두면 코너 좌석이 화면 안쪽에
+          // 뭉친다. seatWidth 는 이름/점수 컬럼 폭만 결정하고 사진 크기는
+          // seatHeight 에서 나오므로, 폭만 줄이면 사진 크기는 유지된다.
+          final sixSeatRing = game.isSpectator && state.players.length >= 6;
+          final seatWidth = (sixSeatRing ? 96.0 : 116.0) * seatScale;
           // Tall enough for the enlarged avatar to render at full size — the
           // label is FittedBox'd, so a box that is too short shrinks the photo
           // and the nickname with it instead of growing them.
@@ -1728,11 +1733,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     0,
                     isBidding || isKillSelect
                         ? 0.10
-                        // 관전자 6인 게임은 링 안이 좌석으로 꽉 차서 트릭
-                        // 라벨을 링 정중앙에 얹으면 좌석과 겹친다 — 중단
-                        // 좌석 사이(가운데보다 살짝 아래)로 내려 얹는다.
+                        // 관전자 6인 게임은 중단·하단 좌석 사이 갭이 좁고
+                        // 링 정중앙에 얹으면 중단 좌석과 겹친다. 좌석 링을
+                        // 확실히 벗어난 아래 지점(alignment.y=-0.15, 화면
+                        // 상단에서 42.5%)에 두면 이전 05 보다 눈에 띄게
+                        // 위로 올라와 판 중심에 가깝다.
                         : (showAllSeats && state.players.length >= 6)
-                        ? (isLandscape ? 0.30 : 0.35)
+                        ? (isLandscape ? -0.20 : -0.15)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   // 하단 비딩/킬 시트가 없는 관전자는 중앙에 진행 상황을

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -90,19 +91,25 @@ class ProfileAvatar extends StatelessWidget {
         !blocked &&
         url != null &&
         (url.startsWith('http://') || url.startsWith('https://'));
-    final radius = borderRadius ?? avatarCornerRadius(size);
+    final outerRadius = borderRadius ?? avatarCornerRadius(size);
+    // BoxDecoration.border 를 쓰면 Container 가 테두리 두께만큼 자동으로
+    // 자식을 padding 시킨다. 자식(이미지) 은 그대로 outerRadius 로 클립되니
+    // 코너 곡률(반경/변) 비율이 살짝 커져서 이미지 모서리가 테두리 안쪽
+    // 곡선보다 안쪽으로 파고 든다 — 사진과 테두리 사이 미세한 틈. 클립
+    // 반경을 (테두리 두께) 만큼 줄여서 두 곡선을 맞춘다.
+    final borderWidth = border == null
+        ? 0.0
+        : (border!.top.width); // Border.all 이라 상하좌우 동일
+    final innerRadius = math.max(0.0, outerRadius - borderWidth);
     final Widget content;
     if (!showPhoto) {
-      // Fallback(봇/기본 실루엣)에도 라운드 코너 클립을 씌운다 — 사진일 때와
-      // 시각적으로 동일한 상자가 되어야 border 를 얹었을 때 사진/봇을 가리지
-      // 않고 같은 곡률로 감싼다.
       content = ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(innerRadius),
         child: fallback,
       );
     } else {
       content = ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(innerRadius),
         child: CachedNetworkImage(
           imageUrl: url,
           width: size,
@@ -121,7 +128,7 @@ class ProfileAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: BorderRadius.circular(outerRadius),
         border: border,
       ),
       child: content,

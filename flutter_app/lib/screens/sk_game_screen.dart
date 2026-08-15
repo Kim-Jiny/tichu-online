@@ -1614,61 +1614,30 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// Where the photo's centre sits inside a seat box, measured from its top,
   /// and how big the photo is. The board places the played card from this and
   /// the seat sizes its avatar from it — one source, so they cannot drift.
+  /// SK 좌석 안의 아바타 반경 + 사진 중심. 마이티와 같은 공식(0.72 비율,
+  /// clamp 52-124) 을 써서 두 게임의 아바타 크기 감을 통일한다. 예전엔 SK
+  /// 만 0.56/[30-84] 라 같은 폰에서 SK 좌석이 마이티보다 눈에 띄게 작아
+  /// 보였다.
   static ({double avatar, double photoCentre}) _skSeatMetrics(
     double seatWidth,
     double seatHeight, {
     bool hasTimeoutRow = false,
     bool spectator = false,
   }) {
-    if (spectator) {
-      // A spectator seat carries a name, a score and a bid chip under the
-      // photo, and the whole label is inside a scaleDown FittedBox — so a photo
-      // asked for as a fraction of the box just made the label scale down and
-      // the photo came out ~40dp whatever fraction was used. Here it takes the
-      // height the other rows leave, which is what makes it land near the 60dp
-      // the Mighty spectator seats show.
-      final compact = seatHeight <= 72 || seatWidth <= 90;
-      final verticalPadding = compact ? 4.0 : 6.0;
-      final labelPadding = compact ? 3.0 : 4.0;
-      final timeoutHeight = hasTimeoutRow ? (compact ? 12.0 : 16.0) : 0.0;
-      final nameRow = (compact ? 10.0 : 11.0) * 1.4;
-      final spacing = compact ? 1.0 : 2.0;
-      // Score and bid chip share one row.
-      final scoreRow = math.max(
-        (compact ? 13.0 : 15.0) * 1.4,
-        compact ? 14.0 : 18.0,
-      );
-      final avatar =
-          (seatHeight -
-                  verticalPadding * 2 -
-                  labelPadding * 2 -
-                  timeoutHeight -
-                  nameRow -
-                  spacing * 2 -
-                  scoreRow)
-              .clamp(30.0, kIsWeb ? 136.0 : 84.0)
-              .toDouble();
-      return (
-        avatar: avatar,
-        photoCentre:
-            verticalPadding + labelPadding + timeoutHeight + avatar / 2,
-      );
-    }
-    final compact = seatHeight <= 70 || seatWidth <= 96;
-    final verticalPadding = compact ? 4.0 : 8.0;
-    final labelPadding = compact ? 2.0 : 3.0;
-    final timeoutHeight = hasTimeoutRow ? (compact ? 11.0 : 12.0) : 0.0;
-    // Height alone used to decide this, so making the window wider changed
-    // nothing — and the ceiling was a phone-sized 84, which a desktop board
-    // reaches immediately and then stops. On web, let the seat's width have a
-    // say (so the photo can never outgrow its own box) and raise the ceiling.
-    // Native keeps the original number exactly.
+    final compact = spectator
+        ? (seatHeight <= 72 || seatWidth <= 90)
+        : (seatHeight <= 70 || seatWidth <= 96);
+    final verticalPadding = compact ? 4.0 : (spectator ? 6.0 : 8.0);
+    final labelPadding = compact ? (spectator ? 3.0 : 2.0) : (spectator ? 4.0 : 3.0);
+    final timeoutHeight = hasTimeoutRow
+        ? (compact ? (spectator ? 12.0 : 11.0) : (spectator ? 16.0 : 12.0))
+        : 0.0;
     final avatar = kIsWeb
         ? math
-              .min(seatHeight * 0.56, seatWidth * 0.60)
-              .clamp(30.0, 136.0)
+              .min(seatHeight * 0.72, seatWidth * 0.74)
+              .clamp(52.0, 180.0)
               .toDouble()
-        : (seatHeight * 0.56).clamp(30.0, 84.0).toDouble();
+        : (seatHeight * 0.72).clamp(52.0, 124.0).toDouble();
     return (
       avatar: avatar,
       photoCentre: verticalPadding + labelPadding + timeoutHeight + avatar / 2,

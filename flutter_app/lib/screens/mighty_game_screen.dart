@@ -26,6 +26,13 @@ class MightyGameScreen extends StatefulWidget {
   State<MightyGameScreen> createState() => _MightyGameScreenState();
 }
 
+/// 좌석 카드를 두 겹으로 나눠 그릴 때의 계층 선택. [photo] 는 사진·테두리·
+/// 뱃지만, [overlay] 는 역할 라벨·이름·점수·먹은패 스트립만 그린다. 6인
+/// 관전처럼 좌석들이 세로로 조금 겹치는 화면에서, 오버레이가 다음 좌석
+/// 사진에 가려지지 않도록 photo 를 먼저 전부 깔고 overlay 를 그 위에
+/// 얹는 방식이다.
+enum SeatLayer { photo, overlay }
+
 class _MightyGameScreenState extends State<MightyGameScreen> {
   // Bidding state
   int _bidPoints = 13;
@@ -1769,51 +1776,54 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         ),
                 ),
               ),
-              for (int i = 0; i < opponents.length; i++) ...[
-                () {
-                  final p = opponents[i];
-                  final angle = _mightyTopSeatAngleForIndex(
-                    i,
-                    opponents.length,
-                    sideOffsetDeg: sideOffsetDeg,
-                  );
-                  final seatLift = _mightySeatVerticalLift(
-                    angle,
-                    isLandscape: isLandscape,
-                  );
-                  final seatLeft =
-                      centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
-                  final seatTop =
-                      centerY +
-                      seatRadiusY * math.sin(angle) -
-                      seatHeight / 2 -
-                      seatLift +
-                      _mightySmallDeviceSideSeatDrop(
-                        angle,
-                        width: width,
-                        playerCount: opponents.length,
-                        isLandscape: isLandscape,
-                      );
-                  return Positioned(
-                    left: seatLeft,
-                    top: seatTop,
-                    width: seatWidth,
-                    height: seatHeight,
-                    child: _buildTableSeatCard(
-                      state,
-                      game,
-                      p,
-                      canRequestCardView: canRequestCardView,
-                      // 관전자가 승인받아 보고 있는 좌석은 나머지와 시각적으로
-                      // 구분되도록 하이라이트 파란 테두리를 준다. 승인 없이
-                      // 그냥 요청만 걸린 상태는 뱃지로 이미 표시된다.
-                      highlighted: _viewingPlayerId == p.id &&
-                          game.approvedCardViews.contains(p.id) &&
-                          p.canViewCards,
-                    ),
-                  );
-                }(),
-              ],
+              // 좌석은 두 겹으로 그린다 — 사진 (photo) 을 모두 먼저 깔고
+              // 위에 텍스트/스트립 (overlay) 를 얹는다. 두 좌석이 세로로
+              // 조금 겹치는 배치(6인 관전)에서 아래 좌석의 사진이 위 좌석의
+              // 텍스트를 가리는 문제를 막는다.
+              for (final layer in const [SeatLayer.photo, SeatLayer.overlay])
+                for (int i = 0; i < opponents.length; i++) ...[
+                  () {
+                    final p = opponents[i];
+                    final angle = _mightyTopSeatAngleForIndex(
+                      i,
+                      opponents.length,
+                      sideOffsetDeg: sideOffsetDeg,
+                    );
+                    final seatLift = _mightySeatVerticalLift(
+                      angle,
+                      isLandscape: isLandscape,
+                    );
+                    final seatLeft =
+                        centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                    final seatTop =
+                        centerY +
+                        seatRadiusY * math.sin(angle) -
+                        seatHeight / 2 -
+                        seatLift +
+                        _mightySmallDeviceSideSeatDrop(
+                          angle,
+                          width: width,
+                          playerCount: opponents.length,
+                          isLandscape: isLandscape,
+                        );
+                    return Positioned(
+                      left: seatLeft,
+                      top: seatTop,
+                      width: seatWidth,
+                      height: seatHeight,
+                      child: _buildTableSeatCard(
+                        state,
+                        game,
+                        p,
+                        canRequestCardView: canRequestCardView,
+                        highlighted: _viewingPlayerId == p.id &&
+                            game.approvedCardViews.contains(p.id) &&
+                            p.canViewCards,
+                        layer: layer,
+                      ),
+                    );
+                  }(),
+                ],
               if (!isBidding)
                 for (int i = 0; i < opponents.length; i++) ...[
                   () {
@@ -1950,13 +1960,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  /// 좌석 카드는 두 번 그린다 — [SeatLayer.photo] 로 사진/뱃지/테두리만
+  /// 그린 다음, [SeatLayer.overlay] 로 이름·점수·먹은패 스트립을 위에 얹는다.
+  /// 이렇게 해야 6인 관전처럼 좌석이 세로로 조금 겹치는 배치에서 아래
+  /// 좌석의 사진이 위 좌석의 이름/점수/스트립을 가리지 않는다. [SeatLayer]
+  /// 를 안 넘기면 예전처럼 한 번에 전부 그린다.
   Widget _buildTableSeatCard(
     MightyGameStateData state,
     GameService game,
     MightyPlayer player, {
     required bool canRequestCardView,
     bool highlighted = false,
+    SeatLayer? layer,
   }) {
+    final photoOn = layer == null || layer == SeatLayer.photo;
+    final overlayOn = layer == null || layer == SeatLayer.overlay;
+    // 오버레이 패스에서 사진을 hide 할 때 SizedBox 로 자리는 유지해서
+    // FittedBox 의 스케일 계산이 두 패스에서 동일하도록 만든다.
+    final holdOnly = layer != null;
     final isCurrentTurn = player.id == state.currentPlayer;
     final isDeclarer = player.id == state.declarer;
     final isPartner = state.friendRevealed && player.id == state.partner;
@@ -2027,26 +2048,34 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = _bidScoreboardBadge(player.bid);
     }
 
-    return Opacity(
+    // 두 패스로 그릴 때 photo 패스는 탭을 받지 않는다 — 겹친 두 위젯이
+    // 모두 탭을 받으면 이벤트가 어느 쪽에 갈지 모호해진다. overlay 패스가
+    // 실제 히트 대상.
+    final gestureOn = !holdOnly || layer == SeatLayer.overlay;
+    Widget content = Opacity(
       opacity: isExcluded ? 0.45 : 1.0,
       child: GestureDetector(
         // The tap is overloaded (card view for spectators, point cards, then
         // profile), so for a spectator it never reaches the profile. Long-press
         // goes straight there, as in the SK and LL seats.
-        onLongPress: () => _showPlayerProfileDialog(
-          player.name,
-          game,
-          isBot: player.id.startsWith('bot_'),
-        ),
-        onTap: () => _handleTableSeatTap(
-          state,
-          game,
-          player,
-          canRequestCardView: canRequestCardView,
-          hasPointCards: hasPointCards,
-          isApproved: isApproved,
-          isPending: isPending,
-        ),
+        onLongPress: gestureOn
+            ? () => _showPlayerProfileDialog(
+                player.name,
+                game,
+                isBot: player.id.startsWith('bot_'),
+              )
+            : null,
+        onTap: gestureOn
+            ? () => _handleTableSeatTap(
+                state,
+                game,
+                player,
+                canRequestCardView: canRequestCardView,
+                hasPointCards: hasPointCards,
+                isApproved: isApproved,
+                isPending: isPending,
+              )
+            : null,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final compact =
@@ -2113,7 +2142,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 children: [
                                   SizedBox(
                                     height: roleLabelHeight,
-                                    child: Center(child: roleLabel),
+                                    child: Center(
+                                      child: overlayOn ? roleLabel : null,
+                                    ),
                                   ),
                                   // 프로필 사진에 뱃지(관전 눈 / 먹은 패 수)를 바로
                                   // 붙인다. 예전엔 좌석 컨테이너의 -4,-4 모서리에
@@ -2125,7 +2156,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       clipBehavior: Clip.none,
                                       alignment: Alignment.center,
                                       children: [
-                                        ProfileAvatar(
+                                        Opacity(
+                                          opacity: photoOn ? 1.0 : 0.0,
+                                          child: ProfileAvatar(
                                           photoUrl: game.resolvePhotoUrl(
                                             player.photoUrl,
                                           ),
@@ -2165,7 +2198,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                   size: avatarDiameter,
                                                 ),
                                         ),
-                                        if (canRequestCardView)
+                                        ),
+                                        if (canRequestCardView && photoOn)
                                           Positioned(
                                             right: -4,
                                             top: -4,
@@ -2199,7 +2233,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                             ),
                                           ),
                                         if (hasPointCards &&
-                                            player.pointCount > 0)
+                                            player.pointCount > 0 &&
+                                            photoOn)
                                           Positioned(
                                             left: -6,
                                             top: -6,
@@ -2254,45 +2289,52 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       ],
                                     ),
                                   ),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (!player.connected)
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            right: compact ? 2 : 3,
+                                  Opacity(
+                                    opacity: overlayOn ? 1.0 : 0.0,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!player.connected)
+                                          Padding(
+                                            padding: EdgeInsets.only(
+                                              right: compact ? 2 : 3,
+                                            ),
+                                            child: Icon(
+                                              Icons.wifi_off,
+                                              size: offlineIconSize,
+                                              color: const Color(0xFFE53935),
+                                            ),
                                           ),
-                                          child: Icon(
-                                            Icons.wifi_off,
-                                            size: offlineIconSize,
-                                            color: const Color(0xFFE53935),
+                                        Flexible(
+                                          child: Text(
+                                            player.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: player.connected
+                                                  ? const Color(0xFF5A4038)
+                                                  : const Color(0xFFE53935),
+                                              fontSize: nameFontSize,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
-                                      Flexible(
-                                        child: Text(
-                                          player.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: player.connected
-                                                ? const Color(0xFF5A4038)
-                                                : const Color(0xFFE53935),
-                                            fontSize: nameFontSize,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                   SizedBox(height: spacing),
-                                  Text(
-                                    '${state.scores[player.id] ?? 0}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF5A4038),
-                                      fontSize: scoreFontSize,
-                                      fontWeight: FontWeight.w800,
+                                  Opacity(
+                                    opacity: overlayOn ? 1.0 : 0.0,
+                                    child: Text(
+                                      '${state.scores[player.id] ?? 0}',
+                                      style: TextStyle(
+                                        color: const Color(0xFF5A4038),
+                                        fontSize: scoreFontSize,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                   // Only when there is a count: the always-
@@ -2301,14 +2343,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   // scaling the avatar down.
                                   if (player.timeoutCount > 0) ...[
                                     SizedBox(height: spacing),
-                                    SizedBox(
-                                      height: timeoutHeight,
-                                      child: Text(
-                                        '⏱ ${player.timeoutCount}/3',
-                                        style: TextStyle(
-                                          fontSize: metaFontSize,
-                                          fontWeight: FontWeight.w800,
-                                          color: const Color(0xFFE65100),
+                                    Opacity(
+                                      opacity: overlayOn ? 1.0 : 0.0,
+                                      child: SizedBox(
+                                        height: timeoutHeight,
+                                        child: Text(
+                                          '⏱ ${player.timeoutCount}/3',
+                                          style: TextStyle(
+                                            fontSize: metaFontSize,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFFE65100),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -2317,7 +2362,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               ),
                             ),
                           ),
-                          if (hasPointCards)
+                          if (hasPointCards && overlayOn)
                             Positioned(
                               left: 0,
                               right: 0,
@@ -2349,6 +2394,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ),
       ),
     );
+    // photo 패스에서는 자기 자신은 아무 탭도 받지 않고 아래 좌석에도
+    // 전달하지 않는다 — overlay 패스가 히트 대상이다.
+    if (layer == SeatLayer.photo) {
+      return IgnorePointer(child: content);
+    }
+    return content;
   }
 
   void _handleTableSeatTap(

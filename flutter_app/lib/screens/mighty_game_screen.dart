@@ -1729,9 +1729,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     isBidding || isKillSelect
                         ? 0.10
                         // 관전자 6인 게임은 링 안이 좌석으로 꽉 차서 트릭
-                        // 라벨이 좌석 위에 겹친다 — 그때만 아래로 밀어낸다.
+                        // 라벨을 좌석 위에 얹으면 겹친다 — 아래쪽 두 좌석
+                        // 사이(중앙 조금 아래)로 살짝만 내려도 충분하다.
+                        // 0.78 은 너무 낮아서 하단 손패 힌트에 붙어 보였다.
                         : (showAllSeats && state.players.length >= 6)
-                        ? (isLandscape ? 0.62 : 0.78)
+                        ? (isLandscape ? 0.52 : 0.62)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   // 하단 비딩/킬 시트가 없는 관전자는 중앙에 진행 상황을
@@ -2930,12 +2932,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // bidding panel of their own and otherwise wouldn't see the turn timer.
   Widget _buildBiddingCenterInfo(MightyGameStateData state) {
     return Center(
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2981,12 +2979,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   .firstOrNull ??
               '');
     return Center(
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -4245,6 +4239,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   // ── Spectator Hand View ──
+  //
+  // 관전자(및 mighty-kill 로 자기 판이 꺼진 플레이어)가 하단 손패 자리에서
+  // 보는 네 개 상태 — 상태별로 다른 위젯이지만 대부분은 얇은 알림바다.
+  //
+  // 유휴(요청 전) → 힌트 텍스트
+  // pending      → 스피너 + "요청 중"
+  // 승인         → 상대 손패 그대로 표시
+  // 거절         → "요청이 거절됨"
+
   Widget _buildSpectatorHandArea(MightyGameStateData state, GameService game) {
     final viewingPlayer = _viewingPlayerId == null
         ? null
@@ -4252,151 +4255,140 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             (p) => p?.id == _viewingPlayerId,
             orElse: () => null,
           );
+    if (viewingPlayer == null) return _spectatorHintBar();
     final isApproved =
-        viewingPlayer != null &&
         game.approvedCardViews.contains(viewingPlayer.id) &&
         viewingPlayer.canViewCards;
+    if (isApproved) return _spectatorApprovedHand(state, viewingPlayer);
     final isPending =
-        viewingPlayer != null &&
         game.pendingCardViewRequests.contains(viewingPlayer.id);
+    if (isPending) return _spectatorPendingBar(viewingPlayer.name);
+    return _spectatorRejectedBar(viewingPlayer.name);
+  }
 
-    final baseDeco = BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.85),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
-    );
-
-    if (viewingPlayer == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: baseDeco,
-        child: Text(
-          L10n.of(context).skGameTapToRequestCards,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF8A7A72),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-
-    if (isPending && !isApproved) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: baseDeco,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFFFB74D),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (isApproved) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  const SizedBox(width: 32),
-                  Expanded(
-                    child: Text(
-                      L10n.of(context).skGamePlayerHand(viewingPlayer.name),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF5A4038),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      tooltip: MaterialLocalizations.of(
-                        context,
-                      ).closeButtonTooltip,
-                      padding: EdgeInsets.zero,
-                      splashRadius: 18,
-                      icon: const Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Color(0xFF8A7A72),
-                      ),
-                      onPressed: () => setState(() => _viewingPlayerId = null),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (viewingPlayer.cards.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  L10n.of(context).skGameNoCards,
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                    fontSize: 12,
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: _buildHandRows(
-                  viewingPlayer.cards,
-                  legalCards: const {},
-                  isPlaying: false,
-                  isKitty: false,
-                  state: state,
-                ),
-              ),
-          ],
-        ),
-      );
-    }
-
-    // Rejected
+  /// 얇은 알림바 셸 — 관전 유휴/pending/거절 상태가 모두 이 상자를 쓴다.
+  Widget _spectatorInfoBar({required Widget child}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: baseDeco,
-      child: Text(
-        L10n.of(context).skGameCardViewRejected(viewingPlayer.name),
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFF8A7A72),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+      decoration: const BoxDecoration(
+        color: Color(0xD9FFFFFF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+      ),
+      child: child,
+    );
+  }
+
+  Text _spectatorInfoText(String text) => Text(
+    text,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+      color: Color(0xFF8A7A72),
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    ),
+  );
+
+  Widget _spectatorHintBar() => _spectatorInfoBar(
+    child: _spectatorInfoText(L10n.of(context).skGameTapToRequestCards),
+  );
+
+  Widget _spectatorPendingBar(String playerName) => _spectatorInfoBar(
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFFFFB74D),
+          ),
         ),
+        const SizedBox(width: 8),
+        _spectatorInfoText(
+          L10n.of(context).skGameRequestingCardView(playerName),
+        ),
+      ],
+    ),
+  );
+
+  Widget _spectatorRejectedBar(String playerName) => _spectatorInfoBar(
+    child: _spectatorInfoText(
+      L10n.of(context).skGameCardViewRejected(playerName),
+    ),
+  );
+
+  Widget _spectatorApprovedHand(
+    MightyGameStateData state,
+    MightyPlayer viewingPlayer,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+      decoration: const BoxDecoration(
+        color: Color(0xEBFFFFFF),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const SizedBox(width: 32),
+                Expanded(
+                  child: Text(
+                    L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF5A4038),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    padding: EdgeInsets.zero,
+                    splashRadius: 18,
+                    icon: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Color(0xFF8A7A72),
+                    ),
+                    onPressed: () => setState(() => _viewingPlayerId = null),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (viewingPlayer.cards.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                L10n.of(context).skGameNoCards,
+                style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: _buildHandRows(
+                viewingPlayer.cards,
+                legalCards: const {},
+                isPlaying: false,
+                isKitty: false,
+                state: state,
+              ),
+            ),
+        ],
       ),
     );
   }

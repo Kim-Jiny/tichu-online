@@ -46,7 +46,21 @@ let nextId = 1;
 const TICK_MS = 900;
 let ticker = null;
 
+// 게임별 정원 상한. 마이티만 5/6인 모두 지원해서 하한/상한이 다르다 —
+// 그래서 상한(6)을 여기 두고, 기본값은 DEFAULT_PLAYERS 에서 따로 잡는다.
 const MAX_PLAYERS = {
+  tichu: 4,
+  skull_king: 6,
+  love_letter: 4,
+  mighty: 6,
+};
+const MIN_PLAYERS = {
+  tichu: 4,
+  skull_king: 6,
+  love_letter: 4,
+  mighty: 5,
+};
+const DEFAULT_PLAYERS = {
   tichu: 4,
   skull_king: 6,
   love_letter: 4,
@@ -114,6 +128,7 @@ function create({
   roomName,
   allowSpectators = true,
   password = '',
+  maxPlayers,
 }) {
   if (!deps) return { success: false, message: 'filler rooms not initialised' };
   const name = (nickname || '').trim();
@@ -130,7 +145,16 @@ function create({
   const roomPassword = (password || '').trim().slice(0, 20);
 
   const hostId = `filler_${nextId++}`;
-  const maxPlayers = MAX_PLAYERS[gameType];
+  const resolvedMax = maxPlayers || DEFAULT_PLAYERS[gameType];
+  if (
+    resolvedMax < MIN_PLAYERS[gameType] ||
+    resolvedMax > MAX_PLAYERS[gameType]
+  ) {
+    return {
+      success: false,
+      message: `${gameType} 방은 ${MIN_PLAYERS[gameType]}~${MAX_PLAYERS[gameType]}인만 지원합니다`,
+    };
+  }
   const room = deps.lobby.createRoom(
     (roomName || name).slice(0, 20),
     hostId,
@@ -143,7 +167,7 @@ function create({
     30,
     1000,
     gameType,
-    maxPlayers,
+    resolvedMax,
     [],
     allowSpectators !== false,
   );

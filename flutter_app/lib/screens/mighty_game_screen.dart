@@ -1649,7 +1649,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           final seatRadiusY = math.min(
             height * (isLandscape ? 0.35 : 0.36),
             math.min(
-              _mightySeatRadiusYCap(height),
+              _mightySeatRadiusYCap(height, opponentCount),
               maxSeatRadiusY,
             ),
           );
@@ -1729,11 +1729,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     isBidding || isKillSelect
                         ? 0.10
                         // 관전자 6인 게임은 링 안이 좌석으로 꽉 차서 트릭
-                        // 라벨을 좌석 위에 얹으면 겹친다 — 아래쪽 두 좌석
-                        // 사이(중앙 조금 아래)로 살짝만 내려도 충분하다.
-                        // 0.78 은 너무 낮아서 하단 손패 힌트에 붙어 보였다.
+                        // 라벨을 링 정중앙에 얹으면 좌석과 겹친다 — 중단
+                        // 좌석 사이(가운데보다 살짝 아래)로 내려 얹는다.
                         : (showAllSeats && state.players.length >= 6)
-                        ? (isLandscape ? 0.52 : 0.62)
+                        ? (isLandscape ? 0.30 : 0.35)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   // 하단 비딩/킬 시트가 없는 관전자는 중앙에 진행 상황을
@@ -2537,7 +2536,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   double _mightySeatRadiusXFactor(int count) {
-    if (count >= 5) return 0.44;
+    // 6석(관전 전용)은 좌석 여섯 개가 링을 빙 두르는 형태라 더 벌려야
+    // 옆으로 밀착돼 보이지 않는다.
+    if (count >= 6) return 0.50;
+    if (count == 5) return 0.44;
     if (count == 4) return 0.43;
     if (count == 3) return 0.40;
     return 0.38;
@@ -2555,9 +2557,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }
 
   /// 링의 수직 반경 상한. 좌석 박스가 커지면서 두 링(양쪽 3인 이상)이 겹치지
-  /// 않도록 넉넉히 잡는다.
-  double _mightySeatRadiusYCap(double height) {
-    final base = 270.0;
+  /// 않도록 넉넉히 잡는다. 6석은 위/아래 각각 두 좌석이 함께 얹혀서
+  /// 링 자체가 더 커야 여유가 생기므로 상한을 조금 더 올린다.
+  double _mightySeatRadiusYCap(double height, int count) {
+    final base = count >= 6 ? 310.0 : 270.0;
     if (height >= 1100) return base + 90;
     if (height >= 850) return base + 50;
     if (height >= 700) return base + 24;

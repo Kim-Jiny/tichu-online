@@ -1717,10 +1717,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final compact =
               constraints.maxHeight <= 72 || constraints.maxWidth <= 90;
           final horizontalPadding = compact ? 5.0 : 6.0;
-          final verticalPadding = compact ? 4.0 : 6.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
-          final labelPadding = compact ? 3.0 : 4.0;
           // Sized against the name it sits beside; the seat is inside a
           // FittedBox, so this scales down with everything else on a tight
           // board rather than pushing the name out.
@@ -1734,15 +1732,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
             hasTimeoutRow: p.timeoutCount > 0,
             spectator: true,
           ).avatar;
-          final nameFontSize = compact ? 10.0 : 11.0;
-          final scoreFontSize = compact ? 13.0 : 15.0;
-          final bidHeight = compact ? 14.0 : 18.0;
-          final bidFontSize = compact ? 10.0 : 11.0;
+          final seatScale = (constraints.maxWidth / 116.0).clamp(0.9, 1.5);
+          final nameFontSize = (compact ? 11.5 : 13.0) * seatScale;
+          final scoreFontSize = (compact ? 15.0 : 17.0) * seatScale;
+          final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
+          final bidFontSize = (compact ? 10.5 : 11.5) * seatScale;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final spacing = compact ? 1.0 : 2.0;
-          // Hugs the photo, like the player seat — a fixed 70% of the box left
-          // empty tint either side of it and squeezed the photo when the box
-          // was narrow.
+          // Hugs the photo — 좌석 컨테이너의 배경/패딩을 없애서 사진 자체가
+          // 좌석의 가장자리다. 이름/점수는 아래로 흐른다.
           final contentWidth = math.max(
             avatarSize + 6,
             math.min(
@@ -1751,17 +1749,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           );
 
-          final labelTint = isViewing
-              ? const Color(0xFFE3EFFF).withValues(alpha: 0.88)
-              : isCurrentTurn
-              ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
-              : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
+            padding: EdgeInsets.zero,
             decoration: const BoxDecoration(),
             // Top-aligned, not centred: the board positions the played card
             // from the seat's top edge, so a label that floats vertically makes
@@ -1771,30 +1761,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: compact ? 4 : 5,
-                        vertical: labelPadding,
-                      ),
-                      decoration: BoxDecoration(
-                        color: labelTint,
-                        borderRadius: BorderRadius.circular(14),
-                        border: isViewing
-                            ? Border.all(
-                                color: const Color(0xFF64B5F6),
-                                width: 1.5,
-                              )
-                            : isCurrentTurn
-                            ? Border.all(
-                                color: const Color(0xFFE6C86A),
-                                width: 1.5,
-                              )
-                            : null,
-                      ),
-                      child: SizedBox(
+                child: SizedBox(
                         width: contentWidth,
                         child: Opacity(
                           opacity: p.connected ? 1.0 : 0.45,
@@ -1814,21 +1781,67 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     ),
                                   ),
                                 ),
-                              // Own row, like the player seat: inline beside the
-                              // name it had to stay at 14-18px to leave the name
-                              // any width, which is too small to make out a face.
+                              // 프로필 사진에 뱃지(관전 눈)를 바로 붙인다 —
+                              // 좌석 컨테이너의 코너에 걸어놓던 방식은 이름/
+                              // 점수 위쪽 여백에 뜬 것처럼 보였다.
                               Padding(
                                 padding: EdgeInsets.only(bottom: spacing),
-                                child: ProfileAvatar(
-                                  photoUrl: game.resolvePhotoUrl(p.photoUrl),
-                                  size: avatarSize,
-                                  blocked: game.blockedUsers.contains(p.name),
-                                  fallback: p.isBot
-                                      ? BotAvatar(
-                                          size: avatarSize,
-                                          name: p.name,
-                                        )
-                                      : DefaultAvatar(size: avatarSize),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    ProfileAvatar(
+                                      photoUrl:
+                                          game.resolvePhotoUrl(p.photoUrl),
+                                      size: avatarSize,
+                                      blocked:
+                                          game.blockedUsers.contains(p.name),
+                                      border: (isCurrentTurn || isViewing)
+                                          ? Border.all(
+                                              color: isViewing
+                                                  ? const Color(0xFF64B5F6)
+                                                  : const Color(0xFFE6C86A),
+                                              width: 1.5,
+                                            )
+                                          : null,
+                                      fallback: p.isBot
+                                          ? BotAvatar(
+                                              size: avatarSize,
+                                              name: p.name,
+                                            )
+                                          : DefaultAvatar(size: avatarSize),
+                                    ),
+                                    Positioned(
+                                      right: -4,
+                                      top: -4,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isApproved
+                                                ? const Color(0xFF64B5F6)
+                                                : const Color(0xFFE0D8D4),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          isPending
+                                              ? Icons.schedule
+                                              : isApproved
+                                              ? Icons.visibility
+                                              : Icons.visibility_outlined,
+                                          size: 12,
+                                          color: isPending
+                                              ? const Color(0xFFFFB74D)
+                                              : isApproved
+                                              ? const Color(0xFF64B5F6)
+                                              : const Color(0xFF8A7A72)
+                                                    .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Row(
@@ -1940,38 +1953,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isApproved
-                                ? const Color(0xFF64B5F6)
-                                : const Color(0xFFE0D8D4),
-                          ),
-                        ),
-                        child: Icon(
-                          isPending
-                              ? Icons.schedule
-                              : isApproved
-                              ? Icons.visibility
-                              : Icons.visibility_outlined,
-                          size: 12,
-                          color: isPending
-                              ? const Color(0xFFFFB74D)
-                              : isApproved
-                              ? const Color(0xFF64B5F6)
-                              : const Color(0xFF8A7A72).withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           );
@@ -2004,13 +1985,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
               !isSelf &&
               (constraints.maxHeight <= 70 || constraints.maxWidth <= 96);
           final horizontalPadding = compact ? 5.0 : 8.0;
-          final verticalPadding = compact ? 4.0 : 8.0;
           final timeoutHeight = compact ? 12.0 : 16.0;
           final offlineIconSize = compact ? 10.0 : 12.0;
-          final nameFontSize = isSelf ? 12.0 : (compact ? 10.0 : 11.0);
-          final scoreFontSize = isSelf ? 16.0 : (compact ? 12.0 : 13.5);
-          final bidHeight = compact ? 13.0 : 16.0;
-          final bidFontSize = compact ? 10.0 : 11.0;
+          final seatScale = (constraints.maxWidth / 116.0).clamp(0.9, 1.5);
+          final nameFontSize = isSelf
+              ? 14.0
+              : (compact ? 11.5 : 13.0) * seatScale;
+          final scoreFontSize = isSelf
+              ? 18.0
+              : (compact ? 15.0 : 17.0) * seatScale;
+          final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
+          final bidFontSize = (compact ? 10.5 : 11.5) * seatScale;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
@@ -2019,8 +2004,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             constraints.maxWidth,
             constraints.maxHeight,
           ).avatar;
-          // Hugs the photo rather than taking a fixed 70% of the box — the
-          // leftover was empty tint either side of the avatar.
+          // Hugs the photo — 좌석 배경/패딩을 없애서 사진 자체가 좌석의
+          // 가장자리. 이름/점수/입찰 뱃지는 아래로 흐른다.
           final contentWidth = math.max(
             avatarDiameter + 6,
             math.min(
@@ -2029,17 +2014,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           );
 
-          final labelTint = isSelf
-              ? Colors.white.withValues(alpha: 0.96)
-              : isCurrentTurn
-              ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
-              : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
           return AnimatedContainer(
             duration: const Duration(milliseconds: 220),
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: verticalPadding,
-            ),
+            padding: EdgeInsets.zero,
             decoration: const BoxDecoration(),
             // Top-aligned, not centred: the board positions the played card
             // from the seat's top edge, so a label that floats vertically makes
@@ -2049,32 +2026,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
-                child: Container(
-                  // Half the old padding: with a photo this size the frame
-                  // read as a box around the seat rather than as the seat.
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 3 : 4,
-                    vertical: compact ? 2 : 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: labelTint,
-                    borderRadius: BorderRadius.circular(isSelf ? 16 : 14),
-                    border: isCurrentTurn
-                        ? Border.all(color: const Color(0xFFE6C86A), width: 1.5)
-                        : null,
-                  ),
-                  child: SizedBox(
+                child: SizedBox(
                     width: contentWidth,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Only when there is a count to show. Reserving the
-                        // row unconditionally cost 16dp of the label's height,
-                        // and since the whole label is scaled down to fit the
-                        // seat box, that 16dp was being taken out of the
-                        // avatar — raising avatarDiameter just tightened the
-                        // scale factor by the same amount.
                         if (p.timeoutCount > 0)
                           SizedBox(
                             height: timeoutHeight,
@@ -2087,18 +2044,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               ),
                             ),
                           ),
-                        // Own row rather than inline before the name: inline it
-                        // had to stay at 14-16px to leave the name any width at
-                        // all, which is too small to recognise a face. Drawn for
-                        // every seat, photo or not — otherwise photo-less seats
-                        // render shorter and the played card, which is placed
-                        // from the photo's centre, lands somewhere else on them.
+                        // 현재턴 테두리는 ProfileAvatar 에 직접 넘겨 사진의
+                        // 라운드 코너와 정확히 같은 곡률로 감싼다.
                         Padding(
                           padding: EdgeInsets.only(bottom: spacing),
                           child: ProfileAvatar(
                             photoUrl: game.resolvePhotoUrl(p.photoUrl),
                             size: avatarDiameter,
                             blocked: game.blockedUsers.contains(p.name),
+                            border: isCurrentTurn
+                                ? Border.all(
+                                    color: const Color(0xFFE6C86A),
+                                    width: 1.5,
+                                  )
+                                : null,
                             fallback: p.isBot
                                 ? BotAvatar(size: avatarDiameter, name: p.name)
                                 : DefaultAvatar(size: avatarDiameter),
@@ -2199,7 +2158,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       ],
                     ),
                   ),
-                ),
               ),
             ),
           );

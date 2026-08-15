@@ -1655,11 +1655,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // the top seat can sit above centre, and with the taller seats that
           // cap was what pushed the two side seats into each other. There is
           // empty board below them to give.
-          final centerY =
-              (isLandscape ? height * 0.42 : height * 0.47) + boardDrop;
+          // 6인 관전은 상·중·하 세 줄이 링을 두르므로 두 줄만 있는 4/5인
+          // 배치보다 링 자체가 세로로 커야 한다. centerY 를 살짝 아래로
+          // 내려서 maxRadiusY 도 함께 키우고, height 비율/상한도 위로 뽑는다.
+          final baseCenterYRatio = isLandscape ? 0.42 : 0.47;
+          final centerYRatio = opponentCount >= 6
+              ? (isLandscape ? 0.50 : 0.53)
+              : baseCenterYRatio;
+          final centerY = height * centerYRatio + boardDrop;
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+          final radiusYRatio = opponentCount >= 6
+              ? (isLandscape ? 0.42 : 0.45)
+              : (isLandscape ? 0.35 : 0.36);
           final seatRadiusY = math.min(
-            height * (isLandscape ? 0.35 : 0.36),
+            height * radiusYRatio,
             math.min(
               _mightySeatRadiusYCap(height, opponentCount),
               maxSeatRadiusY,
@@ -1738,16 +1747,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Align(
                   alignment: Alignment(
                     0,
-                    isBidding || isKillSelect
-                        ? 0.10
-                        // 관전자 6인 게임은 중단·하단 좌석 사이 갭이 좁고
-                        // 링 정중앙에 얹으면 중단 좌석과 겹친다. 좌석 링을
-                        // 확실히 벗어난 아래 지점(alignment.y=-0.15, 화면
-                        // 상단에서 42.5%)에 두면 이전 05 보다 눈에 띄게
-                        // 위로 올라와 판 중심에 가깝다.
-                        : (showAllSeats && state.players.length >= 6)
-                        ? (isLandscape ? -0.20 : -0.15)
-                        : (isLandscape ? 0.36 : 0.46),
+                    // 관전자 6인 게임은 중단·하단 좌석 사이 갭이 좁고 링
+                    // 정중앙에 얹으면 좌석과 겹친다 — 트릭/비딩/킬 표시를
+                    // 모두 같은 지점(중단 좌석 살짝 위)에 얹는다.
+                    (showAllSeats && state.players.length >= 6)
+                        ? (isLandscape ? -0.22 : -0.20)
+                        : (isBidding || isKillSelect
+                              ? 0.10
+                              : (isLandscape ? 0.36 : 0.46)),
                   ),
                   // 하단 비딩/킬 시트가 없는 관전자는 중앙에 진행 상황을
                   // 보여줘야 뭐가 벌어지는지 알 수 있다. 플레이어 모드는
@@ -2514,30 +2521,47 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return widest.clamp(0.35, 1.0).toDouble();
   }
 
+  /// 좌석 안의 사진 반경 + 사진 중심의 실제 렌더 y (좌석 top 기준).
+  ///
+  /// _buildTableSeatCard 의 Column 은 [roleLabel · 사진 · 이름 · 점수 · (타임아웃)]
+  /// 이고 이 전체를 FittedBox(scaleDown) 이 seatHeight 안에 맞춰 축소한다.
+  /// 낸 카드는 좌석 밖 별도 Positioned 로 그리므로 위치가 실제 사진 중심과
+  /// 일치하려면 FittedBox 의 축소 비율을 반영해 계산해야 한다.
   static ({double avatar, double photoCentre}) _mightySeatMetrics(
     double seatWidth,
     double seatHeight,
   ) {
     final compact = seatHeight <= 70 || seatWidth <= 96;
-    final verticalPadding = compact ? 4.0 : 6.0;
-    final labelPadding = compact ? 2.0 : 3.0;
-    final roleLabelHeight = compact ? 15.0 : 16.0;
-    // Height alone used to decide this, so making the window wider changed
-    // nothing — and the ceiling was a phone-sized 92, which a desktop board
-    // reaches immediately and then stops. On web, let the seat's width have a
-    // say (so the photo can never outgrow its own box) and raise the ceiling.
-    // Native keeps the original number exactly. The web ceiling came down
-    // with the board (148 was picked against a 1.6 scale, this is 1.3).
+    final seatScale = (seatWidth / 116.0).clamp(0.9, 1.5);
+    // 아래 값들은 _buildTableSeatCard 의 것과 동일해야 한다 — 어긋나면 카드
+    // 위치도 어긋난다.
+    final roleLabelHeight = (compact ? 18.0 : 20.0) * seatScale;
+    final spacing = compact ? 1.0 : 2.0;
+    final nameFontSize = (compact ? 13.0 : 15.0) * seatScale;
+    final scoreFontSize = (compact ? 17.0 : 19.5) * seatScale;
+    // Web 는 폭도 함께 고려해 사진이 좌석 폭을 넘지 않게 한다.
     final avatar = kIsWeb
         ? math
               .min(seatHeight * 0.72, seatWidth * 0.74)
               .clamp(52.0, 180.0)
               .toDouble()
         : (seatHeight * 0.72).clamp(52.0, 124.0).toDouble();
+    // Column 의 자연 높이 (타임아웃 행은 유동이라 여기선 뺀다 — 있어도 몇 dp
+    // 차이라 카드 위치가 눈에 띌 정도로 어긋나지 않는다).
+    final intrinsicHeight =
+        roleLabelHeight +
+        avatar +
+        spacing +
+        nameFontSize * 1.35 +
+        spacing +
+        scoreFontSize * 1.35;
+    final fittedScale = intrinsicHeight <= seatHeight
+        ? 1.0
+        : seatHeight / intrinsicHeight;
+    final unscaledPhotoCentre = roleLabelHeight + avatar / 2;
     return (
       avatar: avatar,
-      photoCentre:
-          verticalPadding + labelPadding + roleLabelHeight + avatar / 2,
+      photoCentre: unscaledPhotoCentre * fittedScale,
     );
   }
 
@@ -2618,7 +2642,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// 않도록 넉넉히 잡는다. 6석은 위/아래 각각 두 좌석이 함께 얹혀서
   /// 링 자체가 더 커야 여유가 생기므로 상한을 조금 더 올린다.
   double _mightySeatRadiusYCap(double height, int count) {
-    final base = count >= 6 ? 310.0 : 270.0;
+    // 6인은 상·중·하 세 줄 스택이라 4/5인보다 링을 더 크게 잡아야 겹치지
+    // 않는다.
+    final base = count >= 6 ? 360.0 : 270.0;
     if (height >= 1100) return base + 90;
     if (height >= 850) return base + 50;
     if (height >= 700) return base + 24;
@@ -2992,8 +3018,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // Centre indicator during bidding — mainly for spectators, who have no
   // bidding panel of their own and otherwise wouldn't see the turn timer.
   Widget _buildBiddingCenterInfo(MightyGameStateData state) {
-    return Center(
-      child: Padding(
+    // Center 감싸면 부모 Align 이 무효화 (trick 위젯들과 같은 이유).
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3024,7 +3050,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
           ],
         ),
-      ),
     );
   }
 
@@ -3039,8 +3064,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   .map((p) => p.name)
                   .firstOrNull ??
               '');
-    return Center(
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3077,7 +3101,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
           ],
         ),
-      ),
     );
   }
 
@@ -3086,8 +3109,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       // During the kitty exchange spectators see the status here in the centre;
       // players (incl. non-declarers) see it above their own hand instead.
       final isKittyWait = state.phase == 'kitty_exchange' && game.isSpectator;
-      return Center(
-        child: Container(
+      // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
+      // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
+      return Container(
           // 내용에 맞춰 줄어든다. 고정 200dp 라 "대기 중…" 한 줄일 때도 양옆으로
           // 길어져서, 좌석이 바깥으로 벌어진 뒤로는 서로 겹쳤다.
           constraints: const BoxConstraints(minWidth: 116, maxWidth: 200),
@@ -3130,7 +3154,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
             ],
           ),
-        ),
       );
     }
 
@@ -3150,8 +3173,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ? _bidAccentColor(leadSuit)
         : const Color(0xFF8A7A72);
 
-    return Center(
-      child: Container(
+    // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
+    // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
+    return Container(
         // 같은 이유로 고정 폭 대신 내용 폭 + 하한. 배경 무늬는 FittedBox 라
         // 상자가 좁아지면 같이 작아진다.
         constraints: const BoxConstraints(
@@ -3227,7 +3251,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -3239,8 +3262,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             .map((p) => p.name)
             .firstOrNull ??
         '';
-    return Center(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3262,7 +3284,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

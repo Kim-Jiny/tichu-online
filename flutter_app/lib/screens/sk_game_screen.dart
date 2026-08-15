@@ -343,13 +343,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildBoardStage({required Widget board, Widget? bottomOverlay}) {
-    // 관전자용 bottomPadding 을 110dp 로 맞춘다 (마이티와 동일). 예전엔
-    // 50dp 였는데, 상대 손패를 승인받아 볼 때 그 카드 행이 50dp 를 훨씬
-    // 넘어서 좌석을 덮었다. 좌석은 살짝 압축되지만 승인 상태에서 카드가
-    // 좌석 위로 뻗어가는 문제가 사라진다.
+    // 관전자용 bottomPadding — 승인받아 상대 손패를 볼 때 8~10 라운드는
+    // 카드가 두 줄이라 110dp 로도 좌석을 살짝 가렸다. 130 이면 두 줄
+    // 카드가 다 들어간다.
     final bottomPadding = bottomOverlay is _SKSpectatorHandAreaMarker
-        ? 110.0
-        : 120.0;
+        ? 130.0
+        : 130.0;
     return Expanded(
       child: Stack(
         children: [
@@ -739,12 +738,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             children: [
               Positioned.fill(
                 child: Align(
-                  // 6인 관전은 링 중단·하단 좌석 사이로 트릭이 올라오도록
-                  // 마이티와 같은 위치(-0.20)로 얹는다.
+                  // 6인 관전은 링 중단·하단 좌석 사이로 트릭이 얹히도록
+                  // 살짝 위(-0.10). 마이티(-0.20) 보다는 조금 낮춘 위치.
                   alignment: Alignment(
                     0,
                     playerCount >= 6
-                        ? (isLandscape ? -0.22 : -0.20)
+                        ? (isLandscape ? -0.12 : -0.10)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   child: Transform.translate(

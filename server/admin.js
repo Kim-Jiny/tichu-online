@@ -3678,13 +3678,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       );
       if (!result.success) console.warn('[admin] filler spectators:', result.message);
     } else {
-      // mighty 만 5/6인 두 폼이 있어서 select 값을 gameType + maxPlayers 로
-      // 분리한다 — 다른 게임들은 정원이 고정이라 별도 변형이 없다.
+      // 마이티 5/6, 스컬킹 2~6 처럼 인원 옵션이 있는 게임은 select 값을
+      // gameType + maxPlayers 로 분리한다.
       let gameType = body.gameType || 'tichu';
       let maxPlayers;
       if (gameType === 'mighty_6') {
         gameType = 'mighty';
         maxPlayers = 6;
+      } else if (gameType.startsWith('skull_king_')) {
+        const parsed = parseInt(gameType.split('_').pop(), 10);
+        gameType = 'skull_king';
+        maxPlayers = parsed;
       }
       const result = fillerRooms.create({
         nickname: body.nickname || '',
@@ -3776,6 +3780,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <span class="muted" style="font-size:12px">게임</span>
             <select name="gameType" style="padding:8px;border:1px solid #ddd;border-radius:8px">
               <option value="tichu">티츄 (4인)</option>
+              <option value="skull_king_2">스컬킹 (2인)</option>
+              <option value="skull_king_3">스컬킹 (3인)</option>
+              <option value="skull_king_4">스컬킹 (4인)</option>
+              <option value="skull_king_5">스컬킹 (5인)</option>
               <option value="skull_king">스컬킹 (6인)</option>
               <option value="love_letter">러브레터 (4인)</option>
               <option value="mighty">마이티 (5인)</option>

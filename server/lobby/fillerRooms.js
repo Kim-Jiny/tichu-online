@@ -46,8 +46,8 @@ let nextId = 1;
 const TICK_MS = 900;
 let ticker = null;
 
-// 게임별 정원 상한. 마이티만 5/6인 모두 지원해서 하한/상한이 다르다 —
-// 그래서 상한(6)을 여기 두고, 기본값은 DEFAULT_PLAYERS 에서 따로 잡는다.
+// 게임별 정원 상한. 마이티 5/6, 스컬킹 2~6 처럼 인원폭이 넓은 게임이 있어
+// MIN/MAX/DEFAULT 를 각각 관리한다.
 const MAX_PLAYERS = {
   tichu: 4,
   skull_king: 6,
@@ -56,7 +56,7 @@ const MAX_PLAYERS = {
 };
 const MIN_PLAYERS = {
   tichu: 4,
-  skull_king: 6,
+  skull_king: 2,
   love_letter: 4,
   mighty: 5,
 };

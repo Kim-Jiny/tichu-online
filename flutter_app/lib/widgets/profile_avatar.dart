@@ -90,25 +90,32 @@ class ProfileAvatar extends StatelessWidget {
         !blocked &&
         url != null &&
         (url.startsWith('http://') || url.startsWith('https://'));
-    if (!showPhoto) {
-      return SizedBox(width: size, height: size, child: fallback);
-    }
-    final image = CachedNetworkImage(
-      imageUrl: url,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      fadeInDuration: const Duration(milliseconds: 150),
-      placeholder: (_, _) => fallback,
-      errorWidget: (_, _, _) => fallback,
-    );
     final radius = borderRadius ?? avatarCornerRadius(size);
-    final clipped = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: image,
-    );
+    final Widget content;
+    if (!showPhoto) {
+      // Fallback(봇/기본 실루엣)에도 라운드 코너 클립을 씌운다 — 사진일 때와
+      // 시각적으로 동일한 상자가 되어야 border 를 얹었을 때 사진/봇을 가리지
+      // 않고 같은 곡률로 감싼다.
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: fallback,
+      );
+    } else {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          fadeInDuration: const Duration(milliseconds: 150),
+          placeholder: (_, _) => fallback,
+          errorWidget: (_, _, _) => fallback,
+        ),
+      );
+    }
     if (border == null) {
-      return SizedBox(width: size, height: size, child: clipped);
+      return SizedBox(width: size, height: size, child: content);
     }
     return Container(
       width: size,
@@ -117,7 +124,7 @@ class ProfileAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         border: border,
       ),
-      child: clipped,
+      child: content,
     );
   }
 }

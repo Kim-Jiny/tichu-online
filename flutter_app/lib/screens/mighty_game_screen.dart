@@ -1502,9 +1502,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // small in the middle of a lot of empty board — most visible once
           // the hand fits on one line and hands its height back. Web gets
           // more headroom; the app keeps the number it shipped with.
+          // 마이티 화면이 원래 360/400 을 기준으로 스케일했는데, 폭이 그
+          // 근처인 폰에서는 scale 이 딱 1.0 에 걸려 좌우/상단에 여백이 크게
+          // 남았다. 기준을 좀 낮춰서 실 화면에서 1.1~1.15 정도로 자라도록
+          // 하고, 상한도 1.45 → 1.6 으로 올린다. FittedBox 안전망이 붙어
+          // 있으니 좁아지는 방향은 자동으로 다시 줄어든다.
           final boardScale = math
-              .min(width / 360.0, height / 400.0)
-              .clamp(0.78, kIsWeb ? 1.85 : 1.45);
+              .min(width / 328.0, height / 372.0)
+              .clamp(0.78, kIsWeb ? 1.95 : 1.6);
           // Two seat columns plus a gap have to fit across, and two rows have
           // to fit inside the ring — on a narrow or short board the seat gives
           // way rather than the seats sliding into each other.
@@ -1518,7 +1523,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           );
           final seatScale = math
               .min(boardScale, seatFit)
-              .clamp(0.62, kIsWeb ? 1.85 : 1.45);
+              .clamp(0.62, kIsWeb ? 1.95 : 1.6);
           final seatWidth = 116.0 * seatScale;
           // Tall enough for the enlarged avatar to render at full size — the
           // label is FittedBox'd, so a box that is too short shrinks the photo
@@ -1544,8 +1549,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             isLandscape: isLandscape,
           );
           final playerBoardDrop = _mightySmallDeviceBoardDrop(
+            // 전체 인원 기준 — 함수 안에서 5인 게임만 특별하게 아래로
+            // 내리는데, visiblePlayers 는 상대 수라 4가 넘어와서 5-인 검사가
+            // 매번 실패했다.
             width: width,
-            playerCount: visiblePlayers.length,
+            playerCount: state.players.length,
             spectatorMode: false,
             isLandscape: isLandscape,
           );
@@ -1936,12 +1944,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// (two rows at web scale) than that.
   static const int _mightyDealSize = 10;
 
-  double _handReserveFor(double boxWidth, int cardCount) {
+  double _handReserveFor(
+    double boxWidth,
+    int cardCount, {
+    int playerCount = 4,
+  }) {
     // Kitty exchange briefly holds 13. Take the larger so the panel can never
     // run under the board; within a phase the number is still constant.
     final count = math.max(cardCount, _mightyDealSize);
     if (count <= 0) return 230.0;
-    final geom = _mightyHandGeometry(boxWidth, count);
+    final geom = _mightyHandGeometry(
+      boxWidth,
+      count,
+      playerCount: playerCount,
+    );
     final rowsHeight =
         geom.rows * geom.cardHeight + (geom.rows - 1) * 4.0 + 8.0;
     return rowsHeight + _handChromeHeight;
@@ -1959,7 +1975,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ? 0.0
             : game.isSpectator
             ? 110.0
-            : _handReserveFor(constraints.maxWidth, state.myCards.length);
+            : _handReserveFor(
+                constraints.maxWidth,
+                state.myCards.length,
+                playerCount: state.players.length,
+              );
         return Stack(
           children: [
             Positioned.fill(
@@ -2005,7 +2025,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtKillExcluded,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
           color: Color(0xFFD84315),
         ),
@@ -2016,7 +2036,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = RichText(
         textAlign: TextAlign.center,
         text: TextSpan(
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
           children: [
             TextSpan(
               text: L10n.of(context).mtDeclarer,
@@ -2037,7 +2057,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtDeclarer,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
           color: Color(0xFFFF8A00),
         ),
@@ -2046,7 +2066,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       roleLabel = Text(
         L10n.of(context).mtFriend,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
           color: Color(0xFF4CAF50),
         ),
@@ -2079,14 +2099,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           builder: (context, constraints) {
             final compact =
                 constraints.maxHeight <= 70 || constraints.maxWidth <= 96;
+            // 좌석은 116dp를 기준으로 boardScale에 따라 자란다 — 그 비율을
+            // 그대로 라벨/점수에도 얹어야 큰 화면에서도 이름·점수가 여백만
+            // 더 남기고 그대로인 모양이 되지 않는다. FittedBox가 위에서
+            // 감싸주므로 좁아지는 쪽은 자동으로 다시 줄어든다.
+            final seatScale = (constraints.maxWidth / 116.0).clamp(0.9, 1.5);
             final horizontalPadding = compact ? 5.0 : 7.0;
-            final verticalPadding = compact ? 4.0 : 6.0;
-            final timeoutHeight = compact ? 11.0 : 12.0;
-            final roleLabelHeight = compact ? 15.0 : 16.0;
-            final offlineIconSize = compact ? 10.0 : 11.0;
-            final nameFontSize = compact ? 10.0 : 11.0;
-            final scoreFontSize = compact ? 13.0 : 15.0;
-            final metaFontSize = compact ? 8.0 : 8.5;
+            final timeoutHeight = (compact ? 12.5 : 14.0) * seatScale;
+            final roleLabelHeight = (compact ? 18.0 : 20.0) * seatScale;
+            final offlineIconSize = (compact ? 12.0 : 13.0) * seatScale;
+            final nameFontSize = (compact ? 13.0 : 15.0) * seatScale;
+            final scoreFontSize = (compact ? 17.0 : 19.5) * seatScale;
+            final metaFontSize = (compact ? 10.0 : 11.0) * seatScale;
             final spacing = compact ? 1.0 : 2.0;
             // Same source as the board's card placement — see
             // _mightySeatMetrics.
@@ -2103,12 +2127,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 avatarDiameter + 22,
               ),
             );
-            final labelTint = highlighted
-                ? const Color(0xFFE7F2FF).withValues(alpha: 0.92)
-                : isCurrentTurn
-                ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
-                : const Color(0xFFFFFCFA).withValues(alpha: 0.64);
-
             return SeatBubbleAnchor(
               // 말풍선은 좌석 Stack 안이 아니라 오버레이에 그린다 —
               // 안쪽에 두면 나중에 그려지는 좌석·카드가 그대로 덮는다.
@@ -2119,10 +2137,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 children: [
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding,
-                      vertical: verticalPadding,
-                    ),
+                    // 프로필 박스의 외곽 패딩은 0 — 좌석 컨테이너가 아니라
+                    // 아바타 자체가 좌석의 가장자리다. 이름·점수는 아래로 흐른다.
+                    padding: EdgeInsets.zero,
                     decoration: const BoxDecoration(),
                     // Top-aligned, not centred: the board places the played card
                     // from the seat's top edge, so a label that floats vertically
@@ -2136,232 +2153,216 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.topCenter,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOut,
-                                  // Half of what it was: with a 56px photo the old
-                                  // padding read as a frame around the seat rather
-                                  // than as the seat itself.
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: compact ? 3 : 4,
-                                    vertical: compact ? 2 : 3,
+                            child: SizedBox(
+                              width: contentWidth,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: roleLabelHeight,
+                                    child: Center(child: roleLabel),
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: labelTint,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border:
-                                        isCurrentTurn ||
-                                            isDeclarer ||
-                                            isPartner ||
-                                            highlighted
-                                        ? Border.all(
-                                            color: isCurrentTurn
-                                                ? const Color(0xFFE6C86A)
-                                                : isDeclarer
-                                                ? const Color(0xFFFF8A00)
-                                                : isPartner
-                                                ? const Color(0xFF4CAF50)
-                                                : const Color(0xFF64B5F6),
-                                            width: (isDeclarer || isPartner)
-                                                ? 3.5
-                                                : 1.5,
-                                          )
-                                        : null,
-                                  ),
-                                  child: SizedBox(
-                                    width: contentWidth,
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
+                                  // 프로필 사진에 뱃지(관전 눈 / 먹은 패 수)를 바로
+                                  // 붙인다. 예전엔 좌석 컨테이너의 -4,-4 모서리에
+                                  // 걸어놨는데, 그렇게 되면 이름/점수 위쪽 여백에
+                                  // 뱃지가 붕 뜬 것처럼 보였다.
+                                  Padding(
+                                    padding: EdgeInsets.only(bottom: spacing),
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      alignment: Alignment.center,
                                       children: [
-                                        SizedBox(
-                                          height: roleLabelHeight,
-                                          child: Center(child: roleLabel),
-                                        ),
-                                        // Own row rather than inline before the
-                                        // name (same as SK/LL), and rendered for
-                                        // EVERY seat — photo-less seats get the
-                                        // default silhouette. Not cosmetic: the
-                                        // label scales down to fit the seat box, so
-                                        // when only some seats had an avatar their
-                                        // labels shrank (smaller name and all) while
-                                        // avatar-less seats rendered full size — the
-                                        // seats came out visibly different sizes.
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            bottom: spacing,
+                                        ProfileAvatar(
+                                          photoUrl: game.resolvePhotoUrl(
+                                            player.photoUrl,
                                           ),
-                                          child: ProfileAvatar(
-                                            photoUrl: game.resolvePhotoUrl(
-                                              player.photoUrl,
-                                            ),
-                                            size: avatarDiameter,
-                                            blocked: game.blockedUsers.contains(
-                                              player.name,
-                                            ),
-                                            fallback: player.isBot
-                                                ? BotAvatar(
-                                                    size: avatarDiameter,
-                                                    name: player.name,
-                                                  )
-                                                : DefaultAvatar(
-                                                    size: avatarDiameter,
-                                                  ),
+                                          size: avatarDiameter,
+                                          blocked: game.blockedUsers.contains(
+                                            player.name,
                                           ),
-                                        ),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (!player.connected)
-                                              Padding(
-                                                padding: EdgeInsets.only(
-                                                  right: compact ? 2 : 3,
+                                          // 테두리를 아바타에 직접 넘겨서 사진의
+                                          // 라운드 코너와 정확히 같은 곡률로 감싼다
+                                          // — 바깥 Container 로 감쌌더니 shape.circle
+                                          // 이 되어 사진 모서리에서 살짝 어긋났다.
+                                          border:
+                                              (isCurrentTurn ||
+                                                  isDeclarer ||
+                                                  isPartner ||
+                                                  highlighted)
+                                              ? Border.all(
+                                                  color: isCurrentTurn
+                                                      ? const Color(0xFFE6C86A)
+                                                      : isDeclarer
+                                                      ? const Color(0xFFFF8A00)
+                                                      : isPartner
+                                                      ? const Color(0xFF4CAF50)
+                                                      : const Color(0xFF64B5F6),
+                                                  width:
+                                                      (isDeclarer || isPartner)
+                                                      ? 3.5
+                                                      : 1.5,
+                                                )
+                                              : null,
+                                          fallback: player.isBot
+                                              ? BotAvatar(
+                                                  size: avatarDiameter,
+                                                  name: player.name,
+                                                )
+                                              : DefaultAvatar(
+                                                  size: avatarDiameter,
                                                 ),
-                                                child: Icon(
-                                                  Icons.wifi_off,
-                                                  size: offlineIconSize,
+                                        ),
+                                        if (canRequestCardView)
+                                          Positioned(
+                                            right: -4,
+                                            top: -4,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isApproved
+                                                      ? const Color(0xFF64B5F6)
+                                                      : const Color(0xFFE0D8D4),
+                                                ),
+                                              ),
+                                              child: Icon(
+                                                isPending
+                                                    ? Icons.schedule
+                                                    : isApproved
+                                                    ? Icons.visibility
+                                                    : Icons
+                                                          .visibility_outlined,
+                                                size: 12,
+                                                color: isPending
+                                                    ? const Color(0xFFFFB74D)
+                                                    : isApproved
+                                                    ? const Color(0xFF64B5F6)
+                                                    : const Color(
+                                                        0xFF8A7A72,
+                                                      ).withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                          ),
+                                        if (hasPointCards &&
+                                            player.pointCount > 0)
+                                          Positioned(
+                                            left: -6,
+                                            top: -6,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(11),
+                                                border: Border.all(
                                                   color: const Color(
                                                     0xFFE53935,
                                                   ),
+                                                  width: 1.2,
                                                 ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(
+                                                          alpha: 0.12,
+                                                        ),
+                                                    blurRadius: 3,
+                                                  ),
+                                                ],
                                               ),
-                                            Flexible(
-                                              child: Text(
-                                                player.name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  color: player.connected
-                                                      ? const Color(0xFF5A4038)
-                                                      : const Color(0xFFE53935),
-                                                  fontSize: nameFontSize,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: spacing),
-                                        Text(
-                                          '${state.scores[player.id] ?? 0}',
-                                          style: TextStyle(
-                                            color: const Color(0xFF5A4038),
-                                            fontSize: scoreFontSize,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        // Only when there is a count: the always-
-                                        // reserved row pushed the label over the seat
-                                        // box, and the FittedBox paid for it by
-                                        // scaling the avatar down.
-                                        if (player.timeoutCount > 0) ...[
-                                          SizedBox(height: spacing),
-                                          SizedBox(
-                                            height: timeoutHeight,
-                                            child: Text(
-                                              '⏱ ${player.timeoutCount}/3',
-                                              style: TextStyle(
-                                                fontSize: metaFontSize,
-                                                fontWeight: FontWeight.w800,
-                                                color: const Color(0xFFE65100),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.style,
+                                                    size: 10,
+                                                    color: Color(0xFFE53935),
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    '${player.pointCount}',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFFE53935),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                        ],
                                       ],
                                     ),
                                   ),
-                                ),
-                                if (canRequestCardView)
-                                  Positioned(
-                                    right: -4,
-                                    top: -4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isApproved
-                                              ? const Color(0xFF64B5F6)
-                                              : const Color(0xFFE0D8D4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!player.connected)
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                            right: compact ? 2 : 3,
+                                          ),
+                                          child: Icon(
+                                            Icons.wifi_off,
+                                            size: offlineIconSize,
+                                            color: const Color(0xFFE53935),
+                                          ),
+                                        ),
+                                      Flexible(
+                                        child: Text(
+                                          player.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: player.connected
+                                                ? const Color(0xFF5A4038)
+                                                : const Color(0xFFE53935),
+                                            fontSize: nameFontSize,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
-                                      child: Icon(
-                                        isPending
-                                            ? Icons.schedule
-                                            : isApproved
-                                            ? Icons.visibility
-                                            : Icons.visibility_outlined,
-                                        size: 12,
-                                        color: isPending
-                                            ? const Color(0xFFFFB74D)
-                                            : isApproved
-                                            ? const Color(0xFF64B5F6)
-                                            : const Color(
-                                                0xFF8A7A72,
-                                              ).withValues(alpha: 0.6),
-                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: spacing),
+                                  Text(
+                                    '${state.scores[player.id] ?? 0}',
+                                    style: TextStyle(
+                                      color: const Color(0xFF5A4038),
+                                      fontSize: scoreFontSize,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                // Captured-points badge (top-left), mirroring the
-                                // card-view eye on the top-right. Only shown for
-                                // opposition players who have actually captured at
-                                // least one point card.
-                                if (hasPointCards && player.pointCount > 0)
-                                  Positioned(
-                                    left: -6,
-                                    top: -6,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(11),
-                                        border: Border.all(
-                                          color: const Color(0xFFE53935),
-                                          width: 1.2,
+                                  // Only when there is a count: the always-
+                                  // reserved row pushed the label over the seat
+                                  // box, and the FittedBox paid for it by
+                                  // scaling the avatar down.
+                                  if (player.timeoutCount > 0) ...[
+                                    SizedBox(height: spacing),
+                                    SizedBox(
+                                      height: timeoutHeight,
+                                      child: Text(
+                                        '⏱ ${player.timeoutCount}/3',
+                                        style: TextStyle(
+                                          fontSize: metaFontSize,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFFE65100),
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.12,
-                                            ),
-                                            blurRadius: 3,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.style,
-                                            size: 10,
-                                            color: Color(0xFFE53935),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '${player.pointCount}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFFE53935),
-                                            ),
-                                          ),
-                                        ],
                                       ),
                                     ),
-                                  ),
-                              ],
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                           if (hasPointCards)
@@ -2565,10 +2566,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // with the board (148 was picked against a 1.6 scale, this is 1.3).
     final avatar = kIsWeb
         ? math
-              .min(seatHeight * 0.60, seatWidth * 0.62)
-              .clamp(40.0, 150.0)
+              .min(seatHeight * 0.72, seatWidth * 0.74)
+              .clamp(52.0, 180.0)
               .toDouble()
-        : (seatHeight * 0.60).clamp(40.0, 92.0).toDouble();
+        : (seatHeight * 0.72).clamp(52.0, 124.0).toDouble();
     return (
       avatar: avatar,
       photoCentre:
@@ -2700,10 +2701,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     required bool spectatorMode,
     required bool isLandscape,
   }) {
-    if (spectatorMode || isLandscape || width > 430 || playerCount != 5) {
-      return 0.0;
-    }
-    return 18.0;
+    if (spectatorMode || isLandscape || width > 430) return 0.0;
+    // 5인 게임(상대 4명)은 좌석 각도가 모두 상반원에 몰려 있어서 링 중심을
+    // 0.47·h 로 잡으면 상단에 뭉쳐 보인다. 링을 아래로 살짝 끌어내려
+    // 남던 공간을 좌석이 채우되, 너무 내리면 이번엔 위쪽 여백이 커지므로
+    // 35dp 언저리가 균형이 맞았다.
+    if (playerCount == 5) return 35.0;
+    return 0.0;
   }
 
   double _mightySeatArcStartDeg(int count) {
@@ -3144,10 +3148,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // 길어져서, 좌석이 바깥으로 벌어진 뒤로는 서로 겹쳤다.
           constraints: const BoxConstraints(minWidth: 116, maxWidth: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -3216,9 +3216,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           minHeight: 74,
         ),
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(16),
+        // 배경은 없지만 워터마크가 라운드 코너 밖으로 새지 않도록
+        // clip 은 유지 — clipBehavior 는 decoration 이 있어야 살아난다.
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         child: Stack(
           alignment: Alignment.center,
@@ -3297,10 +3298,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.68),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -5352,7 +5349,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// so on a wide window a two-row hand ran ~50px under the board, and a
   /// one-row hand left the same amount as dead space the seats never claimed.
   ({int rows, double cardWidth, double cardHeight, double cardPadding})
-  _mightyHandGeometry(double boxWidth, int cardCount) {
+  _mightyHandGeometry(double boxWidth, int cardCount, {int playerCount = 4}) {
     final availableWidth = boxWidth - 24;
     final cardPadding = cardCount >= 8 ? 1.5 : 3.0;
 
@@ -5365,7 +5362,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final scale = kIsWeb
         ? (media.size.shortestSide / 400).clamp(1.0, 1.3)
         : 1.0;
-    final maxCardWidth = 52.0 * scale;
+    final maxCardWidth = 50.0 * scale;
 
     // One row while the cards can stay full size; two the moment a single
     // line would force them to shrink. The card keeps a 1:1.4 ratio, so
@@ -5384,13 +5381,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       0.0,
       maxCardWidth,
     );
-    var cardHeight = (cardWidth * 1.4).clamp(52.0 * scale, 73.0 * scale);
+    var cardHeight = (cardWidth * 1.4).clamp(50.0 * scale, 70.0 * scale);
 
-    // Sizing off width alone lets the hand grow until it covers the table,
-    // because a desktop window has width to spare. Bound the rows to a
-    // share of the screen and bring the width back with it.
+    // 좌석 링과 하단 손패의 세로 배분: 화면 높이 대비 비율을 상한으로
+    // 두는데, 5인 게임은 위쪽 좌석이 한 줄 더 커지는 대신 하단은 조금
+    // 더 눌러줘야 전체 여백이 균형이 맞는다.
     final rows = perRow >= cardCount ? 1 : 2;
-    final maxCardHeight = (media.size.height * 0.26) / rows;
+    final heightRatio = playerCount >= 5 ? 0.21 : 0.235;
+    final maxCardHeight = (media.size.height * heightRatio) / rows;
     if (cardHeight > maxCardHeight) {
       cardHeight = maxCardHeight;
       cardWidth = cardHeight / 1.4;
@@ -5412,7 +5410,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final geom = _mightyHandGeometry(constraints.maxWidth, cards.length);
+        final geom = _mightyHandGeometry(
+          constraints.maxWidth,
+          cards.length,
+          playerCount: state?.players.length ?? 4,
+        );
         final cardPadding = geom.cardPadding;
         final cardWidth = geom.cardWidth;
         final cardHeight = geom.cardHeight;

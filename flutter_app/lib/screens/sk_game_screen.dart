@@ -2872,8 +2872,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // ── Trick Area ──
   Widget _buildTrickArea(SKGameStateData state) {
     if (state.currentTrick.isEmpty) {
-      return Center(
-        child: Container(
+      // Center 감싸면 부모 Align 이 자식을 무한 크기로 받아 alignment 가
+      // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
+      return Container(
           // Trimmed with the seat boxes so the side seats clear it.
           width: 164,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -2899,7 +2900,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
               _buildCenterTimerBadge(state),
             ],
           ),
-        ),
       );
     }
 
@@ -2956,8 +2956,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const Color(0xFF2F6687).withValues(alpha: 0.93),
               const Color(0xFF6CA6C4).withValues(alpha: 0.90),
             ];
-      return Center(
-        child: Container(
+      return Container(
           constraints: const BoxConstraints(maxWidth: 260),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -3030,13 +3029,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               _buildCenterTimerBadge(state),
             ],
           ),
-        ),
       );
     }
 
     if (!isKraken && hasWhiteWhaleEffect && state.phase == 'trick_end') {
-      return Center(
-        child: Container(
+      return Container(
           constraints: const BoxConstraints(maxWidth: 270),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -3115,12 +3112,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
               _buildCenterTimerBadge(state),
             ],
           ),
-        ),
       );
     }
 
-    return Center(
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.68),
@@ -3168,7 +3163,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
             _buildCenterTimerBadge(state),
           ],
         ),
-      ),
     );
   }
 

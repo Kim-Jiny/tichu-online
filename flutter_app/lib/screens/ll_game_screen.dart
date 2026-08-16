@@ -1261,12 +1261,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
         // is inside a scaleDown FittedBox, so asking for a bigger photo than
         // the box could hold just scaled the whole label back down — the photo
         // stayed ~44dp however large the fraction was.
+        // 탈락은 이제 사진 위 오버레이로 그리니 Column 높이에서 뺀다.
+        // 타임아웃 카운터는 여전히 Column 에 남아 있어서 계산에 포함.
         final fixedRows =
             spacing + // under the photo
             nameFontSize * 1.35 + // name
-            (player.eliminated || player.timeoutCount > 0
+            (!player.eliminated && player.timeoutCount > 0
                 ? (ultraTight ? 11.0 : 12.0)
-                : 0.0) + // 탈락 / ⏱ line
+                : 0.0) + // ⏱ line only (탈락 은 사진 위 배지)
             spacing +
             math.max(tokenSize, chipFontSize * 1.9) + // hearts + turn chip
             labelPadding * 2;
@@ -1298,34 +1300,79 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // 현재턴/하이라이트 테두리는 ProfileAvatar 에 직접 넘겨
-                      // 사진 라운드 코너와 같은 곡률로 감싼다.
+                      // 사진 라운드 코너와 같은 곡률로 감싼다. 탈락 표시는
+                      // 사진 위에 반투명 밴드로 얹어 아바타 크기를 유지한다.
                       Padding(
                         padding: EdgeInsets.only(bottom: spacing),
-                        child: ProfileAvatar(
-                          photoUrl: _gameService?.resolvePhotoUrl(
-                            player.photoUrl,
-                          ),
-                          size: avatarDiameter,
-                          blocked:
-                              _gameService?.blockedUsers.contains(
-                                player.name,
-                              ) ??
-                              false,
-                          border: (isCurrent || highlighted) &&
-                                  !player.eliminated
-                              ? Border.all(
-                                  color: highlighted
-                                      ? const Color(0xFF64B5F6)
-                                      : const Color(0xFFE6C86A),
-                                  width: 1.8,
-                                )
-                              : null,
-                          fallback: player.isBot
-                              ? BotAvatar(
-                                  size: avatarDiameter,
-                                  name: player.name,
-                                )
-                              : DefaultAvatar(size: avatarDiameter),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            Opacity(
+                              // 탈락한 플레이어는 사진 자체도 흐리게 —
+                              // 아래 탈락 밴드와 함께 눈에 덜 걸린다.
+                              opacity: player.eliminated ? 0.35 : 1.0,
+                              child: ProfileAvatar(
+                                photoUrl: _gameService?.resolvePhotoUrl(
+                                  player.photoUrl,
+                                ),
+                                size: avatarDiameter,
+                                blocked:
+                                    _gameService?.blockedUsers.contains(
+                                      player.name,
+                                    ) ??
+                                    false,
+                                border: (isCurrent || highlighted) &&
+                                        !player.eliminated
+                                    ? Border.all(
+                                        color: highlighted
+                                            ? const Color(0xFF64B5F6)
+                                            : const Color(0xFFE6C86A),
+                                        width: 1.8,
+                                      )
+                                    : null,
+                                fallback: player.isBot
+                                    ? BotAvatar(
+                                        size: avatarDiameter,
+                                        name: player.name,
+                                      )
+                                    : DefaultAvatar(size: avatarDiameter),
+                              ),
+                            ),
+                            if (player.eliminated)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    bottomLeft: Radius.circular(
+                                      avatarDiameter * 17 / 60,
+                                    ),
+                                    bottomRight: Radius.circular(
+                                      avatarDiameter * 17 / 60,
+                                    ),
+                                  ),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: ultraTight ? 1.0 : 2.0,
+                                    ),
+                                    color: Colors.black.withValues(alpha: 0.55),
+                                    child: Text(
+                                      L10n.of(context).llEliminated,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize:
+                                            (ultraTight ? 9.0 : 10.5) *
+                                            seatScale,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       Row(
@@ -1372,18 +1419,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             ),
                         ],
                       ),
-                      if (player.eliminated)
-                        Padding(
-                          padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
-                          child: Text(
-                            L10n.of(context).llEliminated,
-                            style: TextStyle(
-                              color: Colors.red.shade300,
-                              fontSize: ultraTight ? 9 : 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
                       if (player.timeoutCount > 0 && !player.eliminated)
                         Padding(
                           padding: EdgeInsets.only(top: ultraTight ? 1 : 2),

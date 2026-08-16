@@ -1835,6 +1835,12 @@ class L10nKo extends L10n {
   String get spectatorWaiting => '대기 중';
 
   @override
+  String get spectatorBlueTeamWin => 'A팀 승리!';
+
+  @override
+  String get spectatorRedTeamWin => 'B팀 승리!';
+
+  @override
   String spectatorTeamWin(String team) {
     return 'Team $team 승리!';
   }

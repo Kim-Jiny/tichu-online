@@ -250,6 +250,50 @@ function dismantleAll() {
 }
 
 /**
+ * Actions the host owes during "collective" phases where the game gathers a
+ * response from every player at once (Tichu large_tichu / card_exchange, SK
+ * bidding). These are outside playerStillNeedsToAct's remit — server.js hands
+ * them to handlePhaseTimeout, whose pending-filter excludes seatIsAutoPlayed
+ * seats. In a filler room every seat is auto-played, so the phase timer never
+ * arms and the room stalls forever waiting for the host that has no client
+ * behind it. Bots march through their own responses via scheduleBotActions;
+ * this fills in the host so the phase can actually complete.
+ *
+ * Mirrors the auto-defaults handlePhaseTimeout uses: pass large tichu, exchange
+ * the first three cards, bid 0. Kept here rather than in each game class so the
+ * existing per-player getAutoTimeoutAction contract keeps its promise (nothing
+ * during a non-turn phase).
+ */
+function hostCollectivePhaseAction(room, hostId) {
+  const g = room.game;
+  if (!g) return null;
+  if (room.gameType === 'tichu') {
+    if (g.state === 'large_tichu_phase'
+        && g.largeTichuResponses
+        && g.largeTichuResponses[hostId] === undefined) {
+      return { type: 'pass_large_tichu' };
+    }
+    if (g.state === 'card_exchange'
+        && g.exchangeDone
+        && !g.exchangeDone[hostId]) {
+      const hand = g.hands ? g.hands[hostId] : null;
+      if (hand && hand.length >= 3) {
+        return {
+          type: 'exchange_cards',
+          cards: { left: hand[0], partner: hand[1], right: hand[2] },
+        };
+      }
+    }
+  }
+  if (room.gameType === 'skull_king') {
+    if (g.state === 'bidding' && g.bids && g.bids[hostId] === null) {
+      return { type: 'submit_bid', bid: 0 };
+    }
+  }
+  return null;
+}
+
+/**
  * One nudge for one room: start a game if idle, otherwise act if it is the
  * host's turn.
  */
@@ -273,6 +317,19 @@ function tickRoom(info) {
     if (room.startGame() !== false) {
       deps.broadcastRoomState(room.id);
       deps.broadcastRoomList();
+      deps.sendGameStateToAll(room.id);
+    }
+    return;
+  }
+
+  // Collective phases first — playerStillNeedsToAct returns false for these
+  // by design (server times them out via handlePhaseTimeout), but that path is
+  // dead in a filler room. See hostCollectivePhaseAction.
+  const collectiveAction = hostCollectivePhaseAction(room, info.hostId);
+  if (collectiveAction) {
+    const result = room.game.handleAction(info.hostId, collectiveAction);
+    if (result && result.success) {
+      if (result.broadcast) deps.broadcastGameEvent(room.id, result.broadcast);
       deps.sendGameStateToAll(room.id);
     }
     return;

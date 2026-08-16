@@ -1882,6 +1882,12 @@ class L10nDe extends L10n {
   String get spectatorWaiting => 'Wartend';
 
   @override
+  String get spectatorBlueTeamWin => 'Team A gewinnt!';
+
+  @override
+  String get spectatorRedTeamWin => 'Team B gewinnt!';
+
+  @override
   String spectatorTeamWin(String team) {
     return 'Team $team gewinnt!';
   }

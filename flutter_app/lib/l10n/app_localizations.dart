@@ -3477,6 +3477,18 @@ abstract class L10n {
   /// **'Waiting'**
   String get spectatorWaiting;
 
+  /// No description provided for @spectatorBlueTeamWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Team A wins!'**
+  String get spectatorBlueTeamWin;
+
+  /// No description provided for @spectatorRedTeamWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Team B wins!'**
+  String get spectatorRedTeamWin;
+
   /// No description provided for @spectatorTeamWin.
   ///
   /// In en, this message translates to:

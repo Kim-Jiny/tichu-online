@@ -1060,6 +1060,8 @@
   "spectatorHost": "Host",
   "spectatorReady": "Ready",
   "spectatorWaiting": "Waiting",
+  "spectatorBlueTeamWin": "Team A wins!",
+  "spectatorRedTeamWin": "Team B wins!",
   "spectatorTeamWin": "Team {team} wins!",
   "@spectatorTeamWin": {
     "placeholders": {

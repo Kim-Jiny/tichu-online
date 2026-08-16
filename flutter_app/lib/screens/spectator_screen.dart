@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
 
@@ -25,151 +26,16 @@ class SpectatorScreen extends StatefulWidget {
   State<SpectatorScreen> createState() => _SpectatorScreenState();
 }
 
-/// The size a spectator seat wants, worked out ahead of laying it out.
-///
-/// The four seats are the same widget, but the left and right ones are built
-/// into a narrow column and the top and bottom ones into a wide, short band.
-/// Each was then fitted to its own slot independently, and the two fits landed
-/// nowhere near each other: a side seat is laid out AT the column width, so its
-/// width ratio is always exactly 1 and it can never be scaled up, while a
-/// top seat's hand is far narrower than its band and grows to fill it. On a
-/// phone that put the side hands at about three quarters the size of the top
-/// and bottom ones, and on a desktop browser at two thirds.
-///
-/// So the board works out one scale that every seat can afford, and hands each
-/// slot the room that scale needs. The numbers below mirror the seat widget —
-/// they have to, or the budget is for a seat nobody builds. The FittedBox in
-/// [_SpectatorScreenState._buildScaledPlayerSection] stays as the safety net:
-/// if this is optimistic, the seat shrinks rather than overflowing.
-class _SeatMetrics {
-  _SeatMetrics({
-    required this.compact,
-    required this.s,
-    required this.cardBudget,
-  });
-
-  final bool compact;
-
-  /// The screen-size factor the card art is drawn at.
-  final double s;
-
-  /// Cards to leave room for, or 0 when no hand is on show and the seat holds
-  /// the card-request button instead.
-  final int cardBudget;
-
-  double get _avatar => compact ? 44 : 56;
-  double get _cardWidth => (compact ? 24.0 : 30.0) * s;
-  double get _cardHeight => (compact ? 36.0 : 45.0) * s;
-  double get _overlapAcross => (compact ? 16.0 : 20.0) * s;
-  double get _overlapDown => (compact ? 14.0 : 20.0) * s;
-
-  /// Avatar, name line, the gap under it, the container padding and the margin.
-  double get _chromeHeight =>
-      _avatar +
-      (compact ? 2 : 3) + // gap under the avatar
-      (compact ? 15 : 16) + // the name line
-      4 + // gap above the hand
-      2 * (compact ? 6 : 8) + // container padding
-      2 * (compact ? 2 : 4); // outer margin
-  /// Container padding and outer margin, both sides.
-  double get _chromeWidth => 2 * (compact ? 6 : 8) + 2 * (compact ? 2 : 4);
-
-  /// Height of the button that stands in for a hand nobody may see: padding,
-  /// the eye icon, a gap, one line of text and the border.
-  double get _requestAreaHeight =>
-      2 * (compact ? 6 : 8) +
-      (compact ? 16 : 20) +
-      (compact ? 1 : 2) +
-      (compact ? 13 : 14) +
-      2;
-
-  /// Whether the seat holds anything that can give way under a height budget.
-  ///
-  /// The hand is Flexible with a scaleDown of its own; the request button is
-  /// not, so budgeting a height for it can only overflow — which is exactly
-  /// what a 40pt guess at a 54pt button did.
-  bool get hasSqueezableHand => cardBudget > 0;
-
-  double get _handAcross =>
-      cardBudget == 0 ? 90 : _cardWidth + (cardBudget - 1) * _overlapAcross;
-  double get _handDown => cardBudget == 0
-      ? _requestAreaHeight
-      : _cardHeight + (cardBudget - 1) * _overlapDown;
-
-  /// A top or bottom seat: the hand lies across, so it is wide and short.
-  Size get topNatural => Size(
-    _handAcross + _chromeWidth,
-    _chromeHeight + (cardBudget == 0 ? _requestAreaHeight : _cardHeight),
-  );
-
-  /// A side seat may be at most this many times taller than it is wide.
-  ///
-  /// A full hand on end is 300pt of cards over a 56pt avatar, which on a small
-  /// phone made the seat an 80×378 ribbon — the photo is square and undistorted
-  /// but the column it sits in reads as stretched. The cap makes the hand give
-  /// way instead: it is the part that can afford to be denser, and it is the
-  /// reason the whole seat could not be any wider.
-  static const double _maxSideAspect = 4.2;
-
-  /// A side seat: the hand stands on end, so it is narrow and tall. The width
-  /// is the avatar's, which is wider than a rotated card.
-  Size get sideNatural {
-    final width = math.max(_avatar, _cardHeight + 4) + _chromeWidth;
-    return Size(
-      width,
-      math.min(_chromeHeight + _handDown, width * _maxSideAspect),
-    );
-  }
-
-  /// Everything stacks: two bands plus the side column, all in one height.
-  double portraitScale(Size board) {
-    final byHeight =
-        board.height / (2 * topNatural.height + sideNatural.height);
-    final byWidth = math.min(
-      board.width / topNatural.width,
-      // The side columns may take under a third of the width between them,
-      // or the trick in the middle has nothing left.
-      board.width * 0.30 / sideNatural.width,
-    );
-    return math.min(byHeight, byWidth).clamp(0.55, 2.0);
-  }
-
-  /// The sides run the full height; the bands share it with the trick, which
-  /// keeps the middle third.
-  double landscapeScale(Size board) {
-    final byHeight = math.min(
-      board.height * 0.33 / topNatural.height,
-      board.height / sideNatural.height,
-    );
-    final byWidth = math.min(
-      (board.width - 2 * sideNatural.width) / topNatural.width,
-      board.width * 0.22 / sideNatural.width,
-    );
-    return math.min(byHeight, byWidth).clamp(0.55, 2.0);
-  }
-}
-
-/// Cards to budget a seat for.
-///
-/// A hand shrinks as it is played, and sizing the board off the current count
-/// would have every seat breathe between tricks. A full hand for as long as
-/// anyone's cards are on show holds the layout still.
-int _seatCardBudget(List players) {
-  final anyVisible = players.any(
-    (p) =>
-        p is Map &&
-        p['canSeeCards'] == true &&
-        (p['cards'] as List?)?.isNotEmpty == true,
-  );
-  return anyVisible ? 14 : 0;
-}
-
 class _SpectatorScreenState extends State<SpectatorScreen> {
   bool _isLeaving = false;
   bool _chatOpen = false;
   bool _soundPanelOpen = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  // Currently-viewed player id — 하단 손패 영역에 이 사람의 카드를 보여준다.
+  // SK 관전 화면과 동일한 모델. 승인 전이면 요청 스피너, 승인 후엔 실제 손패.
+  String? _viewingPlayerId;
+  Timer? _cardViewRequestTimer;
 
   Widget _buildRecoveryLoading({required String title, String? subtitle}) {
     return Center(
@@ -238,6 +104,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   @override
   void dispose() {
+    _cardViewRequestTimer?.cancel();
     _seatChat.dispose();
     _chatController.dispose();
     _chatScrollController.dispose();
@@ -392,6 +259,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           ],
         ),
 
+        // 하단 손패 영역 — SK 관전과 동일 상태 머신.
+        // 대상 없음(안내) / 요청 중 / 승인(패) / 거절 4가지 상태를 모두 처리하므로
+        // 항상 렌더링한다.
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _buildSpectatorHandArea(game, players),
+        ),
+
         // Server error banner (e.g. "X has set always-deny" when a
         // card-view request fizzles). Plays the role of the in-game
         // _buildErrorBanner so spectators don't get silent no-ops.
@@ -405,8 +282,181 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         if (_chatOpen) _buildChatPanel(game),
 
         // Bug #10: Game end overlay for spectators
-        if (phase == 'game_end') _buildGameEndOverlay(game, totalScores),
+        if (phase == 'game_end')
+          _buildGameEndOverlay(game, totalScores, players),
       ],
+    );
+  }
+
+  // 관전자용 하단 손패 영역. SK 의 _buildSpectatorHandArea 와 동일한 상태 머신:
+  // 대상 없음(안내) / 요청 중 / 승인됨 / 거절.
+  Widget _buildSpectatorHandArea(GameService game, List players) {
+    BoxDecoration panelBg() => BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.92),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+    );
+
+    final viewingId = _viewingPlayerId;
+    // 대상 없음 — 좌석 탭으로 요청하라고 안내하는 상시 바.
+    if (viewingId == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: panelBg(),
+        child: Text(
+          L10n.of(context).skGameTapToRequestCards,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFF8A7A72),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    final viewingPlayer = players.cast<Map<String, dynamic>?>().firstWhere(
+      (p) => (p?['id']?.toString() ?? '') == viewingId,
+      orElse: () => null,
+    );
+    if (viewingPlayer == null) return const SizedBox.shrink();
+    final name = viewingPlayer['name'] ?? '';
+    final canSeeCards = viewingPlayer['canSeeCards'] == true;
+    final cards = (viewingPlayer['cards'] as List?) ?? const [];
+    final isApproved =
+        game.approvedCardViews.contains(viewingId) && canSeeCards;
+    final isPending = game.pendingCardViewRequests.contains(viewingId);
+
+    // 요청 중 — 스피너 + 라벨.
+    if (isPending && !isApproved) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: panelBg(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFFFFB74D),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              L10n.of(context).skGameRequestingCardView(name),
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 승인 — 손패 노출.
+    if (isApproved) {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+        decoration: panelBg(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const SizedBox(width: 32),
+                  Expanded(
+                    child: Text(
+                      L10n.of(context).skGamePlayerHand(name),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF5A4038),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      padding: EdgeInsets.zero,
+                      splashRadius: 18,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF8A7A72),
+                      ),
+                      onPressed: () =>
+                          setState(() => _viewingPlayerId = null),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (cards.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  L10n.of(context).skGameNoCards,
+                  style: const TextStyle(
+                    color: Color(0xFF8A7A72),
+                    fontSize: 12,
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: _buildHorizontalCards(cards),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // 거절/만료 — 안내 후 사용자가 다른 좌석을 탭하도록.
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: panelBg(),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              L10n.of(context).skGameCardViewRejected(name),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF8A7A72),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              padding: EdgeInsets.zero,
+              splashRadius: 18,
+              icon: const Icon(
+                Icons.close,
+                size: 18,
+                color: Color(0xFF8A7A72),
+              ),
+              onPressed: () => setState(() => _viewingPlayerId = null),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -463,89 +513,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     List currentTrick, {
     String? callRank,
   }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // One scale for all four seats, and each slot sized to what that scale
-        // needs — see _SeatMetrics for why fitting each seat to its own slot
-        // left the side hands markedly smaller than the top and bottom ones.
-        //
-        // Every seat still goes through the scaling wrapper. Nothing here is
-        // measured, only predicted, and a prediction that runs long has to
-        // shrink rather than overflow ("BOTTOM OVERFLOWED BY 69 PIXELS" was
-        // this screen, on a fold).
-        final metrics = _SeatMetrics(
-          compact: false,
-          s: _s,
-          cardBudget: _seatCardBudget(players),
-        );
-        final seatScale = metrics.portraitScale(constraints.biggest);
-        final endSeatHeight = metrics.topNatural.height * seatScale;
-        final sideWidth = metrics.sideNatural.width * seatScale;
-        return Column(
-          children: [
-            if (players.length > 2)
-              SizedBox(
-                height: endSeatHeight,
-                child: _buildScaledPlayerSection(
-                  game,
-                  players[2],
-                  currentPlayer,
-                ),
-              ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (players.length > 3)
-                    SizedBox(
-                      width: sideWidth,
-                      child: _buildScaledPlayerSection(
-                        game,
-                        players[3],
-                        currentPlayer,
-                        isLeft: true,
-                        referenceWidth: metrics.sideNatural.width,
-                        referenceHeight: metrics.hasSqueezableHand
-                            ? metrics.sideNatural.height
-                            : null,
-                      ),
-                    ),
-                  Expanded(
-                    child: _buildTrickArea(
-                      currentTrick,
-                      callRank: callRank,
-                      players: players,
-                    ),
-                  ),
-                  if (players.length > 1)
-                    SizedBox(
-                      width: sideWidth,
-                      child: _buildScaledPlayerSection(
-                        game,
-                        players[1],
-                        currentPlayer,
-                        isRight: true,
-                        referenceWidth: metrics.sideNatural.width,
-                        referenceHeight: metrics.hasSqueezableHand
-                            ? metrics.sideNatural.height
-                            : null,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (players.isNotEmpty)
-              SizedBox(
-                height: endSeatHeight,
-                child: _buildScaledPlayerSection(
-                  game,
-                  players[0],
-                  currentPlayer,
-                ),
-              ),
-          ],
-        );
-      },
+    return _buildRingSpectatorBoard(
+      game,
+      players,
+      currentPlayer,
+      currentTrick,
+      callRank: callRank,
+      isLandscape: false,
     );
   }
 
@@ -556,224 +530,215 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     List currentTrick, {
     String? callRank,
   }) {
+    return _buildRingSpectatorBoard(
+      game,
+      players,
+      currentPlayer,
+      currentTrick,
+      callRank: callRank,
+      isLandscape: true,
+    );
+  }
+
+  // 링 레이아웃. 티츄 4인 관전은 위/아래 대칭 4-corner (N/E/S/W)로,
+  // 상단 두 좌석과 하단 두 좌석의 세로 간격이 동일하다. 3인/2인 관전은
+  // SK 규칙을 그대로 이어받는다. 좌석 배경 상자 없이 사진이 좌석의 가장자리.
+  Widget _buildRingSpectatorBoard(
+    GameService game,
+    List players,
+    String currentPlayer,
+    List currentTrick, {
+    String? callRank,
+    required bool isLandscape,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cramped = constraints.maxHeight < 390;
-        final compact = constraints.maxHeight < 520;
-        // One scale for all four seats — see _SeatMetrics. The tables of
-        // breakpoints this replaces (72/86/104/150 for the columns, 92/108/
-        // 150/240 for the bands) were each chosen for the screen that had just
-        // gone wrong, and no two of them agreed on how big a seat should be.
-        final metrics = _SeatMetrics(
-          compact: compact,
-          s: _s,
-          cardBudget: _seatCardBudget(players),
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final boardScale = math
+            .min(width / 360.0, height / 400.0)
+            .clamp(0.78, 1.45);
+        // 실제 손패는 하단 손패 영역으로 이관됐으므로 좌석은 게임 화면 톤과 동일.
+        const seatWidthBase = 108.0;
+        const seatHeightBase = 128.0;
+        final seatWidth = seatWidthBase * boardScale;
+        final seatHeight = seatHeightBase * boardScale;
+        final playerCount = players.length;
+        // 4인은 티츄 좌석 순서(0=아래, 1=오른, 2=위, 3=왼)를 그대로 살려 4-corner.
+        // 3인/2인은 SK 관전 규칙.
+        final List<double> anglesDeg = playerCount >= 4
+            ? const [90.0, 0.0, 270.0, 180.0]
+            : playerCount == 3
+            ? const [155.0, 270.0, 385.0]
+            : playerCount == 2
+            ? const [180.0, 360.0]
+            : const [270.0];
+        final centerX = width / 2;
+        // 4인은 위/아래 대칭을 유지한 채 하단 손패 영역이 아래 좌석을
+        // 가리지 않도록 링 중심을 위로 올린다 (0.39 ≈ 11% 상향).
+        final centerY = playerCount >= 4
+            ? height * 0.39
+            : (isLandscape ? height * 0.48 : height * 0.50);
+        final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+        final seatRadiusX = math.min(
+          width * 0.44,
+          math.min(width >= 700 ? 245.0 : 200.0, maxSeatRadiusX),
         );
-        final seatScale = metrics.landscapeScale(constraints.biggest);
-        final sideWidth = metrics.sideNatural.width * seatScale;
-        final playerSlotHeight = metrics.topNatural.height * seatScale;
-        // Whatever the two bands leave, less the 4pt gaps around it.
-        final trickSlotHeight = math.max(
-          cramped ? 76.0 : 88.0,
-          constraints.maxHeight - 2 * playerSlotHeight - 8,
+        final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+        final seatRadiusY = math.min(
+          height * (isLandscape ? 0.40 : 0.42),
+          math.min(height >= 700 ? 220.0 : 196.0, maxSeatRadiusY),
         );
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Stack(
+          clipBehavior: Clip.none,
           children: [
-            if (players.length > 3)
-              SizedBox(
-                width: sideWidth,
-                child: _buildScaledPlayerSection(
-                  game,
-                  players[3],
-                  currentPlayer,
-                  isLeft: true,
-                  compact: compact,
-                  referenceWidth: metrics.sideNatural.width,
-                  referenceHeight: metrics.hasSqueezableHand
-                      ? metrics.sideNatural.height
-                      : null,
-                ),
-              ),
-            if (players.length > 3) const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                children: [
-                  if (players.length > 2)
-                    SizedBox(
-                      height: playerSlotHeight,
-                      child: _buildScaledPlayerSection(
+            // 좌석 먼저 그리기 — 그래야 트릭이 프로필 사진 위로 얹힌다.
+            for (int i = 0; i < playerCount && i < anglesDeg.length; i++) ...[
+              () {
+                final p = players[i] as Map<String, dynamic>;
+                final angle = anglesDeg[i] * math.pi / 180;
+                final seatLeft =
+                    centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
+                final seatTop =
+                    centerY + seatRadiusY * math.sin(angle) - seatHeight / 2;
+                return Positioned(
+                  left: seatLeft,
+                  top: seatTop,
+                  width: seatWidth,
+                  height: seatHeight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: seatWidth,
+                      child: _buildPlayerSection(
                         game,
-                        players[2],
+                        p,
                         currentPlayer,
-                        compact: compact,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: trickSlotHeight,
-                          maxWidth: constraints.maxWidth,
-                        ),
-                        child: _buildTrickArea(
-                          currentTrick,
-                          compact: compact,
-                          landscapeCompact: compact,
-                          callRank: callRank,
-                          players: players,
-                        ),
+                        ringMode: true,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  if (players.isNotEmpty)
-                    SizedBox(
-                      height: playerSlotHeight,
-                      child: _buildScaledPlayerSection(
-                        game,
-                        players[0],
-                        currentPlayer,
-                        compact: compact,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (players.length > 1) const SizedBox(width: 6),
-            if (players.length > 1)
-              SizedBox(
-                width: sideWidth,
-                child: _buildScaledPlayerSection(
-                  game,
-                  players[1],
-                  currentPlayer,
-                  isRight: true,
-                  compact: compact,
-                  referenceWidth: metrics.sideNatural.width,
-                  referenceHeight: metrics.hasSqueezableHand
-                      ? metrics.sideNatural.height
-                      : null,
+                );
+              }(),
+            ],
+            // 중앙 트릭: Stack 마지막에 얹어 좌석 프로필 위로 그려진다.
+            // IgnorePointer 로 감싸 아래 좌석의 탭이 그대로 통하게.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: playerCount >= 4
+                      ? const Alignment(0, -0.28)
+                      : Alignment(0, isLandscape ? 0.38 : 0.48),
+                  child: _buildTrickArea(
+                    currentTrick,
+                    callRank: callRank,
+                    players: players,
+                  ),
                 ),
               ),
+            ),
           ],
         );
       },
     );
   }
 
-  /// [referenceWidth] — build the seat this wide instead of filling the slot.
-  ///
-  /// Only the side seats pass it, and it is the whole reason they can grow. A
-  /// seat laid out at its slot's width has a width ratio of exactly 1, so
-  /// BoxFit.contain never enlarges it however much room the column has; built
-  /// at its natural width instead, it scales up to the column the way the top
-  /// and bottom seats scale up to their band.
-  ///
-  /// [referenceHeight] — the seat's own budget, not the slot's. The hand inside
-  /// is Flexible with a scaleDown of its own, so a hand longer than the budget
-  /// packs tighter and the avatar and name keep their size. Passing the SLOT's
-  /// height here is what broke this before: the seat overflowed inside the
-  /// clamp and left the FittedBox nothing to measure.
-  Widget _buildScaledPlayerSection(
+  Widget _buildGameEndOverlay(
     GameService game,
-    Map<String, dynamic> player,
-    String currentPlayerId, {
-    bool isLeft = false,
-    bool isRight = false,
-    bool compact = false,
-    double? referenceWidth,
-    double? referenceHeight,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Width only. A maxHeight here defeated the FittedBox below: the seat
-        // was forced into the band's height and overflowed *inside* that clamp
-        // ("BOTTOM OVERFLOWED BY 69 PIXELS"), leaving FittedBox no natural
-        // height to measure and nothing to scale. Unbounded vertically, the
-        // seat lays out at its true size and the FittedBox shrinks it to fit.
-        final child = ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: referenceWidth != null
-                ? math.min(referenceWidth, constraints.maxWidth)
-                : constraints.maxWidth,
-            maxHeight: referenceHeight ?? double.infinity,
-          ),
-          child: _buildPlayerSection(
-            game,
-            player,
-            currentPlayerId,
-            isLeft: isLeft,
-            isRight: isRight,
-            compact: compact,
-          ),
-        );
-        // Always scale down, not just on short phone-landscape viewports.
-        // The seat slots are height-capped (108px at most), but `compact` and
-        // `cramped` both switch off on a tall window — so a desktop browser
-        // built the full-size seat and dropped it into that cap unscaled. The
-        // top seat's card-view button spilled outside its profile box and the
-        // bottom seat ran off the viewport. BoxFit.scaleDown does nothing when
-        // the child already fits, so phones are unaffected.
-        return Align(
-          alignment: Alignment.center,
-          child: FittedBox(
-            // contain, not scaleDown: scaleDown only ever shrinks, so on a
-            // tablet or an unfolded phone the seat stayed at its phone size in
-            // the middle of a band twice as tall. Shrinking behaves the same as
-            // before, which is what phones do.
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGameEndOverlay(GameService game, Map<String, dynamic> scores) {
-    final teamA = scores['teamA'] ?? 0;
-    final teamB = scores['teamB'] ?? 0;
+    Map<String, dynamic> scores,
+    List players,
+  ) {
+    final teamA = (scores['teamA'] as num?)?.toInt() ?? 0;
+    final teamB = (scores['teamB'] as num?)?.toInt() ?? 0;
     final l10n = L10n.of(context);
-    final winnerText = teamA > teamB
-        ? l10n.spectatorTeamWin('A')
-        : teamB > teamA
-        ? l10n.spectatorTeamWin('B')
+    // 팀 이름을 "Team A/B" 로 노출하지 않고 팀 색으로. 파란=A, 빨간=B.
+    // 무승부는 별도 처리.
+    final aWins = teamA > teamB;
+    final bWins = teamB > teamA;
+    final winnerText = aWins
+        ? l10n.spectatorBlueTeamWin
+        : bWins
+        ? l10n.spectatorRedTeamWin
         : l10n.spectatorDraw;
+    final winnerColor = aWins
+        ? const Color(0xFF4A90D9)
+        : bWins
+        ? const Color(0xFFD24B4B)
+        : const Color(0xFF6A5A52);
+
+    final teamAPlayers = players
+        .where((p) => p is Map && (p['team']?.toString() ?? '') == 'A')
+        .cast<Map>()
+        .toList();
+    final teamBPlayers = players
+        .where((p) => p is Map && (p['team']?.toString() ?? '') == 'B')
+        .cast<Map>()
+        .toList();
 
     return Container(
-      color: Colors.black54,
+      color: Colors.black.withValues(alpha: 0.55),
       child: Center(
         child: Container(
-          margin: const EdgeInsets.all(32),
-          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 우승 아이콘 (무승부는 악수 아이콘) + 승리 문구.
+              Icon(
+                aWins || bWins ? Icons.emoji_events : Icons.handshake,
+                size: 44,
+                color: winnerColor,
+              ),
+              const SizedBox(height: 6),
               Text(
                 winnerText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
+                  fontWeight: FontWeight.w800,
+                  color: winnerColor,
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.spectatorTeamScores(teamA as int, teamB as int),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6A5A52),
-                ),
+              const SizedBox(height: 16),
+              // 팀별 멤버 카드 두 개, 승자 쪽만 살짝 강조.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildGameEndTeamCard(
+                      game: game,
+                      teamPlayers: teamAPlayers,
+                      score: teamA,
+                      color: const Color(0xFF4A90D9),
+                      isWinner: aWins,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildGameEndTeamCard(
+                      game: game,
+                      teamPlayers: teamBPlayers,
+                      score: teamB,
+                      color: const Color(0xFFD24B4B),
+                      isWinner: bWins,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Text(
                 l10n.spectatorAutoReturn,
                 style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
@@ -781,6 +746,90 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGameEndTeamCard({
+    required GameService game,
+    required List<Map> teamPlayers,
+    required int score,
+    required Color color,
+    required bool isWinner,
+  }) {
+    final softBg = Color.alphaBlend(color.withValues(alpha: 0.10), Colors.white);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: softBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withValues(alpha: isWinner ? 0.9 : 0.35),
+          width: isWinner ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Flexible 로 감싸 좁은 폰(320dp)에서도 두 멤버가 카드 폭에
+              // 균등하게 들어가도록. 예전엔 고정 60dp × 2 + 간격 = 126dp 로
+              // 111dp 폭을 넘어 RenderFlex overflow 가 났다.
+              for (int i = 0; i < teamPlayers.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Flexible(
+                  child: _buildGameEndMember(game, teamPlayers[i], color),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$score',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGameEndMember(GameService game, Map player, Color color) {
+    final name = (player['name'] ?? '').toString();
+    final isBot = player['isBot'] == true;
+    // 폭 상한만 잡고(52) 이름은 셀 폭에 맞춰 elipsize. 좁은 폰에서 두 멤버 +
+    // 간격이 팀 카드의 내부 폭을 넘지 않도록 40dp 아바타로.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 52),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ProfileAvatar(
+            photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
+            size: 40,
+            blocked: game.blockedUsers.contains(name),
+            fallback: isBot
+                ? BotAvatar(size: 40, name: name)
+                : DefaultAvatar(size: 40),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1113,14 +1162,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     GameService game,
     Map<String, dynamic> player,
     String currentPlayerId, {
-    bool isLeft = false,
-    bool isRight = false,
     bool compact = false,
+    bool ringMode = false,
   }) {
-    final playerId = player['id'] ?? '';
+    final playerId = (player['id'] ?? '').toString();
     final name = player['name'] ?? '';
-    final cards = (player['cards'] as List?) ?? [];
-    final cardCount = player['cardCount'] ?? 0;
     final canSeeCards = player['canSeeCards'] == true;
     final isCurrentTurn = playerId == currentPlayerId;
     final hasFinished = player['hasFinished'] ?? false;
@@ -1128,13 +1174,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final hasSmallTichu = player['hasSmallTichu'] ?? false;
     final hasLargeTichu = player['hasLargeTichu'] ?? false;
     final connected = player['connected'] ?? true;
-    final vertical = isLeft || isRight;
 
+    // 카드 보기 상태 — SK 관전과 동일. 좌석 사진에 눈 아이콘 뱃지로 표시.
     final isPending = game.pendingCardViewRequests.contains(playerId);
+    final isApproved =
+        game.approvedCardViews.contains(playerId) && canSeeCards;
+    final isViewing = _viewingPlayerId == playerId && isApproved;
 
     // Faint team tint as the slot background (replaces the removed dot
     // indicator) so spectators can still tell which team each player is on
     // at a glance. Team A → cool blue, Team B → warm rose.
+    // Ring 모드에선 배경 상자 자체를 없앤다 (사진이 좌석의 가장자리).
     final team = player['team']?.toString() ?? '';
     final slotBg = team == 'A'
         ? const Color(0xFFE9F2FB)
@@ -1143,54 +1193,128 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         : Colors.white.withValues(alpha: 0.98);
 
     final isBot = player['isBot'] == true;
-    // Spectating a game had no way into a profile at all — so no way to block or
-    // report someone whose nickname or photo is the problem. The tap belongs to
-    // the card-view button inside, so the seat takes a long-press, and the name
-    // row below takes a tap of its own since nothing else wants it.
+    final avatarSize = (ringMode
+            ? (compact ? 56 : 72)
+            : (compact ? 44 : 56))
+        .toDouble();
+    // 좌석 탭: 아직 승인 전이면 패 보기 요청, 승인 후엔 하단 손패 영역에
+    // 이 사람의 패를 열거나 닫는다. 프로필 다이얼로그는 롱프레스로 이동
+    // (SK 관전과 동일). 죽은 후엔 패가 없으므로 그냥 프로필만.
+    void onSeatTap() {
+      if (hasFinished) {
+        _showPlayerProfileDialog(name, game, isBot: isBot);
+        return;
+      }
+      if (isApproved) {
+        setState(() {
+          _viewingPlayerId = _viewingPlayerId == playerId ? null : playerId;
+        });
+      } else if (isPending) {
+        setState(() => _viewingPlayerId = playerId);
+      } else {
+        _cardViewRequestTimer?.cancel();
+        game.requestCardView(playerId);
+        setState(() => _viewingPlayerId = playerId);
+        _cardViewRequestTimer = Timer(const Duration(seconds: 5), () {
+          if (!mounted) return;
+          game.expireCardViewRequest(playerId);
+        });
+      }
+    }
+
     return GestureDetector(
-      onTap: () => _showPlayerProfileDialog(name, game, isBot: isBot),
+      onTap: onSeatTap,
       onLongPress: () => _showPlayerProfileDialog(name, game, isBot: isBot),
       child: _wrapWithBubble(
         name,
         Container(
-          margin: EdgeInsets.all(compact ? 2 : 4),
-          padding: EdgeInsets.all(compact ? 6 : 8),
-          decoration: BoxDecoration(
-            color: slotBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isCurrentTurn
-                  ? const Color(0xFFF3C97A)
-                  : const Color(0xFFE6DDD8),
-              width: isCurrentTurn ? 2 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          margin: ringMode
+              ? EdgeInsets.zero
+              : EdgeInsets.all(compact ? 2 : 4),
+          padding: ringMode
+              ? EdgeInsets.zero
+              : EdgeInsets.all(compact ? 6 : 8),
+          decoration: ringMode
+              ? const BoxDecoration()
+              : BoxDecoration(
+                  color: slotBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isCurrentTurn
+                        ? const Color(0xFFF3C97A)
+                        : const Color(0xFFE6DDD8),
+                    width: isCurrentTurn ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Own row rather than inline before the name. The side slots are only
-              // ~79dp wide, so an inline avatar had to stay at 16-20px to leave the
-              // nickname any room — too small to make out a face.
+              // 사진에 눈 아이콘 뱃지 (우측 상단) — 패보기 상태를 표시.
+              // 현재 턴/보는 중일 때는 사진 자체 테두리로 강조.
               Padding(
                 padding: EdgeInsets.only(bottom: compact ? 2 : 3),
-                child: ProfileAvatar(
-                  photoUrl: game.resolvePhotoUrl(player['photoUrl'] as String?),
-                  size: (compact ? 44 : 56).toDouble(),
-                  blocked: game.blockedUsers.contains(name),
-                  fallback: isBot
-                      ? BotAvatar(
-                          size: (compact ? 44 : 56).toDouble(),
-                          name: name,
-                          showBadge: true,
-                        )
-                      : DefaultAvatar(size: (compact ? 44 : 56).toDouble()),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    ProfileAvatar(
+                      photoUrl: game.resolvePhotoUrl(
+                        player['photoUrl'] as String?,
+                      ),
+                      size: avatarSize,
+                      blocked: game.blockedUsers.contains(name),
+                      border: (isCurrentTurn || isViewing)
+                          ? Border.all(
+                              color: isViewing
+                                  ? const Color(0xFF64B5F6)
+                                  : const Color(0xFFE6C86A),
+                              width: 1.5,
+                            )
+                          : null,
+                      fallback: isBot
+                          // showBadge 없이 봇 아바타만 (봇 마크 제거).
+                          ? BotAvatar(size: avatarSize, name: name)
+                          : DefaultAvatar(size: avatarSize),
+                    ),
+                    if (!hasFinished)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isApproved
+                                  ? const Color(0xFF64B5F6)
+                                  : const Color(0xFFE0D8D4),
+                            ),
+                          ),
+                          child: Icon(
+                            isPending
+                                ? Icons.schedule
+                                : isApproved
+                                ? Icons.visibility
+                                : Icons.visibility_outlined,
+                            size: 12,
+                            color: isPending
+                                ? const Color(0xFFFFB74D)
+                                : isApproved
+                                ? const Color(0xFF64B5F6)
+                                : const Color(0xFF8A7A72)
+                                      .withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               // Player name and status
@@ -1296,11 +1420,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     ],
                   ),
                 ),
-              const SizedBox(height: 4),
-              // Cards or request button
-              if (hasFinished && cardCount == 0)
+              // 실제 손패는 하단 _buildSpectatorHandArea 로 이관됨 (SK 관전과 동일).
+              // 여기서는 탈락 상태만 표시.
+              if (hasFinished)
                 Padding(
-                  padding: EdgeInsets.all(compact ? 6 : 8),
+                  padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     L10n.of(context).spectatorFinished,
                     style: TextStyle(
@@ -1308,34 +1432,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       fontSize: compact ? 9 : 10,
                     ),
                   ),
-                )
-              else if (canSeeCards && cards.isNotEmpty)
-                // Only the card strip gives way when the slot runs out of height.
-                // Moving the avatar onto its own row cost ~28dp, and a 13-card
-                // vertical strip in a side slot overflowed the bottom by that much.
-                // Scaling the whole seat instead would shrink the avatar and name
-                // back down, which is what this change was for.
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.topCenter,
-                    child: vertical
-                        ? _buildRotatedCards(
-                            cards,
-                            isLeft: isLeft,
-                            compact: compact,
-                          )
-                        : _buildHorizontalCards(cards, compact: compact),
-                  ),
-                )
-              else
-                _buildCardRequestArea(
-                  game,
-                  playerId,
-                  cardCount,
-                  isPending,
-                  vertical,
-                  compact: compact,
                 ),
             ],
           ),
@@ -1363,168 +1459,39 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  Widget _buildRotatedCards(
-    List cards, {
-    bool isLeft = true,
-    bool compact = false,
-  }) {
-    final cardWidth = (compact ? 24.0 : 30.0) * _s;
-    final cardHeight = (compact ? 36.0 : 45.0) * _s;
-    final overlap = (compact ? 14.0 : 20.0) * _s;
-
-    final totalHeight = cardHeight + (cards.length - 1) * overlap;
-    // 좌측: 90도 (pi/2), 우측: 270도 (3*pi/2 = -pi/2)
-    final angle = isLeft ? 1.5708 : -1.5708;
-
-    return SizedBox(
-      width: cardHeight + 4, // 회전 후 잘림 방지
-      // Cap at a full 14-card hand height + small buffer. Previous
-      // 180/300 caps clipped the last card when holding a full hand.
-      height: totalHeight.clamp(40.0, (compact ? 240.0 : 320.0) * _s),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (int i = 0; i < cards.length; i++)
-            Positioned(
-              top: i * overlap,
-              left: 0,
-              child: SizedBox(
-                width: cardHeight,
-                height: cardHeight,
-                child: Center(
-                  child: Transform.rotate(
-                    angle: angle,
-                    child: SizedBox(
-                      width: cardWidth,
-                      height: cardHeight,
-                      child: PlayingCard(
-                        cardId: cards[i].toString(),
-                        width: cardWidth,
-                        height: cardHeight,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCardRequestArea(
-    GameService game,
-    String playerId,
-    int cardCount,
-    bool isPending,
-    bool vertical, {
-    bool compact = false,
-  }) {
-    if (isPending) {
-      return Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 12,
-          vertical: compact ? 6 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFEFD8),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: compact ? 14 : 16,
-              height: compact ? 14 : 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFF2A65A),
-              ),
-            ),
-            SizedBox(height: compact ? 3 : 4),
-            Text(
-              L10n.of(context).spectatorRequesting(cardCount),
-              style: TextStyle(
-                color: const Color(0xFFB58343),
-                fontSize: compact ? 9 : 10,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: () => game.requestCardView(playerId),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 12,
-          vertical: compact ? 6 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEAF4FF),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFB7D3EF)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.visibility,
-              color: const Color(0xFF4F88C8),
-              size: compact ? 16 : 20,
-            ),
-            SizedBox(height: compact ? 1 : 2),
-            // Side slots are ~79dp wide and the full label broke into three
-            // lines there ("패 보 기 요 청 (4 장)"). The eye icon above already
-            // says what the button does, so the count alone is enough.
-            Text(
-              vertical
-                  ? L10n.of(context).spectatorCardCount(cardCount)
-                  : L10n.of(context).spectatorRequestCardView(cardCount),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: TextStyle(
-                color: const Color(0xFF4F88C8),
-                fontSize: compact ? 9 : 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildHorizontalCards(List cards, {bool compact = false}) {
-    final cardWidth = (compact ? 24.0 : 30.0) * _s;
-    final cardHeight = (compact ? 36.0 : 45.0) * _s;
-    final overlap = (compact ? 16.0 : 20.0) * _s;
+    // 하단 손패 영역용. 카드는 게임 화면 트릭 톤(44×62), overlap 은 숫자·문양이
+    // 읽히도록 넉넉하게(카드 폭의 약 66%만 겹침). 14장을 다 펼치면 가로가
+    // 폭 캡을 넘으므로 FittedBox 로 전체를 스케일다운해 잘림 없이 축소.
+    final cardWidth = (compact ? 32.0 : 44.0) * _s;
+    final cardHeight = (compact ? 45.0 : 62.0) * _s;
+    final overlap = (compact ? 24.0 : 30.0) * _s;
 
     final totalWidth = cardWidth + (cards.length - 1) * overlap;
 
-    // Cap at a full 14-card hand width + small buffer. The previous
-    // 200/280 caps clipped the rightmost card when a player held a full
-    // hand (14 × 20 + 30 = 290 non-compact / 14 × 16 + 24 = 232 compact).
-    return SizedBox(
-      height: cardHeight,
-      width: totalWidth.clamp(40.0, (compact ? 244.0 : 304.0) * _s),
-      child: Stack(
-        children: [
-          for (int i = 0; i < cards.length; i++)
-            Positioned(
-              left: i * overlap,
-              child: SizedBox(
-                width: cardWidth,
-                height: cardHeight,
-                child: PlayingCard(
-                  cardId: cards[i].toString(),
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.center,
+      child: SizedBox(
+        height: cardHeight,
+        width: totalWidth,
+        child: Stack(
+          children: [
+            for (int i = 0; i < cards.length; i++)
+              Positioned(
+                left: i * overlap,
+                child: SizedBox(
                   width: cardWidth,
                   height: cardHeight,
+                  child: PlayingCard(
+                    cardId: cards[i].toString(),
+                    width: cardWidth,
+                    height: cardHeight,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1690,29 +1657,25 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
 
     if (currentTrick.isEmpty) {
-      return Center(
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 12 : 16,
-            vertical: compact ? 8 : 10,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                L10n.of(context).spectatorNewTrick,
-                style: TextStyle(
-                  color: const Color(0xFF9A8E8A),
-                  fontSize: compact ? 12 : 14,
-                ),
+      // 배경 상자 없이 텍스트만. Center 래퍼도 뺀다 — 부모 Align 이 위치를
+      // 담당하는데 Center 가 다시 부모를 꽉 채워 Align y 값이 무력화됐다.
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 16,
+          vertical: compact ? 8 : 10,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              L10n.of(context).spectatorNewTrick,
+              style: TextStyle(
+                color: const Color(0xFF9A8E8A),
+                fontSize: compact ? 12 : 14,
               ),
-              if (hasCall) ...[SizedBox(height: compact ? 4 : 6), callBadge()],
-            ],
-          ),
+            ),
+            if (hasCall) ...[SizedBox(height: compact ? 4 : 6), callBadge()],
+          ],
         ),
       );
     }
@@ -1736,53 +1699,44 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       }
     }
     final isBlue = lastTeam != 'B';
-    final bgColor = isBlue ? const Color(0xFFE3F0FF) : const Color(0xFFFFE8EC);
-    final borderColor = isBlue
-        ? const Color(0xFFB3D4F7)
-        : const Color(0xFFF5C0C8);
+    // 이름의 팀 색상만 유지, 배경/테두리 상자는 제거 — 게임 화면과 동일 톤.
     final nameColor = isBlue
         ? const Color(0xFF4A90D9)
         : const Color(0xFFD94A5A);
 
-    return Center(
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 12,
-          vertical: compact ? 6 : 8,
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (hasCall) ...[callBadge(), SizedBox(height: compact ? 4 : 6)],
-            Text(
-              L10n.of(context).spectatorPlayedCards(
-                playerName.length > 8
-                    ? '${playerName.substring(0, 8)}..'
-                    : playerName,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: compact ? 12 : 14,
-                fontWeight: FontWeight.bold,
-                color: nameColor,
-              ),
+    // 외곽 Center 제거 — 부모 Align 이 위치를 잡도록.
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 6 : 8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasCall) ...[callBadge(), SizedBox(height: compact ? 4 : 6)],
+          Text(
+            L10n.of(context).spectatorPlayedCards(
+              playerName.length > 8
+                  ? '${playerName.substring(0, 8)}..'
+                  : playerName,
             ),
-            SizedBox(height: compact ? 4 : 6),
-            _buildOverlappedCards(
-              cards,
-              compact: compact,
-              forceSingleRow: landscapeCompact,
-              combo: lastCombo,
-              comboValue: lastComboValue,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: compact ? 12 : 14,
+              fontWeight: FontWeight.bold,
+              color: nameColor,
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: compact ? 4 : 6),
+          _buildOverlappedCards(
+            cards,
+            compact: compact,
+            forceSingleRow: landscapeCompact,
+            combo: lastCombo,
+            comboValue: lastComboValue,
+          ),
+        ],
       ),
     );
   }
@@ -1794,10 +1748,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     String combo = '',
     double comboValue = 0,
   }) {
-    final double cardW = (compact ? 24 : 36) * _s;
-    final double cardH = (compact ? 34 : 50) * _s;
-    final double minOverlap = (compact ? 10 : 20) * _s;
-    final double maxOverlap = (compact ? 18 : 30) * _s;
+    // 트릭 카드 크기: 하단 손패 톤(44×62)에 맞춰 상향. 겹침도 그에 맞게.
+    final double cardW = (compact ? 30 : 44) * _s;
+    final double cardH = (compact ? 42 : 62) * _s;
+    final double minOverlap = (compact ? 12 : 24) * _s;
+    final double maxOverlap = (compact ? 22 : 34) * _s;
 
     final isPhoenixSingleTrick =
         combo == 'single' &&
@@ -1844,7 +1799,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       );
     }
 
-    if (cards.length <= 4) {
+    // 3장 이하만 나란히 배열, 4장부터는 overlap 경로로 태워 살짝 겹친다
+    // (4장 연속페어 4455 예시). 겹침량은 아래 LayoutBuilder 의 clamp 로 통제.
+    if (cards.length <= 3) {
       return Wrap(
         alignment: WrapAlignment.center,
         spacing: 3,
@@ -1858,8 +1815,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         final neededOverlap = cards.length > 1
             ? (availableWidth - cardW) / (cards.length - 1)
             : availableWidth;
+        // 긴 스트레이트/피 (7장 이상) 는 억지로 한 줄에 밀어넣지 말고 두 줄로.
+        // 한 줄이면 카드가 너무 겹쳐 숫자·문양이 안 보인다. landscape compact 에서
+        // 강제 한 줄이 필요한 경로는 forceSingleRow 로 계속 예외.
+        final wantTwoRows = !forceSingleRow && cards.length >= 7;
 
-        if (neededOverlap >= minOverlap || forceSingleRow) {
+        if (!wantTwoRows && (neededOverlap >= minOverlap || forceSingleRow)) {
           final overlap =
               (forceSingleRow
                       ? neededOverlap

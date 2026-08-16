@@ -571,6 +571,8 @@
       }
     }
   },
+  "spectatorBlueTeamWin": "A팀 승리!",
+  "spectatorRedTeamWin": "B팀 승리!",
   "spectatorDraw": "무승부!",
   "spectatorTeamScores": "Team A: {scoreA} | Team B: {scoreB}",
   "@spectatorTeamScores": {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -35,7 +36,6 @@ class _GameScreenState extends State<GameScreen> {
   // Responsive scale factor (updated every build)
   double _s = 1.0; // scale factor based on screen width
   double _ts = 1.0; // gentler scale for text and chrome — see build()
-  int _maxNameLen = 4;
 
   final Set<String> _selectedCards = {};
 
@@ -418,7 +418,6 @@ class _GameScreenState extends State<GameScreen> {
     // every label on a layout that was tuned at the smaller size. The app must
     // render exactly as it does today.
     _ts = kIsWeb ? 1 + (_s - 1) * 0.5 : _s;
-    _maxNameLen = screenSize.width < 370 ? 3 : 4;
     final themeColors = context.watch<GameService>().themeGradient;
     final session = context.watch<SessionService>();
     return ConnectionOverlay(
@@ -602,7 +601,6 @@ class _GameScreenState extends State<GameScreen> {
         Column(
           children: [
             _buildTopBar(state, game),
-            _buildPartnerArea(state, game),
             Expanded(
               // Reserve a constant bottom slot equal to the typical max
               // hand-area height (full 14-card hand + name row + action
@@ -612,7 +610,7 @@ class _GameScreenState extends State<GameScreen> {
               // and the board still doesn't move.
               child: Padding(
                 padding: EdgeInsets.only(bottom: _handReserveHeight(context)),
-                child: _buildMiddleArea(state, game),
+                child: _buildOpponentsRing(state, game),
               ),
             ),
           ],
@@ -1361,197 +1359,305 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildPartnerArea(GameStateData state, GameService game) {
+  // 스컬킹 4인 게임 스크린과 동일한 링 레이아웃.
+  // 파트너/좌/우 세 좌석을 상단 아크 [200°, 270°, 340°] 에 배치하고,
+  // 중앙 트릭 영역은 별도 Align 으로 얹는다. 사진 자체가 좌석의 가장자리 —
+  // 배경 상자/패딩 없음. (참고: sk_game_screen.dart _buildScoreboard.)
+  Widget _buildOpponentsRing(GameStateData state, GameService game) {
     _seatChat.consume(game);
     final partner = _firstWhereOrNull(
       state.players,
       (p) => p.position == 'partner',
     );
-    final isPartnerTurn = partner?.id == state.currentPlayer;
-
-    return Container(
-      padding: EdgeInsets.all(10 * _s),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: partner != null
-                ? () => _showPlayerProfileDialog(
-                    partner.name,
-                    game,
-                    isBot: partner.id.startsWith('bot_'),
-                  )
-                : null,
-            child: _buildTurnName(
-              name: partner?.name ?? L10n.of(context).gamePartner,
-              isTurn: isPartnerTurn,
-              badge: _tichuBadgeForPlayer(partner),
-              exchangeDone:
-                  state.phase == 'card_exchange' &&
-                  (partner?.hasExchanged ?? false),
-              connected: partner?.connected ?? true,
-              timeoutCount: partner?.timeoutCount ?? 0,
-              teamLabel: _teamForPosition(state, 'partner'),
-              isMyTeam: true,
-              photoUrl: game.blockedUsers.contains(partner?.name ?? '')
-                  ? null
-                  : game.resolvePhotoUrl(partner?.photoUrl),
-              isBot: partner?.isBot ?? false,
-              avatarSize: 40,
-              avatarBeside: true,
-            ),
-          ),
-          SizedBox(height: 3 * _s),
-          Text(
-            _getPlayerInfo(partner),
-            style: TextStyle(
-              fontSize: 11 * _ts,
-              color: const Color(0xFF8A7A72),
-            ),
-          ),
-          SizedBox(height: 6 * _s),
-          // Card backs
-          _buildOverlappedHand(
-            count: partner?.cardCount ?? 0,
-            cardWidth: 30 * _s,
-            cardHeight: 42 * _s,
-            overlap: 19 * _s,
-            maxVisible: 14,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiddleArea(GameStateData state, GameService game) {
     final left = _firstWhereOrNull(state.players, (p) => p.position == 'left');
     final right = _firstWhereOrNull(
       state.players,
       (p) => p.position == 'right',
     );
-    final isLeftTurn = left?.id == state.currentPlayer;
-    final isRightTurn = right?.id == state.currentPlayer;
+    // 좌/우는 sin +0.5 (150°/30°) — self 가 차지한 하단과 파트너 사이에서
+    // 살짝 아래쪽으로 치우쳐 앉는다.
+    final positions = <(Player?, String, double)>[
+      (left, 'left', 150.0),
+      (partner, 'partner', 270.0),
+      (right, 'right', 30.0),
+    ];
 
-    return Row(
-      children: [
-        // Left player
-        SizedBox(
-          width: 80 * _s,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: left != null
-                    ? () => _showPlayerProfileDialog(
-                        left.name,
-                        game,
-                        isBot: left.id.startsWith('bot_'),
-                      )
-                    : null,
-                child: _buildTurnName(
-                  name: left?.name ?? L10n.of(context).gameLeftPlayer,
-                  isTurn: isLeftTurn,
-                  fontSize: 11 * _ts,
-                  badge: _tichuBadgeForPlayer(left),
-                  exchangeDone:
-                      state.phase == 'card_exchange' &&
-                      (left?.hasExchanged ?? false),
-                  connected: left?.connected ?? true,
-                  timeoutCount: left?.timeoutCount ?? 0,
-                  teamLabel: _teamForPosition(state, 'left'),
-                  isMyTeam: false,
-                  photoUrl: game.blockedUsers.contains(left?.name ?? '')
-                      ? null
-                      : game.resolvePhotoUrl(left?.photoUrl),
-                  isBot: left?.isBot ?? false,
-                  avatarSize: 34,
-                ),
-              ),
-              Text(
-                _getPlayerInfo(left),
-                style: TextStyle(
-                  fontSize: 9 * _ts,
-                  color: const Color(0xFF8A7A72),
-                ),
-              ),
-              SizedBox(height: 4 * _s),
-              _buildOverlappedHandVertical(
-                count: left?.cardCount ?? 0,
-                cardWidth: 26 * _s,
-                cardHeight: 36 * _s,
-                overlap: 25 * _s,
-                maxVisible: 14,
-              ),
+    const seatWidthBase = 108.0;
+    const seatHeightBase = 132.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final boardScale = math
+            .min(width / 360.0, height / 400.0)
+            .clamp(0.78, 1.45);
+        final seatWidth = seatWidthBase * boardScale;
+        final seatHeight = seatHeightBase * boardScale;
+        final centerX = width / 2;
+        final centerY = height * 0.46;
+        final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+        final seatRadiusX = math.min(
+          width * 0.42,
+          math.min(width >= 700 ? 233.0 : 188.0, maxSeatRadiusX),
+        );
+        final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
+        final seatRadiusY = math.min(
+          height * 0.34,
+          math.min(height >= 700 ? 220.0 : 196.0, maxSeatRadiusY),
+        );
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // 좌석 먼저 — 트릭이 프로필 위로 얹히도록 뒤에 그린다 (관전과 동일).
+            for (int i = 0; i < positions.length; i++) ...[
+              () {
+                final (p, key, angleDeg) = positions[i];
+                final angle = angleDeg * math.pi / 180;
+                // 좌/우 좌석은 X 를 각도 cos 이 아니라 항상 가장자리(±1)로
+                // 고정. sin(150°/30°)=0.87 이라 cos 이 0.87로 안쪽으로 들어와
+                // 보이던 문제를 없앤다. 세로만 sin 으로 조절.
+                final horizontalDir = key == 'partner'
+                    ? math.cos(angle)
+                    : (key == 'left' ? -1.0 : 1.0);
+                final seatLeft =
+                    centerX + seatRadiusX * horizontalDir - seatWidth / 2;
+                final seatTop =
+                    centerY + seatRadiusY * math.sin(angle) - seatHeight / 2;
+                return Positioned(
+                  left: seatLeft,
+                  top: seatTop,
+                  width: seatWidth,
+                  height: seatHeight,
+                  child: _buildOpponentSeat(state, game, p, positionKey: key),
+                );
+              }(),
             ],
-          ),
-        ),
+            // 중앙 트릭: Stack 마지막에 얹어 좌석 프로필 위로 그려진다.
+            // Align 대신 Positioned(top) — Align 은 자식 높이가 커지면 top 이
+            // 위로 밀려 "카드 표시할 때 트릭박스가 오히려 위로 자라는" 것처럼
+            // 보인다. top 을 고정하면 카드는 항상 아래로만 자란다.
+            Positioned(
+              left: 0,
+              right: 0,
+              top: height * 0.52,
+              child: IgnorePointer(
+                child: Center(child: _buildCenterArea(state, game)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-        // Center area
-        Expanded(child: _buildCenterArea(state, game)),
+  Widget _buildOpponentSeat(
+    GameStateData state,
+    GameService game,
+    Player? p, {
+    required String positionKey,
+  }) {
+    final isTurn = p != null && p.id == state.currentPlayer;
+    final displayName =
+        p?.name ??
+        (positionKey == 'partner'
+            ? L10n.of(context).gamePartner
+            : positionKey == 'left'
+            ? L10n.of(context).gameLeftPlayer
+            : L10n.of(context).gameRightPlayer);
+    final teamLabel = _teamForPosition(state, positionKey);
+    final isMyTeam = positionKey == 'partner';
+    final badge = _tichuBadgeForPlayer(p);
+    final exchangeDone =
+        state.phase == 'card_exchange' && (p?.hasExchanged ?? false);
 
-        // Right player
-        SizedBox(
-          width: 80 * _s,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: right != null
-                    ? () => _showPlayerProfileDialog(
-                        right.name,
-                        game,
-                        isBot: right.id.startsWith('bot_'),
-                      )
-                    : null,
-                child: _buildTurnName(
-                  name: right?.name ?? L10n.of(context).gameRightPlayer,
-                  isTurn: isRightTurn,
-                  fontSize: 11 * _ts,
-                  badge: _tichuBadgeForPlayer(right),
-                  exchangeDone:
-                      state.phase == 'card_exchange' &&
-                      (right?.hasExchanged ?? false),
-                  connected: right?.connected ?? true,
-                  timeoutCount: right?.timeoutCount ?? 0,
-                  teamLabel: _teamForPosition(state, 'right'),
-                  isMyTeam: false,
-                  photoUrl: game.blockedUsers.contains(right?.name ?? '')
-                      ? null
-                      : game.resolvePhotoUrl(right?.photoUrl),
-                  isBot: right?.isBot ?? false,
-                  avatarSize: 34,
+    return GestureDetector(
+      onTap: p != null
+          ? () => _showPlayerProfileDialog(
+              p.name,
+              game,
+              isBot: p.id.startsWith('bot_'),
+            )
+          : null,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final seatW = constraints.maxWidth;
+          final seatH = constraints.maxHeight;
+          final compact = seatH <= 108 || seatW <= 96;
+          final seatScale = (seatW / 116.0).clamp(0.9, 1.5);
+          // 좌석 높이의 절반 정도가 사진. SK 의 0.58 규칙과 동일 톤.
+          final avatarDiameter = kIsWeb
+              ? math
+                    .min(seatH * 0.55, seatW * 0.7)
+                    .clamp(52.0, 160.0)
+                    .toDouble()
+              : (seatH * 0.55).clamp(50.0, 108.0).toDouble();
+          final nameFontSize = (compact ? 11.5 : 13.0) * seatScale;
+          final contentWidth = math.max(
+            avatarDiameter + 6,
+            math.min((seatW - 8) * 0.92, avatarDiameter + 28),
+          );
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: contentWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if ((p?.timeoutCount ?? 0) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          '⏱ ${p!.timeoutCount}/3',
+                          style: TextStyle(
+                            color: const Color(0xFFE65100),
+                            fontSize: compact ? 9 : 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ProfileAvatar(
+                      photoUrl: game.blockedUsers.contains(p?.name ?? '')
+                          ? null
+                          : game.resolvePhotoUrl(p?.photoUrl),
+                      size: avatarDiameter,
+                      blocked: game.blockedUsers.contains(p?.name ?? ''),
+                      // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
+                      // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
+                      border: (p?.hasLargeTichu ?? false)
+                          ? Border.all(
+                              color: const Color(0xFFD24B4B),
+                              width: 2.0,
+                            )
+                          : (p?.hasSmallTichu ?? false)
+                          ? Border.all(
+                              color: const Color(0xFF4A90D9),
+                              width: 2.0,
+                            )
+                          : isTurn
+                          ? Border.all(
+                              color: const Color(0xFFE6C86A),
+                              width: 1.5,
+                            )
+                          : null,
+                      fallback: (p?.isBot ?? false)
+                          ? BotAvatar(size: avatarDiameter, name: p!.name)
+                          : DefaultAvatar(size: avatarDiameter),
+                    ),
+                    SizedBox(height: 3 * _s),
+                    if (badge != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: badge,
+                      ),
+                    // 이름+팀+연결상태를 SK 톤 pill 로. 현재 턴이면 노란 배경.
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8 * _s,
+                        vertical: 3 * _s,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isTurn
+                            ? const Color(0xFFFFF2B3)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: isTurn
+                            ? Border.all(color: const Color(0xFFE6C86A))
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 3,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMyTeam
+                                  ? const Color(0xFFE3F0FF)
+                                  : const Color(0xFFFFE8EC),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isMyTeam
+                                    ? const Color(0xFF4A90D9)
+                                    : const Color(0xFFD24B4B),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: Text(
+                              teamLabel,
+                              style: TextStyle(
+                                fontSize: 8 * _ts,
+                                fontWeight: FontWeight.bold,
+                                color: isMyTeam
+                                    ? const Color(0xFF4A90D9)
+                                    : const Color(0xFFD24B4B),
+                              ),
+                            ),
+                          ),
+                          if (!(p?.connected ?? true))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 3),
+                              child: Icon(
+                                Icons.wifi_off,
+                                size: 11,
+                                color: Colors.red,
+                              ),
+                            ),
+                          Flexible(
+                            child: Text(
+                              displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                              style: TextStyle(
+                                color: (p?.connected ?? true)
+                                    ? const Color(0xFF5A4038)
+                                    : Colors.grey,
+                                fontSize: nameFontSize,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (exchangeDone)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.check_circle,
+                                size: 12,
+                                color: const Color(0xFF3A8F52),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 3 * _s),
+                    _buildCompactHandBacks(p?.cardCount ?? 0, scale: _s),
+                  ],
                 ),
               ),
-              Text(
-                _getPlayerInfo(right),
-                style: TextStyle(
-                  fontSize: 9 * _ts,
-                  color: const Color(0xFF8A7A72),
-                ),
-              ),
-              SizedBox(height: 4 * _s),
-              _buildOverlappedHandVertical(
-                count: right?.cardCount ?? 0,
-                cardWidth: 26 * _s,
-                cardHeight: 36 * _s,
-                overlap: 25 * _s,
-                maxVisible: 14,
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildCenterArea(GameStateData state, GameService game) {
+    // 중앙 트릭 영역은 배경 상자 없이 내용만 얹는다 (Mighty/SK/LL 톤).
     return Center(
       child: Container(
         width: 220 * _s,
         padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1563,7 +1669,7 @@ class _GameScreenState extends State<GameScreen> {
               Text(
                 _getPhaseName(state.phase),
                 style: TextStyle(
-                  fontSize: 13 * _ts,
+                  fontSize: 15 * _ts,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF5A4038),
                 ),
@@ -1573,23 +1679,71 @@ class _GameScreenState extends State<GameScreen> {
               SizedBox(height: 3 * _s),
               Row(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    state.isMyTurn
-                        ? L10n.of(context).gameMyTurn
-                        : L10n.of(
-                            context,
-                          ).gamePlayerTurn(_getCurrentPlayerName(state)),
-                    style: TextStyle(
-                      fontSize: 11 * _ts,
-                      color: state.isMyTurn
-                          ? const Color(0xFFE6A800)
-                          : const Color(0xFF8A7A72),
-                      fontWeight: state.isMyTurn
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                  Flexible(
+                    child: Text(
+                      state.isMyTurn
+                          ? L10n.of(context).gameMyTurn
+                          : L10n.of(
+                              context,
+                            ).gamePlayerTurn(_getCurrentPlayerName(state)),
+                      style: TextStyle(
+                        fontSize: 17 * _ts,
+                        color: state.isMyTurn
+                            ? const Color(0xFFE6A800)
+                            : const Color(0xFF5A4038),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
+                  // 트릭박스 안 턴 표시 옆에 남은 시간을 함께 붙여 눈이 두 군데를
+                  // 왔다갔다 하지 않게. 좌상단 타이머 뱃지는 그대로 유지 —
+                  // 이건 트릭을 볼 때 자연스러운 위치에서 한 번 더 알려주는 용도.
+                  if (_remainingSeconds > 0) ...[
+                    SizedBox(width: 6 * _s),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6 * _s,
+                        vertical: 2 * _s,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _remainingSeconds <= 10
+                            ? const Color(0xFFFFE4E4)
+                            : const Color(0xFFF5EEE8),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _remainingSeconds <= 10
+                              ? const Color(0xFFFF6B6B)
+                              : const Color(0xFFD8CCC4),
+                          width: _remainingSeconds <= 10 ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 13 * _ts,
+                            color: _remainingSeconds <= 10
+                                ? const Color(0xFFCC4444)
+                                : const Color(0xFF6A5A52),
+                          ),
+                          SizedBox(width: 3 * _s),
+                          Text(
+                            '${_remainingSeconds}s',
+                            style: TextStyle(
+                              fontSize: 13 * _ts,
+                              fontWeight: FontWeight.bold,
+                              color: _remainingSeconds <= 10
+                                  ? const Color(0xFFCC4444)
+                                  : const Color(0xFF5A4038),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -1714,19 +1868,11 @@ class _GameScreenState extends State<GameScreen> {
           // the scoreBar for horizontal space.
           Align(
             alignment: Alignment.centerRight,
-            // leaderboard · chat · more, the order the other three games use.
-            // Tichu was the only one with the spectator list promoted to the
-            // top bar and the only one with no score-history button — its
-            // score pill is tappable, which is not something you can see.
+            // 점수 pill 이 이미 leaderboard 아이콘을 달고 탭 → 히스토리를 열어주므로
+            // 별도의 leaderboard 버튼은 중복. chat · more 만 노출.
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SpectatorActionButton(
-                  icon: Icons.leaderboard_outlined,
-                  active: false,
-                  onTap: () => _showScoreHistoryDialog(state),
-                ),
-                const SizedBox(width: 6),
                 _buildChatButton(game),
                 const SizedBox(width: 6),
                 _buildMoreButton(game),
@@ -1963,26 +2109,17 @@ class _GameScreenState extends State<GameScreen> {
     final trick = useLastTrick ? state.lastTrick : state.currentTrick;
     if (trick.isEmpty) return const SizedBox.shrink();
     final lastPlay = trick.last;
-    // Bug #9: Determine team color from player position
+    // 팀 색으로 이름/뱃지만 물들이고, 배경 상자와 테두리는 없앤다 —
+    // 다른 게임(SK/Mighty/LL) 과 동일한 톤. 낸 카드가 이미 트릭 자체다.
     final isMyTeam = state.players.any(
       (p) =>
           (p.position == 'self' || p.position == 'partner') &&
           p.id == lastPlay.playerId,
     );
-    final trickBgColor = isMyTeam
-        ? const Color(0xFFE3F0FF) // blue tint for my team
-        : const Color(0xFFFFE8EC); // pink tint for opponent
-    final trickBorderColor = isMyTeam
-        ? const Color(0xFFB3D4F7)
-        : const Color(0xFFF5C0C8);
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: trickBgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: trickBorderColor),
-      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text.rich(
             TextSpan(
@@ -2019,18 +2156,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildOverlappedTrick(List<String> cards, {TrickPlay? lastPlay}) {
-    // Scaled, not fixed: the trick is what the table is actually looking at and
-    // 36x50 read small, but a fixed bump would wrap a plain 4-card play onto two
-    // rows on the narrowest phones. Long combos still fit — the layout below
-    // tightens the overlap and falls back to two rows.
+    // 관전 트릭과 동일 톤: 44×62, minOverlap 24, maxOverlap 34.
+    // 7장 이상은 두 줄로, 4장 이상은 살짝 겹치도록 아래 LayoutBuilder 에서 처리.
     final double baseCardW = 44 * _s;
-    final double baseCardH = 61 * _s;
-    // Assigned by the LayoutBuilder below once it knows the panel width; the
-    // card builder closes over these.
+    final double baseCardH = 62 * _s;
     var cardW = baseCardW;
     var cardH = baseCardH;
-    final double minOverlap = 22 * _s;
-    final double maxOverlap = 32 * _s;
+    final double minOverlap = 24 * _s;
+    final double maxOverlap = 34 * _s;
 
     // Phoenix-as-single → overlay a chip on the card showing what rank
     // it beat (e.g. "↑Q"), so the table can read the play at a glance.
@@ -2080,7 +2213,8 @@ class _GameScreenState extends State<GameScreen> {
       );
     }
 
-    if (cards.length <= 4) {
+    // 3장 이하만 나란히, 4장부터 overlap 경로로 태워 살짝 겹친다.
+    if (cards.length <= 3) {
       return Wrap(
         alignment: WrapAlignment.center,
         spacing: 3,
@@ -2112,8 +2246,10 @@ class _GameScreenState extends State<GameScreen> {
         final neededOverlap = cards.length > 1
             ? (availableWidth - cardW) / (cards.length - 1)
             : availableWidth;
+        // 7장 이상은 한 줄에 밀어넣지 말고 두 줄로. 관전 트릭과 동일 규칙.
+        final wantTwoRows = cards.length >= 7;
 
-        if (neededOverlap >= minOverlap) {
+        if (!wantTwoRows && neededOverlap >= minOverlap) {
           // Fits in one row
           final overlap = neededOverlap.clamp(minOverlap, maxOverlap);
           final totalWidth = cardW + overlap * (cards.length - 1);
@@ -3187,14 +3323,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  String _getPlayerInfo(Player? player) {
-    if (player == null) return '';
-    if (player.hasFinished)
-      return L10n.of(context).gameFinishPosition(player.finishPosition);
-
-    return L10n.of(context).gameCardCount(player.cardCount);
-  }
-
   String _getPhaseName(String phase) {
     final l10n = L10n.of(context);
     switch (phase) {
@@ -3224,94 +3352,73 @@ class _GameScreenState extends State<GameScreen> {
     return player?.name ?? '';
   }
 
-  Widget _buildOverlappedHand({
-    required int count,
-    required double cardWidth,
-    required double cardHeight,
-    required double overlap,
-    int maxVisible = 12,
-  }) {
-    final visible = count.clamp(0, maxVisible);
-    final totalWidth = visible == 0
-        ? 0.0
-        : cardWidth + (visible - 1) * (cardWidth - overlap);
-
+  /// 사진 아래에 얹는 카드 뒷면 컴팩트 스트립 — 마이티 먹은패 배지처럼
+  /// 아주 좁은 폭으로 겹쳐 그리고, 넘치면 +N 배지로 표시한다. Tichu 는
+  /// 상대 손을 카드 개수만 알려주면 되므로 예전 큰 뒷면 스택 대신 이걸로
+  /// 갈아탄다.
+  Widget _buildCompactHandBacks(int count, {double scale = 1.0}) {
+    if (count <= 0) return const SizedBox.shrink();
+    final cardW = 14.0 * scale;
+    final cardH = 20.0 * scale;
+    // 모든 카드를 그려주되 좌석 폭(≈60dp * scale)을 넘지 않도록 step 을 줄여
+    // 겹침을 자동으로 조절. 최소 step 2dp 로 두어 아무리 많아도 카드가 완전히
+    // 포개져 보이진 않도록.
+    const double preferredStep = 4.0;
+    const double minStep = 2.0;
+    const double maxTotalW = 60.0;
+    final double step = count <= 1
+        ? preferredStep * scale
+        : (math
+                  .min(
+                    preferredStep,
+                    (maxTotalW - 14.0) / (count - 1),
+                  )
+                  .clamp(minStep, preferredStep)
+              * scale);
+    final totalW = cardW + step * (count - 1);
+    // 우측 상단 카드에 살짝 겹치는 카운트 뱃지 — clipBehavior: none 이라
+    // 좌석 밖으로 살짝 나가도 잘리지 않는다.
+    final double badgeSize = 18.0 * scale;
     return SizedBox(
-      height: cardHeight,
-      child: Center(
-        child: Stack(
-          alignment: Alignment.centerLeft,
-          children: [
-            SizedBox(width: totalWidth, height: cardHeight),
-            for (var i = 0; i < visible; i++)
-              Positioned(
-                left: i * (cardWidth - overlap),
-                child: PlayingCard(
-                  cardId: '',
-                  isFaceUp: false,
-                  width: cardWidth,
-                  height: cardHeight,
-                  isInteractive: false,
-                ),
-              ),
-            if (count > visible)
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE6DCE8)),
-                  ),
-                  child: Text(
-                    '+${count - visible}',
-                    style: TextStyle(
-                      fontSize: 10 * _ts,
-                      color: Color(0xFF8A7A72),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverlappedHandVertical({
-    required int count,
-    required double cardWidth,
-    required double cardHeight,
-    required double overlap,
-    int maxVisible = 8,
-  }) {
-    final visible = count.clamp(0, maxVisible);
-    final totalHeight = visible == 0
-        ? 0.0
-        : cardHeight + (visible - 1) * (cardHeight - overlap);
-
-    return SizedBox(
-      width: cardWidth,
-      height: totalHeight,
+      width: totalW,
+      height: cardH,
       child: Stack(
-        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
         children: [
-          for (var i = 0; i < visible; i++)
+          for (var i = 0; i < count; i++)
             Positioned(
-              top: i * (cardHeight - overlap),
+              left: i * step,
               child: PlayingCard(
                 cardId: '',
                 isFaceUp: false,
-                width: cardWidth,
-                height: cardHeight,
+                width: cardW,
+                height: cardH,
                 isInteractive: false,
               ),
             ),
+          Positioned(
+            right: -badgeSize * 0.35,
+            top: -badgeSize * 0.35,
+            child: Container(
+              width: badgeSize,
+              height: badgeSize,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5A4038),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11 * _ts * scale,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -3443,174 +3550,6 @@ class _GameScreenState extends State<GameScreen> {
     final myTeam = state.myTeam;
     final sameTeam = (position == 'self' || position == 'partner');
     return sameTeam ? myTeam : (myTeam == 'A' ? 'B' : 'A');
-  }
-
-  Widget _buildTurnName({
-    required String name,
-    required bool isTurn,
-    double fontSize = 14,
-    Widget? badge,
-    bool exchangeDone = false,
-    bool connected = true,
-    int timeoutCount = 0,
-    String? teamLabel,
-    bool isMyTeam = false,
-    String? photoUrl,
-    bool isBot = false,
-    double avatarSize = 26,
-    bool avatarBeside = false,
-  }) {
-    final maxLen = _maxNameLen;
-    final displayName = name.length > maxLen
-        ? '${name.substring(0, maxLen)}..'
-        : name;
-    final s = _s;
-    // Only built when there is something to show, so photo-less, non-bot
-    // players keep the exact original nameplate layout.
-    final avatar = (photoUrl != null || isBot)
-        ? ProfileAvatar(
-            photoUrl: photoUrl,
-            size: avatarSize * s,
-            fallback: isBot
-                ? BotAvatar(size: avatarSize * s, name: name)
-                // Reached while the photo loads, or if it's blocked/expired —
-                // a blank square there reads as a broken image.
-                : DefaultAvatar(size: avatarSize * s),
-          )
-        : null;
-    final plate = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // The avatar goes above the pill by default. `avatarBeside` puts it to
-        // the left instead: the partner seat sits at the top of the board where
-        // vertical space is what everything else is competing for, and width is
-        // free — so there it can be half again as big without costing the board
-        // a single pixel.
-        if (avatar != null && !avatarBeside)
-          Padding(
-            padding: EdgeInsets.only(bottom: 3 * s),
-            child: avatar,
-          ),
-        if (badge != null)
-          Padding(padding: const EdgeInsets.only(bottom: 2), child: badge),
-        if (timeoutCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 4 * s, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFFB74D)),
-              ),
-              child: Text(
-                '⏱ $timeoutCount/3',
-                style: TextStyle(
-                  fontSize: 8 * _ts * s,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFE65100),
-                ),
-              ),
-            ),
-          ),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(horizontal: 8 * s, vertical: 3 * s),
-          decoration: BoxDecoration(
-            color: isTurn ? const Color(0xFFFFF2B3) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: isTurn ? Border.all(color: const Color(0xFFE6C86A)) : null,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 120 * s),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (teamLabel != null)
-                  Container(
-                    margin: EdgeInsets.only(right: 4 * s),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 3 * s,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isMyTeam
-                          ? const Color(0xFFE3F0FF)
-                          : const Color(0xFFFFE8EC),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isMyTeam
-                            ? const Color(0xFF4A90D9)
-                            : const Color(0xFFD24B4B),
-                        width: 0.5 * _s,
-                      ),
-                    ),
-                    child: Text(
-                      teamLabel,
-                      style: TextStyle(
-                        fontSize: 8 * _ts * s,
-                        fontWeight: FontWeight.bold,
-                        color: isMyTeam
-                            ? const Color(0xFF4A90D9)
-                            : const Color(0xFFD24B4B),
-                      ),
-                    ),
-                  ),
-                if (!connected)
-                  Container(
-                    margin: EdgeInsets.only(right: 4 * s),
-                    child: Icon(
-                      Icons.wifi_off,
-                      size: 12 * _s * s,
-                      color: Colors.red,
-                    ),
-                  ),
-                Flexible(
-                  child: Text(
-                    displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: TextStyle(
-                      fontSize: fontSize * s,
-                      fontWeight: FontWeight.bold,
-                      color: connected ? const Color(0xFF5A4038) : Colors.grey,
-                    ),
-                  ),
-                ),
-                if (exchangeDone)
-                  Container(
-                    margin: EdgeInsets.only(left: 4 * s),
-                    child: Icon(
-                      Icons.check_circle,
-                      size: 12 * _s * s,
-                      color: const Color(0xFF3A8F52),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-    final seat = (avatar == null || !avatarBeside)
-        ? plate
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              avatar,
-              SizedBox(width: 6 * _s * s),
-              plate,
-            ],
-          );
-    // Overlay, not the seat's own Stack: a sibling drawn later used to paint
-    // straight over the bubble.
-    return SeatBubbleAnchor(
-      text: _seatChat.textFor(name),
-      suppressed: _chatOpen,
-      child: seat,
-    );
   }
 
   Widget? _tichuBadgeForPlayer(Player? player) {

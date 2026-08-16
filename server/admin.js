@@ -3689,6 +3689,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         const parsed = parseInt(gameType.split('_').pop(), 10);
         gameType = 'skull_king';
         maxPlayers = parsed;
+      } else if (gameType.startsWith('love_letter_')) {
+        const parsed = parseInt(gameType.split('_').pop(), 10);
+        gameType = 'love_letter';
+        maxPlayers = parsed;
       }
       const result = fillerRooms.create({
         nickname: body.nickname || '',
@@ -3785,6 +3789,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="skull_king_4">스컬킹 (4인)</option>
               <option value="skull_king_5">스컬킹 (5인)</option>
               <option value="skull_king">스컬킹 (6인)</option>
+              <option value="love_letter_2">러브레터 (2인)</option>
+              <option value="love_letter_3">러브레터 (3인)</option>
               <option value="love_letter">러브레터 (4인)</option>
               <option value="mighty">마이티 (5인)</option>
               <option value="mighty_6">마이티 (6인)</option>

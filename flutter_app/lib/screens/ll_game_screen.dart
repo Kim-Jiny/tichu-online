@@ -998,20 +998,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
       orElse: () => null,
     );
 
+    // 배경 상자 없이 내용만 올린다 — Mighty/SK 톤과 통일. 안쪽의
+    // "드로우 카운트", "현재 플레이어" 알약은 각자 배경을 갖고 있어
+    // 그대로 읽힌다.
     return Container(
       constraints: const BoxConstraints(maxWidth: 252),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFCFA).withValues(alpha: 0.68),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1246,24 +1238,24 @@ class _LLGameScreenState extends State<LLGameScreen> {
             ultraTight ||
             constraints.maxHeight <= 104 ||
             constraints.maxWidth <= 108;
+        // 좌석 컨테이너의 외곽 padding 은 0 — 사진이 좌석의 가장자리다.
+        // ultraTight/tight/compact 는 폰트 크기 결정에만 계속 쓴다.
         final horizontalPadding = ultraTight
             ? 4.0
             : (tight ? 5.0 : (compact ? 7.0 : 8.0));
-        // Halved, like the Mighty and Skull King seats: at this photo size the
-        // old padding read as a frame around the seat rather than as the seat.
-        final verticalPadding = ultraTight
-            ? 3.0
-            : (tight ? 3.0 : (compact ? 4.0 : 4.0));
-        final nameFontSize = ultraTight
-            ? 9.0
-            : (tight ? 10.0 : (compact ? 11.0 : 12.0));
-        final tokenSize = ultraTight
-            ? 9.0
-            : (tight ? 11.0 : (compact ? 12.0 : 13.0));
+        final verticalPadding = 0.0;
+        // 마이티/스컬킹과 같은 톤으로 폰트 상향, seatScale 로 감쌈.
+        final seatScale = (constraints.maxWidth / 116.0).clamp(0.85, 1.5);
+        final nameFontSize = (ultraTight
+            ? 10.0
+            : (tight ? 11.5 : (compact ? 13.0 : 14.0))) * seatScale;
+        final tokenSize = (ultraTight
+            ? 10.0
+            : (tight ? 12.5 : (compact ? 13.5 : 15.0))) * seatScale;
         final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
-        final chipFontSize = ultraTight ? 8.0 : (tight ? 9.0 : 10.0);
-        final statusIconSize = ultraTight ? 10.0 : (tight ? 11.0 : 12.0);
-        final labelPadding = ultraTight ? 2.0 : 3.0;
+        final chipFontSize = (ultraTight ? 9.0 : (tight ? 10.0 : 11.5)) * seatScale;
+        final statusIconSize = (ultraTight ? 11.0 : (tight ? 12.5 : 13.5)) * seatScale;
+        final labelPadding = 0.0;
         // The photo takes whatever height the rest of the label leaves, rather
         // than a fraction of the box. A fraction did nothing visible: the label
         // is inside a scaleDown FittedBox, so asking for a bigger photo than
@@ -1291,45 +1283,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
             avatarDiameter + 20,
           ),
         );
-        final labelTint = player.eliminated
-            ? const Color(0xFFE9DFDE).withValues(alpha: 0.78)
-            : highlighted
-            ? const Color(0xFFFFF0C9).withValues(alpha: 0.94)
-            : isCurrent
-            ? const Color(0xFFFFF0C9).withValues(alpha: 0.88)
-            : const Color(0xFFFFFCFA).withValues(alpha: 0.62);
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: verticalPadding,
-          ),
+          // Padding zero, decoration empty — 사진이 좌석의 가장자리.
+          padding: EdgeInsets.zero,
           decoration: const BoxDecoration(),
-          child: Center(
-            child: FittedBox(
+          child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.topCenter,
-              child: Container(
-                // Half the old padding — the frame was reading as a box around
-                // the seat rather than as the seat.
-                padding: EdgeInsets.symmetric(
-                  horizontal: ultraTight ? 3 : 4,
-                  vertical: labelPadding,
-                ),
-                decoration: BoxDecoration(
-                  color: labelTint,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: SizedBox(
+              child: SizedBox(
                   width: contentWidth,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Own row rather than inline before the name — same
-                      // change as the Skull King seats: inline it had to stay
-                      // at 13-16px to leave the name any width, which is too
-                      // small to make out a face.
+                      // 현재턴/하이라이트 테두리는 ProfileAvatar 에 직접 넘겨
+                      // 사진 라운드 코너와 같은 곡률로 감싼다.
                       Padding(
                         padding: EdgeInsets.only(bottom: spacing),
                         child: ProfileAvatar(
@@ -1342,6 +1311,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 player.name,
                               ) ??
                               false,
+                          border: (isCurrent || highlighted) &&
+                                  !player.eliminated
+                              ? Border.all(
+                                  color: highlighted
+                                      ? const Color(0xFF64B5F6)
+                                      : const Color(0xFFE6C86A),
+                                  width: 1.8,
+                                )
+                              : null,
                           fallback: player.isBot
                               ? BotAvatar(
                                   size: avatarDiameter,
@@ -1470,9 +1448,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       ),
                     ],
                   ),
-                ),
               ),
-            ),
           ),
         );
       },

@@ -57,7 +57,7 @@ const MAX_PLAYERS = {
 const MIN_PLAYERS = {
   tichu: 4,
   skull_king: 2,
-  love_letter: 4,
+  love_letter: 2,
   mighty: 5,
 };
 const DEFAULT_PLAYERS = {

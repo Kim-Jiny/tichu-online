@@ -704,11 +704,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final playedCardW = playedCardHeight * 0.7;
           final playerCount = state.players.length;
           final centerX = width / 2;
-          // 6인 관전은 상·중·하 세 줄 링이라 centerY 를 살짝 아래로 내려
-          // 세로 반경 여유를 만든다 (마이티와 동일 규칙).
+          // 인원별로 링 중심을 아래로 조금씩 내려서 세로 반경 여유를 확보.
+          // 예전엔 6인 만 특별 케이스였는데, 3~5인도 상·하단 좌석 간격이
+          // 뭉쳐 보인다는 지적을 받아 함께 조정.
           final centerY = playerCount >= 6
               ? height * (isLandscape ? 0.50 : 0.53)
-              : height * (isLandscape ? 0.39 : 0.41);
+              : playerCount >= 4
+              ? height * (isLandscape ? 0.46 : 0.49)
+              : height * (isLandscape ? 0.42 : 0.45);
           final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
           final seatRadiusX = math.min(
             width * _seatRadiusXFactor(playerCount),
@@ -718,40 +721,39 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           );
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
-          // 6인은 링 자체를 세로로 크게. 마이티와 같은 비율.
+          // 인원별 세로 반경 비율 — 상·하단 좌석 사이 간격이 결정된다.
           final radiusYRatio = playerCount >= 6
               ? (isLandscape ? 0.42 : 0.45)
-              : (isLandscape ? 0.34 : 0.35);
+              : playerCount >= 4
+              ? (isLandscape ? 0.40 : 0.42)
+              : (isLandscape ? 0.36 : 0.38);
           final seatRadiusY = math.min(
             height * radiusYRatio,
             math.min(_seatRadiusYCap(height, spectator: true), maxSeatRadiusY),
           );
-
-          // 3-player game spectator: drop the trick box a bit so it sits below
-          // the opponents' played cards.
-          final threePlayerSpectatorDrop = state.players.length == 3
-              ? (isLandscape ? 18.0 : 24.0)
-              : 0.0;
 
           return Stack(
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
                 child: Align(
-                  // 6인 관전은 링 중단·하단 좌석 사이로 트릭이 얹히도록
-                  // 살짝 위(-0.10). 마이티(-0.20) 보다는 조금 낮춘 위치.
+                  // 관전 인원별로 트릭 위치를 링 상단쪽으로 조절.
+                  // 3인은 top + bottom-left + bottom-right 세 자리라 링 중앙
+                  // 근처가 비어 트릭이 편하게 앉는다.
                   alignment: Alignment(
                     0,
                     playerCount >= 6
                         ? (isLandscape ? -0.12 : -0.10)
+                        : playerCount == 3
+                        ? (isLandscape ? -0.05 : -0.02)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   child: Transform.translate(
                     offset: Offset(
                       0,
-                      playerCount >= 6
+                      playerCount >= 6 || playerCount == 3
                           ? 0
-                          : (isLandscape ? -34 : -42) + threePlayerSpectatorDrop,
+                          : (isLandscape ? -34 : -42),
                     ),
                     child: IgnorePointer(child: _buildTrickArea(state)),
                   ),
@@ -1403,19 +1405,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
             children: [
               Positioned.fill(
                 child: Align(
-                  // 상대 3명(4인 게임) 은 옆 두 자리를 200°/340° 로 조금
-                  // 내렸으므로 트릭도 마이티 관전과 같은 위치(-0.15) 로
-                  // 올려 상단 좌석 라인 아래에 걸리게 한다.
+                  // 상대 2~3명은 상단에 몰리므로 트릭을 -0.15 로 올리고,
+                  // 4명(5인 게임) 도 옆 두 자리(172°/368°) 가 mid-side 라
+                  // 트릭이 링 아래에 붙어 보이던 것을 -0.05 로 조금 올린다.
                   alignment: Alignment(
                     0,
-                    opponents.length == 3
+                    opponents.length <= 3
                         ? (isLandscape ? -0.18 : -0.15)
+                        : opponents.length == 4
+                        ? (isLandscape ? -0.08 : -0.05)
                         : (isLandscape ? 0.36 : 0.46),
                   ),
                   child: Transform.translate(
                     offset: Offset(
                       0,
-                      opponents.length == 3
+                      opponents.length <= 4
                           ? 0
                           : (isLandscape ? -34 : -42) + twoOpponentTrickDrop,
                     ),
@@ -1591,6 +1595,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
   List<double>? _customSpectatorSeatAnglesDeg(int count) {
     switch (count) {
+      case 3:
+        // 관전자는 자기 자리가 없으니 3인 게임을 top(270) + bottom-left(155) +
+        // bottom-right(385) 로 벌린다. 플레이어 모드에서 쓰는 [200/270/340]
+        // (전부 상단) 대신 사이 세로 간격을 확보한다.
+        return const [155.0, 270.0, 385.0];
       case 6:
         return const [132, 180, 236, 304, 360, 408];
       default:

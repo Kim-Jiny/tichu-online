@@ -1658,14 +1658,20 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           // 6인 관전은 상·중·하 세 줄이 링을 두르므로 두 줄만 있는 4/5인
           // 배치보다 링 자체가 세로로 커야 한다. centerY 를 살짝 아래로
           // 내려서 maxRadiusY 도 함께 키우고, height 비율/상한도 위로 뽑는다.
+          // 인원별 링 중심·반경. 관전자 5인 게임(opponent 5) 도 상·중·하
+          // 3줄 링이라 6인만큼은 아니지만 세로로 좀 벌려 준다.
           final baseCenterYRatio = isLandscape ? 0.42 : 0.47;
           final centerYRatio = opponentCount >= 6
               ? (isLandscape ? 0.50 : 0.53)
+              : opponentCount == 5 && showAllSeats
+              ? (isLandscape ? 0.47 : 0.50)
               : baseCenterYRatio;
           final centerY = height * centerYRatio + boardDrop;
           final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
           final radiusYRatio = opponentCount >= 6
               ? (isLandscape ? 0.42 : 0.45)
+              : opponentCount == 5 && showAllSeats
+              ? (isLandscape ? 0.38 : 0.40)
               : (isLandscape ? 0.35 : 0.36);
           final seatRadiusY = math.min(
             height * radiusYRatio,
@@ -1747,11 +1753,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Align(
                   alignment: Alignment(
                     0,
-                    // 관전자 6인 게임은 중단·하단 좌석 사이 갭이 좁고 링
-                    // 정중앙에 얹으면 좌석과 겹친다 — 트릭/비딩/킬 표시를
-                    // 모두 같은 지점(중단 좌석 살짝 위)에 얹는다.
+                    // 관전 인원별로 트릭/비딩/킬 표시를 링 상단쪽으로 올린다.
                     (showAllSeats && state.players.length >= 6)
                         ? (isLandscape ? -0.22 : -0.20)
+                        : (showAllSeats && state.players.length == 5)
+                        ? (isLandscape ? -0.12 : -0.10)
                         : (isBidding || isKillSelect
                               ? 0.10
                               : (isLandscape ? 0.36 : 0.46)),

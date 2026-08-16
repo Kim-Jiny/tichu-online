@@ -579,10 +579,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         final centerY = playerCount >= 4
             ? height * 0.39
             : (isLandscape ? height * 0.48 : height * 0.50);
-        final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
+        // 좌/우 간격을 화면 가장자리 쪽으로 더 벌린다 — 안쪽 여백을 10→2 로
+        // 줄이고 factor 0.44→0.48. 좁은 폰에서도 sideRadius 가 몇 dp 더 커짐.
+        final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 2);
         final seatRadiusX = math.min(
-          width * 0.44,
-          math.min(width >= 700 ? 245.0 : 200.0, maxSeatRadiusX),
+          width * 0.48,
+          math.min(width >= 700 ? 260.0 : 210.0, maxSeatRadiusX),
         );
         final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
         final seatRadiusY = math.min(
@@ -629,7 +631,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               child: IgnorePointer(
                 child: Align(
                   alignment: playerCount >= 4
-                      ? const Alignment(0, -0.28)
+                      ? const Alignment(0, -0.36)
                       : Alignment(0, isLandscape ? 0.38 : 0.48),
                   child: _buildTrickArea(
                     currentTrick,

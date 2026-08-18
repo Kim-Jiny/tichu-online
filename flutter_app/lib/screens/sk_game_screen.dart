@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
 import '../models/sk_game_state.dart';
+import '../widgets/turn_name_pill.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/seat_chat_bubble.dart';
@@ -1700,10 +1701,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ? 1.0
         : seatHeight / intrinsicHeight;
     final unscaledPhotoCentre = timeoutHeight + avatar / 2;
-    return (
-      avatar: avatar,
-      photoCentre: unscaledPhotoCentre * fittedScale,
-    );
+    return (avatar: avatar, photoCentre: unscaledPhotoCentre * fittedScale);
   }
 
   Widget _buildSpectatorSeat(
@@ -1793,197 +1791,197 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
                 child: SizedBox(
-                        width: contentWidth,
-                        child: Opacity(
-                          opacity: p.connected ? 1.0 : 0.45,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                  width: contentWidth,
+                  child: Opacity(
+                    opacity: p.connected ? 1.0 : 0.45,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (p.timeoutCount > 0)
+                          SizedBox(
+                            height: timeoutHeight,
+                            child: Text(
+                              '⏱ ${p.timeoutCount}/3',
+                              style: TextStyle(
+                                color: const Color(0xFFE65100),
+                                fontSize: compact ? 8.5 : 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        // 프로필 사진에 뱃지(관전 눈)를 바로 붙인다 —
+                        // 좌석 컨테이너의 코너에 걸어놓던 방식은 이름/
+                        // 점수 위쪽 여백에 뜬 것처럼 보였다.
+                        Padding(
+                          padding: EdgeInsets.only(bottom: spacing),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.center,
                             children: [
-                              if (p.timeoutCount > 0)
-                                SizedBox(
-                                  height: timeoutHeight,
-                                  child: Text(
-                                    '⏱ ${p.timeoutCount}/3',
-                                    style: TextStyle(
-                                      color: const Color(0xFFE65100),
-                                      fontSize: compact ? 8.5 : 10,
-                                      fontWeight: FontWeight.w800,
+                              ProfileAvatar(
+                                photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                                size: avatarSize,
+                                blocked: game.blockedUsers.contains(p.name),
+                                border: (isCurrentTurn || isViewing)
+                                    ? Border.all(
+                                        color: isViewing
+                                            ? const Color(0xFF64B5F6)
+                                            : const Color(0xFFE6C86A),
+                                        width: 1.5,
+                                      )
+                                    : null,
+                                fallback: p.isBot
+                                    ? BotAvatar(size: avatarSize, name: p.name)
+                                    : DefaultAvatar(size: avatarSize),
+                              ),
+                              Positioned(
+                                right: -4,
+                                top: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isApproved
+                                          ? const Color(0xFF64B5F6)
+                                          : const Color(0xFFE0D8D4),
                                     ),
+                                  ),
+                                  child: Icon(
+                                    isPending
+                                        ? Icons.schedule
+                                        : isApproved
+                                        ? Icons.visibility
+                                        : Icons.visibility_outlined,
+                                    size: 12,
+                                    color: isPending
+                                        ? const Color(0xFFFFB74D)
+                                        : isApproved
+                                        ? const Color(0xFF64B5F6)
+                                        : const Color(
+                                            0xFF8A7A72,
+                                          ).withValues(alpha: 0.6),
                                   ),
                                 ),
-                              // 프로필 사진에 뱃지(관전 눈)를 바로 붙인다 —
-                              // 좌석 컨테이너의 코너에 걸어놓던 방식은 이름/
-                              // 점수 위쪽 여백에 뜬 것처럼 보였다.
-                              Padding(
-                                padding: EdgeInsets.only(bottom: spacing),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  alignment: Alignment.center,
-                                  children: [
-                                    ProfileAvatar(
-                                      photoUrl:
-                                          game.resolvePhotoUrl(p.photoUrl),
-                                      size: avatarSize,
-                                      blocked:
-                                          game.blockedUsers.contains(p.name),
-                                      border: (isCurrentTurn || isViewing)
-                                          ? Border.all(
-                                              color: isViewing
-                                                  ? const Color(0xFF64B5F6)
-                                                  : const Color(0xFFE6C86A),
-                                              width: 1.5,
-                                            )
-                                          : null,
-                                      fallback: p.isBot
-                                          ? BotAvatar(
-                                              size: avatarSize,
-                                              name: p.name,
-                                            )
-                                          : DefaultAvatar(size: avatarSize),
-                                    ),
-                                    Positioned(
-                                      right: -4,
-                                      top: -4,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isApproved
-                                                ? const Color(0xFF64B5F6)
-                                                : const Color(0xFFE0D8D4),
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          isPending
-                                              ? Icons.schedule
-                                              : isApproved
-                                              ? Icons.visibility
-                                              : Icons.visibility_outlined,
-                                          size: 12,
-                                          color: isPending
-                                              ? const Color(0xFFFFB74D)
-                                              : isApproved
-                                              ? const Color(0xFF64B5F6)
-                                              : const Color(0xFF8A7A72)
-                                                    .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (!p.connected)
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        right: compact ? 2 : 3,
-                                      ),
-                                      child: Icon(
-                                        Icons.wifi_off,
-                                        size: offlineIconSize,
-                                        color: const Color(0xFFE53935),
-                                      ),
-                                    ),
-                                  Flexible(
-                                    child: Text(
-                                      p.name,
-                                      style: TextStyle(
-                                        color: p.connected
-                                            ? const Color(0xFF5A4038)
-                                            : const Color(0xFFE53935),
-                                        fontSize: nameFontSize,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: spacing),
-                              // Score and bid chip on one row. The chip used to
-                              // sit on its own row below the score, and that
-                              // row came straight out of the photo's height.
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    '${p.totalScore}',
-                                    style: TextStyle(
-                                      color: const Color(0xFF5A4038),
-                                      fontSize: scoreFontSize,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    height: bidHeight,
-                                    child: p.hasBid && p.bid != null
-                                        ? Container(
-                                            margin: EdgeInsets.only(
-                                              left: compact ? 3 : 4,
-                                            ),
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: bidHorizontalPadding,
-                                              vertical: compact ? 0 : 1,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: p.tricks == p.bid
-                                                  ? const Color(0xFFE8F5E9)
-                                                  : p.tricks > p.bid!
-                                                  ? const Color(0xFFFFF3E0)
-                                                  : const Color(0xFFF5F5F5),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '${p.tricks}/${p.bid}',
-                                              style: TextStyle(
-                                                color: p.tricks == p.bid
-                                                    ? const Color(0xFF4CAF50)
-                                                    : p.tricks > p.bid!
-                                                    ? const Color(0xFFE65100)
-                                                    : const Color(0xFF8A7A72),
-                                                fontSize: bidFontSize,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          )
-                                        : p.hasBid && p.bid == null
-                                        ? Container(
-                                            margin: EdgeInsets.only(
-                                              left: compact ? 3 : 4,
-                                            ),
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: bidHorizontalPadding,
-                                              vertical: compact ? 0 : 1,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFF0EBF8),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              Icons.check,
-                                              size: compact ? 10 : 12,
-                                              color: const Color(0xFF7A6A95),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
                               ),
                             ],
                           ),
                         ),
-                      ),
+                        // 지금 차례면 이름에 노란 알약 — 티츄 판과 같은 표시.
+                        TurnNamePill(
+                          isTurn: isCurrentTurn,
+                          horizontal: compact ? 5 : 7,
+                          vertical: 1,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!p.connected)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    right: compact ? 2 : 3,
+                                  ),
+                                  child: Icon(
+                                    Icons.wifi_off,
+                                    size: offlineIconSize,
+                                    color: const Color(0xFFE53935),
+                                  ),
+                                ),
+                              Flexible(
+                                child: Text(
+                                  p.name,
+                                  style: TextStyle(
+                                    color: p.connected
+                                        ? const Color(0xFF5A4038)
+                                        : const Color(0xFFE53935),
+                                    fontSize: nameFontSize,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: spacing),
+                        // Score and bid chip on one row. The chip used to
+                        // sit on its own row below the score, and that
+                        // row came straight out of the photo's height.
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${p.totalScore}',
+                              style: TextStyle(
+                                color: const Color(0xFF5A4038),
+                                fontSize: scoreFontSize,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(
+                              height: bidHeight,
+                              child: p.hasBid && p.bid != null
+                                  ? Container(
+                                      margin: EdgeInsets.only(
+                                        left: compact ? 3 : 4,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: bidHorizontalPadding,
+                                        vertical: compact ? 0 : 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: p.tricks == p.bid
+                                            ? const Color(0xFFE8F5E9)
+                                            : p.tricks > p.bid!
+                                            ? const Color(0xFFFFF3E0)
+                                            : const Color(0xFFF5F5F5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${p.tricks}/${p.bid}',
+                                        style: TextStyle(
+                                          color: p.tricks == p.bid
+                                              ? const Color(0xFF4CAF50)
+                                              : p.tricks > p.bid!
+                                              ? const Color(0xFFE65100)
+                                              : const Color(0xFF8A7A72),
+                                          fontSize: bidFontSize,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  : p.hasBid && p.bid == null
+                                  ? Container(
+                                      margin: EdgeInsets.only(
+                                        left: compact ? 3 : 4,
+                                      ),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: bidHorizontalPadding,
+                                        vertical: compact ? 0 : 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0EBF8),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.check,
+                                        size: compact ? 10 : 12,
+                                        color: const Color(0xFF7A6A95),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           );
@@ -2058,43 +2056,48 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
                 child: SizedBox(
-                    width: contentWidth,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (p.timeoutCount > 0)
-                          SizedBox(
-                            height: timeoutHeight,
-                            child: Text(
-                              '⏱ ${p.timeoutCount}/3',
-                              style: TextStyle(
-                                color: const Color(0xFFE65100),
-                                fontSize: compact ? 8.5 : 10,
-                                fontWeight: FontWeight.w800,
-                              ),
+                  width: contentWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      if (p.timeoutCount > 0)
+                        SizedBox(
+                          height: timeoutHeight,
+                          child: Text(
+                            '⏱ ${p.timeoutCount}/3',
+                            style: TextStyle(
+                              color: const Color(0xFFE65100),
+                              fontSize: compact ? 8.5 : 10,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        // 현재턴 테두리는 ProfileAvatar 에 직접 넘겨 사진의
-                        // 라운드 코너와 정확히 같은 곡률로 감싼다.
-                        Padding(
-                          padding: EdgeInsets.only(bottom: spacing),
-                          child: ProfileAvatar(
-                            photoUrl: game.resolvePhotoUrl(p.photoUrl),
-                            size: avatarDiameter,
-                            blocked: game.blockedUsers.contains(p.name),
-                            border: isCurrentTurn
-                                ? Border.all(
-                                    color: const Color(0xFFE6C86A),
-                                    width: 1.5,
-                                  )
-                                : null,
-                            fallback: p.isBot
-                                ? BotAvatar(size: avatarDiameter, name: p.name)
-                                : DefaultAvatar(size: avatarDiameter),
-                          ),
                         ),
-                        Row(
+                      // 현재턴 테두리는 ProfileAvatar 에 직접 넘겨 사진의
+                      // 라운드 코너와 정확히 같은 곡률로 감싼다.
+                      Padding(
+                        padding: EdgeInsets.only(bottom: spacing),
+                        child: ProfileAvatar(
+                          photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                          size: avatarDiameter,
+                          blocked: game.blockedUsers.contains(p.name),
+                          border: isCurrentTurn
+                              ? Border.all(
+                                  color: const Color(0xFFE6C86A),
+                                  width: 1.5,
+                                )
+                              : null,
+                          fallback: p.isBot
+                              ? BotAvatar(size: avatarDiameter, name: p.name)
+                              : DefaultAvatar(size: avatarDiameter),
+                        ),
+                      ),
+                      // 지금 차례면 이름에 노란 알약 — 티츄 판과 같은 표시.
+                      TurnNamePill(
+                        isTurn: isCurrentTurn,
+                        horizontal: compact ? 5 : 7,
+                        vertical: 1,
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -2128,67 +2131,68 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: spacing),
-                        Text(
-                          '${p.totalScore}',
-                          style: TextStyle(
-                            color: const Color(0xFF5A4038),
-                            fontSize: scoreFontSize,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                      SizedBox(height: spacing),
+                      Text(
+                        '${p.totalScore}',
+                        style: TextStyle(
+                          color: const Color(0xFF5A4038),
+                          fontSize: scoreFontSize,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(
-                          height: bidHeight,
-                          child: p.hasBid && p.bid != null
-                              ? Container(
-                                  margin: EdgeInsets.only(top: bidTopMargin),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: bidHorizontalPadding,
-                                    vertical: compact ? 0 : 1,
-                                  ),
-                                  decoration: BoxDecoration(
+                      ),
+                      SizedBox(
+                        height: bidHeight,
+                        child: p.hasBid && p.bid != null
+                            ? Container(
+                                margin: EdgeInsets.only(top: bidTopMargin),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: bidHorizontalPadding,
+                                  vertical: compact ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: p.tricks == p.bid
+                                      ? const Color(0xFFE8F5E9)
+                                      : p.tricks > p.bid!
+                                      ? const Color(0xFFFFF3E0)
+                                      : const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${p.tricks}/${p.bid}',
+                                  style: TextStyle(
                                     color: p.tricks == p.bid
-                                        ? const Color(0xFFE8F5E9)
+                                        ? const Color(0xFF4CAF50)
                                         : p.tricks > p.bid!
-                                        ? const Color(0xFFFFF3E0)
-                                        : const Color(0xFFF5F5F5),
-                                    borderRadius: BorderRadius.circular(8),
+                                        ? const Color(0xFFE65100)
+                                        : const Color(0xFF8A7A72),
+                                    fontSize: bidFontSize,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  child: Text(
-                                    '${p.tricks}/${p.bid}',
-                                    style: TextStyle(
-                                      color: p.tricks == p.bid
-                                          ? const Color(0xFF4CAF50)
-                                          : p.tricks > p.bid!
-                                          ? const Color(0xFFE65100)
-                                          : const Color(0xFF8A7A72),
-                                      fontSize: bidFontSize,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                )
-                              : p.hasBid && p.bid == null
-                              ? Container(
-                                  margin: EdgeInsets.only(top: bidTopMargin),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: bidHorizontalPadding,
-                                    vertical: compact ? 0 : 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0EBF8),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.check,
-                                    size: compact ? 10 : 12,
-                                    color: const Color(0xFF7A6A95),
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ],
-                    ),
+                                ),
+                              )
+                            : p.hasBid && p.bid == null
+                            ? Container(
+                                margin: EdgeInsets.only(top: bidTopMargin),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: bidHorizontalPadding,
+                                  vertical: compact ? 0 : 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0EBF8),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  size: compact ? 10 : 12,
+                                  color: const Color(0xFF7A6A95),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
                   ),
+                ),
               ),
             ),
           );
@@ -2908,26 +2912,26 @@ class _SKGameScreenState extends State<SKGameScreen> {
       // 배경 없이 아이콘·텍스트만 얹는다 — 좌석 링 안에 흰 상자가 떠 있는
       // 모양이 무거워 보였다.
       return Container(
-          width: 164,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.anchor, size: 20, color: Color(0xFF8A7A72)),
-              const SizedBox(height: 4),
-              Text(
-                state.phase == 'bidding'
-                    ? L10n.of(context).skGameBiddingPhase
-                    : L10n.of(context).skGamePlayCard,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
+        width: 164,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.anchor, size: 20, color: Color(0xFF8A7A72)),
+            const SizedBox(height: 4),
+            Text(
+              state.phase == 'bidding'
+                  ? L10n.of(context).skGameBiddingPhase
+                  : L10n.of(context).skGamePlayCard,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
               ),
-              _buildCenterTimerBadge(state),
-            ],
-          ),
+            ),
+            _buildCenterTimerBadge(state),
+          ],
+        ),
       );
     }
 
@@ -2985,192 +2989,142 @@ class _SKGameScreenState extends State<SKGameScreen> {
               const Color(0xFF6CA6C4).withValues(alpha: 0.90),
             ];
       return Container(
-          constraints: const BoxConstraints(maxWidth: 260),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: accentColor.withValues(alpha: 0.70),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+        constraints: const BoxConstraints(maxWidth: 260),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildCard(
-                    isKraken ? 'sk_kraken' : 'sk_white_whale',
-                    size: 50,
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          L10n.of(context).skGameTrickVoided,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: accentColor,
-                            letterSpacing: 0.5,
-                          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: accentColor.withValues(alpha: 0.70),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCard(isKraken ? 'sk_kraken' : 'sk_white_whale', size: 50),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        L10n.of(context).skGameTrickVoided,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: accentColor,
+                          letterSpacing: 0.5,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          voidReason ?? '',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        voidReason ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                L10n.of(context).skGameLeadPlayer(winnerName),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.82),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              L10n.of(context).skGameLeadPlayer(winnerName),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.white.withValues(alpha: 0.82),
               ),
-              _buildCenterTimerBadge(state),
-            ],
-          ),
+            ),
+            _buildCenterTimerBadge(state),
+          ],
+        ),
       );
     }
 
     if (!isKraken && hasWhiteWhaleEffect && state.phase == 'trick_end') {
       return Container(
-          constraints: const BoxConstraints(maxWidth: 270),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFFE6F6FF).withValues(alpha: 0.98),
-                const Color(0xFFD2ECFA).withValues(alpha: 0.96),
-                const Color(0xFFB7DBEE).withValues(alpha: 0.94),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF4F88A8).withValues(alpha: 0.55),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2B5C78).withValues(alpha: 0.16),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
+        constraints: const BoxConstraints(maxWidth: 270),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFE6F6FF).withValues(alpha: 0.98),
+              const Color(0xFFD2ECFA).withValues(alpha: 0.96),
+              const Color(0xFFB7DBEE).withValues(alpha: 0.94),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildCard('sk_white_whale', size: 52),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          L10n.of(context).skGameTrickWinner(winnerName),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF214A62),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          whaleNullifyLabel ??
-                              L10n.of(context).skGameWhiteWhaleActivated,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF356B89),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (bonus > 0) ...[
-                const SizedBox(height: 8),
-                Text(
-                  lootBonusPoints > 0
-                      ? L10n.of(
-                          context,
-                        ).skGameBonusWithLoot(bonus, lootBonusPoints)
-                      : L10n.of(context).skGameBonus(bonus),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF2E8B57),
-                  ),
-                ),
-              ],
-              _buildCenterTimerBadge(state),
-            ],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF4F88A8).withValues(alpha: 0.55),
           ),
-      );
-    }
-
-    return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2B5C78).withValues(alpha: 0.16),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              state.phase == 'trick_end'
-                  ? L10n.of(context).skGameTrickWinner(winnerName)
-                  : L10n.of(context).skGameCheckingCards,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-            if (whaleNullifyLabel != null && state.phase == 'trick_end') ...[
-              const SizedBox(height: 4),
-              Text(
-                whaleNullifyLabel,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF3A6B8F),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCard('sk_white_whale', size: 52),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        L10n.of(context).skGameTrickWinner(winnerName),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF214A62),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        whaleNullifyLabel ??
+                            L10n.of(context).skGameWhiteWhaleActivated,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF356B89),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-            if (state.phase == 'trick_end' && bonus > 0) ...[
-              const SizedBox(height: 4),
+              ],
+            ),
+            if (bonus > 0) ...[
+              const SizedBox(height: 8),
               Text(
                 lootBonusPoints > 0
                     ? L10n.of(
@@ -3180,13 +3134,58 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF43A047),
+                  color: Color(0xFF2E8B57),
                 ),
               ),
             ],
             _buildCenterTimerBadge(state),
           ],
         ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            state.phase == 'trick_end'
+                ? L10n.of(context).skGameTrickWinner(winnerName)
+                : L10n.of(context).skGameCheckingCards,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF5A4038),
+            ),
+          ),
+          if (whaleNullifyLabel != null && state.phase == 'trick_end') ...[
+            const SizedBox(height: 4),
+            Text(
+              whaleNullifyLabel,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3A6B8F),
+              ),
+            ),
+          ],
+          if (state.phase == 'trick_end' && bonus > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              lootBonusPoints > 0
+                  ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
+                  : L10n.of(context).skGameBonus(bonus),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF43A047),
+              ),
+            ),
+          ],
+          _buildCenterTimerBadge(state),
+        ],
+      ),
     );
   }
 

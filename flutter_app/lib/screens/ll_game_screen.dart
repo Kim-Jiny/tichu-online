@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../models/ll_game_state.dart';
+import '../widgets/turn_name_pill.dart';
 import '../widgets/love_letter_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
@@ -1246,15 +1247,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
         final verticalPadding = 0.0;
         // 마이티/스컬킹과 같은 톤으로 폰트 상향, seatScale 로 감쌈.
         final seatScale = (constraints.maxWidth / 116.0).clamp(0.85, 1.5);
-        final nameFontSize = (ultraTight
-            ? 10.0
-            : (tight ? 11.5 : (compact ? 13.0 : 14.0))) * seatScale;
-        final tokenSize = (ultraTight
-            ? 10.0
-            : (tight ? 12.5 : (compact ? 13.5 : 15.0))) * seatScale;
+        final nameFontSize =
+            (ultraTight ? 10.0 : (tight ? 11.5 : (compact ? 13.0 : 14.0))) *
+            seatScale;
+        final tokenSize =
+            (ultraTight ? 10.0 : (tight ? 12.5 : (compact ? 13.5 : 15.0))) *
+            seatScale;
         final spacing = ultraTight ? 1.0 : (tight ? 2.0 : 4.0);
-        final chipFontSize = (ultraTight ? 9.0 : (tight ? 10.0 : 11.5)) * seatScale;
-        final statusIconSize = (ultraTight ? 11.0 : (tight ? 12.5 : 13.5)) * seatScale;
+        final chipFontSize =
+            (ultraTight ? 9.0 : (tight ? 10.0 : 11.5)) * seatScale;
+        final statusIconSize =
+            (ultraTight ? 11.0 : (tight ? 12.5 : 13.5)) * seatScale;
         final labelPadding = 0.0;
         // The photo takes whatever height the rest of the label leaves, rather
         // than a fraction of the box. A fraction did nothing visible: the label
@@ -1291,199 +1294,202 @@ class _LLGameScreenState extends State<LLGameScreen> {
           padding: EdgeInsets.zero,
           decoration: const BoxDecoration(),
           child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                  width: contentWidth,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // 현재턴/하이라이트 테두리는 ProfileAvatar 에 직접 넘겨
-                      // 사진 라운드 코너와 같은 곡률로 감싼다. 탈락 표시는
-                      // 사진 위에 반투명 밴드로 얹어 아바타 크기를 유지한다.
-                      Padding(
-                        padding: EdgeInsets.only(bottom: spacing),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            Opacity(
-                              // 탈락한 플레이어는 사진 자체도 흐리게 —
-                              // 아래 탈락 밴드와 함께 눈에 덜 걸린다.
-                              opacity: player.eliminated ? 0.35 : 1.0,
-                              child: ProfileAvatar(
-                                photoUrl: _gameService?.resolvePhotoUrl(
-                                  player.photoUrl,
-                                ),
-                                size: avatarDiameter,
-                                blocked:
-                                    _gameService?.blockedUsers.contains(
-                                      player.name,
-                                    ) ??
-                                    false,
-                                border: (isCurrent || highlighted) &&
-                                        !player.eliminated
-                                    ? Border.all(
-                                        color: highlighted
-                                            ? const Color(0xFF64B5F6)
-                                            : const Color(0xFFE6C86A),
-                                        width: 1.8,
-                                      )
-                                    : null,
-                                fallback: player.isBot
-                                    ? BotAvatar(
-                                        size: avatarDiameter,
-                                        name: player.name,
-                                      )
-                                    : DefaultAvatar(size: avatarDiameter),
-                              ),
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topCenter,
+            child: SizedBox(
+              width: contentWidth,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 현재턴/하이라이트 테두리는 ProfileAvatar 에 직접 넘겨
+                  // 사진 라운드 코너와 같은 곡률로 감싼다. 탈락 표시는
+                  // 사진 위에 반투명 밴드로 얹어 아바타 크기를 유지한다.
+                  Padding(
+                    padding: EdgeInsets.only(bottom: spacing),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        Opacity(
+                          // 탈락한 플레이어는 사진 자체도 흐리게 —
+                          // 아래 탈락 밴드와 함께 눈에 덜 걸린다.
+                          opacity: player.eliminated ? 0.35 : 1.0,
+                          child: ProfileAvatar(
+                            photoUrl: _gameService?.resolvePhotoUrl(
+                              player.photoUrl,
                             ),
-                            if (player.eliminated)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(
-                                      avatarDiameter * 17 / 60,
-                                    ),
-                                    bottomRight: Radius.circular(
-                                      avatarDiameter * 17 / 60,
-                                    ),
-                                  ),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: ultraTight ? 1.0 : 2.0,
-                                    ),
-                                    color: Colors.black.withValues(alpha: 0.55),
-                                    child: Text(
-                                      L10n.of(context).llEliminated,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize:
-                                            (ultraTight ? 9.0 : 10.5) *
-                                            seatScale,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ),
+                            size: avatarDiameter,
+                            blocked:
+                                _gameService?.blockedUsers.contains(
+                                  player.name,
+                                ) ??
+                                false,
+                            border:
+                                (isCurrent || highlighted) && !player.eliminated
+                                ? Border.all(
+                                    color: highlighted
+                                        ? const Color(0xFF64B5F6)
+                                        : const Color(0xFFE6C86A),
+                                    width: 1.8,
+                                  )
+                                : null,
+                            fallback: player.isBot
+                                ? BotAvatar(
+                                    size: avatarDiameter,
+                                    name: player.name,
+                                  )
+                                : DefaultAvatar(size: avatarDiameter),
+                          ),
+                        ),
+                        if (player.eliminated)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(
+                                  avatarDiameter * 17 / 60,
+                                ),
+                                bottomRight: Radius.circular(
+                                  avatarDiameter * 17 / 60,
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              player.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: player.eliminated
-                                    ? const Color(0xFFBBAAAA)
-                                    : const Color(0xFF5A4038),
-                                fontSize: nameFontSize,
-                                fontWeight: isCurrent
-                                    ? FontWeight.w800
-                                    : FontWeight.w700,
-                                decoration: player.eliminated
-                                    ? TextDecoration.lineThrough
-                                    : null,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: ultraTight ? 1.0 : 2.0,
+                                ),
+                                color: Colors.black.withValues(alpha: 0.55),
+                                child: Text(
+                                  L10n.of(context).llEliminated,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize:
+                                        (ultraTight ? 9.0 : 10.5) * seatScale,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                          if (!player.connected)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 3),
-                              child: Icon(
-                                Icons.wifi_off,
-                                color: Colors.red,
-                                size: statusIconSize,
-                              ),
-                            ),
-                          if (player.protected)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 3),
-                              child: Icon(
-                                Icons.shield,
-                                color: Colors.blueAccent,
-                                size: statusIconSize,
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (player.timeoutCount > 0 && !player.eliminated)
-                        Padding(
-                          padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
+                      ],
+                    ),
+                  ),
+                  // 지금 차례면 이름에 노란 알약 — 티츄 판과 같은 표시.
+                  TurnNamePill(
+                    isTurn: isCurrent && !player.eliminated,
+                    horizontal: 6,
+                    vertical: 1,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
                           child: Text(
-                            '⏱ ${player.timeoutCount}/3',
+                            player.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: const Color(0xFFE65100),
-                              fontSize: ultraTight ? 9 : 10,
+                              color: player.eliminated
+                                  ? const Color(0xFFBBAAAA)
+                                  : const Color(0xFF5A4038),
+                              fontSize: nameFontSize,
+                              fontWeight: isCurrent
+                                  ? FontWeight.w800
+                                  : FontWeight.w700,
+                              decoration: player.eliminated
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        if (!player.connected)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 3),
+                            child: Icon(
+                              Icons.wifi_off,
+                              color: Colors.red,
+                              size: statusIconSize,
+                            ),
+                          ),
+                        if (player.protected)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 3),
+                            child: Icon(
+                              Icons.shield,
+                              color: Colors.blueAccent,
+                              size: statusIconSize,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (player.timeoutCount > 0 && !player.eliminated)
+                    Padding(
+                      padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
+                      child: Text(
+                        '⏱ ${player.timeoutCount}/3',
+                        style: TextStyle(
+                          color: const Color(0xFFE65100),
+                          fontSize: ultraTight ? 9 : 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: spacing),
+                  // Hearts and the turn countdown share one row. The chip
+                  // used to own a row below them, and that row cost the
+                  // photo the same height whether or not it was that
+                  // player's turn.
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int i = 0; i < state.targetTokens; i++)
+                        Padding(
+                          padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
+                          child: Icon(
+                            Icons.favorite,
+                            color: i < player.tokens
+                                ? player.eliminated
+                                      ? const Color(0xFFB98B95)
+                                      : const Color(0xFFE91E63)
+                                : const Color(0xFFE0D8D4),
+                            size: tokenSize,
+                          ),
+                        ),
+                      if (isCurrent && _remainingSeconds > 0)
+                        Container(
+                          margin: EdgeInsets.only(left: ultraTight ? 2 : 3),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: ultraTight ? 4 : 5,
+                            vertical: ultraTight ? 1 : 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _remainingSeconds <= 5
+                                ? Colors.red.shade900
+                                : Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${_remainingSeconds}s',
+                            style: TextStyle(
+                              color: _remainingSeconds <= 5
+                                  ? Colors.redAccent
+                                  : Colors.amber.shade900,
+                              fontSize: chipFontSize,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
-                      SizedBox(height: spacing),
-                      // Hearts and the turn countdown share one row. The chip
-                      // used to own a row below them, and that row cost the
-                      // photo the same height whether or not it was that
-                      // player's turn.
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (int i = 0; i < state.targetTokens; i++)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                right: ultraTight ? 1 : 2,
-                              ),
-                              child: Icon(
-                                Icons.favorite,
-                                color: i < player.tokens
-                                    ? player.eliminated
-                                          ? const Color(0xFFB98B95)
-                                          : const Color(0xFFE91E63)
-                                    : const Color(0xFFE0D8D4),
-                                size: tokenSize,
-                              ),
-                            ),
-                          if (isCurrent && _remainingSeconds > 0)
-                            Container(
-                              margin: EdgeInsets.only(left: ultraTight ? 2 : 3),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: ultraTight ? 4 : 5,
-                                vertical: ultraTight ? 1 : 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _remainingSeconds <= 5
-                                    ? Colors.red.shade900
-                                    : Colors.amber.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                '${_remainingSeconds}s',
-                                style: TextStyle(
-                                  color: _remainingSeconds <= 5
-                                      ? Colors.redAccent
-                                      : Colors.amber.shade900,
-                                  fontSize: chipFontSize,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
                     ],
                   ),
+                ],
               ),
+            ),
           ),
         );
       },

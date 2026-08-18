@@ -17,6 +17,7 @@ import '../widgets/spectator_controls.dart';
 import '../utils/spectator_line.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../widgets/turn_name_pill.dart';
 import '../widgets/mid_game_join.dart';
 
 class MightyGameScreen extends StatefulWidget {
@@ -1376,11 +1377,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           for (var i = 0; i < shown.length; i++)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => _showPlayerProfileDialog(
-                shown[i],
-                game,
-                isBot: false,
-              ),
+              onTap: () =>
+                  _showPlayerProfileDialog(shown[i], game, isBot: false),
               child: Text(
                 '${shown[i]}${i < shown.length - 1 || hidden > 0 ? ', ' : ''}',
                 style: const TextStyle(
@@ -1767,12 +1765,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   // 시트에 이미 같은 정보가 있어서 중앙은 비운다.
                   child: isBidding
                       ? (showAllSeats
-                          ? _buildBiddingCenterInfo(state)
-                          : const SizedBox.shrink())
+                            ? _buildBiddingCenterInfo(state)
+                            : const SizedBox.shrink())
                       : isKillSelect
                       ? (showAllSeats
-                          ? _buildKillCenterInfo(state)
-                          : const SizedBox.shrink())
+                            ? _buildKillCenterInfo(state)
+                            : const SizedBox.shrink())
                       : Transform.translate(
                           offset: Offset(
                             0,
@@ -1829,7 +1827,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         game,
                         p,
                         canRequestCardView: canRequestCardView,
-                        highlighted: _viewingPlayerId == p.id &&
+                        highlighted:
+                            _viewingPlayerId == p.id &&
                             game.approvedCardViews.contains(p.id) &&
                             p.canViewCards,
                         layer: layer,
@@ -1928,11 +1927,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // run under the board; within a phase the number is still constant.
     final count = math.max(cardCount, _mightyDealSize);
     if (count <= 0) return 230.0;
-    final geom = _mightyHandGeometry(
-      boxWidth,
-      count,
-      playerCount: playerCount,
-    );
+    final geom = _mightyHandGeometry(boxWidth, count, playerCount: playerCount);
     final rowsHeight =
         geom.rows * geom.cardHeight + (geom.rows - 1) * 4.0 + 8.0;
     return rowsHeight + _handChromeHeight;
@@ -2172,45 +2167,54 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                         Opacity(
                                           opacity: photoOn ? 1.0 : 0.0,
                                           child: ProfileAvatar(
-                                          photoUrl: game.resolvePhotoUrl(
-                                            player.photoUrl,
+                                            photoUrl: game.resolvePhotoUrl(
+                                              player.photoUrl,
+                                            ),
+                                            size: avatarDiameter,
+                                            blocked: game.blockedUsers.contains(
+                                              player.name,
+                                            ),
+                                            // 테두리를 아바타에 직접 넘겨서 사진의
+                                            // 라운드 코너와 정확히 같은 곡률로 감싼다
+                                            // — 바깥 Container 로 감쌌더니 shape.circle
+                                            // 이 되어 사진 모서리에서 살짝 어긋났다.
+                                            border:
+                                                (isCurrentTurn ||
+                                                    isDeclarer ||
+                                                    isPartner ||
+                                                    highlighted)
+                                                ? Border.all(
+                                                    color: isCurrentTurn
+                                                        ? const Color(
+                                                            0xFFE6C86A,
+                                                          )
+                                                        : isDeclarer
+                                                        ? const Color(
+                                                            0xFFFF8A00,
+                                                          )
+                                                        : isPartner
+                                                        ? const Color(
+                                                            0xFF4CAF50,
+                                                          )
+                                                        : const Color(
+                                                            0xFF64B5F6,
+                                                          ),
+                                                    width:
+                                                        (isDeclarer ||
+                                                            isPartner)
+                                                        ? 3.5
+                                                        : 1.5,
+                                                  )
+                                                : null,
+                                            fallback: player.isBot
+                                                ? BotAvatar(
+                                                    size: avatarDiameter,
+                                                    name: player.name,
+                                                  )
+                                                : DefaultAvatar(
+                                                    size: avatarDiameter,
+                                                  ),
                                           ),
-                                          size: avatarDiameter,
-                                          blocked: game.blockedUsers.contains(
-                                            player.name,
-                                          ),
-                                          // 테두리를 아바타에 직접 넘겨서 사진의
-                                          // 라운드 코너와 정확히 같은 곡률로 감싼다
-                                          // — 바깥 Container 로 감쌌더니 shape.circle
-                                          // 이 되어 사진 모서리에서 살짝 어긋났다.
-                                          border:
-                                              (isCurrentTurn ||
-                                                  isDeclarer ||
-                                                  isPartner ||
-                                                  highlighted)
-                                              ? Border.all(
-                                                  color: isCurrentTurn
-                                                      ? const Color(0xFFE6C86A)
-                                                      : isDeclarer
-                                                      ? const Color(0xFFFF8A00)
-                                                      : isPartner
-                                                      ? const Color(0xFF4CAF50)
-                                                      : const Color(0xFF64B5F6),
-                                                  width:
-                                                      (isDeclarer || isPartner)
-                                                      ? 3.5
-                                                      : 1.5,
-                                                )
-                                              : null,
-                                          fallback: player.isBot
-                                              ? BotAvatar(
-                                                  size: avatarDiameter,
-                                                  name: player.name,
-                                                )
-                                              : DefaultAvatar(
-                                                  size: avatarDiameter,
-                                                ),
-                                        ),
                                         ),
                                         if (canRequestCardView && photoOn)
                                           Positioned(
@@ -2232,8 +2236,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                     ? Icons.schedule
                                                     : isApproved
                                                     ? Icons.visibility
-                                                    : Icons
-                                                          .visibility_outlined,
+                                                    : Icons.visibility_outlined,
                                                 size: 12,
                                                 color: isPending
                                                     ? const Color(0xFFFFB74D)
@@ -2304,38 +2307,44 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   ),
                                   Opacity(
                                     opacity: overlayOn ? 1.0 : 0.0,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (!player.connected)
-                                          Padding(
-                                            padding: EdgeInsets.only(
-                                              right: compact ? 2 : 3,
+                                    // 지금 차례면 이름에 노란 알약 — 티츄 판과 같은 표시.
+                                    child: TurnNamePill(
+                                      isTurn: isCurrentTurn,
+                                      horizontal: compact ? 5 : 7,
+                                      vertical: 1,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (!player.connected)
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                right: compact ? 2 : 3,
+                                              ),
+                                              child: Icon(
+                                                Icons.wifi_off,
+                                                size: offlineIconSize,
+                                                color: const Color(0xFFE53935),
+                                              ),
                                             ),
-                                            child: Icon(
-                                              Icons.wifi_off,
-                                              size: offlineIconSize,
-                                              color: const Color(0xFFE53935),
+                                          Flexible(
+                                            child: Text(
+                                              player.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: player.connected
+                                                    ? const Color(0xFF5A4038)
+                                                    : const Color(0xFFE53935),
+                                                fontSize: nameFontSize,
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                             ),
                                           ),
-                                        Flexible(
-                                          child: Text(
-                                            player.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: player.connected
-                                                  ? const Color(0xFF5A4038)
-                                                  : const Color(0xFFE53935),
-                                              fontSize: nameFontSize,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   SizedBox(height: spacing),
@@ -2565,10 +2574,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         ? 1.0
         : seatHeight / intrinsicHeight;
     final unscaledPhotoCentre = roleLabelHeight + avatar / 2;
-    return (
-      avatar: avatar,
-      photoCentre: unscaledPhotoCentre * fittedScale,
-    );
+    return (avatar: avatar, photoCentre: unscaledPhotoCentre * fittedScale);
   }
 
   double _mightyTopSeatAngleForIndex(
@@ -3026,36 +3032,36 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _buildBiddingCenterInfo(MightyGameStateData state) {
     // Center 감싸면 부모 Align 이 무효화 (trick 위젯들과 같은 이유).
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.gavel, size: 20, color: Color(0xFF1565C0)),
-            const SizedBox(height: 4),
-            Text(
-              L10n.of(context).mtBidInProgress,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.gavel, size: 20, color: Color(0xFF1565C0)),
+          const SizedBox(height: 4),
+          Text(
+            L10n.of(context).mtBidInProgress,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5A4038),
             ),
-            if (_remainingSeconds > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _remainingSeconds <= 5
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF8A7A72),
-                  ),
+          ),
+          if (_remainingSeconds > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${_remainingSeconds}s',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: _remainingSeconds <= 5
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFF8A7A72),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -3071,27 +3077,80 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   .firstOrNull ??
               '');
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.dangerous, size: 20, color: Color(0xFFD84315)),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: 180,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.dangerous, size: 20, color: Color(0xFFD84315)),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 180,
+            child: Text(
+              L10n.of(context).mtKillPhaseWait(declarerName),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+          ),
+          if (_remainingSeconds > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
               child: Text(
-                L10n.of(context).mtKillPhaseWait(declarerName),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
+                '${_remainingSeconds}s',
+                style: TextStyle(
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
+                  color: _remainingSeconds <= 5
+                      ? const Color(0xFFE53935)
+                      : const Color(0xFF8A7A72),
                 ),
               ),
             ),
-            if (_remainingSeconds > 0)
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrickArea(MightyGameStateData state, GameService game) {
+    if (state.currentTrick.isEmpty) {
+      // During the kitty exchange spectators see the status here in the centre;
+      // players (incl. non-declarers) see it above their own hand instead.
+      final isKittyWait = state.phase == 'kitty_exchange' && game.isSpectator;
+      // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
+      // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
+      return Container(
+        // 내용에 맞춰 줄어든다. 고정 200dp 라 "대기 중…" 한 줄일 때도 양옆으로
+        // 길어져서, 좌석이 바깥으로 벌어진 뒤로는 서로 겹쳤다.
+        constraints: const BoxConstraints(minWidth: 116, maxWidth: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isKittyWait ? Icons.swap_horiz : Icons.style,
+              size: 20,
+              color: const Color(0xFF8A7A72),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isKittyWait
+                  ? L10n.of(context).mtExchangingKitty
+                  : state.isMyTurn
+                  ? L10n.of(context).mtYourTurn
+                  : L10n.of(context).mtWaiting,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF5A4038),
+              ),
+            ),
+            if (_remainingSeconds > 0 && (state.isMyTurn || isKittyWait))
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
@@ -3107,59 +3166,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
           ],
         ),
-    );
-  }
-
-  Widget _buildTrickArea(MightyGameStateData state, GameService game) {
-    if (state.currentTrick.isEmpty) {
-      // During the kitty exchange spectators see the status here in the centre;
-      // players (incl. non-declarers) see it above their own hand instead.
-      final isKittyWait = state.phase == 'kitty_exchange' && game.isSpectator;
-      // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
-      // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
-      return Container(
-          // 내용에 맞춰 줄어든다. 고정 200dp 라 "대기 중…" 한 줄일 때도 양옆으로
-          // 길어져서, 좌석이 바깥으로 벌어진 뒤로는 서로 겹쳤다.
-          constraints: const BoxConstraints(minWidth: 116, maxWidth: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isKittyWait ? Icons.swap_horiz : Icons.style,
-                size: 20,
-                color: const Color(0xFF8A7A72),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isKittyWait
-                    ? L10n.of(context).mtExchangingKitty
-                    : state.isMyTurn
-                    ? L10n.of(context).mtYourTurn
-                    : L10n.of(context).mtWaiting,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-              if (_remainingSeconds > 0 && (state.isMyTurn || isKittyWait))
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '${_remainingSeconds}s',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: _remainingSeconds <= 5
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFF8A7A72),
-                    ),
-                  ),
-                ),
-            ],
-          ),
       );
     }
 
@@ -3182,81 +3188,81 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
     // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
     return Container(
-        // 같은 이유로 고정 폭 대신 내용 폭 + 하한. 배경 무늬는 FittedBox 라
-        // 상자가 좁아지면 같이 작아진다.
-        constraints: const BoxConstraints(
-          minWidth: 116,
-          maxWidth: 150,
-          minHeight: 74,
-        ),
-        clipBehavior: Clip.antiAlias,
-        // 배경은 없지만 워터마크가 라운드 코너 밖으로 새지 않도록
-        // clip 은 유지 — clipBehavior 는 decoration 이 있어야 살아난다.
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Big faded lead-suit watermark — FittedBox scales it to fit the
-            // box so it's always fully visible (never clipped).
-            if (leadSuit != null)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    child: SuitIcon(
-                      suit: leadSuit,
-                      size: 100,
-                      color: accent.withValues(alpha: 0.15),
-                    ),
+      // 같은 이유로 고정 폭 대신 내용 폭 + 하한. 배경 무늬는 FittedBox 라
+      // 상자가 좁아지면 같이 작아진다.
+      constraints: const BoxConstraints(
+        minWidth: 116,
+        maxWidth: 150,
+        minHeight: 74,
+      ),
+      clipBehavior: Clip.antiAlias,
+      // 배경은 없지만 워터마크가 라운드 코너 밖으로 새지 않도록
+      // clip 은 유지 — clipBehavior 는 decoration 이 있어야 살아난다.
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Big faded lead-suit watermark — FittedBox scales it to fit the
+          // box so it's always fully visible (never clipped).
+          if (leadSuit != null)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SuitIcon(
+                    suit: leadSuit,
+                    size: 100,
+                    color: accent.withValues(alpha: 0.15),
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (leadSuit != null)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${L10n.of(context).mtLead} ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: accent,
-                          ),
-                        ),
-                        SuitIcon(suit: leadSuit, size: 18, color: accent),
-                      ],
-                    )
-                  else
-                    const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
-                  // Turn timer
-                  if (_remainingSeconds > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '${_remainingSeconds}s',
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (leadSuit != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${L10n.of(context).mtLead} ',
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _remainingSeconds <= 5
-                              ? const Color(0xFFE53935)
-                              : const Color(0xFF8A7A72),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: accent,
                         ),
                       ),
+                      SuitIcon(suit: leadSuit, size: 18, color: accent),
+                    ],
+                  )
+                else
+                  const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
+                // Turn timer
+                if (_remainingSeconds > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${_remainingSeconds}s',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _remainingSeconds <= 5
+                            ? const Color(0xFFE53935)
+                            : const Color(0xFF8A7A72),
+                      ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3269,27 +3275,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             .firstOrNull ??
         '';
     return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                L10n.of(context).mtWins(winnerName),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF4CAF50),
-                ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8F5E9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              L10n.of(context).mtWins(winnerName),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF4CAF50),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -4348,8 +4354,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         game.approvedCardViews.contains(viewingPlayer.id) &&
         viewingPlayer.canViewCards;
     if (isApproved) return _spectatorApprovedHand(state, viewingPlayer);
-    final isPending =
-        game.pendingCardViewRequests.contains(viewingPlayer.id);
+    final isPending = game.pendingCardViewRequests.contains(viewingPlayer.id);
     if (isPending) return _spectatorPendingBar(viewingPlayer.name);
     return _spectatorRejectedBar(viewingPlayer.name);
   }

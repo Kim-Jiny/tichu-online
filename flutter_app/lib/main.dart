@@ -153,12 +153,16 @@ void recordPushTap(Map<String, dynamic> data) {
     pendingCampaignTaps.value = [...pendingCampaignTaps.value, id];
     return;
   }
-  // Everything else: an admin broadcast or a one-to-one notification. Report
-  // that it was opened and stop there.
-  if (type != 'broadcast' && type != 'log') return;
+  // Everything else: an admin broadcast, a letter's notification, or a
+  // one-to-one message. Report that it was opened and stop there.
+  //
+  // 우편 알림도 여기로 온다 — 발송 기록이 단체 발송과 같은 표에 남으므로
+  // 집계도 같은 갈래다. 이걸 빼두면 우편과 함께 나간 푸시만 열람 수가
+  // 영영 0 이다.
+  if (type != 'broadcast' && type != 'log' && type != 'mail') return;
   final id = int.tryParse('${data['pushId']}');
   if (id == null) return;
-  final entry = (kind: type == 'broadcast' ? 'broadcast' : 'log', id: id);
+  final entry = (kind: type == 'log' ? 'log' : 'broadcast', id: id);
   if (pendingPushOpens.value.contains(entry)) return;
   pendingPushOpens.value = [...pendingPushOpens.value, entry];
 }

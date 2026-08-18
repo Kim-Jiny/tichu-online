@@ -83,6 +83,19 @@ void main() {
       expect(pendingPushOpens.value, isEmpty);
     });
 
+    test('우편 알림도 집계 큐로 — 단체 발송과 같은 표에 남는다', () {
+      recordPushTap({'type': 'mail', 'mailId': '3', 'pushId': '91'});
+      expect(pendingCampaignTaps.value, isEmpty);
+      expect(pendingPushOpens.value, [(kind: 'broadcast', id: 91)]);
+    });
+
+    test('pushId 없는 옛 우편 알림은 아무 큐에도 넣지 않는다', () {
+      // 이 변경 전에 나간 알림에는 pushId 가 없다. 세어줄 행이 없으니
+      // 조용히 흘려보내야 한다.
+      recordPushTap({'type': 'mail', 'mailId': '3'});
+      expect(pendingPushOpens.value, isEmpty);
+    });
+
     test('어드민 단체 발송은 집계 큐로', () {
       recordPushTap({'type': 'broadcast', 'pushId': '7'});
       expect(pendingCampaignTaps.value, isEmpty);

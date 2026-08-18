@@ -4432,7 +4432,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                     <input type="hidden" name="item_key" value="${escapeHtml(it.item_key)}">
                     <label style="font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:3px;white-space:nowrap">
                       <input type="checkbox" name="refund_gold" value="1"${it.price ? '' : ' disabled'}>
-                      ${it.price ? `${formatNumber(it.price)}G 환불` : '환불 없음'}
+                      ${it.price
+                        ? `${formatNumber(it.price)}G 환불${it.source && it.source !== 'shop'
+                            ? ' <span style="color:#c62828">(무상 지급)</span>' : ''}`
+                        : '환불 없음'}
                     </label>
                     <button class="btn btn-danger" style="padding:5px 11px">회수</button>
                   </form>

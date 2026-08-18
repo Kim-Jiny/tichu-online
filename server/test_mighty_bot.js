@@ -164,12 +164,16 @@ check('fix3: friend preserves joker on locked trick',
     action.jokerSuit, s => s && s !== 'spade');
 })();
 
-// ── Fix 5: 마이티를 아끼고 그 무늬 최상위로 받는다 ──
+// ── Fix 5: 안 잘릴 자리면 마이티를 아끼고 그 무늬 최상위로 받는다 ──
 // 유저 리포트 국면: 주공이 첫 트릭에 낮은 카드를 리드했고, (아직 공개 안 된)
-// 프렌드 봇이 그 무늬 최상위(♠K)와 마이티(♠A)를 둘 다 들고 있다.
-// 뒤에 스페이드가 없는 상대가 기루다를 들고 있어서 "안전한 승리 카드" 검사는
-// ♠K 를 떨어뜨리고, 예전엔 그래서 마이티가 강제로 나갔다. 판돈 0점짜리
-// 첫 트릭이므로 ♠K 로 받고 마이티는 남겨야 한다.
+// 프렌드 봇이 그 무늬 최상위(♠K)와 마이티(♠A)를 둘 다 들고 있다. 뒤에 남은
+// 사람이 전부 스페이드를 들고 있어 ♠K 가 그대로 버틴다 — 이럴 때 마이티까지
+// 쓰는 건 게임 최강 카드를 0점짜리 첫 트릭에 버리는 것이다.
+//
+// 처음엔 "뒤에서 잘릴 수 있어도 판돈 0점이면 ♠K" 로 넣었는데, 실제 대국에서
+// 그 ♠K 가 기루다로 잘려 트릭을 통째로 넘기는 걸 보고 뒤집었다(Fix 5b).
+// 지금 기준은 "잘릴 것 같으면 마이티, 버틸 때만 아낀다" 하나뿐이라,
+// 이 케이스는 러프할 사람이 아예 없는 배치로 다시 세웠다.
 (() => {
   const c = (s) => s.split(' ').map(x => `mighty_${x}`);
   const build = () => position({
@@ -180,18 +184,53 @@ check('fix3: friend preserves joker on locked trick',
     hands: {
       p0: c('spade_6 spade_7 spade_8 club_2 club_3 heart_2 heart_3 diamond_2 diamond_3'),
       p1: c('spade_A spade_K heart_8 heart_9 heart_10 diamond_8 diamond_9 diamond_10 club_9 club_10'),
-      // 스페이드가 없고 기루다를 들고 있다 → ♠K 는 잘릴 수 있다.
-      // 봇은 모든 손패를 보므로 오라클도 "어차피 러프당한다"를 알고 마이티를
-      // 골랐었다. 그래도 판돈 0점짜리 첫 트릭엔 ♠K 로 받는 게 맞다.
-      p2: c('club_4 club_5 club_6 club_Q club_K heart_4 heart_5 diamond_4 diamond_5 diamond_7'),
-      p3: c('spade_3 spade_4 spade_9 spade_10 heart_6 heart_7 heart_J diamond_6 diamond_J club_7'),
-      p4: c('spade_2 spade_J spade_Q heart_Q heart_K heart_A diamond_Q diamond_K diamond_A club_8'),
+      // 뒤에 남은 셋 다 스페이드를 들었다 → ♠K 를 넘길 사람이 없다.
+      p2: c('spade_2 spade_3 club_6 club_Q club_K heart_4 heart_5 diamond_4 diamond_5 diamond_7'),
+      p3: c('spade_4 spade_9 spade_10 heart_6 heart_7 heart_J diamond_6 diamond_J club_7 club_4'),
+      p4: c('spade_J spade_Q heart_Q heart_K heart_A diamond_Q diamond_K diamond_A club_8 club_5'),
     },
   });
   for (const strategy of ['heuristic', 'mixoracle']) {
-    check(`fix5(${strategy}): 첫 트릭에서 마이티 대신 무늬 최상위`,
+    check(`fix5(${strategy}): 안 잘릴 자리면 마이티 대신 무늬 최상위`,
       (MightyBot.decideMightyBotAction(build(), 'p1', strategy) || {}).cardId,
       got => got === 'mighty_spade_K');
+  }
+})();
+
+// ── Fix 5b: 뒤에서 잘릴 것 같으면 마이티를 낸다 ──
+// 유저 리포트: 기루다 하트, 주공이 1트릭 초구로 ♠3. 프렌드 봇은 ♠A(마이티)와
+// ♠K 를 들고 있고, 뒤에 스페이드가 없는 야당이 있다. 봇은 마이티도 ♠K 도 안
+// 내고 흘려서 트릭을 통째로 내줬다 — 마이티를 아끼려고 손을 뗀 규칙과 점수패를
+// 안 넘기려는 규칙이 엇갈려서 셋 중 제일 나쁜 수가 나왔다.
+// 야당이 막자리든 중간 자리든 같다. 잘릴 것 같으면 마이티로 확실히 가져온다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = (voidLast) => position({
+    declarer: 'p0', partner: null, friendRevealed: false,
+    friendCard: 'mighty_spade_A', trumpSuit: 'heart',
+    tricksLen: 0, currentPlayer: 'p2',
+    currentTrick: [
+      { pid: 'p0', cardId: 'mighty_spade_3' },
+      { pid: 'p1', cardId: 'mighty_spade_7' },
+    ],
+    hands: {
+      p0: c('spade_4 spade_5 heart_2 heart_3 club_2 club_3 club_4 diamond_2 diamond_3'),
+      p1: c('spade_8 heart_4 club_5 club_6 club_7 diamond_4 diamond_5 diamond_6 diamond_7'),
+      p2: c('spade_A spade_K heart_5 club_8 club_9 club_10 diamond_8 diamond_9 diamond_10 diamond_J'),
+      // 스페이드가 없고 기루다를 잔뜩 든 야당. 막자리/중간 자리 둘 다 본다.
+      [voidLast ? 'p3' : 'p4']:
+        c('spade_6 spade_9 spade_10 spade_J spade_Q heart_6 club_J club_Q club_K diamond_Q'),
+      [voidLast ? 'p4' : 'p3']:
+        c('heart_A heart_K heart_Q heart_J heart_10 heart_9 heart_8 club_A diamond_K diamond_A'),
+    },
+  });
+  for (const strategy of ['heuristic', 'mixoracle']) {
+    check(`fix5b(${strategy}): 막자리가 잘라 가면 마이티를 낸다`,
+      (MightyBot.decideMightyBotAction(build(true), 'p2', strategy) || {}).cardId,
+      got => got === 'mighty_spade_A');
+    check(`fix5b(${strategy}): 중간 자리가 잘라 가도 마이티를 낸다`,
+      (MightyBot.decideMightyBotAction(build(false), 'p2', strategy) || {}).cardId,
+      got => got === 'mighty_spade_A');
   }
 })();
 

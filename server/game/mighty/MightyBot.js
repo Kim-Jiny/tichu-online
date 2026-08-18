@@ -933,7 +933,15 @@ function pickSufficientWinner(winningCards, game, isLastPlayer, oppBehind) {
     }
 
     // Lead-suit (or trump-suit) follow: need a guaranteed top-of-suit winner.
-    const sureCheap = cheap.filter(c => _isEffectiveTopOfSuit(c, game));
+    // "무늬 최상위"는 러프까지 막아 주지 못한다. 뒤에 남은 야당이 잘라 갈 수
+    // 있는데 마이티가 손에 있다면, 뺏기느니 마이티로 확실히 가져온다.
+    // 마이티가 없으면 이 필터는 아무것도 안 바꾼다.
+    const mightyAvailable = winningCards.includes(mightyCard);
+    const sureCheap = cheap.filter(c => {
+      if (!_isEffectiveTopOfSuit(c, game)) return false;
+      if (!mightyAvailable) return true;
+      return _isSafeFriendWinner(c, game, game.currentPlayer);
+    });
     if (sureCheap.length > 0) return getWeakestCard(sureCheap, game);
     if (winningCards.includes(mightyCard)) return mightyCard;
     if (winningCards.includes('mighty_joker')) return 'mighty_joker';
@@ -2205,7 +2213,15 @@ function _topOfSuitInsteadOfMighty(game, botId, winningCards) {
     ? game.jokerSuitDeclared
     : getCardInfo(leadCardId).suit;
   const sameSuit = tops.filter(c => getCardInfo(c).suit === leadSuit);
-  return getWeakestCard(sameSuit.length > 0 ? sameSuit : tops, game);
+  const pick = getWeakestCard(sameSuit.length > 0 ? sameSuit : tops, game);
+  if (!pick) return null;
+
+  // 대신 내는 카드가 뒤에서 잘릴 것 같으면 이 교환은 성립하지 않는다.
+  // 마이티를 아꼈다고 좋아할 게 아니라 트릭을 통째로(그 카드가 점수패면
+  // 점수까지) 야당에 넘겨준 것이기 때문이다. 아끼는 건 그 무늬 최상위가
+  // 실제로 버틸 때만 한다.
+  if (!_isSafeFriendWinner(pick, game, botId)) return null;
+  return pick;
 }
 
 /**

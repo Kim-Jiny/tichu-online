@@ -3804,7 +3804,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               _buildMidGameJoinBadge(game),
               const SizedBox(height: 12),
             ],
-            if (game.roomRandomSeating)
+            // 팀 배치는 네 자리(0·2 대 1·3)를 그대로 찍어 읽는다. 방을
+            // 옮기는 찰나에는 게임 종류가 아직 티츄인 채로 자리 수만 먼저
+            // 바뀌어 있을 수 있어서(스컬킹 2인 방에 들어가는 순간 등)
+            // roomPlayers[2] 를 읽다 터졌다. 자리가 모자라면 격자로 그린다.
+            if (game.roomRandomSeating || game.roomPlayers.length < 4)
               // No teams to keep apart here — they are drawn at start — so
               // the grid is free to pair whoever is adjacent.
               _buildSeatGrid(game)

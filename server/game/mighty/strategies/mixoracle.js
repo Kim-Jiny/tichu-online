@@ -412,6 +412,19 @@ function _calledSuit(game) {
     }
     return trick.leadSuit || null;
   }
+
+  // 아직 프렌드 카드가 안 나왔다면 — 마이티/조커 프렌드는 카드를 낼 때까지
+  // 드러나지 않는다 — 주공이 처음 깐 무늬가 곧 부른 문양이다. 주공은 그
+  // 무늬로 프렌드를 끌어내려는 것이고, 돌려줄 곳도 거기다.
+  if (!game.friendRevealed) {
+    for (const trick of game.tricks || []) {
+      if (trick.leader !== game.declarer) continue;
+      if (trick.leadSuit && typeof global.__mightyCalledSuitHook === 'function') {
+        global.__mightyCalledSuitHook(trick.leadSuit);
+      }
+      return trick.leadSuit || null;
+    }
+  }
   return null;
 }
 
@@ -434,9 +447,25 @@ function _friendNTLeadRule(game, botId) {
     ? hand.filter(c => c === 'mighty_joker' || getCardInfo(c).suit !== avoidSuit)
     : hand;
 
+  const friendSuit = _calledSuit(game);
+  const calledSuitCards = friendSuit
+    ? leadable.filter(c => c !== 'mighty_joker'
+        && (getCardInfo(c) || {}).suit === friendSuit)
+    : [];
+
+  // 아직 드러나지 않은 마이티 프렌드는 마이티를 "현금화할 top" 으로 세지
+  // 않는다. 마이티는 언제든 이기는 카드라 top 목록의 맨 앞에 서지만, 여기서
+  // 던지면 두 가지를 한꺼번에 버린다: 아무도 위협하지 않는 트릭에 최강 카드를
+  // 쓰고, 그러면서 프렌드가 누구인지 알려준다. 주공이 부른 무늬를 돌려줄 수
+  // 있을 때만 미룬다 — 돌려줄 게 없으면 마이티로라도 선을 잡는 게 맞다.
+  const holdMighty = game.friendCard === game.getMightyCard()
+    && !game.friendRevealed
+    && calledSuitCards.length > 0;
+
   const tops = [];
   for (const cardId of leadable) {
     if (cardId === 'mighty_joker') continue;
+    if (holdMighty && cardId === game.getMightyCard()) continue;
     if (!MightyBotInternals.isEffectiveTopOfSuit(cardId, game)) continue;
     tops.push(cardId);
   }
@@ -449,16 +478,8 @@ function _friendNTLeadRule(game, botId) {
     return MightyBotInternals.makePlayAction(tops[0], game, botId);
   }
 
-  const friendSuit = _calledSuit(game);
   if (!friendSuit) return null;
-
-  const friendSuitCards = [];
-  for (const cardId of leadable) {
-    if (cardId === 'mighty_joker') continue;
-    const info = getCardInfo(cardId);
-    if (!info || info.suit !== friendSuit) continue;
-    friendSuitCards.push(cardId);
-  }
+  const friendSuitCards = [...calledSuitCards];
   if (friendSuitCards.length === 0) return null;
 
   // Called-suit return goes HIGH-first: leading the highest remaining

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui' show FontFeature, ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -3128,81 +3129,147 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
+    final myTotal = state.myTeam == 'A'
+        ? (state.totalScores['teamA'] ?? 0)
+        : (state.totalScores['teamB'] ?? 0);
+    final theirTotal = state.myTeam == 'A'
+        ? (state.totalScores['teamB'] ?? 0)
+        : (state.totalScores['teamA'] ?? 0);
+    final myRound = state.myTeam == 'A'
+        ? state.lastRoundScores['teamA']
+        : state.lastRoundScores['teamB'];
+    final theirRound = state.myTeam == 'A'
+        ? state.lastRoundScores['teamB']
+        : state.lastRoundScores['teamA'];
+
     return _buildDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (state.lastRoundScores.isNotEmpty) ...[
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: l10n.gameThisRound),
-                  TextSpan(
-                    text:
-                        '${state.myTeam == 'A' ? state.lastRoundScores['teamA'] : state.lastRoundScores['teamB']}',
-                    style: const TextStyle(
-                      color: Color(0xFF4A90D9),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const TextSpan(text: ' : '),
-                  TextSpan(
-                    text:
-                        '${state.myTeam == 'A' ? state.lastRoundScores['teamB'] : state.lastRoundScores['teamA']}',
-                    style: const TextStyle(
-                      color: Color(0xFFD24B4B),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+              color: Color(0xFF1C1C1E),
             ),
-          ],
-          const SizedBox(height: 8),
-          Text.rich(
-            TextSpan(
+          ),
+          const SizedBox(height: 20),
+          // 총점을 크게 두 칸으로. 결과 화면에서 눈이 먼저 가는 건 누가
+          // 몇 점인가지, "총점:" 이라는 글자가 아니다.
+          Row(
+            children: [
+              Expanded(
+                child: _scoreColumn(
+                  l10n.gameScoreUs,
+                  myTotal,
+                  const Color(0xFF007AFF),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 44,
+                color: const Color(0xFFE5E5EA),
+              ),
+              Expanded(
+                child: _scoreColumn(
+                  l10n.gameScoreThem,
+                  theirTotal,
+                  const Color(0xFFFF3B30),
+                ),
+              ),
+            ],
+          ),
+          if (state.lastRoundScores.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _dialogHairline(),
+            const SizedBox(height: 12),
+            // 이번 라운드는 총점 아래 한 줄로. 문구의 콜론은 이 배치에서
+            // 군더더기라 떼고 쓴다.
+            Row(
               children: [
-                TextSpan(text: l10n.gameTotalScore),
-                TextSpan(
-                  text:
-                      '${state.myTeam == 'A' ? state.totalScores['teamA'] : state.totalScores['teamB']}',
-                  style: const TextStyle(
-                    color: Color(0xFF4A90D9),
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    l10n.gameThisRound.replaceAll(RegExp(r'[:\s]+$'), ''),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF8E8E93),
+                    ),
                   ),
                 ),
-                const TextSpan(text: ' : '),
-                TextSpan(
-                  text:
-                      '${state.myTeam == 'A' ? state.totalScores['teamB'] : state.totalScores['teamA']}',
+                Text(
+                  '$myRound',
                   style: const TextStyle(
-                    color: Color(0xFFD24B4B),
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF007AFF),
+                  ),
+                ),
+                const Text(
+                  '  :  ',
+                  style: TextStyle(fontSize: 14, color: Color(0xFFC7C7CC)),
+                ),
+                Text(
+                  '$theirRound',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFFF3B30),
                   ),
                 ),
               ],
             ),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          ],
           if (isGameEnd && game.isRankedRoom) ...[
             const SizedBox(height: 14),
             _buildRankedResult(game),
           ],
+          const SizedBox(height: 18),
+          _dialogHairline(),
           const SizedBox(height: 12),
           Text(
             isGameEnd ? l10n.gameAutoReturnLobby : l10n.gameAutoNextRound,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
           ),
         ],
       ),
     );
   }
+
+  /// 결과 팝업의 점수 한 칸 — 작은 라벨 위, 큰 숫자 아래.
+  Widget _scoreColumn(String label, int score, Color color) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF8E8E93),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '$score',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -1,
+            color: color,
+            // 자릿수가 달라도 두 칸이 흔들리지 않게.
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 머리카락 굵기 구분선. 상자를 또 만들지 않고 영역만 나눈다.
+  Widget _dialogHairline() =>
+      Container(height: 0.5, color: const Color(0xFFE5E5EA));
 
   Widget _buildRankedResult(GameService game) {
     final profile = game.profileFor(game.playerName);
@@ -3219,12 +3286,14 @@ class _GameScreenState extends State<GameScreen> {
     final seasonRating = data['seasonRating'] ?? 1000;
     final tier = _rankTier(seasonRating);
 
+    // 테두리 없는 옅은 바탕 한 겹. 팝업 안에서 상자를 또 그리면 층이
+    // 겹쳐 보인다 — 색은 티어 뱃지가 이미 들고 있다.
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F3FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE4DFF2)),
+        color: const Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -3234,9 +3303,9 @@ class _GameScreenState extends State<GameScreen> {
           Text(
             L10n.of(context).gameRankedScore(seasonRating as int),
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF4A4080),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1C1C1E),
             ),
           ),
         ],
@@ -3307,17 +3376,30 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildDialog({required Widget child}) {
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.all(32 * _s),
-          padding: EdgeInsets.all(24 * _s),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+    // 판을 검게 덮는 대신 흐리게 만든다. 아래에서 벌어진 일이 비쳐 보여야
+    // 결과가 그 판의 결말로 읽히고, 검은 장막은 화면을 두 개로 갈라놨다.
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Container(
+        color: const Color(0x40000000),
+        child: Center(
+          child: Container(
+            margin: EdgeInsets.all(32 * _s),
+            padding: EdgeInsets.fromLTRB(24 * _s, 22 * _s, 24 * _s, 18 * _s),
+            constraints: const BoxConstraints(maxWidth: 320),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: child,
           ),
-          child: child,
         ),
       ),
     );

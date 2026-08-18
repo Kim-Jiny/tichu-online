@@ -535,6 +535,8 @@
   "gameDraw": "무승부!",
   "gameThisRound": "이번 라운드: ",
   "gameTotalScore": "총점: ",
+  "gameScoreUs": "우리",
+  "gameScoreThem": "상대",
   "gameAutoReturnLobby": "3초 후 대기실로 이동...",
   "gameAutoNextRound": "3초 후 자동 진행...",
   "gameRankedScore": "랭크전 점수 {score}",

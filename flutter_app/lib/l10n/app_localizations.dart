@@ -3309,6 +3309,18 @@ abstract class L10n {
   /// **'Total: '**
   String get gameTotalScore;
 
+  /// No description provided for @gameScoreUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Us'**
+  String get gameScoreUs;
+
+  /// No description provided for @gameScoreThem.
+  ///
+  /// In en, this message translates to:
+  /// **'Them'**
+  String get gameScoreThem;
+
   /// No description provided for @gameAutoReturnLobby.
   ///
   /// In en, this message translates to:

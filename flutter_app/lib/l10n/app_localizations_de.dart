@@ -1790,6 +1790,12 @@ class L10nDe extends L10n {
   String get gameTotalScore => 'Gesamt: ';
 
   @override
+  String get gameScoreUs => 'Wir';
+
+  @override
+  String get gameScoreThem => 'Sie';
+
+  @override
   String get gameAutoReturnLobby => 'Rückkehr zur Lobby in 3 Sekunden...';
 
   @override

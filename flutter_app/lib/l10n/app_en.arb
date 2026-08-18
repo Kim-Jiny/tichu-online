@@ -1011,6 +1011,8 @@
   "gameDraw": "Draw!",
   "gameThisRound": "This round: ",
   "gameTotalScore": "Total: ",
+  "gameScoreUs": "Us",
+  "gameScoreThem": "Them",
   "gameAutoReturnLobby": "Returning to lobby in 3 seconds...",
   "gameAutoNextRound": "Auto-continuing in 3 seconds...",
   "gameRankedScore": "Ranked Score {score}",

@@ -1781,6 +1781,12 @@ class L10nEn extends L10n {
   String get gameTotalScore => 'Total: ';
 
   @override
+  String get gameScoreUs => 'Us';
+
+  @override
+  String get gameScoreThem => 'Them';
+
+  @override
   String get gameAutoReturnLobby => 'Returning to lobby in 3 seconds...';
 
   @override

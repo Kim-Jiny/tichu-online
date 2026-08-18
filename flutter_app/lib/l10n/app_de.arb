@@ -545,6 +545,8 @@
   "gameDraw": "Unentschieden!",
   "gameThisRound": "Diese Runde: ",
   "gameTotalScore": "Gesamt: ",
+  "gameScoreUs": "Wir",
+  "gameScoreThem": "Sie",
   "gameAutoReturnLobby": "Rückkehr zur Lobby in 3 Sekunden...",
   "gameAutoNextRound": "Weiter in 3 Sekunden...",
   "gameRankedScore": "Ranglistenpunkte {score}",

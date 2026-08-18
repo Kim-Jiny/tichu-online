@@ -1745,6 +1745,12 @@ class L10nKo extends L10n {
   String get gameTotalScore => '총점: ';
 
   @override
+  String get gameScoreUs => '우리';
+
+  @override
+  String get gameScoreThem => '상대';
+
+  @override
   String get gameAutoReturnLobby => '3초 후 대기실로 이동...';
 
   @override

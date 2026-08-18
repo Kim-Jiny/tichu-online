@@ -41,8 +41,10 @@ void main() {
   }
 
   test('the radius keeps its proportion at every size', () {
-    // 14 on a 60px avatar is where the shape was settled (the profile popup).
-    expect(avatarCornerRadius(60), closeTo(14, 0.001));
+    // 60px 아바타에서 17. 14 에서 올라온 값이다 — 좌석 테두리를 두르면
+    // 사진 모서리와 테두리 사이에 틈이 보여서, 사진 쪽 곡률을 테두리에
+    // 맞췄다(698373d).
+    expect(avatarCornerRadius(60), closeTo(17, 0.001));
     expect(avatarCornerRadius(30) / 30, closeTo(avatarCornerRadius(90) / 90, 0.0001));
     expect(avatarCornerRadius(24), greaterThan(0));
   });

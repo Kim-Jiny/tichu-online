@@ -120,8 +120,14 @@ class _MailboxScreenState extends State<MailboxScreen> {
   String _rewardLabel(L10n l10n, Map<String, dynamic> mail) {
     final gold = (mail['reward_gold'] as num?)?.toInt() ?? 0;
     if (gold > 0) return l10n.mailboxRewardGold(formatGold(gold));
-    final itemName = (mail['item_name_ko'] ?? mail['reward_item_key'] ?? '')
-        .toString();
+    // 서버는 item_name_ko/_en/_de 를 다 내려준다. 늘 한국어를 집으면
+    // 영어·독일어로 쓰는 사람 화면에 아이템 이름만 한국어로 섞인다.
+    // 없는 번역은 한국어로, 그것도 없으면 키로 떨어진다.
+    final locale = Localizations.localeOf(context).languageCode;
+    final localised = mail['item_name_$locale'];
+    final itemName =
+        (localised ?? mail['item_name_ko'] ?? mail['reward_item_key'] ?? '')
+            .toString();
     if (itemName.isEmpty) return '';
     final days = (mail['reward_days'] as num?)?.toInt();
     if (days != null && days > 0) {

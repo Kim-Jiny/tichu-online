@@ -1607,6 +1607,11 @@ async function runMigrations() {
       ON tc_mail_recipients (nickname, created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_recipient_unread
       ON tc_mail_recipients (nickname) WHERE read_at IS NULL`);
+    // 사용자가 우편을 지워도 배달 기록은 남긴다. 행을 지우면 어드민의
+    // "보낸 편지" 통계가 시간이 갈수록 줄어든다 — 받은 사람이 자기 우편함을
+    // 정리했다는 이유로 "몇 명에게 갔는지" 가 바뀌면 안 된다.
+    await client.query(
+      `ALTER TABLE tc_mail_recipients ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
 
     // Every push that goes to ONE user: a friend request, an inquiry reply, a
     // gold grant, an admin's one-off message. None of these were recorded
@@ -4086,6 +4091,12 @@ async function sendMail({
        ON CONFLICT (mail_id, nickname) DO NOTHING`,
       [mailId, targets],
     );
+    // "몇 명에게 보냈는가" 는 보낸 순간에 정해지는 사실이다. 세어서 구하면
+    // 나중에 누가 우편함을 정리했을 때 지난 발송의 숫자가 바뀐다.
+    await client.query(
+      `UPDATE tc_mail SET final_recipients =
+         (SELECT COUNT(*)::int FROM tc_mail_recipients WHERE mail_id = $1)
+        WHERE id = $1`, [mailId]);
     await client.query('COMMIT');
     return { success: true, id: mailId, sent: targets.length, missing, targets };
   } catch (err) {
@@ -4120,6 +4131,7 @@ async function getMailbox(nickname, limit = 50) {
          JOIN tc_users u ON u.nickname = r.nickname
          LEFT JOIN tc_shop_items si ON si.item_key = m.reward_item_key
         WHERE r.nickname = $1
+          AND r.deleted_at IS NULL
           -- A recycled nickname must not inherit the previous owner's post.
           AND r.created_at >= u.created_at
           AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
@@ -4152,7 +4164,8 @@ async function getUnreadMailCount(nickname) {
          FROM tc_mail_recipients r
          JOIN tc_mail m ON m.id = r.mail_id
          JOIN tc_users u ON u.nickname = r.nickname
-        WHERE r.nickname = $1 AND r.created_at >= u.created_at
+        WHERE r.nickname = $1 AND r.deleted_at IS NULL
+          AND r.created_at >= u.created_at
           AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($2 || ' days')::interval
           AND (
             r.read_at IS NULL
@@ -4174,7 +4187,7 @@ async function markMailRead(nickname, mailId) {
     await pool.query(
       `UPDATE tc_mail_recipients
           SET read_at = COALESCE(read_at, (NOW() AT TIME ZONE 'UTC'))
-        WHERE mail_id = $1 AND nickname = $2`,
+        WHERE mail_id = $1 AND nickname = $2 AND deleted_at IS NULL`,
       [parseInt(mailId, 10), nickname]);
     return { success: true };
   } catch (err) {
@@ -4198,7 +4211,8 @@ async function claimMail(nickname, mailId) {
     const rec = await client.query(
       `SELECT r.id, r.claimed_at FROM tc_mail_recipients r
          JOIN tc_users u ON u.nickname = r.nickname
-        WHERE r.mail_id = $1 AND r.nickname = $2 AND r.created_at >= u.created_at
+        WHERE r.mail_id = $1 AND r.nickname = $2 AND r.deleted_at IS NULL
+          AND r.created_at >= u.created_at
           AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
         FOR UPDATE OF r`,
       [parseInt(mailId, 10), nickname, MAIL_RETENTION_DAYS]);
@@ -4291,7 +4305,7 @@ async function deleteMailForUser(nickname, mailId) {
                 AND m.expires_at < (NOW() AT TIME ZONE 'UTC')) AS reward_closed
          FROM tc_mail_recipients r
          JOIN tc_mail m ON m.id = r.mail_id
-        WHERE r.mail_id = $1 AND r.nickname = $2
+        WHERE r.mail_id = $1 AND r.nickname = $2 AND r.deleted_at IS NULL
         FOR UPDATE OF r`,
       [parseInt(mailId, 10), nickname]);
     if (rec.rows.length === 0) {
@@ -4304,7 +4318,10 @@ async function deleteMailForUser(nickname, mailId) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'mail_claim_first' };
     }
-    await client.query('DELETE FROM tc_mail_recipients WHERE id = $1', [row.id]);
+    // 지우는 게 아니라 감춘다 — 위 deleted_at 주석 참고.
+    await client.query(
+      `UPDATE tc_mail_recipients SET deleted_at = (NOW() AT TIME ZONE 'UTC')
+        WHERE id = $1`, [row.id]);
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {

@@ -1545,6 +1545,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       text: TextSpan(text: text, style: style),
       maxLines: 1,
       textDirection: TextDirection.ltr,
+      // 기기 글자 크기 설정을 그대로 태운다. 이걸 빼면 글자를 키워 쓰는
+      // 사람에게는 실제보다 좁게 재서, 넘치지 않게 하려고 만든 계산이
+      // 도로 넘치게 만든다.
+      textScaler: MediaQuery.textScalerOf(context),
     )..layout();
     return tp.width;
   }

@@ -408,7 +408,11 @@ class GameService extends ChangeNotifier {
   /// and inquiry replies: three different things arrive in the same place, and
   /// a player should not have to learn which is which to know something is
   /// waiting.
-  int get unreadMailCount => mailbox.where(mailNeedsAttention).length;
+  int get unreadMailCount =>
+      mailbox.where(mailNeedsAttention).length + _unreadMailBeyondPage;
+
+  /// 서버가 센 수와 받아온 목록에서 센 수의 차 — mailUnreadBeyondPage 참고.
+  int _unreadMailBeyondPage = 0;
 
   /// Count of answered inquiries the user hasn't read yet. Drives a persistent
   /// badge so the reply is discoverable — the transient lobby banner alone left
@@ -2537,6 +2541,12 @@ class GameService extends ChangeNotifier {
                   ?.map((e) => (e as Map).cast<String, dynamic>())
                   .toList() ??
               [];
+          // 목록은 최근 50통까지다. 서버가 같이 내려준 정확한 수와의 차이를
+          // 들고 있다가 배지에 더한다 — mailUnreadBeyondPage 참고.
+          _unreadMailBeyondPage = mailUnreadBeyondPage(
+            mailbox.where(mailNeedsAttention).length,
+            (data['unread'] as num?)?.toInt(),
+          );
           mailboxError = null;
         } else {
           mailboxError = data['message'] as String?;
@@ -2569,6 +2579,13 @@ class GameService extends ChangeNotifier {
           }
           lastMailReward = data['reward'] as Map<String, dynamic>?;
         } else {
+          // 실패도 결과다. 화면이 이걸 집어가지 않으면 버튼이 '수령 중'
+          // 상태로 굳는다 — 만료·이미 수령·다른 기기에서 먼저 수령처럼
+          // 정상적으로 일어나는 실패에서.
+          _failedMailClaim = (
+            id: claimedId is int ? claimedId : null,
+            message: data['message'] as String?,
+          );
           mailboxError = data['message'] as String?;
         }
         notifyListeners();
@@ -3714,6 +3731,16 @@ class GameService extends ChangeNotifier {
     mailbox.removeWhere((m) => m['id'] == mailId);
     notifyListeners();
     _network.send({'type': 'delete_mail', 'mailId': mailId});
+  }
+
+  /// 실패한 수령. 성공한 보상과 같은 방식으로 화면이 한 번 집어간다 —
+  /// 화면은 이걸 받아야 '수령 중' 표시를 풀 수 있다.
+  ({int? id, String? message})? _failedMailClaim;
+
+  ({int? id, String? message})? takeFailedMailClaim() {
+    final f = _failedMailClaim;
+    _failedMailClaim = null;
+    return f;
   }
 
   /// The reward from the most recent successful claim, for the screen to show

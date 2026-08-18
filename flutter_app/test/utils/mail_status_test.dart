@@ -90,4 +90,26 @@ void main() {
   test('a zero-gold, no-item letter is not a reward letter', () {
     expect(mailNeedsAttention(letter(gold: 0, item: ''), now: now), isFalse);
   });
+
+  group('배지 수 — 목록은 50통까지만 내려온다', () {
+    test('페이지에 다 들어오면 더할 게 없다', () {
+      expect(mailUnreadBeyondPage(3, 3), 0);
+    });
+
+    test('목록에 안 실린 만큼을 더한다', () {
+      // 서버는 62통이 밀렸다고 하는데 목록에는 50통만 왔고 그중 47통이
+      // 대기 중이면, 배지는 47 이 아니라 62 가 되어야 한다.
+      expect(mailUnreadBeyondPage(47, 62), 15);
+    });
+
+    test('읽어서 목록 쪽이 줄어도 음수로 가지 않는다', () {
+      // 서버 수는 다음 갱신까지 그대로다. 그 사이 몇 통을 읽으면 목록에서
+      // 센 수가 서버 수보다 커질 수 있다.
+      expect(mailUnreadBeyondPage(9, 5), 0);
+    });
+
+    test('서버가 수를 안 보내면 목록만 믿는다', () {
+      expect(mailUnreadBeyondPage(4, null), 0);
+    });
+  });
 }

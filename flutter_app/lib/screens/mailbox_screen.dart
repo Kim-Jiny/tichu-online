@@ -43,6 +43,29 @@ class _MailboxScreenState extends State<MailboxScreen> {
 
   /// A claim's outcome arrives as a message, not a reply, so the result is
   /// picked up on the next rebuild rather than awaited.
+  ///
+  /// 실패도 결과로 받는다. 만료됐거나, 이미 수령했거나, 다른 기기에서 먼저
+  /// 가져간 우편은 정상적으로 실패한다 — 그걸 집어가지 않으면 버튼이
+  /// '수령 중' 인 채로 굳어서 다시 눌러볼 수도 없다.
+  void _drainClaimOutcome(GameService game) {
+    final failed = game.takeFailedMailClaim();
+    if (failed != null) {
+      _claiming = null;
+      final message = failed.message;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || message == null || message.isEmpty) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: const Color(0xFFB3261E),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      });
+    }
+    _drainReward(game);
+  }
+
   void _drainReward(GameService game) {
     final reward = game.takeMailReward();
     if (reward == null) return;
@@ -162,7 +185,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
               Expanded(
                 child: Consumer<GameService>(
                   builder: (context, game, _) {
-                    _drainReward(game);
+                    _drainClaimOutcome(game);
                     if (game.mailboxLoading && game.mailbox.isEmpty) {
                       return const Center(child: CircularProgressIndicator());
                     }

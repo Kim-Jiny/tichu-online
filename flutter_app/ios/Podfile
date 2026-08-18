@@ -27,6 +27,23 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 
 flutter_ios_podfile_setup
 
+# google_mobile_ads 9.1 은 podspec 에 iOS 13.0 을 최소로 적어놓고,
+# 실제로는 iOS 15 가 필요한 Google-Mobile-Ads-SDK ~> 13.7 에 의존한다.
+# 그래서 pod install 이 "requires a higher minimum iOS deployment version
+# than the plugin's reported minimum version" 으로 멎는다. 플러그인 쪽
+# podspec 버그이고 9.1.0 이 최신이라 기다릴 수가 없다.
+#
+# 해결이 아니라 정정이다: 이 앱은 이미 iOS 15 를 최소로 잡고 있으니
+# (platform :ios, '15.0') 잘못 적힌 값만 실제와 맞춰준다. 플러그인이
+# 고쳐지면 이 블록은 지워도 된다.
+pre_install do |installer|
+  installer.analysis_result.specifications.each do |spec|
+    if spec.name == 'google_mobile_ads' && spec.attributes_hash['ios']
+      spec.attributes_hash['ios']['deployment_target'] = '15.0'
+    end
+  end
+end
+
 target 'Runner' do
   use_frameworks!
 
@@ -40,6 +57,12 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
+      # google_mobile_ads 9.1 의 FLTAd_Internal.h / FLTAdPreloader.h 는
+      # GoogleMobileAds 프레임워크의 private 헤더(GoogleMobileAds_Beta.h)를
+      # include 한다. use_frameworks! 아래에서는 모듈 밖 헤더를 들이는 게
+      # 기본 금지라 빌드가 "Include of non-modular header inside framework
+      # module" 로 멎는다. 플러그인이 고쳐지기 전까지는 허용해줘야 한다.
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
       xcconfig_path = config.base_configuration_reference&.real_path
       if xcconfig_path
         xcconfig = File.read(xcconfig_path)

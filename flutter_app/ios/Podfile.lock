@@ -100,11 +100,11 @@ PODS:
     - GoogleUtilities/UserDefaults (~> 8.1)
     - nanopb (~> 3.30910.0)
   - Flutter (1.0.0)
-  - Google-Mobile-Ads-SDK (11.13.0):
+  - Google-Mobile-Ads-SDK (13.8.0):
     - GoogleUserMessagingPlatform (>= 1.1)
-  - google_mobile_ads (5.3.1):
+  - google_mobile_ads (9.1.0):
     - Flutter
-    - Google-Mobile-Ads-SDK (~> 11.13.0)
+    - Google-Mobile-Ads-SDK (~> 13.7)
     - webview_flutter_wkwebview
   - google_sign_in_ios (0.0.1):
     - AppAuth (>= 1.7.4)
@@ -329,8 +329,8 @@ SPEC CHECKSUMS:
   FirebaseInstallations: 317270fec08a5d418fdbc8429282238cab3ac843
   FirebaseMessaging: 3b26e2cee503815e01c3701236b020aa9b576f09
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  Google-Mobile-Ads-SDK: 14f57f2dc33532a24db288897e26494640810407
-  google_mobile_ads: 16ad301354fa6a7ea55770c6254bd4339bf8558b
+  Google-Mobile-Ads-SDK: 9818000c50be41d5289dff425c7e3338cfbf323d
+  google_mobile_ads: 6b1c16497394528f4a59e76e2fc947cb32b101e2
   google_sign_in_ios: b48bb9af78576358a168361173155596c845f0b9
   GoogleAdsOnDeviceConversion: 2be6297a4f048459e0ae17fad9bfd2844e10cf64
   GoogleAppMeasurement: 700dce7541804bec33db590a5c496b663fbe2539
@@ -353,6 +353,6 @@ SPEC CHECKSUMS:
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
 
-PODFILE CHECKSUM: b54583bc6e2c0af65f6eda9fddd03baa65e2f32a
+PODFILE CHECKSUM: ec94637af6f80e846ad2756a5fc2338a3954f6ab
 
 COCOAPODS: 1.16.2

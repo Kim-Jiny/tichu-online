@@ -737,26 +737,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             children: [
               Positioned.fill(
                 child: Align(
-                  // 관전 인원별로 트릭 위치를 링 상단쪽으로 조절.
-                  // 3인은 top + bottom-left + bottom-right 세 자리라 링 중앙
-                  // 근처가 비어 트릭이 편하게 앉는다.
-                  alignment: Alignment(
-                    0,
-                    playerCount >= 6
-                        ? (isLandscape ? -0.12 : -0.10)
-                        : playerCount == 3
-                        ? (isLandscape ? -0.05 : -0.02)
-                        : (isLandscape ? 0.36 : 0.46),
-                  ),
-                  child: Transform.translate(
-                    offset: Offset(
-                      0,
-                      playerCount >= 6 || playerCount == 3
-                          ? 0
-                          : (isLandscape ? -34 : -42),
-                    ),
-                    child: IgnorePointer(child: _buildTrickArea(state)),
-                  ),
+                  // 인원과 상관없이 한자리. 예전에는 2~6인이 세 갈래로
+                  // 흩어져 있어서, 방 인원이 바뀔 때마다 트릭을 눈으로 다시
+                  // 찾아야 했다. 링 한가운데는 어느 인원에서도 비어 있는
+                  // 자리라 6인 기준을 그대로 쓰면 된다.
+                  alignment: Alignment(0, isLandscape ? -0.12 : -0.10),
+                  child: IgnorePointer(child: _buildTrickArea(state)),
                 ),
               ),
               for (int i = 0; i < state.players.length; i++) ...[

@@ -3702,6 +3702,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         allowSpectators: body.allowSpectators !== '0',
         password: body.password || '',
         maxPlayers,
+        botTichuMode: body.botTichuMode || null,
       });
       if (!result.success) {
         return html(res, layout('봇방', `
@@ -3727,7 +3728,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const list = rows.map((r) => `
       <tr>
         <td><strong>${escapeHtml(r.nickname)}</strong>${r.isPrivate ? ' <span title="비공개 방">🔒</span>' : ''}</td>
-        <td>${escapeHtml(GAME_LABEL[r.gameType] || r.gameType)}</td>
+        <td>${escapeHtml(GAME_LABEL[r.gameType] || r.gameType)}${
+          r.botTichuMode
+            ? ` <span class="badge" style="background:#ede7f6;color:#5e35b1">${r.botTichuMode === 'large' ? '라지티츄' : '스몰티츄'}</span>`
+            : ''
+        }</td>
         <td>${escapeHtml(SPEED_LABEL[r.botSpeed] || r.botSpeed)}</td>
         <td>${r.inGame ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32">게임 중</span> <span class="muted">${escapeHtml(String(r.phase || ''))}</span>` : '<span class="badge">대기</span>'}</td>
         <td>
@@ -3794,6 +3799,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="love_letter">러브레터 (4인)</option>
               <option value="mighty">마이티 (5인)</option>
               <option value="mighty_6">마이티 (6인)</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px">
+            <span class="muted" style="font-size:12px">티츄 선언 (티츄 방만)</span>
+            <select name="botTichuMode" style="padding:8px;border:1px solid #ddd;border-radius:8px">
+              <option value="">안 함 (기본)</option>
+              <option value="large">라지티츄 — 봇 전원</option>
+              <option value="small">스몰티츄 — 봇 전원</option>
             </select>
           </label>
           <label style="display:flex;flex-direction:column;gap:4px">

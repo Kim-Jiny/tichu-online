@@ -129,6 +129,7 @@ function create({
   allowSpectators = true,
   password = '',
   maxPlayers,
+  botTichuMode = null,
 }) {
   if (!deps) return { success: false, message: 'filler rooms not initialised' };
   const name = (nickname || '').trim();
@@ -140,6 +141,15 @@ function create({
   }
   if (!['fast', 'normal', 'slow'].includes(botSpeed)) {
     return { success: false, message: `알 수 없는 봇 속도: ${botSpeed}` };
+  }
+  // 티츄 흐름(라지/스몰 선언 → 성공·실패 점수)을 봇방으로 시험하려고 둔
+  // 스위치. 봇은 평소 티츄를 부르지 않으니 이걸 켜지 않으면 그 경로가
+  // 아예 안 밟힌다. 티츄 이외의 게임에는 해당 없음.
+  const tichuMode = ['large', 'small'].includes(botTichuMode)
+    ? botTichuMode
+    : null;
+  if (tichuMode && gameType !== 'tichu') {
+    return { success: false, message: '티츄 선언 옵션은 티츄 방에서만 됩니다' };
   }
   // Same cap the room-create path applies. Empty means a public room.
   const roomPassword = (password || '').trim().slice(0, 20);
@@ -172,6 +182,8 @@ function create({
     allowSpectators !== false,
   );
 
+  room.botTichuMode = tichuMode;
+
   // The constructor seats the host as an ordinary un-ready player. Mark it so the
   // rest of the server can recognise it, and pre-ready it so startGame passes.
   room.players[0] = {
@@ -197,6 +209,7 @@ function create({
     nickname: name,
     gameType,
     botSpeed,
+    botTichuMode: tichuMode,
     createdAt: Date.now(),
   });
 
@@ -205,6 +218,7 @@ function create({
   ensureTicker();
   console.log(
     `[filler] created ${room.id} "${name}" type=${gameType} bots=${botSpeed}`
+    + (tichuMode ? ` tichu=${tichuMode}` : '')
     + ` spectators=${allowSpectators !== false ? 'on' : 'off'}`
     + (roomPassword ? ' private' : ''),
   );

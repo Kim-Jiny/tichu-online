@@ -1256,6 +1256,8 @@ class TichuGame {
       c.trickPiles[pid] = (this.trickPiles[pid] || []).slice();
     }
 
+    // serialize() 와 짝을 맞춘다 — 봇방 티츄 스위치.
+    c.botTichuMode = this.botTichuMode || null;
     c.largeTichuDeclarations = this.largeTichuDeclarations.slice();
     c.smallTichuDeclarations = this.smallTichuDeclarations.slice();
     c.largeTichuResponses = { ...this.largeTichuResponses };
@@ -1318,6 +1320,10 @@ class TichuGame {
       lastRoundScores: this.lastRoundScores || null,
       hands: this.hands,
       trickPiles: this.trickPiles,
+      // 어드민 봇방의 티츄 선언 스위치. 결정은 워커에서 내려지므로 이
+      // 스냅샷에 실리지 않으면 워커 쪽 봇은 스위치를 못 본다 — 티츄 봇은
+      // winrate 전략이라 실제로 워커로 나간다.
+      botTichuMode: this.botTichuMode || null,
       largeTichuDeclarations: this.largeTichuDeclarations,
       smallTichuDeclarations: this.smallTichuDeclarations,
       largeTichuResponses: this.largeTichuResponses,

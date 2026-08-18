@@ -368,14 +368,17 @@ function evaluateHand(cards) {
 
 // ========== TICHU DECLARATION ==========
 
-function decideLargeTichu(cards) {
-  // Bots never declare large tichu
-  return false;
+function decideLargeTichu(cards, game) {
+  // 봇은 스스로는 라지티츄를 부르지 않는다. 어드민 봇방에서 티츄 흐름을
+  // 시험하려고 켜둔 방(botTichuMode)에서만 부른다 — 사람 상대로는 예전과
+  // 똑같이 조용하다.
+  return game?.botTichuMode === 'large';
 }
 
-function decideSmallTichu(cards, state) {
-  // Bots never declare small tichu
-  return false;
+function decideSmallTichu(cards, state, game) {
+  // 같은 이유. 라지로 켜둔 방에서는 이미 라지를 불렀으니 스몰은 건드리지
+  // 않는다(규칙상 둘 다는 안 된다).
+  return game?.botTichuMode === 'small';
 }
 
 
@@ -2385,7 +2388,7 @@ function decideHeuristicBotAction(game, botId) {
   switch (phase) {
     case 'large_tichu_phase':
       if (!state.largeTichuResponded) {
-        if (decideLargeTichu(myCards)) {
+        if (decideLargeTichu(myCards, game)) {
           return { type: 'declare_large_tichu' };
         }
         return { type: 'pass_large_tichu' };
@@ -2394,7 +2397,7 @@ function decideHeuristicBotAction(game, botId) {
 
     case 'card_exchange':
       // Decide small tichu before exchanging (14 cards in hand)
-      if (state.canDeclareSmallTichu && decideSmallTichu(myCards, state)) {
+      if (state.canDeclareSmallTichu && decideSmallTichu(myCards, state, game)) {
         return { type: 'declare_small_tichu' };
       }
       if (!state.exchangeDone && myCards.length >= 3) {
@@ -2404,7 +2407,7 @@ function decideHeuristicBotAction(game, botId) {
 
     case 'playing':
       // Small tichu: can still declare with 14 cards
-      if (state.canDeclareSmallTichu && decideSmallTichu(myCards, state)) {
+      if (state.canDeclareSmallTichu && decideSmallTichu(myCards, state, game)) {
         return { type: 'declare_small_tichu' };
       }
 

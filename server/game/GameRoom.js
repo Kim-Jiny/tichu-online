@@ -911,6 +911,9 @@ class GameRoom {
     } else {
       this.game = new TichuGame(playerIds, playerNames);
       this.game.targetScore = this.targetScore;
+      // 어드민 봇방에서 티츄 흐름을 시험할 때만 켜진다 — 봇이 라지/스몰을
+      // 부르게 만든다. 일반 방에서는 undefined 라 예전과 같다.
+      this.game.botTichuMode = this.botTichuMode || null;
     }
     // resumeMatch() deals the next round of a migrated match and seeds the
     // cumulative score; start() begins a brand-new one.

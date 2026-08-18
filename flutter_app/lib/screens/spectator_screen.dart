@@ -1173,6 +1173,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final isCurrentTurn = playerId == currentPlayerId;
     final hasFinished = player['hasFinished'] ?? false;
     final finishPosition = player['finishPosition'] ?? 0;
+    final cardCount = (player['cardCount'] ?? 0) as int;
     final hasSmallTichu = player['hasSmallTichu'] ?? false;
     final hasLargeTichu = player['hasLargeTichu'] ?? false;
     final connected = player['connected'] ?? true;
@@ -1422,7 +1423,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     ],
                   ),
                 ),
-              // 실제 손패는 하단 _buildSpectatorHandArea 로 이관됨 (SK 관전과 동일).
+              // 남은 장수는 카드 뒷면으로 보여준다 — 게임 화면 좌석과 같은
+              // 스트립이다. 실제 패는 하단 _buildSpectatorHandArea 에서
+              // 열어보지만, 몇 장 남았는지는 판을 훑을 때 바로 읽혀야 한다.
+              // (관전에는 이게 아예 없어서 라지티츄 단계에 여덟 장을 쥔 게
+              // 화면 어디에도 안 나왔다.)
+              if (!hasFinished && cardCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: _compactHandBacks(cardCount, compact: compact),
+                ),
               // 여기서는 탈락 상태만 표시.
               if (hasFinished)
                 Padding(
@@ -1438,6 +1448,43 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 좌석 아래에 얹는 카드 뒷면 스트립. 게임 화면의
+  /// `_buildCompactHandBacks` 와 같은 모양 — 폭이 좁으니 겹쳐 그리고,
+  /// 장수는 오른쪽 끝 배지로 읽는다.
+  Widget _compactHandBacks(int count, {required bool compact}) {
+    final scale = compact ? 0.85 : 1.0;
+    final cardW = 14.0 * scale;
+    final cardH = 20.0 * scale;
+    const double preferredStep = 4.0;
+    const double maxTotalW = 60.0;
+    final double step = count <= 1
+        ? preferredStep * scale
+        : (math.min(preferredStep, (maxTotalW - 14.0) / (count - 1))
+                  .clamp(2.0, preferredStep) *
+              scale);
+    final totalW = cardW + step * (count - 1);
+    return SizedBox(
+      width: totalW,
+      height: cardH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (var i = 0; i < count; i++)
+            Positioned(
+              left: i * step,
+              child: PlayingCard(
+                cardId: '',
+                isFaceUp: false,
+                width: cardW,
+                height: cardH,
+                isInteractive: false,
+              ),
+            ),
+        ],
       ),
     );
   }

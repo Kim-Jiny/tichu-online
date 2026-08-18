@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
 
+import 'dart:ui' show FontFeature, ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -674,127 +675,137 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         .cast<Map>()
         .toList();
 
-    return Container(
-      color: Colors.black.withValues(alpha: 0.55),
-      child: Center(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 우승 아이콘 (무승부는 악수 아이콘) + 승리 문구.
-              Icon(
-                aWins || bWins ? Icons.emoji_events : Icons.handshake,
-                size: 44,
-                color: winnerColor,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                winnerText,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+    // 플레이어 화면의 결과 팝업과 같은 톤 — 판을 검게 덮는 대신 흐리게
+    // 하고, 상자를 겹쳐 그리는 대신 구분선으로 영역만 나눈다.
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Container(
+        color: const Color(0x40000000),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            constraints: const BoxConstraints(maxWidth: 340),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 30,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  aWins || bWins ? Icons.emoji_events : Icons.handshake,
+                  size: 34,
                   color: winnerColor,
                 ),
-              ),
-              const SizedBox(height: 16),
-              // 팀별 멤버 카드 두 개, 승자 쪽만 살짝 강조.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildGameEndTeamCard(
-                      game: game,
-                      teamPlayers: teamAPlayers,
-                      score: teamA,
-                      color: const Color(0xFF4A90D9),
-                      isWinner: aWins,
-                    ),
+                const SizedBox(height: 8),
+                Text(
+                  winnerText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    color: winnerColor,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildGameEndTeamCard(
-                      game: game,
-                      teamPlayers: teamBPlayers,
-                      score: teamB,
-                      color: const Color(0xFFD24B4B),
-                      isWinner: bWins,
-                    ),
+                ),
+                const SizedBox(height: 18),
+                // 두 팀을 상자 없이 나란히. 진 쪽은 살짝 덜어내는 것으로
+                // 충분하다 — 테두리를 굵게 두르면 축하가 아니라 경고처럼
+                // 보인다.
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _gameEndTeamColumn(
+                          game: game,
+                          teamPlayers: teamAPlayers,
+                          score: teamA,
+                          color: const Color(0xFF007AFF),
+                          dimmed: bWins,
+                        ),
+                      ),
+                      Container(width: 1, color: const Color(0xFFE5E5EA)),
+                      Expanded(
+                        child: _gameEndTeamColumn(
+                          game: game,
+                          teamPlayers: teamBPlayers,
+                          score: teamB,
+                          color: const Color(0xFFFF3B30),
+                          dimmed: aWins,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                l10n.spectatorAutoReturn,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-              ),
-            ],
+                ),
+                const SizedBox(height: 18),
+                Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.spectatorAutoReturn,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildGameEndTeamCard({
+  Widget _gameEndTeamColumn({
     required GameService game,
     required List<Map> teamPlayers,
     required int score,
     required Color color,
-    required bool isWinner,
+    required bool dimmed,
   }) {
-    final softBg = Color.alphaBlend(
-      color.withValues(alpha: 0.10),
-      Colors.white,
-    );
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: softBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: color.withValues(alpha: isWinner ? 0.9 : 0.35),
-          width: isWinner ? 2 : 1,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Flexible 로 감싸 좁은 폰(320dp)에서도 두 멤버가 카드 폭에
-              // 균등하게 들어가도록. 예전엔 고정 60dp × 2 + 간격 = 126dp 로
-              // 111dp 폭을 넘어 RenderFlex overflow 가 났다.
-              for (int i = 0; i < teamPlayers.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                Flexible(
-                  child: _buildGameEndMember(game, teamPlayers[i], color),
-                ),
+    return Opacity(
+      opacity: dimmed ? 0.45 : 1.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Flexible 로 감싸 좁은 폰(320dp)에서도 두 멤버가 칸 폭에
+                // 균등하게 들어가도록.
+                for (int i = 0; i < teamPlayers.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Flexible(
+                    child: _buildGameEndMember(game, teamPlayers[i], color),
+                  ),
+                ],
               ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$score',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: color,
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              '$score',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -1,
+                color: color,
+                // 자릿수가 달라도 두 칸이 흔들리지 않게.
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -823,10 +834,12 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            // 이름은 중립색. 팀 색은 아래 점수 하나로 충분하고, 넷이 다
+            // 색 글씨면 어느 쪽이 이겼는지가 오히려 안 보인다.
+            style: const TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF3C3C43),
             ),
           ),
         ],

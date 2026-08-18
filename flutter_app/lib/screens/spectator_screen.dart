@@ -395,8 +395,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         size: 18,
                         color: Color(0xFF8A7A72),
                       ),
-                      onPressed: () =>
-                          setState(() => _viewingPlayerId = null),
+                      onPressed: () => setState(() => _viewingPlayerId = null),
                     ),
                   ),
                 ],
@@ -447,11 +446,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               padding: EdgeInsets.zero,
               splashRadius: 18,
-              icon: const Icon(
-                Icons.close,
-                size: 18,
-                color: Color(0xFF8A7A72),
-              ),
+              icon: const Icon(Icons.close, size: 18, color: Color(0xFF8A7A72)),
               onPressed: () => setState(() => _viewingPlayerId = null),
             ),
           ),
@@ -759,7 +754,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     required Color color,
     required bool isWinner,
   }) {
-    final softBg = Color.alphaBlend(color.withValues(alpha: 0.10), Colors.white);
+    final softBg = Color.alphaBlend(
+      color.withValues(alpha: 0.10),
+      Colors.white,
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
@@ -1020,8 +1018,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                             fontSize: 11,
                           );
                           final watchText = L10n.of(context).spectatorWatching;
-                          final phaseText =
-                              'R$round | ${_getPhaseText(phase)}';
+                          final phaseText = 'R$round | ${_getPhaseText(phase)}';
                           final targetText = targetScore == null
                               ? ''
                               : L10n.of(
@@ -1037,12 +1034,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                               : _textWidth(targetText, targetStyle);
                           final avail = box.maxWidth;
 
-                          final wantAll = chipBase + 4 + watchW + 8 + phaseW +
+                          final wantAll =
+                              chipBase +
+                              4 +
+                              watchW +
+                              8 +
+                              phaseW +
                               (targetW > 0 ? 6 + targetW : 0);
                           final showWatchLabel = wantAll <= avail;
                           final chipW =
                               chipBase + (showWatchLabel ? 4 + watchW : 0);
-                          final showTarget = targetW > 0 &&
+                          final showTarget =
+                              targetW > 0 &&
                               chipW + 8 + phaseW + 6 + targetW <= avail;
 
                           return Row(
@@ -1220,8 +1223,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
     // 카드 보기 상태 — SK 관전과 동일. 좌석 사진에 눈 아이콘 뱃지로 표시.
     final isPending = game.pendingCardViewRequests.contains(playerId);
-    final isApproved =
-        game.approvedCardViews.contains(playerId) && canSeeCards;
+    final isApproved = game.approvedCardViews.contains(playerId) && canSeeCards;
     final isViewing = _viewingPlayerId == playerId && isApproved;
 
     // Faint team tint as the slot background (replaces the removed dot
@@ -1236,18 +1238,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         : Colors.white.withValues(alpha: 0.98);
 
     final isBot = player['isBot'] == true;
-    final avatarSize = (ringMode
-            ? (compact ? 56 : 72)
-            : (compact ? 44 : 56))
+    final avatarSize = (ringMode ? (compact ? 56 : 72) : (compact ? 44 : 56))
         .toDouble();
     // 좌석 탭: 아직 승인 전이면 패 보기 요청, 승인 후엔 하단 손패 영역에
     // 이 사람의 패를 열거나 닫는다. 프로필 다이얼로그는 롱프레스로 이동
-    // (SK 관전과 동일). 죽은 후엔 패가 없으므로 그냥 프로필만.
+    // (SK 관전과 동일).
+    //
+    // 손패를 다 턴 사람도 똑같이 다룬다. 예전에는 눈 표시를 감추고 탭을
+    // 프로필로 돌렸는데, 한 사람이 나가자마자 그 자리만 규칙이 달라져서
+    // 눌러도 아무 일이 없는 것처럼 보였다. 열면 "남은 패 없음" 이 뜬다.
     void onSeatTap() {
-      if (hasFinished) {
-        _showPlayerProfileDialog(name, game, isBot: isBot);
-        return;
-      }
       if (isApproved) {
         setState(() {
           _viewingPlayerId = _viewingPlayerId == playerId ? null : playerId;
@@ -1271,12 +1271,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       child: _wrapWithBubble(
         name,
         Container(
-          margin: ringMode
-              ? EdgeInsets.zero
-              : EdgeInsets.all(compact ? 2 : 4),
-          padding: ringMode
-              ? EdgeInsets.zero
-              : EdgeInsets.all(compact ? 6 : 8),
+          margin: ringMode ? EdgeInsets.zero : EdgeInsets.all(compact ? 2 : 4),
+          padding: ringMode ? EdgeInsets.zero : EdgeInsets.all(compact ? 6 : 8),
           decoration: ringMode
               ? const BoxDecoration()
               : BoxDecoration(
@@ -1326,37 +1322,36 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                           ? BotAvatar(size: avatarSize, name: name)
                           : DefaultAvatar(size: avatarSize),
                     ),
-                    if (!hasFinished)
-                      Positioned(
-                        right: -4,
-                        top: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isApproved
-                                  ? const Color(0xFF64B5F6)
-                                  : const Color(0xFFE0D8D4),
-                            ),
-                          ),
-                          child: Icon(
-                            isPending
-                                ? Icons.schedule
-                                : isApproved
-                                ? Icons.visibility
-                                : Icons.visibility_outlined,
-                            size: 12,
-                            color: isPending
-                                ? const Color(0xFFFFB74D)
-                                : isApproved
+                    // 다 턴 자리에도 남긴다 — onSeatTap 주석 참고.
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isApproved
                                 ? const Color(0xFF64B5F6)
-                                : const Color(0xFF8A7A72)
-                                      .withValues(alpha: 0.6),
+                                : const Color(0xFFE0D8D4),
                           ),
                         ),
+                        child: Icon(
+                          isPending
+                              ? Icons.schedule
+                              : isApproved
+                              ? Icons.visibility
+                              : Icons.visibility_outlined,
+                          size: 12,
+                          color: isPending
+                              ? const Color(0xFFFFB74D)
+                              : isApproved
+                              ? const Color(0xFF64B5F6)
+                              : const Color(0xFF8A7A72).withValues(alpha: 0.6),
+                        ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -1503,7 +1498,8 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     const double maxTotalW = 60.0;
     final double step = count <= 1
         ? preferredStep * scale
-        : (math.min(preferredStep, (maxTotalW - 14.0) / (count - 1))
+        : (math
+                  .min(preferredStep, (maxTotalW - 14.0) / (count - 1))
                   .clamp(2.0, preferredStep) *
               scale);
     final totalW = cardW + step * (count - 1);

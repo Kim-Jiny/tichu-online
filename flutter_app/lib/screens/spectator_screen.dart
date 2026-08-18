@@ -1229,7 +1229,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final isCurrentTurn = playerId == currentPlayerId;
     final hasFinished = player['hasFinished'] ?? false;
     final finishPosition = player['finishPosition'] ?? 0;
-    final cardCount = (player['cardCount'] ?? 0) as int;
+    final cardCount = ((player['cardCount'] as num?) ?? 0).toInt();
     final hasSmallTichu = player['hasSmallTichu'] ?? false;
     final hasLargeTichu = player['hasLargeTichu'] ?? false;
     final connected = player['connected'] ?? true;

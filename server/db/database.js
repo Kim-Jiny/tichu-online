@@ -2684,11 +2684,15 @@ async function getUserProfile(nickname, locale = 'ko') {
     // Report count in last 6 months — and never from before this account
     // existed, since reports outlive a deleted account under its old nickname
     // and the next owner of that nickname must not inherit the record.
+    // 가입 시각은 SQL 안에서 다시 읽는다. 컬럼에서 읽은 값을 JS Date 로
+    // 들고 있다가 파라미터로 되돌려 넣으면 timestamp 컬럼과 비교될 때 9시간
+    // 앞으로 밀린다(노드 쪽이 로컬시간으로 직렬화한다). 그 결과 가입 후
+    // 아홉 시간 안에 들어온 신고는 프로필에서 아예 세어지지 않았다.
     const reportRes = await client.query(
       `SELECT COUNT(*) FROM tc_reports
        WHERE reported_nickname = $1 AND created_at >= NOW() - INTERVAL '6 months'
-         AND created_at >= $2`,
-      [nickname, user.created_at]
+         AND created_at >= (SELECT created_at FROM tc_users WHERE nickname = $1)`,
+      [nickname]
     );
     const reportCount = parseInt(reportRes.rows[0].count, 10) || 0;
 
@@ -4185,10 +4189,18 @@ async function getUnreadMailCount(nickname) {
 async function markMailRead(nickname, mailId) {
   try {
     await pool.query(
-      `UPDATE tc_mail_recipients
-          SET read_at = COALESCE(read_at, (NOW() AT TIME ZONE 'UTC'))
-        WHERE mail_id = $1 AND nickname = $2 AND deleted_at IS NULL`,
-      [parseInt(mailId, 10), nickname]);
+      // 조회·수령과 같은 조건으로 막는다. 닉네임은 재사용되므로 mail_id 와
+      // 닉네임만 보면, 새 주인이 mailId 를 알아내 이전 주인의 사본을 읽음으로
+      // 바꿔놓을 수 있다 — 읽지는 못해도 상태는 건드려진다. 보존 기간이 지난
+      // 사본도 마찬가지로 손대지 않는다.
+      `UPDATE tc_mail_recipients r
+          SET read_at = COALESCE(r.read_at, (NOW() AT TIME ZONE 'UTC'))
+         FROM tc_users u
+        WHERE r.mail_id = $1 AND r.nickname = $2 AND r.deleted_at IS NULL
+          AND u.nickname = r.nickname
+          AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval`,
+      [parseInt(mailId, 10), nickname, MAIL_RETENTION_DAYS]);
     return { success: true };
   } catch (err) {
     console.error('markMailRead error:', err.message);
@@ -4305,9 +4317,14 @@ async function deleteMailForUser(nickname, mailId) {
                 AND m.expires_at < (NOW() AT TIME ZONE 'UTC')) AS reward_closed
          FROM tc_mail_recipients r
          JOIN tc_mail m ON m.id = r.mail_id
+         JOIN tc_users u ON u.nickname = r.nickname
         WHERE r.mail_id = $1 AND r.nickname = $2 AND r.deleted_at IS NULL
+          -- 읽음 처리와 같은 이유 — 재사용된 닉네임이 이전 주인의 사본을
+          -- 지워버리지 못하게.
+          AND r.created_at >= u.created_at
+          AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($3 || ' days')::interval
         FOR UPDATE OF r`,
-      [parseInt(mailId, 10), nickname]);
+      [parseInt(mailId, 10), nickname, MAIL_RETENTION_DAYS]);
     if (rec.rows.length === 0) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'mail_not_yours' };

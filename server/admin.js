@@ -4954,47 +4954,62 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     // The letter is already saved; the notification is a courtesy on top. A
     // push failure must therefore never read as a failed send.
+    //
+    // 그래서 이 구간은 통째로 감싼다. 히스토리 기록이나 수신자 저장이
+    // 실패해도 예외가 라우트까지 올라가면 운영자는 "우편 발송 실패" 로
+    // 읽고 다시 보낸다 — 편지는 이미 갔으므로 같은 우편이 두 번 간다.
+    // 어디까지 갔는지는 알려준다: 푸시가 나갔는데 기록만 실패한 것과
+    // 아예 못 보낸 것은 다시 보낼지 말지가 갈리는 차이다.
     let pushNote = '';
     if (body.send_push === '1' && sendBroadcastPush) {
-      const tokens = await getMailPushTokens(result.targets);
-      if (tokens.length === 0) {
-        pushNote = ' 알림을 켠 대상이 없어 푸시는 보내지 않았습니다.';
-      } else {
-        // 단체 발송과 같은 절차를 밟는다. 예전에는 여기서 곧장 쏘기만 해서,
-        // 우편과 함께 나간 푸시는 푸시 히스토리에 아예 남지 않았고 열람도
-        // 영영 0 이었다 — 히스토리는 "유저에게 나간 모든 알림" 을 보여주는
-        // 자리다. 행을 먼저 넣는 이유는 그 id 를 페이로드에 실어야 하기
-        // 때문이다(탭이 돌아올 때 들고 오는 게 그 id 다).
-        const pushBody = '운영자 우편함에서 확인하세요.';
-        const historyId = await insertPushHistory({
-          adminUsername: sessionInfo.session.username || 'admin',
-          title: body.title,
-          body: pushBody,
-          targetFilter: `mail:${result.id}`,
-          totalSent: tokens.length,
-          successCount: 0,
-          failCount: 0,
-          invalidTokens: 0,
-        });
-        const push = await sendBroadcastPush(
-          tokens, body.title, pushBody,
-          { type: 'mail', mailId: result.id, pushId: historyId });
-        await markFcmTokensInvalid(push.invalidUserIds || []);
-        await updatePushHistoryCounts(historyId, {
-          successCount: push.successCount,
-          failCount: push.failCount,
-          invalidTokens: (push.invalidUserIds || []).length,
-        });
-        const byId = {};
-        for (const row of tokens) byId[row.id] = row.nickname;
-        const recipients = (push.results || []).map((r) => ({
-          userId: r.userId,
-          nickname: byId[r.userId] || 'unknown',
-          status: r.invalid ? 'invalid_token' : (r.success ? 'success' : 'fail'),
-        }));
-        if (recipients.length > 0) await insertPushRecipients(historyId, recipients);
-        pushNote = ` 푸시 ${formatNumber(push.successCount)}명 전송`
-          + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + '.';
+      let pushSent = false;
+      try {
+        const tokens = await getMailPushTokens(result.targets);
+        if (tokens.length === 0) {
+          pushNote = ' 알림을 켠 대상이 없어 푸시는 보내지 않았습니다.';
+        } else {
+          // 단체 발송과 같은 절차를 밟는다. 예전에는 여기서 곧장 쏘기만 해서,
+          // 우편과 함께 나간 푸시는 푸시 히스토리에 아예 남지 않았고 열람도
+          // 영영 0 이었다 — 히스토리는 "유저에게 나간 모든 알림" 을 보여주는
+          // 자리다. 행을 먼저 넣는 이유는 그 id 를 페이로드에 실어야 하기
+          // 때문이다(탭이 돌아올 때 들고 오는 게 그 id 다).
+          const pushBody = '운영자 우편함에서 확인하세요.';
+          const historyId = await insertPushHistory({
+            adminUsername: sessionInfo.session.username || 'admin',
+            title: body.title,
+            body: pushBody,
+            targetFilter: `mail:${result.id}`,
+            totalSent: tokens.length,
+            successCount: 0,
+            failCount: 0,
+            invalidTokens: 0,
+          });
+          const push = await sendBroadcastPush(
+            tokens, body.title, pushBody,
+            { type: 'mail', mailId: result.id, pushId: historyId });
+          pushSent = true;
+          await markFcmTokensInvalid(push.invalidUserIds || []);
+          await updatePushHistoryCounts(historyId, {
+            successCount: push.successCount,
+            failCount: push.failCount,
+            invalidTokens: (push.invalidUserIds || []).length,
+          });
+          const byId = {};
+          for (const row of tokens) byId[row.id] = row.nickname;
+          const recipients = (push.results || []).map((r) => ({
+            userId: r.userId,
+            nickname: byId[r.userId] || 'unknown',
+            status: r.invalid ? 'invalid_token' : (r.success ? 'success' : 'fail'),
+          }));
+          if (recipients.length > 0) await insertPushRecipients(historyId, recipients);
+          pushNote = ` 푸시 ${formatNumber(push.successCount)}명 전송`
+            + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + '.';
+        }
+      } catch (err) {
+        console.error('mail push error:', err);
+        pushNote = pushSent
+          ? ' 푸시는 나갔지만 발송 기록에 실패했습니다 (다시 보내지 마세요).'
+          : ' 편지는 저장됐지만 푸시는 보내지 못했습니다.';
       }
     }
     const missNote = result.missing?.length

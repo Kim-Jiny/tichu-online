@@ -999,58 +999,98 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    // On the status line, matching SpectatorHeader — on the
-                    // title row it was squeezing the room name.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8E0F8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.visibility,
-                            size: 12,
+                    // 좁아지면 순서대로 버린다: '관전 중' 글씨 → 목표 점수 →
+                    // (마지막 수단) 라운드·단계 줄임표. 남는 폭을 아는 자리에서
+                    // 실제 글자 폭을 재서 정하므로, 어느 언어든 넘치지 않고
+                    // 무엇이 먼저 사라질지도 정해져 있다.
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, box) {
+                          const watchStyle = TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                             color: Color(0xFF4A4080),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            L10n.of(context).spectatorWatching,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A4080),
-                            ),
-                          ),
-                        ],
+                          );
+                          const phaseStyle = TextStyle(
+                            color: Color(0xFF8A7E78),
+                            fontSize: 12,
+                          );
+                          const targetStyle = TextStyle(
+                            color: Color(0xFFA89C96),
+                            fontSize: 11,
+                          );
+                          final watchText = L10n.of(context).spectatorWatching;
+                          final phaseText =
+                              'R$round | ${_getPhaseText(phase)}';
+                          final targetText = targetScore == null
+                              ? ''
+                              : L10n.of(
+                                  context,
+                                ).spectatorTargetScore(targetScore);
+
+                          // 칩 = 좌우 여백 16 + 눈 12 + (여백 4 + 글씨)
+                          const chipBase = 16.0 + 12.0;
+                          final watchW = _textWidth(watchText, watchStyle);
+                          final phaseW = _textWidth(phaseText, phaseStyle);
+                          final targetW = targetText.isEmpty
+                              ? 0.0
+                              : _textWidth(targetText, targetStyle);
+                          final avail = box.maxWidth;
+
+                          final wantAll = chipBase + 4 + watchW + 8 + phaseW +
+                              (targetW > 0 ? 6 + targetW : 0);
+                          final showWatchLabel = wantAll <= avail;
+                          final chipW =
+                              chipBase + (showWatchLabel ? 4 + watchW : 0);
+                          final showTarget = targetW > 0 &&
+                              chipW + 8 + phaseW + 6 + targetW <= avail;
+
+                          return Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8E0F8),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.visibility,
+                                      size: 12,
+                                      color: Color(0xFF4A4080),
+                                    ),
+                                    if (showWatchLabel) ...[
+                                      const SizedBox(width: 4),
+                                      Text(watchText, style: watchStyle),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  phaseText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  style: phaseStyle,
+                                ),
+                              ),
+                              if (showTarget) ...[
+                                const SizedBox(width: 6),
+                                Text(targetText, style: targetStyle),
+                              ],
+                            ],
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'R$round | ${_getPhaseText(phase)}',
-                      style: const TextStyle(
-                        color: Color(0xFF8A7E78),
-                        fontSize: 12,
-                      ),
-                    ),
-                    // What score the game is played to. Players see it in their
-                    // own top bar; spectators had no way to know.
-                    if (targetScore != null) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        L10n.of(context).spectatorTargetScore(targetScore),
-                        style: const TextStyle(
-                          color: Color(0xFFA89C96),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
+                    const SizedBox(width: 6),
                     // The score itself opens the history — it is what you are
                     // already looking at when you wonder how it got there, and
                     // it saves a slot in the bar.
@@ -1487,6 +1527,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         ],
       ),
     );
+  }
+
+  /// 글자가 실제로 차지할 폭. 상태 줄에서 무엇을 먼저 버릴지 정하는 데
+  /// 쓴다 — Flex 는 남는 자리를 나눠줄 뿐, "이걸 먼저 지워라" 를 모른다.
+  double _textWidth(String text, TextStyle style) {
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    return tp.width;
   }
 
   Widget _tichuCallBadge(String label, Color bg, Color border) {

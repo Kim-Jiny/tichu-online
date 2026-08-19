@@ -34,6 +34,19 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) setState(() {});
   });
 
+  /// Wraps a board seat so a chat bubble can hang above it.
+  ///
+  /// Drawn on the overlay, not inside the seat's own Stack — otherwise the
+  /// trick layer, which this board deliberately paints over the seats, would
+  /// swallow the line.
+  Widget _withSeatBubble(String nickname, Widget seat) {
+    return SeatBubbleAnchor(
+      text: _seatChat.textFor(nickname),
+      suppressed: _chatOpen,
+      child: seat,
+    );
+  }
+
   // Responsive scale factor (updated every build)
   double _s = 1.0; // scale factor based on screen width
   double _ts = 1.0; // gentler scale for text and chrome — see build()
@@ -1431,7 +1444,11 @@ class _GameScreenState extends State<GameScreen> {
                   top: seatTop,
                   width: seatWidth,
                   height: seatHeight,
-                  child: _buildOpponentSeat(state, game, p, positionKey: key),
+                  // 빈 자리(p == null)엔 띄울 말이 없다.
+                  child: _withSeatBubble(
+                    p?.name ?? '',
+                    _buildOpponentSeat(state, game, p, positionKey: key),
+                  ),
                 );
               }(),
             ],

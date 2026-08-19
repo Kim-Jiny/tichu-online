@@ -78,6 +78,21 @@
   <meta property="og:url" content="https://tichu.kr/">
   <link rel="manifest" href="manifest.json">
 
+  <!-- 부팅 경로의 큰 파일을 미리 건다.
+       그냥 두면 왕복이 줄줄이 이어진다 — 브라우저는 flutter_bootstrap.js 를
+       받아서 실행한 뒤에야 main.dart.js 를 요청하고, Pretendard 는 그
+       main.dart.js 가 다 내려와 main() 이 돌기 시작해야 요청된다. RTT 300ms
+       짜리 회선에서 실측하면 첫 프레임까지 5.3초였고 그중 1초가 이 대기였다.
+       미리 걸어 두면 셋이 0초부터 같이 내려온다.
+
+       Pretendard 는 as="font" 가 아니라 as="fetch" 다 — main.dart.js 의
+       FontLoader 가 CSS @font-face 가 아니라 http 로 바이트를 직접 읽어
+       CanvasKit 에 등록하기 때문이다. crossorigin 을 붙이면 같은 출처
+       XHR(자격증명 same-origin)과 모드가 어긋나 두 번 받는다. -->
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preload" href="fonts/Pretendard-Regular.woff2" as="fetch" type="font/woff2">
+  <link rel="preload" href="fonts/Pretendard-Bold.woff2" as="fetch" type="font/woff2">
+
   <!-- Structured data, so a search result can show the game rather than a
        bare URL. Kept minimal and factual. -->
   <script type="application/ld+json">
@@ -129,6 +144,67 @@
          underneath anyway, so this text is never actually seen. */
       font-size: 16px;
     }
+
+    /*
+      부팅 중에 보여 줄 화면.
+
+      Flutter 가 첫 프레임을 그리기 전까지 이 페이지에는 아무것도 없다. 회선이
+      느리면 그 백지가 몇 초씩 이어지고, 사용자 눈에는 "안 뜨는 사이트"다.
+      실제 다운로드가 빨라지는 건 아니지만, 기다리는 동안 무엇을 기다리는지는
+      보여야 한다.
+
+      웹폰트를 쓰지 않는다 — 이 화면의 존재 이유가 "즉시 뜨는 것"인데 폰트를
+      기다리면 그 자리에서 또 백지다. 이미지도 없다(요청 하나가 더 늘고, 그
+      요청이 늦으면 마찬가지다).
+    */
+    #boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      background: #fdf8f3;
+      font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+      color: #143a57;
+      z-index: 2147483000;
+      transition: opacity .35s ease;
+    }
+    #boot.done { opacity: 0; pointer-events: none; }
+    #boot .mark {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      color: #f28c26;
+    }
+    #boot .sub { font-size: .8125rem; opacity: .65; }
+    #boot .bar {
+      position: relative;
+      width: min(13rem, 55vw);
+      height: 3px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(20, 58, 87, .12);
+    }
+    /* 진행률을 알 수 없으니(브라우저가 안 알려 준다) 흐르는 막대로 둔다.
+       가짜 퍼센트를 그리는 것보다 정직하다. */
+    #boot .bar::after {
+      content: '';
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 40%;
+      border-radius: inherit;
+      background: #f28c26;
+      animation: boot-slide 1.1s ease-in-out infinite;
+    }
+    @keyframes boot-slide {
+      0%   { transform: translateX(-105%); }
+      100% { transform: translateX(255%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot .bar::after { animation: none; width: 100%; opacity: .5; }
+    }
   </style>
 </head>
 <body>
@@ -152,6 +228,34 @@
       <li>러브레터 — 2~4인 추리 카드게임</li>
     </ul>
   </div>
+
+  <div id="boot">
+    <div class="mark">Tichu Online</div>
+    <div class="bar"></div>
+    <div class="sub">불러오는 중…</div>
+  </div>
+
+  <script>
+    // 첫 프레임이 그려지면 로딩 화면을 걷는다. Flutter 가 flutter-first-frame
+    // 을 쏴 준다 — 엔진이 실제로 무언가를 그린 시점이라, 타이머로 짐작하는
+    // 것과 달리 이르지도 늦지도 않다.
+    //
+    // 안전장치로 20초를 건다. 부팅이 실패해도 로딩 화면이 영원히 덮고 있으면
+    // 그 아래 있을지 모를 오류 화면조차 못 본다.
+    (function () {
+      var boot = document.getElementById('boot');
+      if (!boot) return;
+      var gone = false;
+      function dismiss() {
+        if (gone) return;
+        gone = true;
+        boot.classList.add('done');
+        setTimeout(function () { boot.remove(); }, 400);
+      }
+      window.addEventListener('flutter-first-frame', dismiss);
+      setTimeout(dismiss, 20000);
+    })();
+  </script>
 
   <script>
     // Built with --pwa-strategy=none, but a browser that visited an earlier

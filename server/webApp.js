@@ -91,14 +91,44 @@ function cacheControlFor(pathname, noStore) {
     : 'no-cache';
 }
 
+/**
+ * 미리 압축해 둔 형제 파일(`<파일>.br`)을 쓸 수 있으면 그걸 고른다.
+ *
+ * nginx 는 gzip 까지만 한다(brotli 모듈이 기본 빌드에 없다). 부팅 경로에서
+ * 제일 큰 main.dart.js 가 gzip 1.46MB · brotli 1.10MB 라 25% 차이고, 이건
+ * 느린 회선에서 그대로 체감된다. 압축은 빌드 때 precompress_web.js 가
+ * 끝내 두고, 여기서는 파일이 있는지만 본다.
+ *
+ * 이미 Content-Encoding 이 붙은 응답은 nginx 가 다시 gzip 하지 않으므로
+ * 이중 압축 걱정은 없다. .br 이 없으면 원본을 그대로 내주고 gzip 이 받는다.
+ */
+async function pickBrotli(req, filePath) {
+  const accepted = String(req.headers['accept-encoding'] || '');
+  if (!/(^|[\s,])br($|[\s,;])/.test(accepted)) return null;
+  try {
+    const brPath = `${filePath}.br`;
+    return { path: brPath, stat: await fsp.stat(brPath) };
+  } catch {
+    return null;
+  }
+}
+
 async function sendFile(req, res, filePath, pathname) {
-  const stat = await fsp.stat(filePath);
+  // Content-Type 은 언제나 원본 확장자로 정한다 — 내보내는 바이트가 brotli 라도
+  // 그건 인코딩이지 타입이 아니다. .wasm 이 application/wasm 이 아니면
+  // 브라우저가 스트리밍 컴파일을 포기한다.
   const ext = path.extname(filePath).toLowerCase();
+  const brotli = await pickBrotli(req, filePath);
+  const stat = brotli ? brotli.stat : await fsp.stat(filePath);
+  const bodyPath = brotli ? brotli.path : filePath;
   // `no-cache` means "revalidate before reusing", and revalidating needs
   // something to compare — without an ETag the browser has no way to ask "is
   // mine still current?" and what it does instead is its own business. That
   // ambiguity is why a rebuild could look like it had not deployed. Size and
   // mtime are enough here: every file is written fresh by the build.
+  //
+  // brotli 로 내줄 때는 그 파일의 크기·시각으로 만든다. 인코딩이 다르면 태그도
+  // 달라야, 같은 URL 을 두 형태로 캐시해도 서로 304 로 오인하지 않는다.
   const etag = `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
   const noStore = /(?:index\.html|flutter_bootstrap\.js|flutter_service_worker\.js)$/
     .test(filePath);
@@ -106,18 +136,26 @@ async function sendFile(req, res, filePath, pathname) {
   const cacheControl = cacheControlFor(pathname || '', noStore);
 
   if (!noStore && req.headers['if-none-match'] === etag) {
-    res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl });
+    res.writeHead(304, {
+      ETag: etag,
+      'Cache-Control': cacheControl,
+      Vary: 'Accept-Encoding',
+    });
     res.end();
     return;
   }
 
-  const body = await fsp.readFile(filePath);
+  const body = await fsp.readFile(bodyPath);
   res.writeHead(200, {
     'Content-Type': CONTENT_TYPES[ext] || 'application/octet-stream',
     'Content-Length': body.length,
     // The entry point and the bootstrap decide which build everything else
     // belongs to, so those must never be served from cache at all.
     'Cache-Control': cacheControl,
+    // 같은 URL 이 인코딩에 따라 다른 바이트를 낸다. 이게 없으면 중간 캐시가
+    // br 응답을 br 을 못 받는 클라이언트에게 물려 줄 수 있다.
+    Vary: 'Accept-Encoding',
+    ...(brotli ? { 'Content-Encoding': 'br' } : {}),
     ...(noStore ? {} : { ETag: etag }),
   });
   res.end(body);

@@ -72,6 +72,13 @@ jobs:
           # shellcheck disable=SC2086  # DEFINES is intentionally word-split
           flutter build web --release --base-href=/ --pwa-strategy=none $DEFINES
 
+      # brotli 사전압축. nginx 는 gzip 까지만 하고(모듈이 기본 빌드에 없다),
+      # 부팅 경로에서 제일 큰 main.dart.js 가 gzip 1.46MB · brotli 1.10MB 다.
+      # 품질 11 이라 요청마다 할 일이 아니고, 파일은 배포 사이에 안 바뀌니
+      # 여기서 한 번 눌러 번들에 같이 실어 보낸다. webApp.js 가 골라 낸다.
+      - name: Precompress
+        run: node server/precompress_web.js flutter_app/build/web
+
       - name: Package
         run: tar -czf web-bundle.tar.gz -C flutter_app/build/web .
 

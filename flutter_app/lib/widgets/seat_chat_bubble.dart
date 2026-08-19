@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -199,6 +200,17 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   final _link = LayerLink();
   final _portal = OverlayPortalController();
 
+  /// 화면 안에 들어가도록 좁힌 최대폭. 좌석이 어디 앉았는지 알아야 정해지므로
+  /// 레이아웃이 끝난 뒤에 계산한다.
+  double? _fitWidth;
+
+  /// 가장자리에서 이만큼은 띄운다.
+  static const _edgeInset = 6.0;
+
+  /// 아무리 좁혀도 이 아래로는 안 줄인다 — 그보다 좁으면 글자가 한 자도
+  /// 안 남는다. 여기까지 왔다면 살짝 넘치더라도 읽히는 쪽이 낫다.
+  static const _minWidth = 96.0;
+
   @override
   void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -223,6 +235,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
 
   void _sync() {
     if (!mounted) return;
+    _measure();
     final wanted = widget.text != null && !widget.suppressed;
     if (wanted == _portal.isShowing) return;
     if (wanted) {
@@ -230,6 +243,25 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
     } else {
       _portal.hide();
     }
+  }
+
+  /// 말풍선은 좌석 한가운데에 맞춰 걸린다. 그래서 좌석이 화면 가장자리에
+  /// 앉으면 기본 폭(178)이 그대로 화면 밖으로 넘어간다 — 티츄 보드의 좌/우
+  /// 좌석이 딱 그 자리라, 긴 문장의 앞글자가 잘려 나갔다.
+  ///
+  /// 옆으로 밀어서 피할 수는 없다. 꼬리가 좌석을 가리키는 게 이 말풍선의
+  /// 존재 이유라(좌석이 다닥다닥 붙어 있어 누가 한 말인지 그걸로 구분한다),
+  /// 대신 양쪽으로 펼칠 수 있는 만큼만 폭을 준다. 넘치는 글자는 원래대로
+  /// ... 로 잘린다.
+  void _measure() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final centre = box.localToGlobal(Offset(box.size.width / 2, 0)).dx;
+    final room = 2 * (math.min(centre, screenWidth - centre) - _edgeInset);
+    final fit = math.min(widget.maxWidth, math.max(room, _minWidth));
+    if (_fitWidth != null && (_fitWidth! - fit).abs() < 0.5) return;
+    setState(() => _fitWidth = fit);
   }
 
   @override
@@ -263,7 +295,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
               offset: Offset(0, -widget.gap),
               child: IgnorePointer(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: widget.maxWidth),
+                  constraints: BoxConstraints(maxWidth: _fitWidth ?? widget.maxWidth),
                   child: SeatChatBubble(
                     text: text,
                     fontSize: widget.fontSize,

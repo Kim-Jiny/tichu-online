@@ -1178,6 +1178,69 @@ function _declarerSaveMightyRule(game, botId) {
   return MightyBotInternals.makePlayAction(trumpLead, game, botId);
 }
 
+/**
+ * 점수 걸린 트릭을 확실히 먹을 수 있으면 먹는다.
+ *
+ * 유저 리포트: 기루다 클로버, 주공이 1트릭 초구로 ♥K 를 냈는데 바로 뒷자리
+ * 야당이 ♥A 를 들고도 안 냈다. 롤아웃 오라클은 "에이스를 아꼈다가 더 큰 트릭을
+ * 먹는다"를 곧잘 고르는데, 눈앞의 점수를 확실히 가져올 수 있으면 그게 먼저다.
+ * 아껴 둔 에이스가 나중에 그 값을 하리라는 보장은 없고, 지금 안 먹으면 그
+ * 점수는 상대 것이 된다.
+ *
+ * 조건은 셋뿐이다 — (1) 지금 이기고 있는 사람이 상대편, (2) 트릭에 점수가
+ * 깔려 있음, (3) 마이티/조커가 아닌 카드로 뒤에서 아무도 못 받아치는 승리가
+ * 가능함. 마이티·조커를 빼는 건 그 둘은 "확실한 승리"가 아니라 낭비 판단이
+ * 따로 필요해서다(9·10번 룰).
+ *
+ * 판돈 0점짜리 트릭은 건드리지 않는다. 그건 에이스를 아끼는 게 맞다.
+ * 엔드게임 솔버는 이 룰보다 먼저 돌아 정확한 수를 그대로 낸다.
+ */
+function _takeSurePointTrickRule(game, botId) {
+  if (game.state !== 'playing') return null;
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+
+  const winner = MightyBotInternals.getCurrentTrickWinner(game);
+  if (!winner || winner === botId) return null;
+
+  // 상대편인지는 봇이 실제로 아는 만큼만 본다. 정부(주공·프렌드)는 서로를
+  // 알지만, 야당은 공개 전까지 숨은 프렌드가 누군지 모른다 — 여기서 전지적
+  // 정보를 쓰면 야당이 프렌드 정체를 아는 것처럼 두게 된다.
+  const botIsGov = _isGovernmentTeam(game, botId);
+  const winnerIsEnemy = botIsGov
+    ? !_isGovernmentTeam(game, winner)
+    : MightyBotInternals.isGovernment(game, winner);
+  if (!winnerIsEnemy) return null;
+
+  let pot = 0;
+  for (const play of game.currentTrick) {
+    if (!play || !play.cardId || play.cardId === 'mighty_joker') continue;
+    pot += (getCardInfo(play.cardId) || {}).point || 0;
+  }
+  if (pot === 0) return null;
+
+  const mightyCard = game.getMightyCard();
+  const legal = game.getLegalCards(botId) || [];
+  const sure = legal.filter(cardId => cardId !== mightyCard
+    && cardId !== 'mighty_joker'
+    && MightyBotInternals.canBeatCurrentWinner(game, cardId)
+    && MightyBotInternals.isSafeFriendWinner(cardId, game, botId));
+  if (sure.length === 0) return null;
+
+  // 휴리스틱이 이미 확실한 승리수를 고르고 있으면 그 선택을 존중한다.
+  const heuristicAction = _heuristicPlayAction(game, botId);
+  if (heuristicAction && sure.includes(heuristicAction.cardId)) return heuristicAction;
+
+  // 아니면 그중 가장 싼 카드로. 기루다는 남겨 두는 게 낫다.
+  const trump = game.trumpSuit;
+  const cost = (cardId) => {
+    const info = getCardInfo(cardId) || {};
+    const isTrump = trump && trump !== 'no_trump' && info.suit === trump;
+    return (isTrump ? 100 : 0) + (RANK_ORDER[info.rank] || 0);
+  };
+  const pick = sure.slice().sort((a, b) => cost(a) - cost(b))[0];
+  return MightyBotInternals.makePlayAction(pick, game, botId);
+}
+
 // 하드 룰은 순서가 곧 우선순위다. 이름을 같이 들고 있는 이유는 어떤 룰이
 // 수를 냈는지 추적할 수 있어야 시뮬레이션에서 원인을 짚을 수 있어서다
 // (global.__mightyRuleTrace).
@@ -1197,6 +1260,7 @@ const HARD_RULES = [
   ['friendNTFollowDumpHigh', _friendNTFollowDumpHighRule],
   ['friendDeclarerSecure', _friendDeclarerSecureRule],
   ['friendNoSafeWinner', _friendNoSafeWinnerRule],
+  ['takeSurePointTrick', _takeSurePointTrickRule],
   ['cantWinDefer', _cantWinDeferRule],
   ['preserveWeakJoker', _preserveWeakJokerRule],
   ['govLeadNoOppTrump', _govLeadNoOppTrumpRule],

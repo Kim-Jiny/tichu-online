@@ -12,7 +12,7 @@
 const MightyGame = require('./game/mighty/MightyGame');
 const MB = require('./game/mighty/MightyBot');
 const { decideMightyBotAction } = MB;
-const { getCardInfo } = require('./game/mighty/MightyDeck');
+const { getCardInfo, makeRng, RANK_ORDER } = require('./game/mighty/MightyDeck');
 
 const IDS = ['p0', 'p1', 'p2', 'p3', 'p4'];
 const NAMES = {}; IDS.forEach((p) => (NAMES[p] = p));
@@ -61,7 +61,8 @@ function believesAlly(game, botId, winner) {
 
 let errors = 0;
 for (let r = 0; r < rounds; r++) {
-  const game = new MightyGame(IDS, NAMES, { seed: base + r });
+  // MightyGame 은 options.seed 를 안 본다 — rng 를 직접 넘겨야 재현된다.
+  const game = new MightyGame(IDS, NAMES, { rng: makeRng(base + r) });
   try {
     game.start();
     let pendingLead = null;
@@ -129,7 +130,7 @@ for (let r = 0; r < rounds; r++) {
             const ci = getCardInfo(c);
             if (!info) return false;
             // 같은 무늬에서 더 낮은 카드로도 이겼다면 과잉이다
-            return ci.suit === info.suit && ci.value < info.value;
+            return ci.suit === info.suit && RANK_ORDER[ci.rank] < RANK_ORDER[info.rank];
           });
           if (cheaper.length > 0) {
             flag('overkill', game, actor, cardId, `더 싼 승리수: ${cheaper.map(short).join(' ')}`);
@@ -151,6 +152,19 @@ for (let r = 0; r < rounds; r++) {
           });
           if (junk.length > 0) {
             flag('trumpDump', game, actor, cardId, `잡패 있었음: ${junk.map(short).join(' ')}`);
+          }
+        }
+
+        // ⑥ 점수 걸린 트릭을 확실히 먹을 수 있는데 흘린다
+        if (winner && !ally && !MB.canBeatCurrentWinner(game, cardId)) {
+          const pot = game.currentTrick.reduce(
+            (sum, p) => sum + ((getCardInfo(p.cardId) || {}).point || 0), 0);
+          const sure = legal.filter((x) => x !== mighty && x !== 'mighty_joker'
+            && MB.canBeatCurrentWinner(game, x)
+            && MB.isSafeFriendWinner(x, game, actor));
+          if (pot > 0 && sure.length > 0) {
+            flag('duckSureWin', game, actor, cardId,
+              `확실한 승리수 있었음: ${sure.map(short).join(' ')} (판돈 ${pot}점)`);
           }
         }
 
@@ -188,6 +202,7 @@ const LABEL = {
   overkill: '마지막 순번인데 최소 승리 카드를 안 씀',
   jokerWaste: '힘없는 조커를 그냥 버림',
   mightyLeadDry: '판돈 0인데 마이티를 리드',
+  duckSureWin: '점수 걸린 트릭을 확실히 먹을 수 있는데 흘림',
 };
 
 console.log(`\n이상한 수 스캔 — ${rounds}라운드, ${strategy}${errors ? ` (errors ${errors})` : ''}`);

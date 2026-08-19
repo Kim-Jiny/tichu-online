@@ -481,5 +481,60 @@ check('fix3: friend preserves joker on locked trick',
   check('solver deterministic', nondet, x => x === 0);
 })();
 
+// ── Fix 11: 점수 걸린 트릭을 확실히 먹을 수 있으면 먹는다 ──
+// 유저 리포트: 기루다 클로버, 주공이 1트릭 초구로 ♥K 를 냈는데 바로 뒷자리
+// 야당이 ♥A 를 들고도 안 냈다.
+// 아래는 그 리포트를 쫓다가 자가대국 스캔에서 잡은 같은 성질의 국면이다.
+// 주공이 ♣K 를 깔고 ♣Q 까지 실려 2점이 걸렸는데, 야당 p2 가 ♣A 를 들고도
+// ♣2 로 흘렸다(오라클 롤아웃이 "에이스는 아꼈다가 더 큰 트릭에" 를 고른다).
+// 뒤에 남은 사람은 p3 뿐이고 ♣A 를 넘길 카드가 없으니 확실한 승리수다.
+(() => {
+  const c = (s) => s.split(' ').map(x => x === 'joker' ? 'mighty_joker' : `mighty_${x}`);
+  const build = () => position({
+    declarer: 'p4', partner: null, friendRevealed: false,
+    friendCard: 'mighty_heart_A', trumpSuit: 'club',
+    tricksLen: 1, currentPlayer: 'p2',
+    currentTrick: [
+      { pid: 'p4', cardId: 'mighty_club_K' },
+      { pid: 'p0', cardId: 'mighty_club_4' },
+      { pid: 'p1', cardId: 'mighty_club_Q' },
+    ],
+    hands: {
+      p0: c('spade_K club_9 heart_2 club_6 heart_A diamond_7 club_7 diamond_K'),
+      p1: c('heart_3 spade_J heart_J spade_Q heart_5 spade_8 diamond_9 heart_6'),
+      p2: c('club_A heart_10 heart_8 diamond_10 spade_10 club_2 joker spade_6 diamond_4'),
+      p3: c('diamond_8 diamond_2 heart_9 club_3 diamond_6 heart_4 diamond_J heart_Q club_J'),
+      p4: c('diamond_A diamond_3 heart_7 club_5 club_8 club_10 heart_K diamond_5'),
+    },
+  });
+  // 휴리스틱은 같은 트릭을 조커로 먹는다(트릭은 가져오지만 조커 낭비 판단은
+  // 별개 룰 소관). 실서버가 쓰는 건 mixoracle 이라 거기서만 카드를 못박는다.
+  let fired = [];
+  global.__mightyRuleTrace = (name) => fired.push(name);
+  check('fix11: 점수 걸린 트릭을 확실한 승리수로 먹는다',
+    (MightyBot.decideMightyBotAction(build(), 'p2', 'mixoracle') || {}).cardId,
+    got => got === 'mighty_club_A');
+  check('fix11: 그 판단이 하드 룰에서 나온다',
+    fired.join(','), got => got.includes('takeSurePointTrick'));
+
+  // 판돈이 0점이면 룰이 안 걸린다 — 에이스를 아끼는 판단은 그대로 둔다.
+  const noPot = () => {
+    const g = build();
+    g.currentTrick = [
+      { pid: 'p4', cardId: 'mighty_club_9' },
+      { pid: 'p0', cardId: 'mighty_club_4' },
+      { pid: 'p1', cardId: 'mighty_club_6' },
+    ];
+    g.hands.p4 = c('diamond_A diamond_3 heart_7 club_5 club_8 club_K heart_K diamond_5');
+    g.hands.p1 = c('heart_3 spade_J heart_J spade_Q heart_5 spade_8 diamond_9 club_Q');
+    return g;
+  };
+  fired = [];
+  MightyBot.decideMightyBotAction(noPot(), 'p2', 'mixoracle');
+  check('fix11: 판돈 0점이면 룰이 안 걸린다',
+    fired.join(','), got => !got.includes('takeSurePointTrick'));
+  global.__mightyRuleTrace = null;
+})();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

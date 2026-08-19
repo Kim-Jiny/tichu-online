@@ -102,12 +102,32 @@ function cacheControlFor(pathname, noStore) {
  * 이미 Content-Encoding 이 붙은 응답은 nginx 가 다시 gzip 하지 않으므로
  * 이중 압축 걱정은 없다. .br 이 없으면 원본을 그대로 내주고 gzip 이 받는다.
  */
+function acceptsBrotli(req) {
+  const header = String(req.headers['accept-encoding'] || '');
+  for (const part of header.split(',')) {
+    const [token, ...params] = part.trim().split(';');
+    if (token.toLowerCase() !== 'br') continue;
+    // `br;q=0` 은 "brotli 는 받지 않겠다"는 뜻이다. 토큰만 보고 내주면
+    // 거절한 클라이언트에게 압축본을 떠넘기게 된다.
+    const q = params.map(x => x.trim().toLowerCase())
+      .find(x => x.startsWith('q='));
+    return !q || parseFloat(q.slice(2)) > 0;
+  }
+  return false;
+}
+
 async function pickBrotli(req, filePath) {
-  const accepted = String(req.headers['accept-encoding'] || '');
-  if (!/(^|[\s,])br($|[\s,;])/.test(accepted)) return null;
+  if (!acceptsBrotli(req)) return null;
   try {
     const brPath = `${filePath}.br`;
-    return { path: brPath, stat: await fsp.stat(brPath) };
+    const stat = await fsp.stat(brPath);
+    // 원본보다 오래된 .br 은 쓰지 않는다. 지금 파이프라인에서는 빌드 직후
+    // 한 번에 압축해 같이 실어 보내니 어긋날 일이 없지만, 어긋나는 순간
+    // 사용자는 옛날 main.dart.js 를 받는다 — 그 실패는 조용해서 더 나쁘다.
+    // 로컬에서 웹만 다시 빌드하고 압축을 안 돌린 경우가 딱 이 모양이다.
+    const origin = await fsp.stat(filePath);
+    if (stat.mtimeMs < origin.mtimeMs) return null;
+    return { path: brPath, stat };
   } catch {
     return null;
   }

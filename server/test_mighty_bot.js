@@ -536,5 +536,52 @@ check('fix3: friend preserves joker on locked trick',
   global.__mightyRuleTrace = null;
 })();
 
+// ── Fix 12: 주공이 조커콜을 들었으면 프렌드는 조커를 먼저 쓴다 ──
+// 유저 리포트: 주공(사람)이 조커콜 카드를 들고 있는데 프렌드(봇)가 선을
+// 먹고도 조커를 안 써서, 나중에 주공이 쏜 총에 프렌드가 맞았다.
+// 룰은 있었는데 "프렌드 공개 전" 에만 위협으로 봐서 공개 뒤엔 안 걸렸다.
+//
+// 부를 무늬도 같이 못박는다 — 기루다가 6장 이상 남았고 야당이 기루다를
+// 들고 있으면 기루다(같이 훑는다), 아니면 주공이 물패를 낼 무늬.
+(() => {
+  const c = (s) => s.split(' ').map(x => x === 'joker' ? 'mighty_joker' : `mighty_${x}`);
+  const build = (mut) => {
+    const g = position({
+      declarer: 'p0', partner: 'p2', friendRevealed: true,
+      friendCard: 'mighty_diamond_A', trumpSuit: 'heart',
+      tricksLen: 2, currentPlayer: 'p2', currentTrick: [],
+      hands: {
+        p0: c('club_3 heart_A heart_5 heart_2 spade_9 spade_4 diamond_2'),
+        p1: c('spade_A spade_K heart_7 club_9 club_8 diamond_5 diamond_6'),
+        p2: c('joker diamond_A heart_9 club_K club_Q spade_7 spade_6'),
+        p3: c('heart_K heart_3 club_A club_10 spade_8 diamond_9 diamond_J'),
+        p4: c('heart_Q heart_4 club_5 club_6 spade_10 diamond_K diamond_Q'),
+      },
+    });
+    if (mut) mut(g, c);
+    return g;
+  };
+
+  // 조커콜 카드는 기루다가 클로버가 아니면 ♣3 이다.
+  check('fix12: 조커콜 카드가 주공 손에 있다',
+    build().getJokerCallCard(), got => got === 'mighty_club_3');
+
+  const a = MightyBot.decideMightyBotAction(build(), 'p2', 'mixoracle') || {};
+  check('fix12: 프렌드가 조커를 먼저 쓴다', a.cardId,
+    got => got === 'mighty_joker');
+  check('fix12: 야당이 기루다를 들었으면 기루다를 부른다', a.jokerSuit,
+    got => got === 'heart');
+
+  // 남은 기루다가 전부 우리 편 손에 있으면 훑을 게 없다 → 기루다를 안 부른다.
+  const b = MightyBot.decideMightyBotAction(build((g, cc) => {
+    g.hands.p0 = cc('club_3 heart_A heart_5 heart_2 heart_K heart_Q spade_4');
+    g.hands.p1 = cc('spade_A spade_K club_7 club_9 club_8 diamond_5 diamond_6');
+    g.hands.p3 = cc('club_A club_10 club_J spade_8 diamond_9 diamond_J diamond_10');
+    g.hands.p4 = cc('club_5 club_6 club_2 spade_10 spade_5 diamond_K diamond_Q');
+  }), 'p2', 'mixoracle') || {};
+  check('fix12: 야당 기루다가 없으면 기루다를 안 부른다', b.jokerSuit,
+    got => got && got !== 'heart');
+})();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -877,8 +877,11 @@ function _friendJokerLeadRule(game, botId) {
   // 그러면 우리 조커가 헛되이 타 버린다. 봇 주공은 이제 우리 편 조커를 보고
   // 안 쏘지만(_teammateHoldsJoker), 사람은 볼 수가 없다.
   // 그 전에 내 리드로 조커를 값나가게 쓰는 게 낫다.
-  const declarerThreat = !game.friendRevealed
-    && game.declarer !== botId
+  // 공개 여부와 무관하다. 공개 전이면 주공이 우리 조커를 모르고 쏘고, 공개
+  // 뒤여도 사람 주공은 잊거나 야당을 노리고 쏜다 — 어느 쪽이든 맞는 건 우리
+  // 조커다("주공이 쏜 총에 프렌즈가 맞는다"). 예전에는 공개 전만 위협으로
+  // 봐서, 프렌드가 드러난 뒤에는 이 룰이 아예 안 걸렸다.
+  const declarerThreat = game.declarer !== botId
     && (game.hands[game.declarer] || []).includes(jokerCallCard)
     // A/B 측정용 좌석 게이트. 켜지면 예전(상대 위협만 봄) 동작으로 돈다.
     && !(typeof global.__mightyDeclarerJokerThreatLegacy === 'function'
@@ -904,8 +907,88 @@ function _friendJokerLeadRule(game, botId) {
   // 수락했다). 사람 주공이 앉는 실제 판에서 조커가 헛되이 끌려 나가는 걸 막으려면
   // 여기서는 그냥 쓰는 게 맞다. 무늬만 후보 중 제일 좋은 걸로 고른다.
   if (!declarerThreat) return null;
+  const suit = _jokerSuitAgainstDeclarer(game, botId);
+  if (suit) {
+    return { type: 'play_card', cardId: 'mighty_joker', jokerSuit: suit };
+  }
   const forced = _bestPlayAction(game, botId, candidateActions);
   return forced.action || null;
+}
+
+/** 아직 한 장도 안 나온 기루다 장수. */
+function _unplayedTrumpCount(game) {
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return 0;
+  const played = MightyBotInternals.getPlayedCards(game);
+  let out = 0;
+  for (const cardId of played) {
+    if (cardId === 'mighty_joker') continue;
+    if ((getCardInfo(cardId) || {}).suit === trump) out++;
+  }
+  return 13 - out;
+}
+
+/**
+ * 조커를 쓸 때 부를 무늬.
+ *
+ * 조커로 리드하면 다들 부른 무늬를 따라내야 하고, 트릭은 조커가 가져간다.
+ * 그러니 "주공이 무엇을 버리게 만들 것인가" 를 고르는 일이다.
+ *
+ *   기루다가 6장 이상 남았으면 → 기루다.
+ *     아직 흔하니 한 장 빼도 아깝지 않고, 야당 기루다까지 같이 훑는다. 단
+ *     주공의 기루다가 탑카드뿐이면 부르지 않는다 — 물패를 빼려던 게 주공의
+ *     제일 좋은 카드를 빼는 게 된다.
+ *   6장 미만이면 → 주공이 제일 값없는 카드를 낼 무늬.
+ *     기루다가 귀해진 판에서 주공 기루다를 뽑아내면 손해다. 점수 없는 낮은
+ *     카드가 나올 무늬로 부른다.
+ */
+function _jokerSuitAgainstDeclarer(game, botId) {
+  const trump = game.trumpSuit;
+  if (!trump || trump === 'no_trump') return null;
+  const declarerHand = game.hands[game.declarer] || [];
+  if (declarerHand.length === 0) return null;
+
+  const mightyCard = game.getMightyCard();
+  // 주공이 그 무늬에서 낼 수밖에 없는 카드 = 가진 것 중 제일 낮은 것.
+  const forcedCard = (suit) => {
+    let worst = null;
+    for (const cardId of declarerHand) {
+      if (cardId === 'mighty_joker' || cardId === mightyCard) continue;
+      const info = getCardInfo(cardId) || {};
+      if (info.suit !== suit) continue;
+      if (!worst || RANK_ORDER[info.rank] < RANK_ORDER[(getCardInfo(worst) || {}).rank]) {
+        worst = cardId;
+      }
+    }
+    return worst;
+  };
+
+  // 기루다를 부르는 이유는 야당 기루다를 같이 훑기 위해서다. 일곱 장이
+  // 남았어도 그게 전부 우리 편(주공·프렌드) 손에 있으면 훑을 게 없다 —
+  // 우리 기루다만 한 장 축내는 셈이라 부를 이유가 없다.
+  if (_unplayedTrumpCount(game) >= 6
+      && MightyBotInternals.countOpponentTrumps(game, botId) > 0) {
+    const card = forcedCard(trump);
+    if (card && !MightyBotInternals.isEffectiveTopOfSuit(card, game)) return trump;
+  }
+
+  let best = null;
+  let bestScore = Infinity;
+  for (const suit of SUITS) {
+    if (suit === trump) continue;
+    const card = forcedCard(suit);
+    if (!card) continue;
+    if (MightyBotInternals.isEffectiveTopOfSuit(card, game)) continue;
+    const info = getCardInfo(card) || {};
+    // 점수패를 빼는 건 손해다(우리가 먹는 트릭이라 점수는 우리 것이지만,
+    // 주공 손에서 나중에 쓸 카드가 사라진다). 같은 값이면 낮은 카드부터.
+    const score = (info.point || 0) * 100 + (RANK_ORDER[info.rank] || 0);
+    if (score < bestScore) {
+      bestScore = score;
+      best = suit;
+    }
+  }
+  return best;
 }
 
 /**

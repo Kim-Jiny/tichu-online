@@ -53,6 +53,20 @@ void main() {
     expect(sent, 1, reason: '탭이 손잡이에 먹히면 여기서 0 이 된다');
   });
 
+  testWidgets('손잡이로 크기 조절은 그대로 된다', (tester) async {
+    // 버튼을 살리려고 손잡이를 죽이면 안 된다. 반대 방향도 같이 못 박는다.
+    await tester.pumpWidget(harness(onSend: () {}));
+    await tester.pumpAndSettle();
+
+    final before = tester.getSize(find.byKey(const ValueKey('chat_panel')));
+    await tester.drag(find.byIcon(Icons.open_in_full), const Offset(-60, -50));
+    await tester.pumpAndSettle();
+    final after = tester.getSize(find.byKey(const ValueKey('chat_panel')));
+
+    expect(after.width, lessThan(before.width), reason: '가로가 안 줄었다');
+    expect(after.height, lessThan(before.height), reason: '세로가 안 줄었다');
+  });
+
   testWidgets('전송 버튼과 리사이즈 손잡이가 겹치지 않는다', (tester) async {
     await tester.pumpWidget(harness(onSend: () {}));
     await tester.pumpAndSettle();

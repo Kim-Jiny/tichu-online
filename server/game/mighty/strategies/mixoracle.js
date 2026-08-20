@@ -949,13 +949,23 @@ function _jokerSuitAgainstDeclarer(game, botId) {
   if (declarerHand.length === 0) return null;
 
   const mightyCard = game.getMightyCard();
+  // 우리 편 손에서 끌려 나오면 안 되는 카드.
+  //
+  // 마이티는 판을 가져올 카드고, 프렌드 카드는 그게 나오는 순간 프렌드가
+  // 공개된다 — 프렌드 카드가 마이티인 판(♠A 프렌즈)에서 스페이드를 부르면
+  // 둘 다 한 번에 날아간다. 조커로 무늬를 부르는 건 상대에게 무엇을 내게
+  // 할지 고르는 일인데, 그러다 우리 것을 빼내면 안 된다.
+  const protect = new Set([mightyCard, game.friendCard]);
+
   // 주공이 그 무늬에서 낼 수밖에 없는 카드 = 가진 것 중 제일 낮은 것.
+  // 지켜야 할 카드밖에 없는 무늬는 아예 후보에서 뺀다(null).
   const forcedCard = (suit) => {
     let worst = null;
     for (const cardId of declarerHand) {
-      if (cardId === 'mighty_joker' || cardId === mightyCard) continue;
+      if (cardId === 'mighty_joker') continue;
       const info = getCardInfo(cardId) || {};
       if (info.suit !== suit) continue;
+      if (protect.has(cardId)) return null;
       if (!worst || RANK_ORDER[info.rank] < RANK_ORDER[(getCardInfo(worst) || {}).rank]) {
         worst = cardId;
       }

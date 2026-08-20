@@ -595,6 +595,14 @@ check('fix3: friend preserves joker on locked trick',
   }), 'p2', 'mixoracle') || {};
   check('fix12: 야당 기루다가 없으면 기루다를 안 부른다', b.jokerSuit,
     got => got && got !== 'heart');
+
+  // 부른 무늬 때문에 우리 편 마이티가 끌려 나오면 안 된다. 주공의 스페이드를
+  // 마이티(♠A) 한 장만 남기면, 스페이드를 부르는 순간 그게 나온다.
+  const d = MightyBot.decideMightyBotAction(build((g, cc) => {
+    g.hands.p0 = cc('club_3 spade_A heart_5 heart_2 heart_A diamond_2 diamond_6');
+  }), 'p2', 'mixoracle') || {};
+  check('fix12: 주공 마이티가 끌려 나올 무늬는 안 부른다', d.jokerSuit,
+    got => got !== 'spade');
 })();
 
 console.log(`\n${pass} passed, ${fail} failed`);

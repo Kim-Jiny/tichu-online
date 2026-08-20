@@ -541,30 +541,44 @@ check('fix3: friend preserves joker on locked trick',
 // 먹고도 조커를 안 써서, 나중에 주공이 쏜 총에 프렌드가 맞았다.
 // 룰은 있었는데 "프렌드 공개 전" 에만 위협으로 봐서 공개 뒤엔 안 걸렸다.
 //
-// 부를 무늬도 같이 못박는다 — 기루다가 6장 이상 남았고 야당이 기루다를
-// 들고 있으면 기루다(같이 훑는다), 아니면 주공이 물패를 낼 무늬.
+// 국면은 실제로 도달 가능해야 한다 — 프렌드는 프렌드 카드를 내면서 공개되므로
+// 공개됐다면 그 카드는 이미 손에 없다. 1트릭에 ♦A 를 내고 그 트릭을 먹어
+// 지금 선을 잡은 자리로 세운다.
 (() => {
   const c = (s) => s.split(' ').map(x => x === 'joker' ? 'mighty_joker' : `mighty_${x}`);
   const build = (mut) => {
     const g = position({
       declarer: 'p0', partner: 'p2', friendRevealed: true,
       friendCard: 'mighty_diamond_A', trumpSuit: 'heart',
-      tricksLen: 2, currentPlayer: 'p2', currentTrick: [],
+      tricksLen: 1, currentPlayer: 'p2', currentTrick: [],
       hands: {
         p0: c('club_3 heart_A heart_5 heart_2 spade_9 spade_4 diamond_2'),
-        p1: c('spade_A spade_K heart_7 club_9 club_8 diamond_5 diamond_6'),
-        p2: c('joker diamond_A heart_9 club_K club_Q spade_7 spade_6'),
-        p3: c('heart_K heart_3 club_A club_10 spade_8 diamond_9 diamond_J'),
-        p4: c('heart_Q heart_4 club_5 club_6 spade_10 diamond_K diamond_Q'),
+        p1: c('spade_A spade_K heart_7 club_9 club_8 diamond_6 diamond_7'),
+        p2: c('joker heart_9 club_K club_Q spade_7 spade_6 diamond_10'),
+        p3: c('heart_K heart_3 club_A club_10 spade_8 diamond_J diamond_8'),
+        p4: c('heart_Q heart_4 club_5 club_6 spade_10 diamond_K diamond_4'),
       },
     });
+    // 1트릭에 실제로 나간 카드. ♦A 가 여기서 빠졌기에 프렌드가 공개됐다.
+    g.tricks = [{
+      cards: [
+        { pid: 'p0', cardId: 'mighty_diamond_3' },
+        { pid: 'p1', cardId: 'mighty_diamond_5' },
+        { pid: 'p2', cardId: 'mighty_diamond_A' },
+        { pid: 'p3', cardId: 'mighty_diamond_9' },
+        { pid: 'p4', cardId: 'mighty_diamond_Q' },
+      ],
+      winner: 'p2',
+    }];
     if (mut) mut(g, c);
     return g;
   };
 
-  // 조커콜 카드는 기루다가 클로버가 아니면 ♣3 이다.
+  check('fix12: 프렌드 카드는 이미 나갔다 (도달 가능한 국면)',
+    (build().hands.p2 || []).includes('mighty_diamond_A'), got => got === false);
   check('fix12: 조커콜 카드가 주공 손에 있다',
-    build().getJokerCallCard(), got => got === 'mighty_club_3');
+    (build().hands.p0 || []).includes(build().getJokerCallCard()),
+    got => got === true);
 
   const a = MightyBot.decideMightyBotAction(build(), 'p2', 'mixoracle') || {};
   check('fix12: 프렌드가 조커를 먼저 쓴다', a.cardId,
@@ -575,9 +589,9 @@ check('fix3: friend preserves joker on locked trick',
   // 남은 기루다가 전부 우리 편 손에 있으면 훑을 게 없다 → 기루다를 안 부른다.
   const b = MightyBot.decideMightyBotAction(build((g, cc) => {
     g.hands.p0 = cc('club_3 heart_A heart_5 heart_2 heart_K heart_Q spade_4');
-    g.hands.p1 = cc('spade_A spade_K club_7 club_9 club_8 diamond_5 diamond_6');
-    g.hands.p3 = cc('club_A club_10 club_J spade_8 diamond_9 diamond_J diamond_10');
-    g.hands.p4 = cc('club_5 club_6 club_2 spade_10 spade_5 diamond_K diamond_Q');
+    g.hands.p1 = cc('spade_A spade_K club_7 club_9 club_8 diamond_6 diamond_7');
+    g.hands.p3 = cc('club_A club_10 club_J spade_8 diamond_J diamond_8 diamond_2');
+    g.hands.p4 = cc('club_5 club_6 club_2 spade_10 spade_5 diamond_K diamond_4');
   }), 'p2', 'mixoracle') || {};
   check('fix12: 야당 기루다가 없으면 기루다를 안 부른다', b.jokerSuit,
     got => got && got !== 'heart');

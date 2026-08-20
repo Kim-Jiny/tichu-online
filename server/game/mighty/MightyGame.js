@@ -743,11 +743,11 @@ class MightyGame {
     // default. The client now blocks the Play button until the user picks;
     // this is the server-side defense for old or misbehaving clients.
     if (cardId === 'mighty_joker' && this.currentTrick.length === 0) {
-      // 막 트릭의 조커는 무늬를 부르지 않는다. 다들 카드가 한 장뿐이라 고를
-      // 것도 없고, 이 조커는 어차피 지는 카드다 — 리드 무늬는 다음 사람이
-      // 내는 카드가 정한다(_leadSuitOf 참고). 옛 클라이언트가 무늬를 실어
-      // 보내도 그냥 버린다.
-      if (!this._isLastTrick()) {
+      // 힘없는 조커는 무늬를 부르지 않는다(기본 옵션에서 1트릭·막 트릭).
+      // 어차피 지는 카드라 부른 무늬로 남을 묶을 이유가 없다 — 리드 무늬는
+      // 다음 사람이 내는 카드가 정한다(_leadSuitOf 참고). 옛 클라이언트가
+      // 무늬를 실어 보내도 그냥 버린다.
+      if (this._currentTrickJokerHasPower()) {
         if (!jokerSuit || !SUITS.includes(jokerSuit)) {
           return { success: false, messageKey: 'mighty_joker_suit_required' };
         }
@@ -866,19 +866,16 @@ class MightyGame {
   // True when joker retains full power in the trick currently being led.
   // First/last trick joker power is option-gated; when joker has no power
   // there, joker-call has no meaning and must not be honored.
-  /** 지금 트릭이 이 라운드의 마지막 트릭인가. */
-  _isLastTrick() {
-    return this.tricks.length === this._totalTricksThisRound() - 1;
-  }
-
   /**
    * 이 트릭의 리드 무늬.
    *
-   * 보통은 첫 카드의 무늬고, 조커로 리드하면 부른 무늬다. 단 막 트릭의
-   * 조커는 무늬를 부르지 않는다 — 그때는 두 번째로 나온 카드가 리드 무늬를
-   * 정한다. 그래야 조커가 지는 카드로 남는다. 안 그러면 부른 무늬를 아무도
-   * 안 들었을 때 전부 우선순위 0 으로 묶이고, 맨 앞에 놓인 조커가 그 트릭을
-   * 가져가 버린다.
+   * 보통은 첫 카드의 무늬고, 조커로 리드하면 부른 무늬다. 단 힘없는 조커는
+   * (기본 옵션에서 1트릭·막 트릭) 무늬를 부르지 않는다 — 그때는 두 번째로
+   * 나온 카드가 리드 무늬를 정한다.
+   *
+   * 그래야 조커가 지는 카드로 남는다. 부른 무늬를 그대로 쓰면, 그 무늬를
+   * 아무도 안 들었을 때 나머지가 전부 우선순위 0 으로 묶이고 맨 앞에 놓인
+   * 조커가 그 트릭을 가져가 버린다.
    *
    * 두 번째 카드가 아직 안 나왔으면 null 이다. 그 시점에는 따라낼 무늬가
    * 정해지지 않았다는 뜻이라 두 번째 사람은 아무거나 낼 수 있다.
@@ -887,7 +884,7 @@ class MightyGame {
     if (!plays || plays.length === 0) return null;
     const leadCard = plays[0].cardId;
     if (leadCard !== 'mighty_joker') return getCardInfo(leadCard).suit;
-    if (!this._isLastTrick()) return this.jokerSuitDeclared;
+    if (this._currentTrickJokerHasPower()) return this.jokerSuitDeclared;
     const second = plays[1];
     if (!second) return null;
     return second.cardId === 'mighty_joker'
@@ -1384,10 +1381,6 @@ class MightyGame {
       mightyCard: this.trumpSuit ? this.getMightyCard() : null,
       jokerCallCard: this.trumpSuit ? this.getJokerCallCard() : null,
       jokerHasPower: this._currentTrickJokerHasPower(),
-      // 막 트릭의 조커는 무늬를 부르지 않는다 — 클라이언트가 무늬 선택기를
-      // 띄울지 정하는 데 쓴다. jokerHasPower 로는 구분이 안 된다(1트릭도
-      // 조커에 힘이 없지만 거기서는 무늬를 불러야 한다).
-      isLastTrick: this._isLastTrick(),
       remainingTrumps: hasTrumpCounter ? this._countRemainingTrumps() : undefined,
       excludedPlayers: [...this.excludedPlayers],
     };
@@ -1454,7 +1447,6 @@ class MightyGame {
       jokerCallCard: cache.jokerCallCard,
       jokerCallActive: this.jokerCallActive,
       jokerHasPower: cache.jokerHasPower,
-      isLastTrick: cache.isLastTrick,
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,
@@ -1530,7 +1522,6 @@ class MightyGame {
       jokerCallCard: cache.jokerCallCard,
       jokerCallActive: this.jokerCallActive,
       jokerHasPower: cache.jokerHasPower,
-      isLastTrick: cache.isLastTrick,
       jokerSuitDeclared: this.jokerSuitDeclared,
       lastTrickCards: this.state === 'trick_end' ? this.lastTrickCards : [],
       lastTrickWinner: this.state === 'trick_end' ? this.lastTrickWinner : null,

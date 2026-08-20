@@ -4700,10 +4700,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           if (isPlaying &&
               selectedCard != null &&
               isSelectedLegal &&
-              // 막 트릭 조커는 무늬를 안 부른다 — 고를 게 없으니 막지 않는다.
+              // 힘없는 조커(1트릭·막 트릭)는 무늬를 안 부른다 — 고를 게
+              // 없으니 막지 않는다.
               !(selectedCard == 'mighty_joker' &&
                   state.currentTrick.isEmpty &&
-                  !state.isLastTrick &&
+                  state.jokerHasPower &&
                   _jokerSuitChoice == null))
             Padding(
               padding: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
@@ -4759,7 +4760,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   Text(
                     (selectedCard == 'mighty_joker' &&
                             state.currentTrick.isEmpty &&
-                            !state.isLastTrick &&
+                            state.jokerHasPower &&
                             _jokerSuitChoice == null)
                         ? L10n.of(context).mtJokerSelectSuit
                         : L10n.of(context).mtSelectCard,
@@ -4832,13 +4833,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
               ),
           ],
-          // Joker suit selector — 막 트릭에는 띄우지 않는다. 그 조커는 무늬를
-          // 부르지 않고(리드 무늬는 다음 카드가 정한다) 어차피 지는 카드라,
-          // 고르라고 물으면 의미 없는 선택을 강요하는 셈이다.
+          // Joker suit selector — 힘없는 조커(1트릭·막 트릭)에는 띄우지
+          // 않는다. 그 조커는 무늬를 부르지 않고(리드 무늬는 다음 카드가
+          // 정한다) 어차피 지는 카드라, 고르라고 물으면 의미 없는 선택을
+          // 강요하는 셈이다.
           if (isPlaying &&
               _selectedCard == 'mighty_joker' &&
               state.currentTrick.isEmpty &&
-              !state.isLastTrick)
+              state.jokerHasPower)
             _buildJokerSuitSelector(),
           // Joker call toggle — hidden when joker has no power in this trick
           // (first/last trick with *JokerPower option disabled), since calling

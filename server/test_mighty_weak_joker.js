@@ -1,10 +1,9 @@
 'use strict';
 /**
- * 막 트릭의 조커.
+ * 힘없는 조커(기본 옵션에서 1트릭·막 트릭).
  *
- * 규칙: 막 트릭에 나온 조커는 무조건 지는 카드다. 그리고 무늬를 부르지
- * 않는다 — 다들 카드가 한 장뿐이라 고를 것도 없고, 리드 무늬는 조커 다음에
- * 나온 카드가 정한다.
+ * 규칙: 그 조커는 무조건 지는 카드다. 그리고 무늬를 부르지 않는다 — 리드
+ * 무늬는 조커 다음에 나온 카드가 정한다.
  *
  * 예전에는 부른 무늬가 그대로 리드 무늬였다. 그 무늬를 아무도 안 들고
  * 있으면 나머지가 전부 우선순위 0 으로 묶이고, 목록 맨 앞의 조커가 그
@@ -22,8 +21,12 @@ const check = (name, cond, detail = '') => {
   else { fail++; console.log(`  FAIL ${name}${detail ? ` — ${detail}` : ''}`); }
 };
 
-/** 9트릭이 끝나고 각자 한 장씩 남은 자리. p0 이 조커로 리드한다. */
-function lastTrick(hands) {
+/**
+ * 조커에 힘이 없는 트릭. `done` 만큼 트릭이 끝난 자리를 만든다.
+ *   done = 9 → 막 트릭 (5인 10트릭)
+ *   done = 0 → 1트릭
+ */
+function weakJokerTrick(hands, done = 9) {
   const names = {};
   IDS.forEach(p => (names[p] = p));
   const g = new MightyGame(IDS, names, { targetScore: 50, rng: makeRng(1) });
@@ -33,7 +36,7 @@ function lastTrick(hands) {
   g.friendCard = 'mighty_diamond_A';
   g.friendRevealed = true;
   g.partner = 'p2';
-  g.tricks = new Array(9).fill(0).map(() => ({
+  g.tricks = new Array(done).fill(0).map(() => ({
     leader: 'p0', leadSuit: 'club', winner: 'p0', cards: [],
   }));
   g.currentPlayer = 'p0';
@@ -63,7 +66,7 @@ const spread = () => ({
 
 // ── 무늬를 안 불러도 낼 수 있다 ──
 {
-  const g = lastTrick(spread());
+  const g = weakJokerTrick(spread());
   const res = g.handleAction('p0', { type: 'play_card', cardId: 'mighty_joker' });
   check('막 트릭 조커는 무늬 없이 낼 수 있다', res.success === true,
     res.messageKey || '');
@@ -73,7 +76,7 @@ const spread = () => ({
 
 // ── 부른 무늬는 무시된다 ──
 {
-  const t = playOut(lastTrick(spread()), 'spade');
+  const t = playOut(weakJokerTrick(spread()), 'spade');
   check('부른 무늬(♠)는 무시되고 다음 카드가 리드 무늬', t.leadSuit === 'club',
     `리드 무늬 ${t.leadSuit}`);
   check('조커가 트릭을 못 먹는다', t.winner !== 'p0', `승자 ${t.winner}`);
@@ -85,7 +88,7 @@ const spread = () => ({
 {
   const hands = spread();
   hands.p3 = ['mighty_spade_3'];
-  const t = playOut(lastTrick(hands), 'spade');
+  const t = playOut(weakJokerTrick(hands), 'spade');
   check('♠ 를 든 사람이 있어도 리드 무늬는 다음 카드 것', t.leadSuit === 'club',
     `리드 무늬 ${t.leadSuit}`);
   check('그 사람이 먹지 않는다', t.winner === 'p1', `승자 ${t.winner}`);
@@ -95,7 +98,7 @@ const spread = () => ({
 {
   const hands = spread();
   hands.p3 = ['mighty_heart_2'];
-  const t = playOut(lastTrick(hands), 'spade');
+  const t = playOut(weakJokerTrick(hands), 'spade');
   check('기루다는 리드 무늬를 넘는다', t.winner === 'p3', `승자 ${t.winner}`);
 }
 
@@ -103,26 +106,41 @@ const spread = () => ({
 {
   const hands = spread();
   hands.p4 = ['mighty_spade_A'];
-  const t = playOut(lastTrick(hands), 'spade');
+  const t = playOut(weakJokerTrick(hands), 'spade');
   check('마이티는 그대로 최강', t.winner === 'p4', `승자 ${t.winner}`);
 }
 
-// ── 막 트릭이 아니면 예전 그대로 ──
+// ── 1트릭도 똑같다 ──
 {
-  const g = lastTrick(spread());
-  g.tricks = new Array(5).fill(0).map(() => ({
-    leader: 'p0', leadSuit: 'club', winner: 'p0', cards: [],
-  }));
+  const g = weakJokerTrick(spread(), 0);
+  const res = g.handleAction('p0', { type: 'play_card', cardId: 'mighty_joker' });
+  check('1트릭 조커도 무늬 없이 낼 수 있다', res.success === true, res.messageKey || '');
+
+  const t = playOut(weakJokerTrick(spread(), 0), 'spade');
+  check('1트릭도 부른 무늬가 무시된다', t.leadSuit === 'club', `리드 무늬 ${t.leadSuit}`);
+  check('1트릭 조커도 트릭을 못 먹는다', t.winner === 'p1', `승자 ${t.winner}`);
+}
+
+// ── 중간 트릭은 예전 그대로 ──
+{
+  const g = weakJokerTrick(spread(), 5);
   const res = g.handleAction('p0', { type: 'play_card', cardId: 'mighty_joker' });
   check('중간 트릭 조커는 무늬를 반드시 부른다', res.success === false
     && res.messageKey === 'mighty_joker_suit_required', JSON.stringify(res));
-  const g2 = lastTrick(spread());
-  g2.tricks = new Array(5).fill(0).map(() => ({
-    leader: 'p0', leadSuit: 'club', winner: 'p0', cards: [],
-  }));
+  const g2 = weakJokerTrick(spread(), 5);
   g2.handleAction('p0', { type: 'play_card', cardId: 'mighty_joker', jokerSuit: 'spade' });
   check('중간 트릭은 부른 무늬가 리드 무늬', g2.jokerSuitDeclared === 'spade',
     `${g2.jokerSuitDeclared}`);
+}
+
+// ── 옵션으로 1트릭 조커에 힘을 주면 예전 규칙으로 돌아온다 ──
+{
+  const g = weakJokerTrick(spread(), 0);
+  g.options.firstTrickJokerPower = true;
+  const res = g.handleAction('p0', { type: 'play_card', cardId: 'mighty_joker' });
+  check('1트릭 조커 파워 옵션을 켜면 무늬가 다시 필수',
+    res.success === false && res.messageKey === 'mighty_joker_suit_required',
+    JSON.stringify(res));
 }
 
 console.log(fail === 0 ? '\nPASS' : `\n${fail} FAILURE(S)`);

@@ -249,14 +249,11 @@ class MightyGameStateData {
   final String? mightyCard;
   final String? jokerCallCard;
   final bool jokerCallActive;
-  final bool jokerHasPower;
-
-  /// 이 라운드의 마지막 트릭인가.
+  /// 이 트릭에서 조커가 힘을 갖는가.
   ///
-  /// 막 트릭의 조커는 무늬를 부르지 않는다(리드 무늬는 다음 카드가 정한다).
-  /// jokerHasPower 로는 구분이 안 된다 — 1트릭도 조커에 힘이 없지만 거기서는
-  /// 무늬를 불러야 한다.
-  final bool isLastTrick;
+  /// 기본 옵션에서 1트릭·막 트릭의 조커는 힘이 없다. 그런 조커는 무늬도
+  /// 부르지 않는다 — 리드 무늬는 조커 다음에 나온 카드가 정한다.
+  final bool jokerHasPower;
   final String? jokerSuitDeclared;
   final int? turnDeadline;
   final bool kittyReceived;
@@ -298,7 +295,6 @@ class MightyGameStateData {
     this.jokerCallCard,
     this.jokerCallActive = false,
     this.jokerHasPower = true,
-    this.isLastTrick = false,
     this.jokerSuitDeclared,
     this.turnDeadline,
     this.kittyReceived = false,
@@ -387,7 +383,6 @@ class MightyGameStateData {
       jokerCallCard: json['jokerCallCard'],
       jokerCallActive: json['jokerCallActive'] == true,
       jokerHasPower: json['jokerHasPower'] != false,
-      isLastTrick: json['isLastTrick'] == true,
       jokerSuitDeclared: json['jokerSuitDeclared'] as String?,
       turnDeadline: (json['turnDeadline'] as num?)?.toInt(),
       kittyReceived: json['kittyReceived'] == true,

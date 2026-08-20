@@ -271,11 +271,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _openNoticesPage() {
     final game = context.read<GameService>();
-    // Capture unread IDs before marking as read, so we can show "NEW" badges
+    // Capture unread IDs before marking as read, so we can show "NEW" badges.
+    // 판정은 GameService.isNoticeNew 하나로 모은다 — 목록의 NEW 와 로비
+    // 배지 숫자가 다른 규칙을 쓰면 "1개라는데 열어보면 없다" 가 된다.
     final unreadIds = <int>{};
     for (final n in game.notices) {
       final id = n['id'];
-      if (id is int && !game.readNoticeIds.contains(id)) unreadIds.add(id);
+      if (id is int && game.isNoticeNew(n)) unreadIds.add(id);
     }
     Navigator.push(
       context,

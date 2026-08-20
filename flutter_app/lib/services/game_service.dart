@@ -18,6 +18,7 @@ import 'network_service.dart';
 import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
+import '../utils/notice_badge.dart';
 
 enum AppDestination {
   lobby,
@@ -393,15 +394,12 @@ class GameService extends ChangeNotifier {
   /// Read-only view of notice IDs the user has already seen.
   Set<int> get readNoticeIds => _readNoticeIds;
 
-  /// Count of notices the user hasn't opened yet.
-  int get unreadNoticeCount {
-    int count = 0;
-    for (final n in notices) {
-      final id = n['id'];
-      if (id is int && !_readNoticeIds.contains(id)) count++;
-    }
-    return count;
-  }
+  /// 이 공지에 NEW 를 달아야 하는가 — 판정은 utils/notice_badge.dart 에 있다.
+  bool isNoticeNew(Map<String, dynamic> notice) =>
+      isNoticeNewFor(notice, _readNoticeIds);
+
+  /// Count of notices the user hasn't opened yet — 최근 사흘 것만.
+  int get unreadNoticeCount => countNewNotices(notices, _readNoticeIds);
 
   /// Letters still wanting something — unread, or holding a reward nobody has
   /// taken out yet (see [mailNeedsAttention]). Joins the same badge as notices

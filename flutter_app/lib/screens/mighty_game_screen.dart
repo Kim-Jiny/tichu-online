@@ -1026,7 +1026,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onTap: () {
                 setState(() {
                   _soundPanelOpen = !_soundPanelOpen;
-                  _moreOpen = false;
+                  // ⋯ 메뉴는 닫지 않는다. 소리를 줄이려고 누른 건데 방금 연
+                  // 버튼들이 같이 사라지면, 조절을 마치고 다시 ⋯ 부터 눌러야
+                  // 한다. 조절바는 메뉴 아래(top 120 · 메뉴는 56~113)에
+                  // 자리를 잡아 두 개가 같이 보인다.
                   if (_soundPanelOpen) {
                     _viewersOpen = false;
                   }

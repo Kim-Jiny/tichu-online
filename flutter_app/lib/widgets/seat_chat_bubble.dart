@@ -211,6 +211,33 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   /// 안 남는다. 여기까지 왔다면 살짝 넘치더라도 읽히는 쪽이 낫다.
   static const _minWidth = 96.0;
 
+  // ── 화면 폭에 따라 키우기 ──────────────────────────────────────────────
+  //
+  // 기본값(11pt · 한 줄 · 178)은 폰에 맞춰 잡은 것이다. 폰은 좌석 자체가
+  // 작아서 더 키우면 옆자리를 덮는다. 반대로 웹이나 태블릿에서는 같은 11pt 가
+  // 화면에 비해 작고, 한 줄로 자르면 대부분의 문장이 ... 로 끝난다.
+  //
+  // 그래서 폭을 기준으로 그 사이를 매운다 — 폰 크기에서는 지금 그대로,
+  // 넓어질수록 글씨·최대폭이 커지고 두 줄까지 허용한다.
+  static const _narrowWidth = 360.0;
+  static const _wideWidth = 900.0;
+
+  /// 넓은 화면 쪽으로 얼마나 왔는지 (0 = 폰, 1 = 데스크톱).
+  double get _grow {
+    final w = MediaQuery.sizeOf(context).width;
+    return ((w - _narrowWidth) / (_wideWidth - _narrowWidth)).clamp(0.0, 1.0);
+  }
+
+  /// 이 화면에서 허용하는 최대폭. 좁힘(_fitWidth)은 이 값을 넘지 않는다.
+  double get _grownMaxWidth => widget.maxWidth * (1 + 0.55 * _grow);
+
+  /// 두 줄은 태블릿 폭(≈550)부터. 폰에서 두 줄이면 말풍선이 위 좌석까지
+  /// 올라간다.
+  int get _grownMaxLines =>
+      _grow >= 0.35 ? math.max(widget.maxLines, 2) : widget.maxLines;
+
+  double get _grownFontSize => widget.fontSize + 4 * _grow;
+
   @override
   void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -223,6 +250,14 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   @override
   void initState() {
     super.initState();
+    _scheduleSync();
+  }
+
+  /// 화면 크기가 바뀌면 폭도 글씨도 다시 정해야 한다 — 웹에서는 창을
+  /// 끌어다 늘였다 줄였다 한다.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _scheduleSync();
   }
 
@@ -259,7 +294,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final centre = box.localToGlobal(Offset(box.size.width / 2, 0)).dx;
     final room = 2 * (math.min(centre, screenWidth - centre) - _edgeInset);
-    final fit = math.min(widget.maxWidth, math.max(room, _minWidth));
+    final fit = math.min(_grownMaxWidth, math.max(room, _minWidth));
     if (_fitWidth != null && (_fitWidth! - fit).abs() < 0.5) return;
     setState(() => _fitWidth = fit);
   }
@@ -295,11 +330,12 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
               offset: Offset(0, -widget.gap),
               child: IgnorePointer(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: _fitWidth ?? widget.maxWidth),
+                  constraints:
+                      BoxConstraints(maxWidth: _fitWidth ?? _grownMaxWidth),
                   child: SeatChatBubble(
                     text: text,
-                    fontSize: widget.fontSize,
-                    maxLines: widget.maxLines,
+                    fontSize: _grownFontSize,
+                    maxLines: _grownMaxLines,
                     textAlign: TextAlign.center,
                     tail: true,
                     opaque: true,

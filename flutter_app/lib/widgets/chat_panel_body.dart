@@ -21,6 +21,14 @@ class ChatPanelBody extends StatefulWidget {
   /// only reachable spot once the panel covers what's behind it.
   final VoidCallback onTapMessages;
 
+  /// 전송 버튼 오른쪽으로 비워 둘 폭.
+  ///
+  /// 떠 있는 패널은 오른쪽 아래 모서리에 리사이즈 손잡이를 얹는데, 그게
+  /// 전송 버튼 위에 겹쳐 앉아 탭을 가로챘다 — 버튼을 눌러도 아무 일이 없거나
+  /// (손잡이엔 onTap 이 없다) 손가락이 조금만 움직이면 onPanStart 가 물려
+  /// 키보드만 내려갔다. 손잡이가 앉을 자리를 비워 둬서 둘이 안 겹치게 한다.
+  final double trailingInset;
+
   const ChatPanelBody({
     super.key,
     required this.scrollController,
@@ -31,6 +39,7 @@ class ChatPanelBody extends StatefulWidget {
     required this.itemCount,
     required this.itemBuilder,
     required this.onTapMessages,
+    this.trailingInset = 0,
   });
 
   @override
@@ -98,10 +107,21 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                   onSubmitted: (_) => _sendKeepingFocus(),
                 ),
               ),
-              IconButton(
-                onPressed: widget.onSend,
-                icon: Icon(Icons.send, color: widget.sendIconColor),
+              // 입력창의 "바깥"으로 치지 않게 묶는다.
+              //
+              // TextField 는 바깥을 탭하면 포커스를 놓는데, 바로 옆 전송
+              // 버튼도 바깥이다. 웹에서는 이게 실제로 동작해서(모바일 터치는
+              // 예외 — EditableTextTapOutsideIntent 참고) 버튼으로 보낼 때마다
+              // 커서가 사라졌다. 엔터로 보낼 때 커서를 남기기로 한 것과 같은
+              // 이유로, 버튼도 커서를 뺏지 않는 게 맞다.
+              TextFieldTapRegion(
+                child: IconButton(
+                  onPressed: widget.onSend,
+                  icon: Icon(Icons.send, color: widget.sendIconColor),
+                ),
               ),
+              if (widget.trailingInset > 0)
+                SizedBox(width: widget.trailingInset),
             ],
           ),
         ),

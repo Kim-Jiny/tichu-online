@@ -79,6 +79,33 @@ void main() {
     expect(inputHasFocus(tester), isTrue);
   });
 
+  testWidgets('키보드가 올라온 채로 버튼을 눌러도 한 번에 보내진다', (tester) async {
+    // 유저 리포트: 앱에서 전송 버튼이 안 눌린다. 키보드로 완료를 치면 보내진다.
+    // TextField 는 바깥을 탭하면 포커스를 놓는데 바로 옆 버튼도 바깥이라,
+    // 누르는 순간 키보드가 내려가고 그 사이 창이 움직여 탭이 취소됐다.
+    var sent = 0;
+    final controller = TextEditingController();
+    await tester.pumpWidget(harness(
+      controller: controller,
+      onSend: () {
+        sent++;
+        controller.clear();
+      },
+    ));
+
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '버튼으로 한 번에');
+    expect(inputHasFocus(tester), isTrue, reason: '준비 상태 확인');
+
+    await tester.tap(find.byIcon(Icons.send));
+    await tester.pumpAndSettle();
+
+    expect(sent, 1);
+    expect(inputHasFocus(tester), isTrue,
+        reason: '포커스가 빠지면 키보드가 내려가고 그 프레임에 탭이 씹힌다');
+  });
+
   testWidgets('보내기 버튼으로 보낼 때는 포커스를 건드리지 않는다', (tester) async {
     // 버튼은 마우스·손가락으로 누르는 길이다. 그쪽까지 강제로 포커스를 주면
     // 폰에서 키보드가 다시 올라온다.

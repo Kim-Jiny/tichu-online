@@ -119,6 +119,13 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   static const double _keyboardGap = 22;
   static const double _topGap = 42;
 
+  /// 오른쪽 아래 리사이즈 손잡이의 한 변.
+  ///
+  /// 이 손잡이는 패널 본문 위에 얹혀 그려지고 HitTestBehavior.opaque 라, 밑에
+  /// 무엇이 있든 탭을 가로챈다. 전송 버튼이 바로 그 자리에 있었다 — 그래서
+  /// ChatPanelBody 에 같은 만큼 자리를 비우게 한다(trailingInset).
+  static const double _resizeHandleSize = 36;
+
   // null until either the user has interacted or saved geometry is loaded;
   // build() falls back to a screen-relative default while null.
   double? _left;
@@ -339,6 +346,10 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
                     itemCount: widget.itemCount,
                     itemBuilder: widget.itemBuilder,
                     onTapMessages: _dismissKeyboard,
+                    // 오른쪽 아래 리사이즈 손잡이(_resizeHandleSize)가 앉을
+                    // 자리. 이만큼 비워 두지 않으면 손잡이가 전송 버튼을
+                    // 덮는다.
+                    trailingInset: _resizeHandleSize - 8,
                   ),
                 ),
               ],
@@ -523,8 +534,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
       },
       onPanEnd: (_) => _saveGeometry(),
       child: Container(
-        width: 36,
-        height: 36,
+        width: _resizeHandleSize,
+        height: _resizeHandleSize,
         decoration: const BoxDecoration(
           borderRadius: BorderRadius.only(bottomRight: Radius.circular(16)),
         ),

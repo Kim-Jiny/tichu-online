@@ -306,5 +306,16 @@
   "mail_not_found": "Letter not found",
   "mail_claim_failed": "Could not claim the reward. Please try again shortly",
   "mail_claim_first": "Claim the reward before deleting this letter",
-  "mail_delete_failed": "Could not delete the letter"
+  "mail_delete_failed": "Could not delete the letter",
+  "invite_meta_title": "{inviter} invited you · {room}",
+  "invite_meta_title_expired": "This invite is no longer valid",
+  "invite_meta_desc": "Tap to join — Tichu · Mighty · Skull King · Love Letter",
+  "invite_meta_desc_expired": "This invite link has expired or is not valid.",
+  "invite_eyebrow": "Invite from {inviter}",
+  "invite_eyebrow_expired": "Tichu Online invite",
+  "invite_title": "Join the room “{room}”",
+  "invite_title_expired": "This invite is no longer valid",
+  "invite_body": "If the app is installed it opens straight to the room. If not, grab it from the stores below.",
+  "invite_body_expired": "This invite link has expired or is not valid. Ask for a new one.",
+  "invite_cta": "Open in the app"
 }

@@ -306,5 +306,16 @@
   "mail_not_found": "Brief nicht gefunden",
   "mail_claim_failed": "Belohnung konnte nicht abgeholt werden. Bitte versuche es später erneut",
   "mail_claim_first": "Hol dir erst die Belohnung, bevor du den Brief löschst",
-  "mail_delete_failed": "Brief konnte nicht gelöscht werden"
+  "mail_delete_failed": "Brief konnte nicht gelöscht werden",
+  "invite_meta_title": "{inviter} hat dich eingeladen · {room}",
+  "invite_meta_title_expired": "Diese Einladung ist nicht mehr gültig",
+  "invite_meta_desc": "Tippen und mitspielen — Tichu · Mighty · Skull King · Love Letter",
+  "invite_meta_desc_expired": "Dieser Einladungslink ist abgelaufen oder ungültig.",
+  "invite_eyebrow": "Einladung von {inviter}",
+  "invite_eyebrow_expired": "Tichu Online Einladung",
+  "invite_title": "Tritt dem Raum „{room}“ bei",
+  "invite_title_expired": "Diese Einladung ist nicht mehr gültig",
+  "invite_body": "Ist die App installiert, öffnet sie den Raum direkt. Sonst unten im Store laden.",
+  "invite_body_expired": "Dieser Einladungslink ist abgelaufen oder ungültig. Bitte einen neuen anfordern.",
+  "invite_cta": "In der App öffnen"
 }

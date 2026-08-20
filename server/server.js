@@ -395,6 +395,28 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * 이 요청에 쓸 언어.
+ *
+ * 브라우저와 스크래퍼가 주는 유일한 힌트가 Accept-Language 다. 완벽하지는
+ * 않다 — 카카오톡 스크래퍼는 자기 기본값을 보내므로 미리보기 문구가 링크를
+ * 받는 사람의 언어와 다를 수 있다. 그래도 전부 한국어로 내보내는 것보다는
+ * 낫고, 페이지 자체는 받는 사람 브라우저가 열기 때문에 본문은 맞게 나온다.
+ *
+ * ?lang= 이 있으면 그게 이긴다(/privacy·/terms 와 같은 규칙).
+ */
+function pickLocale(req, url) {
+  const explicit = url && url.searchParams.get('lang');
+  if (explicit && ['ko', 'en', 'de'].includes(explicit)) return explicit;
+  const header = String(req.headers['accept-language'] || '').toLowerCase();
+  // 'ko-KR,ko;q=0.9,en;q=0.8' → 앞에서부터 우리가 아는 언어를 찾는다.
+  for (const part of header.split(',')) {
+    const tag = part.split(';')[0].trim().split('-')[0];
+    if (['ko', 'en', 'de'].includes(tag)) return tag;
+  }
+  return 'ko';
+}
+
 function renderMarketingPage({
   title,
   description,
@@ -407,14 +429,31 @@ function renderMarketingPage({
   tertiaryHref = IOS_STORE_URL,
   metaTitle,
   metaDescription,
+  // 공유 카드에 뜰 이미지의 절대 URL. 없으면 이미지 태그를 아예 안 넣는다 —
+  // 빈 og:image 는 스크래퍼가 깨진 이미지로 잡는다.
+  metaImage,
+  metaImageWidth,
+  metaImageHeight,
   // Raw markup injected into <head>. Only used by /invite, to bounce a real
   // browser into the web client while leaving scrapers the preview tags.
   headExtra = '',
+  lang = 'ko',
 }) {
   const pageTitle = metaTitle || title;
   const pageDescription = metaDescription || description;
+  // 이미지가 없으면 큰 카드를 약속하지 않는다. summary_large_image 를 걸어
+  // 놓고 이미지를 안 주면 카드가 비어 보인다.
+  const imageTags = metaImage
+    ? `
+    <meta property="og:image" content="${escapeHtml(metaImage)}" />
+    <meta property="og:image:width" content="${escapeHtml(String(metaImageWidth || ''))}" />
+    <meta property="og:image:height" content="${escapeHtml(String(metaImageHeight || ''))}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="${escapeHtml(metaImage)}" />`
+    : `
+    <meta name="twitter:card" content="summary" />`;
   return `<!doctype html>
-<html lang="ko">
+<html lang="${escapeHtml(lang)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -424,7 +463,7 @@ function renderMarketingPage({
     <meta property="og:description" content="${escapeHtml(pageDescription)}" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="${escapeHtml(primaryHref)}" />
-    <meta name="twitter:card" content="summary_large_image" />
+    ${imageTags}
     ${headExtra}
     <style>
       :root {
@@ -1440,13 +1479,14 @@ const server = http.createServer(async (req, res) => {
     const payload = token ? getInviteTokenPayload(token) : null;
     const roomName = payload?.roomName || 'Tichu Online Room';
     const inviter = payload?.inviterNickname || 'A friend';
+    const locale = pickLocale(req, url);
     const deepLinkUrl = `${INVITE_BASE_URL}/invite?t=${encodeURIComponent(token)}`;
     const title = payload
-      ? `${inviter} invited you to ${roomName}`
-      : 'Tichu Online invite';
+      ? t(locale, 'invite_meta_title', { inviter, room: roomName })
+      : t(locale, 'invite_meta_title_expired');
     const description = payload
-      ? 'Open this invite in Tichu Online to join the room.'
-      : 'This room invite is no longer valid.';
+      ? t(locale, 'invite_meta_desc')
+      : t(locale, 'invite_meta_desc_expired');
     // 보통 브라우저에서는, 앱이 깔려 있었다면 유니버셜 링크가 이 페이지가
     // 뜨기 전에 앱을 열었다. 그러니 여기까지 왔다는 건 넘겨줄 앱이 없다는
     // 뜻이고, 웹 클라이언트로 넘겨 방에 바로 앉힌다.
@@ -1497,15 +1537,26 @@ const server = http.createServer(async (req, res) => {
 })()</script>`
       : '';
     const html = renderMarketingPage({
-      eyebrow: payload ? `${inviter}님의 초대` : 'Tichu Online 초대',
-      title: payload ? `${roomName} 방에 참여해보세요` : '초대 링크를 확인할 수 없어요',
+      lang: locale,
+      eyebrow: payload
+        ? t(locale, 'invite_eyebrow', { inviter })
+        : t(locale, 'invite_eyebrow_expired'),
+      title: payload
+        ? t(locale, 'invite_title', { room: roomName })
+        : t(locale, 'invite_title_expired'),
       description: payload
-        ? '앱이 설치되어 있으면 바로 방으로 이동하고, 설치되어 있지 않다면 아래 스토어에서 내려받을 수 있어요.'
-        : '초대 링크가 만료되었거나 유효하지 않습니다. 새로운 링크를 다시 받아주세요.',
-      primaryLabel: '앱에서 초대 열기',
+        ? t(locale, 'invite_body')
+        : t(locale, 'invite_body_expired'),
+      primaryLabel: t(locale, 'invite_cta'),
       primaryHref: deepLinkUrl,
       metaTitle: title,
       metaDescription: description,
+      // 공유 카드 썸네일. 스크래퍼만 받아 가는 이미지라 방문자 로딩과는
+      // 무관하다 — 그래서 호환성이 넓은 jpg 를 쓴다(webp 는 카카오 같은
+      // 스크래퍼가 못 잡는 경우가 있다).
+      metaImage: `${INVITE_BASE_URL}/share-banner.jpg`,
+      metaImageWidth: 1200,
+      metaImageHeight: 569,
       headExtra: redirectScript,
     });
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

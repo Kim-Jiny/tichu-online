@@ -4976,7 +4976,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           // 영영 0 이었다 — 히스토리는 "유저에게 나간 모든 알림" 을 보여주는
           // 자리다. 행을 먼저 넣는 이유는 그 id 를 페이로드에 실어야 하기
           // 때문이다(탭이 돌아올 때 들고 오는 게 그 id 다).
-          const pushBody = '운영자 우편함에서 확인하세요.';
+          // 유저에게 보이는 문구다. 관리자 화면 메뉴 이름("운영자 우편함")을
+          // 그대로 쓰고 있었는데, 앱에는 그냥 "우편함" 으로 있다 — 알림을
+          // 받은 사람이 없는 메뉴를 찾게 된다.
+          const pushBody = '우편함에서 확인하세요.';
           const historyId = await insertPushHistory({
             adminUsername: sessionInfo.session.username || 'admin',
             title: body.title,

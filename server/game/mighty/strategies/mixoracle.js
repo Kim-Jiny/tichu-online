@@ -1334,11 +1334,56 @@ function _takeSurePointTrickRule(game, botId) {
   return MightyBotInternals.makePlayAction(pick, game, botId);
 }
 
+/**
+ * 프렌드가 조커콜을 들었으면, 그에게 선을 넘기기 전에 주공이 조커를 턴다.
+ *
+ * 유저 리포트의 뒤집힌 판이다. 주공(봇)이 조커를 들고 프렌즈(사람)가 조커콜
+ * 카드를 들고 있으면, 프렌즈가 선을 잡는 순간 조커콜이 날아올 수 있다 —
+ * 사람은 같은 편 조커가 어디 있는지 모르고, 야당을 노려 쏜다. 그러면 주공의
+ * 조커가 헛되이 끌려 나간다.
+ *
+ * 그래서 프렌즈가 이 트릭을 먹게 생겼으면 그 자리에서 조커로 덮는다. 트릭은
+ * 주공이 가져가고(점수는 어차피 같은 편), 선이 프렌즈에게 안 넘어가니 쏠
+ * 기회 자체가 없어지며, 조커는 값을 하고 빠진다.
+ *
+ * 따라내는 자리에서만 걸린다 — 무늬를 부르지 않으므로 우리 편 마이티나
+ * 프렌드 카드를 끌어낼 위험이 없다.
+ *
+ * 1트릭은 조커에 힘이 없어(_currentTrickJokerHasPower) 저절로 빠진다.
+ */
+function _declarerSpendJokerBeforeFriendLeadRule(game, botId) {
+  if (game.state !== 'playing') return null;
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (botId !== game.declarer) return null;
+
+  if (typeof game._currentTrickJokerHasPower !== 'function') return null;
+  if (!game._currentTrickJokerHasPower()) return null;
+
+  const legal = game.getLegalCards(botId) || [];
+  if (!legal.includes('mighty_joker')) return null;
+  if (!MightyBotInternals.canBeatCurrentWinner(game, 'mighty_joker')) return null;
+
+  // 이 트릭을 먹게 생긴 사람이 프렌드인가.
+  const winner = MightyBotInternals.getCurrentTrickWinner(game);
+  if (!winner || !MightyBotInternals.isFriend(game, winner)) return null;
+
+  // 그 프렌드가 조커콜 카드를 들고 있어야 위협이다.
+  const jokerCallCard = game.getJokerCallCard();
+  if (!jokerCallCard) return null;
+  if (!(game.hands[winner] || []).includes(jokerCallCard)) return null;
+
+  return MightyBotInternals.makePlayAction('mighty_joker', game, botId);
+}
+
 // 하드 룰은 순서가 곧 우선순위다. 이름을 같이 들고 있는 이유는 어떤 룰이
 // 수를 냈는지 추적할 수 있어야 시뮬레이션에서 원인을 짚을 수 있어서다
 // (global.__mightyRuleTrace).
 const HARD_RULES = [
   ['friendCardReveal', _friendCardRevealRule],
+  // declarerSavesAllyWin 보다 앞이다. 그 룰은 "아군이 이기는 트릭은 덮지
+  // 말고 버려라" 인데, 이건 그 예외다 — 덮는 이유가 트릭이 아니라 조커를
+  // 털어 조커콜을 피하는 것이라서.
+  ['declarerSpendJokerBeforeFriendLead', _declarerSpendJokerBeforeFriendLeadRule],
   ['declarerSavesAllyWin', _declarerSavesAllyWinRule],
   ['friendSafeWinner', _friendSafeWinnerRule],
   ['friendJokerCall', _friendJokerCallRule],

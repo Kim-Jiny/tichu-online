@@ -605,5 +605,52 @@ check('fix3: friend preserves joker on locked trick',
     got => got !== 'spade');
 })();
 
+// ── Fix 13: 프렌즈가 조커콜을 들었으면 주공이 먼저 조커를 턴다 ──
+// Fix 12 의 뒤집힌 판. 주공(봇)이 조커를 들고 프렌즈(사람)가 조커콜 카드를
+// 들고 있으면, 프렌즈가 선을 잡는 순간 조커콜이 날아올 수 있다 — 사람은 같은
+// 편 조커가 어디 있는지 모르고 야당을 노려 쏜다.
+// 프렌즈가 이 트릭을 먹게 생겼으면 그 자리에서 조커로 덮어 선을 안 넘긴다.
+(() => {
+  const c = (s) => s.split(' ').map(x => x === 'joker' ? 'mighty_joker' : `mighty_${x}`);
+  const build = (mut) => {
+    const g = position({
+      declarer: 'p0', partner: 'p2', friendRevealed: true,
+      friendCard: 'mighty_diamond_A', trumpSuit: 'heart',
+      tricksLen: 2, currentPlayer: 'p0',
+      // p2(프렌드)가 ♠K 로 이기고 있고, 주공 p0 이 따라낼 차례다.
+      currentTrick: [
+        { pid: 'p1', cardId: 'mighty_spade_4' },
+        { pid: 'p2', cardId: 'mighty_spade_K' },
+      ],
+      hands: {
+        p0: c('joker heart_5 heart_2 club_9 club_8 diamond_2'),
+        p1: c('spade_A heart_7 club_7 club_6 diamond_6 diamond_7'),
+        // 조커콜 카드(♣3)를 프렌드가 들고 있다.
+        p2: c('club_3 heart_9 club_K spade_7 spade_6 diamond_10'),
+        p3: c('heart_K heart_3 club_A club_10 spade_8 diamond_J'),
+        p4: c('heart_Q heart_4 club_5 spade_10 diamond_K diamond_4'),
+      },
+    });
+    if (mut) mut(g, c);
+    return g;
+  };
+
+  check('fix13: 조커콜 카드를 프렌드가 들고 있다',
+    (build().hands.p2 || []).includes(build().getJokerCallCard()),
+    got => got === true);
+
+  check('fix13: 주공이 조커로 덮어 선을 안 넘긴다',
+    (MightyBot.decideMightyBotAction(build(), 'p0', 'mixoracle') || {}).cardId,
+    got => got === 'mighty_joker');
+
+  // 프렌드가 조커콜을 안 들고 있으면 조커를 아낀다.
+  check('fix13: 위협이 없으면 조커를 안 쓴다',
+    (MightyBot.decideMightyBotAction(build((g, cc) => {
+      g.hands.p2 = cc('club_2 heart_9 club_K spade_7 spade_6 diamond_10');
+      g.hands.p4 = cc('club_3 heart_4 club_5 spade_10 diamond_K diamond_4');
+    }), 'p0', 'mixoracle') || {}).cardId,
+    got => got !== 'mighty_joker');
+})();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

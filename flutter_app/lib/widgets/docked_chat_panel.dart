@@ -76,6 +76,17 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
   double? _dragHeight;
 
   void _onDragStart(DragStartDetails _) {
+    // 키보드부터 내린다.
+    //
+    // 키보드가 올라오면 이 패널이 앉을 상자가 그만큼 줄고, 좌석 몫(130dp)을
+    // 떼고 나면 남는 게 거의 없다. 폰에서는 상한이 타이핑 바닥값보다 낮아져
+    // 채팅 높이가 한 값에 고정되고, 그 상태에서는 아무리 끌어도 화면이
+    // 꿈쩍하지 않는다 — 손잡이가 고장 난 것처럼 보인다.
+    //
+    // 떠 있는 채팅창은 드래그를 시작할 때 키보드를 내려서 이 상황을 피한다
+    // (DraggableChatPanel 의 onPanStart). 같은 제스처가 두 곳에서 다르게
+    // 동작할 이유가 없다.
+    FocusScope.of(context).unfocus();
     final box = _boxKey.currentContext?.findRenderObject() as RenderBox?;
     _dragHeight = box?.hasSize == true ? box!.size.height : null;
   }

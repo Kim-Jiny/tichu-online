@@ -3172,14 +3172,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       );
     }
 
-    // Lead suit from first card in trick
-    String? leadSuit;
-    final leadCardId = state.currentTrick.first.cardId;
-    if (leadCardId == 'mighty_joker') {
-      leadSuit = state.jokerSuitDeclared;
-    } else {
-      leadSuit = _getCardSuit(leadCardId);
-    }
+    final leadSuit = state.leadSuit;
 
     // Contract (공약) is already shown in the top info bar, so the center
     // trick box only surfaces the LEAD suit — rendered big and faded as a
@@ -6954,10 +6947,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (hand.isEmpty) return <String>{};
     if (trick.isEmpty) return hand.toSet();
 
-    final leadCardId = trick[0].cardId;
-    final leadSuit = leadCardId == 'mighty_joker'
-        ? (state.jokerSuitDeclared)
-        : _getCardSuit(leadCardId);
+    final leadSuit = state.leadSuit;
     if (leadSuit == null) return hand.toSet();
 
     final suitCards = hand.where((c) {

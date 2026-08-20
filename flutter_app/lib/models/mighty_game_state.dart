@@ -315,6 +315,28 @@ class MightyGameStateData {
     this.newlyReceivedCards = const [],
   });
 
+  /// 이 트릭의 리드 무늬. 서버 MightyGame._leadSuitOf 와 같은 규칙이다.
+  ///
+  /// 보통은 첫 카드의 무늬고, 조커로 리드하면 부른 무늬다. 힘없는 조커는
+  /// (기본 옵션에서 1트릭·막 트릭) 무늬를 부르지 않으므로 두 번째로 나온
+  /// 카드가 리드 무늬를 정한다 — 그 전에는 아직 정해진 무늬가 없다(null).
+  /// 두 번째 사람이 아무 카드나 낼 수 있다는 뜻이기도 하다.
+  String? get leadSuit {
+    if (currentTrick.isEmpty) return null;
+    final lead = currentTrick.first.cardId;
+    if (lead != 'mighty_joker') return _suitOf(lead);
+    if (jokerSuitDeclared != null) return jokerSuitDeclared;
+    if (currentTrick.length < 2) return null;
+    return _suitOf(currentTrick[1].cardId);
+  }
+
+  /// 'mighty_club_5' → 'club'. 조커는 무늬가 없다.
+  static String? _suitOf(String cardId) {
+    if (cardId == 'mighty_joker') return null;
+    final parts = cardId.split('_');
+    return parts.length >= 3 ? parts[1] : null;
+  }
+
   factory MightyGameStateData.fromJson(Map<String, dynamic> json) {
     List<MightyPlayer> playerList = [];
     if (json['players'] != null) {

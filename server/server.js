@@ -323,19 +323,19 @@ function resultMessage(result, locale) {
 }
 
 const PORT = process.env.PORT || 8080;
-// ⚠️ STILL tichu.jiny.shop, on purpose. Flip to tichu.kr only after the
-// tichu.kr build has shipped and taken hold — see docs/DOMAIN_MIGRATION.md 2단계.
+// 초대 링크를 찍는 호스트 — docs/DOMAIN_MIGRATION.md 2단계.
 //
 // Whichever host is minted here has to be one the RECIPIENT's app already
-// registers as an app link, and app links live in the installed binary. Every
-// build in the wild today knows tichu.jiny.shop; none of them know tichu.kr.
-// Minting tichu.kr links now would mean a player with the app installed taps
-// an invite and lands in the browser instead of the app.
+// registers as an app link, and app links live in the installed binary.
 //
-// tichu.jiny.shop is the only host BOTH old and new builds register, so it
-// stays the mint until the old ones are gone. A custom scheme (tichu://) does
-// not rescue this: it would also only exist in the new binary.
-const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.jiny.shop';
+// tichu.kr 은 2.8.3+45(2026-08-07)부터 앱링크에 들어갔다. 그 이전 빌드
+// (≤2.8.2+44)는 tichu.kr 초대를 앱으로 못 열고 브라우저로 떨어진다 — 링크가
+// 죽는 건 아니고(웹 클라이언트가 같은 토큰을 처리한다) 설치된 앱 대신 웹으로
+// 들어갈 뿐이다. 그 구버전이 얼마 안 남아 감수하기로 하고 민트를 옮겼다.
+//
+// 두 호스트 모두 /invite 를 앱링크로 등록하고 있으므로, 예전에 뿌려진
+// tichu.jiny.shop 링크도 계속 앱으로 열린다.
+const INVITE_BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.kr';
 
 // Blue/green deploy hooks. Set per-container so the surviving instance
 // (PEER_URL) can adopt rooms migrated from this one when SIGTERM hits.

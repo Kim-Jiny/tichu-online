@@ -1447,10 +1447,20 @@ const server = http.createServer(async (req, res) => {
     const description = payload
       ? 'Open this invite in Tichu Online to join the room.'
       : 'This room invite is no longer valid.';
-    // If the app were installed, the universal link would have opened it
-    // before the browser ever loaded this URL. Getting here therefore means
-    // there is no app to hand off to — so hand off to the web client instead
-    // and drop the recipient straight into the room.
+    // 보통 브라우저에서는, 앱이 깔려 있었다면 유니버셜 링크가 이 페이지가
+    // 뜨기 전에 앱을 열었다. 그러니 여기까지 왔다는 건 넘겨줄 앱이 없다는
+    // 뜻이고, 웹 클라이언트로 넘겨 방에 바로 앉힌다.
+    //
+    // 인앱 브라우저는 그 전제가 깨진다. 카카오톡·인스타그램 같은 앱은 링크를
+    // 자기 웹뷰로 직접 열기 때문에 유니버셜 링크(안드로이드는 앱링크)가 아예
+    // 발동하지 않는다 — 앱이 깔려 있어도 이 페이지가 뜬다. 예전에는 그 상태
+    // 에서 곧장 웹으로 넘겨서, 앱이 있는 사람도 웹으로 들어갔다.
+    //
+    // 그래서 인앱 브라우저에서만 커스텀 스킴을 한 번 찔러 본다. 웹뷰가
+    // 렌더할 수 없는 스킴이라 OS 로 넘어가고, 앱이 있으면 그때 열린다.
+    // 안 열리면(=앱이 없으면) 잠시 뒤 예정대로 웹으로 넘어간다. 보통
+    // 브라우저에서는 시도하지 않는다 — 앱이 없는 사람에게 "페이지를 열 수
+    // 없습니다" 경고만 띄우게 되기 때문이다.
     //
     // Still server-rendered rather than just serving the SPA: this page is
     // what KakaoTalk and every other scraper reads to build the share preview
@@ -1461,8 +1471,30 @@ const server = http.createServer(async (req, res) => {
     // replace(), not assign(): Back should return to wherever the link was
     // tapped, not bounce through this page again.
     const canPlayInBrowser = webApp.isAvailable() && !!payload;
+    const webUrl = `/?invite=${encodeURIComponent(token)}`;
+    const appUrl = `tichuonline://invite?t=${encodeURIComponent(token)}`;
     const redirectScript = canPlayInBrowser
-      ? `<script>location.replace(${JSON.stringify(`/?invite=${encodeURIComponent(token)}`)})</script>`
+      ? `<script>(function(){
+  var web = ${JSON.stringify(webUrl)};
+  var app = ${JSON.stringify(appUrl)};
+  // 카카오톡 · 인스타그램 · 페이스북 · 라인 · 네이버 앱의 인앱 브라우저.
+  // 정규식 리터럴을 안 쓴다 — 이 스크립트가 템플릿 리터럴 안에 있어서
+  // 백슬래시가 먹히고, 그러면 '/' 하나에 정규식이 조기 종료된다.
+  var ua = navigator.userAgent || '';
+  var marks = ['KAKAOTALK', 'Instagram', 'FBAN', 'FBAV', 'Line/', 'NAVER(inapp'];
+  var inApp = false;
+  for (var i = 0; i < marks.length; i++) {
+    if (ua.indexOf(marks[i]) !== -1) { inApp = true; break; }
+  }
+  if (!inApp) { location.replace(web); return; }
+  // 앱이 열리면 이 탭은 뒤로 밀려 타이머가 멈춘다. 살아 있다는 건 안 열렸다는
+  // 뜻이니 그때 웹으로 넘긴다.
+  var t = setTimeout(function () { location.replace(web); }, 1500);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) clearTimeout(t);
+  });
+  location.href = app;
+})()</script>`
       : '';
     const html = renderMarketingPage({
       eyebrow: payload ? `${inviter}님의 초대` : 'Tichu Online 초대',

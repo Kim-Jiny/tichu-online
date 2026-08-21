@@ -288,6 +288,7 @@ async function probeFcmTokens(rows) {
 const { handleAdminRoute } = require('./admin');
 const { t } = require('./i18n');
 const { attendancePushText } = require('./attendance_push');
+const { kickableReason: kickRule } = require('./ingame_kick');
 const { logAdminAccess, logVerboseConnection } = require('./logger');
 
 async function sendFriendRequestPush(targetNickname, fromNickname) {
@@ -1824,6 +1825,17 @@ const turnTimerPhases = {}; // roomId -> phase name (to prevent phase timer rese
 // same timeout after a reconnect without restarting the clock; the id is not
 // recoverable from the handle. Only set for per-turn timers, never phase ones.
 const turnTimerTargets = {};
+
+// 이 타이머가 누구의 응답을 기다리고 있는가 (roomId -> playerId 배열).
+//
+// 게임 중 강퇴가 "지금 그 사람 차례인가" 를 물어야 하는데, 그 답은 게임마다
+// 다른 곳에 있다 — 티츄는 currentPlayer, 마이티 키티는 declarer, 교환·입찰은
+// 아직 응답 안 한 여러 명이다. 그 판단을 강퇴 쪽에서 다시 하면 언젠가
+// 어긋나고, 어긋나면 멀쩡히 두고 있는 사람이 잘린다.
+//
+// 그래서 판단하지 않고 **받아 적는다.** 타이머를 거는 곳이 이미 답을 알고
+// 있으므로, 거는 김에 적어 둔다. 읽는 쪽은 강퇴뿐이라 다른 동작에 영향이 없다.
+const turnWaitingOn = {};
 const waitingRoomTimers = {}; // `${roomId}_${playerId}` -> setTimeout handle for waiting room disconnect
 
 function seasonNameFromDate(date) {
@@ -3229,6 +3241,9 @@ wss.on('connection', (ws, req) => {
 const DRAIN_FROZEN_ACTIONS = new Set([
   'create_room', 'join_room', 'join_room_by_invite',
   'change_room_name', 'toggle_ready', 'change_team', 'kick_player',
+  // 강퇴도 좌석을 바꾼다. 드레인 중에 바꾸면 피어로 넘어갈 사본과 어긋나고,
+  // 애초에 이때는 타임아웃을 세지 않으므로 "잠수" 판정 자체가 성립하지 않는다.
+  'kick_afk_player',
   'add_bot', 'block_slot', 'unblock_slot', 'set_random_seating',
   'switch_to_spectator', 'switch_to_player',
   // Taking a seat here while the room is about to move to the peer would
@@ -3383,6 +3398,9 @@ async function handleMessage(ws, data) {
       break;
     case 'change_team':
       handleChangeTeam(ws, data);
+      break;
+    case 'kick_afk_player':
+      await handleKickAfkPlayer(ws, data);
       break;
     case 'kick_player':
       handleKickPlayer(ws, data);
@@ -5514,6 +5532,93 @@ function handleChangeTeam(ws, data) {
   broadcastRoomState(ws.roomId);
 }
 
+// ---- 게임 중 강퇴 -----------------------------------------------------------
+//
+// 문의로 들어온 요구는 "잠수 타는 사람을 기다리는 시간이 아깝다" 였다. 대응이
+// 없던 게 아니라 오래 걸렸다 — 턴 3회 초과라 기본 30초 방에서도 최소 90초,
+// 방장이 60초로 잡았으면 3분이다.
+//
+// 그래서 방장에게 "잠수가 확인된 사람만" 즉시 봇으로 바꿀 권한을 준다.
+// 기다림을 없애는 게 목적이지 방장에게 권력을 주는 게 목적이 아니라서,
+// 정상적으로 두고 있는 사람에게는 버튼 자체가 생기지 않는다. 권한을 넓게 주고
+// 신고로 사후 처리하는 것보다 애초에 누를 수 없게 하는 쪽을 택했다.
+//
+// 자세한 기획은 docs/PLAN_INGAME_KICK.md.
+
+/// 강퇴 판정에 필요한 사실을 모은다. 규칙 자체는 ingame_kick.js 에 있다 —
+/// 여기서 하는 일은 그 규칙이 물어보는 것들을 이 프로세스에서 찾아 주는 것뿐.
+function kickFacts(room, playerId) {
+  const nickname = room.game?.playerNames?.[playerId];
+  return {
+    connected: !!findWsByPlayerId(playerId),
+    missedTurns: nickname ? (timeoutCounts[room.id]?.[nickname] || 0) : 0,
+    waitingOn: turnWaitingOn[room.id] || [],
+    isFillerHost: fillerRooms.isFillerHost(playerId),
+  };
+}
+
+/// 지금 이 사람을 강퇴할 수 있는가. 되면 이유, 안 되면 null.
+///
+/// 화면에 버튼을 띄울지 정할 때와 실제로 눌렀을 때 **같은 함수**를 쓴다.
+/// 버튼이 뜬 뒤 대상이 돌아와 두기 시작했으면 강퇴는 실패해야 하는데, 판단이
+/// 두 벌이면 그 사이가 벌어져서 복귀한 사람이 잘린다.
+function kickableReason(room, playerId) {
+  if (!room || !room.game) return null;
+  return kickRule(room, playerId, kickFacts(room, playerId));
+}
+
+/// 방장 화면에 보낼 "지금 자를 수 있는 자리" 목록.
+function kickableSeats(room) {
+  if (!room || !room.game || room.isRanked) return [];
+  return room.players
+    .filter((p) => p !== null && !p.isBot && kickableReason(room, p.id))
+    .map((p) => p.id);
+}
+
+// 한 번에 하나씩. 연타로 여러 자리를 동시에 넘기면 정산이 꼬인다.
+const kicksInFlight = new Set();
+
+async function handleKickAfkPlayer(ws, data) {
+  const deny = (key) => sendTo(ws, { type: 'error', message: t(ws.locale, key) });
+  if (!ws.roomId) return deny('not_in_room');
+  const room = lobby.getRoom(ws.roomId);
+  if (!room) { sendTo(ws, { type: 'room_closed' }); ws.roomId = null; return; }
+  if (!room.game || room.game.state === 'game_end' || room.game.deserted) {
+    return deny('no_kick_after_game');
+  }
+  // 관전자는 방장 자리를 들고 있어도 자르지 못한다. 판에 앉아 있지 않은
+  // 사람이 판을 바꾸는 일은 없어야 한다.
+  if (room.hostId !== ws.playerId || ws.isSpectator) return deny('host_only_kick');
+  // 랭크는 점수가 걸려 있어 자리 교체 자체를 막고 있다. 잠수를 만나면
+  // 기존대로 3회 타임아웃까지 기다린다.
+  if (room.isRanked) return deny('no_kick_in_ranked');
+
+  const targetId = data && data.playerId;
+  if (!targetId || targetId === ws.playerId) return deny('cannot_kick_self');
+
+  // 누를 때 다시 검사한다. 화면 상태만 믿으면 복귀한 사람이 잘린다.
+  const reason = kickableReason(room, targetId);
+  if (!reason) return deny('kick_target_active');
+
+  if (kicksInFlight.has(room.id)) return deny('kick_in_progress');
+  kicksInFlight.add(room.id);
+  try {
+    const nickname = room.game.playerNames?.[targetId] || '';
+    // 탈주와 같은 길로 보낸다. 기록·정산·자리 정리가 이미 다 붙어 있어서
+    // 새 경로를 만들면 그 전부를 다시 붙여야 한다.
+    //
+    // forceBotHandoff 는 중간참여 옵션을 건너뛰라는 뜻이다. 방장이 직접
+    // "봇으로 계속하겠다" 고 누른 것이므로 그 뜻을 따른다. 옵션이 꺼진 방에서
+    // 탈주가 게임을 끝내는 규칙을 강퇴에까지 적용하면 "기다리기 싫다" 는
+    // 원래 요구를 못 푼다. 그 자리에 사람이 새로 들어오는 것은 옵션을 그대로
+    // 따르므로, 옵션이 꺼진 방이면 판이 끝날 때까지 봇으로 남는다.
+    await handleDesertion(room.id, targetId, 'kick', { forceBotHandoff: true });
+    console.log(`[KICK] ${ws.nickname} kicked ${nickname} (${reason}) from ${room.name}`);
+  } finally {
+    kicksInFlight.delete(room.id);
+  }
+}
+
 // Kick player handler (host only, not during game)
 function handleKickPlayer(ws, data) {
   if (!ws.roomId) {
@@ -7139,6 +7244,7 @@ function startTurnTimer(roomId) {
       : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'large_tichu_phase';
+    turnWaitingOn[roomId] = pending;
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'large_tichu_phase');
     }, timeLimit);
@@ -7159,6 +7265,7 @@ function startTurnTimer(roomId) {
       : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'card_exchange';
+    turnWaitingOn[roomId] = pending;
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'card_exchange');
     }, timeLimit);
@@ -7178,6 +7285,7 @@ function startTurnTimer(roomId) {
       : room.turnTimeLimit * 2 * 1000;
     room.turnDeadline = Date.now() + timeLimit;
     turnTimerPhases[roomId] = 'sk_bidding';
+    turnWaitingOn[roomId] = pending;
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'sk_bidding');
     }, timeLimit);
@@ -7191,6 +7299,7 @@ function startTurnTimer(roomId) {
     if (!currentPlayer || seatIsAutoPlayed(room, currentPlayer)) return;
     const timeLimit = turnTimeLimitMs(room, currentPlayer);
     room.turnDeadline = Date.now() + timeLimit;
+    turnWaitingOn[roomId] = [currentPlayer];
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, currentPlayer);
     }, timeLimit);
@@ -7204,6 +7313,7 @@ function startTurnTimer(roomId) {
     if (!declarer || seatIsAutoPlayed(room, declarer)) return;
     const timeLimit = turnTimeLimitMs(room, declarer, 2);
     room.turnDeadline = Date.now() + timeLimit;
+    turnWaitingOn[roomId] = [declarer];
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, declarer);
     }, timeLimit);
@@ -7218,6 +7328,7 @@ function startTurnTimer(roomId) {
     if (!declarer || seatIsAutoPlayed(room, declarer)) return;
     const timeLimit = turnTimeLimitMs(room, declarer);
     room.turnDeadline = Date.now() + timeLimit;
+    turnWaitingOn[roomId] = [declarer];
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, declarer);
     }, timeLimit);
@@ -7233,6 +7344,7 @@ function startTurnTimer(roomId) {
       if (!targetPlayer || seatIsAutoPlayed(room, targetPlayer)) return;
       const timeLimit = turnTimeLimitMs(room, targetPlayer);
       room.turnDeadline = Date.now() + timeLimit;
+      turnWaitingOn[roomId] = [targetPlayer];
       turnTimers[roomId] = setTimeout(() => {
         handleTurnTimeout(roomId, targetPlayer);
       }, timeLimit);
@@ -7267,6 +7379,7 @@ function startTurnTimer(roomId) {
   room.turnDeadline = Date.now() + timeLimit;
 
   turnTimerTargets[roomId] = targetPlayer;
+  turnWaitingOn[roomId] = [targetPlayer];
   turnTimers[roomId] = setTimeout(() => {
     handleTurnTimeout(roomId, targetPlayer);
   }, timeLimit);
@@ -7319,6 +7432,7 @@ function clearTurnTimer(roomId) {
   }
   delete turnTimerPhases[roomId];
   delete turnTimerTargets[roomId];
+  delete turnWaitingOn[roomId];
   const room = lobby.getRoom(roomId);
   if (room) room.turnDeadline = null;
 }
@@ -7640,7 +7754,9 @@ function handOffSeatToBot(room, playerId, reason, options = {}) {
       type: 'left_in_progress',
       message: t(
         leaverWs.locale,
-        reason === 'timeout' ? 'midjoin_left_timeout' : 'midjoin_left_self',
+        reason === 'kick' ? 'midjoin_left_kicked'
+          : reason === 'timeout' ? 'midjoin_left_timeout'
+          : 'midjoin_left_self',
       ),
     });
     if (leaverWs.roomId === roomId) {
@@ -7690,7 +7806,13 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
   // Safe to test before claiming the game: handOffSeatToBot's decision is
   // synchronous, so nothing can interleave between here and `deserted = true`
   // on the fall-through path.
-  if (room.allowMidGameJoin && game.state !== 'game_end') {
+  // forceBotHandoff 는 게임 중 강퇴가 켠다. 방장이 직접 "봇으로 계속하겠다"
+  // 고 누른 것이므로 중간참여 옵션과 무관하게 자리를 넘긴다 — 옵션이 꺼진
+  // 방에서 탈주가 판을 끝내는 규칙을 강퇴에까지 적용하면 "기다리기 싫다" 는
+  // 원래 요구를 못 푼다. 그 자리에 **사람이** 새로 들어오는 것은 옵션을
+  // 그대로 따르므로(join_in_progress 가 allowMidGameJoin 을 요구한다),
+  // 옵션이 꺼진 방이면 판이 끝날 때까지 봇으로 남는다.
+  if ((room.allowMidGameJoin || options.forceBotHandoff) && game.state !== 'game_end') {
     const handedOff = handOffSeatToBot(room, playerId, reason, options);
     if (handedOff) {
       // Recording is the same as any desertion — see the note there. Awaited
@@ -8159,6 +8281,15 @@ function decoratePlayerState(room, ws, state, seats) {
   decorateSeats(ws, state, seats || roomSeatInfo(room));
   state.turnDeadline = room.turnDeadline;
   state.cardViewers = room.getViewersForPlayer(ws.playerId);
+  // 지금 자를 수 있는 자리. 방장에게만 보낸다 — 다른 사람 화면에 뜨면
+  // 누를 수도 없는 버튼이 생기고, 무엇보다 "누가 잠수로 찍혔는지" 를
+  // 테이블 전체에 알리는 셈이 된다.
+  //
+  // 매 브로드캐스트마다 다시 계산한다. 대상이 돌아와 두기 시작하면 다음
+  // 상태와 함께 버튼이 사라져야 하기 때문이다. 자리 수만큼의 검사라 싸다.
+  if (room.hostId === ws.playerId && !ws.isSpectator) {
+    state.kickableSeats = kickableSeats(room);
+  }
   return state;
 }
 

@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../widgets/coupon_redeem.dart';
+import '../widgets/notice_body.dart';
 
 class NoticesScreen extends StatefulWidget {
   final Set<int> unreadIds;
@@ -494,14 +495,9 @@ class _NoticeDetailPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                content,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.7,
-                                  color: Color(0xFF5A4038),
-                                ),
-                              ),
+                              // 마크다운 몇 가지를 알아본다 — 운영자가 이미
+                              // **굵게** 를 쓰고 있었는데 별표째로 보였다.
+                              NoticeBody(content: content),
                               // Below the text, not above it: the post says
                               // what the coupon is for, and the code is what
                               // you act on once you have read that.

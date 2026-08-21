@@ -5549,8 +5549,13 @@ function handleChangeTeam(ws, data) {
 /// 여기서 하는 일은 그 규칙이 물어보는 것들을 이 프로세스에서 찾아 주는 것뿐.
 function kickFacts(room, playerId) {
   const nickname = room.game?.playerNames?.[playerId];
+  const seat = room.players.find((p) => p !== null && p.id === playerId);
   return {
-    connected: !!findWsByPlayerId(playerId),
+    // 자리에 적힌 접속 상태를 그대로 쓴다. 화면의 연결끊김 아이콘도 이 값을
+    // 보므로(roomSeatInfo → decorateSeats), 아이콘이 뜬 자리와 자를 수 있는
+    // 자리가 어긋날 수 없다. 소켓 목록을 따로 뒤지면 드레인 중처럼 둘이
+    // 갈라지는 상황이 생긴다.
+    connected: seat ? seat.connected !== false : false,
     missedTurns: nickname ? (timeoutCounts[room.id]?.[nickname] || 0) : 0,
     waitingOn: turnWaitingOn[room.id] || [],
     isFillerHost: fillerRooms.isFillerHost(playerId),

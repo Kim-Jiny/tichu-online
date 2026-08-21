@@ -33,7 +33,9 @@ class NoticeBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = TextStyle(fontSize: 14, height: 1.7, color: color ?? _text);
+    // 본문 15pt. 14 로는 폰에서 작아 보인다는 얘기가 있었다 — 공지는 길게
+    // 읽는 글이라 한 단계 키우고, 제목도 같이 올려 위계를 유지한다.
+    final base = TextStyle(fontSize: 15, height: 1.7, color: color ?? _text);
     final blocks = parseNoticeBlocks(content);
 
     final children = <Widget>[];
@@ -54,7 +56,7 @@ class NoticeBody extends StatelessWidget {
         return Text.rich(
           _inline(context, b.text, base),
           style: base.copyWith(
-            fontSize: 17,
+            fontSize: 19,
             height: 1.45,
             fontWeight: FontWeight.w800,
           ),
@@ -63,7 +65,7 @@ class NoticeBody extends StatelessWidget {
         return Text.rich(
           _inline(context, b.text, base),
           style: base.copyWith(
-            fontSize: 15,
+            fontSize: 17,
             height: 1.5,
             fontWeight: FontWeight.w700,
           ),

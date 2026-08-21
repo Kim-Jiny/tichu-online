@@ -458,7 +458,7 @@ class _NoticeDetailPage extends StatelessWidget {
                       child: Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 17,
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF5A4038),
                         ),
@@ -483,7 +483,7 @@ class _NoticeDetailPage extends StatelessWidget {
                       Text(
                         publishedAt,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 13,
                           color: Color(0xFF9A8E8A),
                         ),
                       ),

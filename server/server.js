@@ -5547,10 +5547,12 @@ function handleChangeTeam(ws, data) {
 
 /// 강퇴 판정에 필요한 사실을 모은다. 규칙 자체는 ingame_kick.js 에 있다 —
 /// 여기서 하는 일은 그 규칙이 물어보는 것들을 이 프로세스에서 찾아 주는 것뿐.
-function kickFacts(room, playerId) {
+function kickFacts(room, playerId, live) {
   const nickname = room.game?.playerNames?.[playerId];
   return {
-    connected: !!findWsByPlayerId(playerId),
+    // 화면의 연결끊김 아이콘과 같은 기준(roomSeatInfo). 둘이 어긋나면
+    // 아이콘 없는 자리에 강퇴 버튼이 뜨거나 그 반대가 된다.
+    connected: live ? live.has(playerId) : !!findWsByPlayerId(playerId),
     missedTurns: nickname ? (timeoutCounts[room.id]?.[nickname] || 0) : 0,
     waitingOn: turnWaitingOn[room.id] || [],
     isFillerHost: fillerRooms.isFillerHost(playerId),
@@ -5562,16 +5564,17 @@ function kickFacts(room, playerId) {
 /// 화면에 버튼을 띄울지 정할 때와 실제로 눌렀을 때 **같은 함수**를 쓴다.
 /// 버튼이 뜬 뒤 대상이 돌아와 두기 시작했으면 강퇴는 실패해야 하는데, 판단이
 /// 두 벌이면 그 사이가 벌어져서 복귀한 사람이 잘린다.
-function kickableReason(room, playerId) {
+function kickableReason(room, playerId, live) {
   if (!room || !room.game) return null;
-  return kickRule(room, playerId, kickFacts(room, playerId));
+  return kickRule(room, playerId, kickFacts(room, playerId, live));
 }
 
 /// 방장 화면에 보낼 "지금 자를 수 있는 자리" 목록.
-function kickableSeats(room) {
+function kickableSeats(room, live) {
   if (!room || !room.game || room.isRanked) return [];
+  const ids = live || liveSeatIds();
   return room.players
-    .filter((p) => p !== null && !p.isBot && kickableReason(room, p.id))
+    .filter((p) => p !== null && !p.isBot && kickableReason(room, p.id, ids))
     .map((p) => p.id);
 }
 
@@ -8219,17 +8222,33 @@ function visiblePhoto(ws, nickname, url) {
 // profile photo all live on the room. Gathered once so a broadcast can reuse it
 // for every recipient.
 function roomSeatInfo(room) {
+  // 지금 소켓이 살아 있는 사람들. 한 번만 훑고 자리마다 재사용한다 —
+  // findWsByPlayerId 는 전체 클라이언트를 선형으로 뒤지므로 자리마다 부르면
+  // 브로드캐스트마다 그 스캔이 네 번씩 돈다.
+  const live = liveSeatIds();
   const connected = {};
   const photoByPid = {};
   const isBotById = {};
   for (const p of room.players) {
     if (p === null) continue;
-    connected[p.id] = p.connected !== false;
+    // 자리의 connected 플래그는 인스턴스 이관 때만 false 로 내려간다. 평범한
+    // 접속 끊김에는 손대는 데가 없어서, 화면의 연결끊김 아이콘이 정작 진짜
+    // 끊겼을 때 안 떴다. 소켓이 있느냐를 같이 본다 — 게임 중 강퇴가 "접속이
+    // 끊겼다" 를 판단하는 기준과 같아야, 아이콘이 뜬 자리와 강퇴할 수 있는
+    // 자리가 어긋나지 않는다.
+    //
+    // 봇은 소켓이 없으니 항상 붙어 있는 것으로 둔다.
+    connected[p.id] = p.isBot === true
+      ? true
+      : (p.connected !== false && live.has(p.id));
     if (p.photoUrl) photoByPid[p.id] = p.photoUrl;
     if (p.isBot) isBotById[p.id] = true;
   }
   return {
     connected,
+    // 강퇴 판정이 같은 집합을 다시 만들지 않도록 실어 보낸다. 브로드캐스트
+    // 한 번에 클라이언트 스캔도 한 번이어야 한다.
+    live,
     photoByPid,
     isBotById,
     timeouts: timeoutCounts[room.id] || {},
@@ -8278,7 +8297,8 @@ function decorateSeats(ws, state, seats) {
 // every avatar off the approver's own board, because that path rebuilt the
 // state and spliced back only turnDeadline and cardViewers.
 function decoratePlayerState(room, ws, state, seats) {
-  decorateSeats(ws, state, seats || roomSeatInfo(room));
+  const info = seats || roomSeatInfo(room);
+  decorateSeats(ws, state, info);
   state.turnDeadline = room.turnDeadline;
   state.cardViewers = room.getViewersForPlayer(ws.playerId);
   // 지금 자를 수 있는 자리. 방장에게만 보낸다 — 다른 사람 화면에 뜨면
@@ -8288,7 +8308,7 @@ function decoratePlayerState(room, ws, state, seats) {
   // 매 브로드캐스트마다 다시 계산한다. 대상이 돌아와 두기 시작하면 다음
   // 상태와 함께 버튼이 사라져야 하기 때문이다. 자리 수만큼의 검사라 싸다.
   if (room.hostId === ws.playerId && !ws.isSpectator) {
-    state.kickableSeats = kickableSeats(room);
+    state.kickableSeats = kickableSeats(room, info.live);
   }
   return state;
 }
@@ -10726,6 +10746,15 @@ function handleInviteToRoom(ws, data) {
     password: room.password || '',
   });
   sendTo(ws, { type: 'invite_result', success: true, message: t(ws.locale, 'invite_sent') });
+}
+
+/// 지금 붙어 있는 소켓들의 playerId. 자리 상태를 만들 때 한 번 쓴다.
+function liveSeatIds() {
+  const ids = new Set();
+  for (const ws of wss.clients) {
+    if (ws.playerId) ids.add(ws.playerId);
+  }
+  return ids;
 }
 
 function findWsByPlayerId(playerId) {

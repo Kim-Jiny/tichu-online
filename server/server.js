@@ -5559,7 +5559,27 @@ function kickFacts(room, playerId) {
     missedTurns: nickname ? (timeoutCounts[room.id]?.[nickname] || 0) : 0,
     waitingOn: turnWaitingOn[room.id] || [],
     isFillerHost: fillerRooms.isFillerHost(playerId),
+    outOfRound: seatIsOutOfRound(room, playerId),
   };
+}
+
+/// 이번 판에서 이미 빠진 사람인가. 게임마다 부르는 이름이 다르다.
+///
+/// 죽은 패(마이티)·탈락(러브레터)·완주(티츄)는 모두 "이 판에서 더 둘 게
+/// 없다" 는 같은 상태다. 스컬킹은 매 트릭 전원이 내므로 해당이 없다.
+function seatIsOutOfRound(room, playerId) {
+  const game = room.game;
+  if (!game) return false;
+  if (game.excludedPlayers instanceof Set && game.excludedPlayers.has(playerId)) {
+    return true;   // 마이티 6인전에서 죽은 패
+  }
+  if (game.eliminated && game.eliminated[playerId] === true) {
+    return true;   // 러브레터 탈락
+  }
+  if (Array.isArray(game.finishOrder) && game.finishOrder.includes(playerId)) {
+    return true;   // 티츄에서 손을 다 턴 사람
+  }
+  return false;
 }
 
 /// 지금 이 사람을 강퇴할 수 있는가. 되면 이유, 안 되면 null.

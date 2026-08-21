@@ -74,6 +74,21 @@ for (const [msg, r, target, facts, want] of blocked) {
     `${msg} (${why || '안 막힘!'})`);
 }
 
+console.log('\n이번 판에서 이미 빠진 사람');
+// 마이티에서 죽었거나, 러브레터에서 탈락했거나, 티츄에서 손을 다 털었다.
+// 판은 이 사람 없이 굴러가고 있으므로 접속이 끊겼어도 자를 이유가 없다 —
+// 기다림이 줄어드는 게 아니라 탈주 기록만 하나 남는다.
+check(kickBlockedBy(room(), AFK, { ...GONE, outOfRound: true })
+        === KICK_BLOCKED.outOfRound,
+  '빠진 사람은 접속이 끊겨도 못 자른다');
+check(kickableReason(room(), AFK, { ...GONE, outOfRound: true }) === null,
+  '그 경우 버튼도 안 뜬다');
+check(kickableReason(room(), AFK, { ...STALLING, outOfRound: true }) === null,
+  '빠진 사람은 붙어 있어도 못 자른다');
+// 다음 판이 시작되면 다시 대상이 된다 — 그때는 이 사람 차례를 실제로 기다린다.
+check(kickableReason(room(), AFK, { ...GONE, outOfRound: false }) === 'disconnected',
+  '다음 판에서는 다시 자를 수 있다');
+
 console.log('\n복귀 판정');
 // 버튼이 뜬 뒤 대상이 돌아와 한 수 두면, 타이머는 다음 사람을 기다린다.
 // 그 순간부터 강퇴는 실패해야 한다 — 화면에 버튼이 남아 있어도.

@@ -28,6 +28,7 @@ const KICK_BLOCKED = {
   notSeated: 'not_seated',
   filler: 'filler_host',
   playing: 'still_playing',
+  outOfRound: 'out_of_round',
 };
 
 /**
@@ -40,6 +41,8 @@ const KICK_BLOCKED = {
  *   - missedTurns   이번 판에 턴을 넘긴 횟수
  *   - waitingOn     지금 타이머가 응답을 기다리는 사람들
  *   - isFillerHost  운영이 세운 채우기 방의 주인인가
+ *   - outOfRound    이번 판에서 이미 빠졌는가 (마이티 죽은 패, 러브레터
+ *                   탈락, 티츄 완주). 이 사람은 더 둘 게 없다.
  * @returns 'disconnected' | 'stalling' | null
  */
 function kickableReason(room, playerId, facts = {}) {
@@ -65,6 +68,15 @@ function kickBlockedBy(room, playerId, facts = {}) {
   const seat = (room.players || []).find((p) => p !== null && p && p.id === playerId);
   if (!seat) return KICK_BLOCKED.notSeated;
   if (seat.isBot) return KICK_BLOCKED.bot;
+
+  // 이번 판에서 이미 빠진 사람 — 마이티에서 죽었거나, 러브레터에서
+  // 탈락했거나, 티츄에서 손을 다 털었다. 접속이 끊겼든 말든 판은 이 사람
+  // 없이 굴러가고 있으므로 자를 이유가 없다. 자르면 기다림이 줄어드는 게
+  // 아니라 탈주 기록만 하나 남는다.
+  //
+  // 다음 판이 시작되면 다시 대상이 된다 — 그때는 이 사람 차례를 실제로
+  // 기다리게 되기 때문이다.
+  if (facts.outOfRound) return KICK_BLOCKED.outOfRound;
 
   if (facts.connected === false) return null;
 

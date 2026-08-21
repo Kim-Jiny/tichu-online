@@ -358,6 +358,15 @@ async function runMigrations() {
     // cannot tell "declined" from "never asked", and that is the thing you have
     // to be able to show.
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_push_enabled BOOLEAN DEFAULT false`);
+    // 출석 알림. 이벤트·혜택 알림(마케팅 동의) 안에 딸린 스위치라 기본이
+    // 켬이다 — 이미 동의한 사람이 아무것도 안 해도 받는다는 뜻이고, 그게
+    // 이 기능을 마케팅 동의에 얹은 이유다. 동의 자체가 없으면 이 값이 켬
+    // 이어도 아무것도 안 나간다(보내는 쪽에서 둘 다 본다).
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS push_attendance BOOLEAN DEFAULT true`);
+    // 기기의 UTC 오프셋(분). 저녁 7시에 보내려면 누구의 7시인지 알아야 하고,
+    // 그건 서버가 알 수 없다. 인도(+330)·네팔(+345)처럼 시가 아닌 오프셋이
+    // 있으므로 분 단위로 받는다. 안 보낸 클라이언트는 NULL 로 남는다.
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS tz_offset_minutes SMALLINT`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_consent_at TIMESTAMP`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS marketing_asked_at TIMESTAMP`);
     // When we last told them they are still opted in. 정보통신망법 §50 ⑧ wants
@@ -680,6 +689,15 @@ async function runMigrations() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // 출석 알림을 보낸 기록. 하루 한 번을 넘기지 않기 위한 것이면서,
+    // 반응 없는 사람에게 매일 보내지 않기 위한 것이기도 하다.
+    //   push_last_date    : 마지막으로 보낸 날 (받는 사람의 현지 날짜)
+    //   push_ignored      : 보냈는데 그날 출석 안 한 횟수, 연속
+    //   push_muted_until  : 이 KST 날짜까지 쉰다
+    await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_last_date DATE`);
+    await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_ignored SMALLINT NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_muted_until DATE`);
 
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
@@ -1791,7 +1809,7 @@ async function loginUser(username, password) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE username = $1',
+      'SELECT id, password_hash, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_attendance, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE username = $1',
       [username.toLowerCase()]
     );
 
@@ -1827,6 +1845,7 @@ async function loginUser(username, password) {
       isAdmin: user.is_admin === true,
       pushEnabled: user.push_enabled !== false,
       pushFriendInvite: user.push_friend_invite !== false,
+      pushAttendance: user.push_attendance !== false,
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
       pushAdminPayment: user.push_admin_payment !== false,
@@ -8787,7 +8806,7 @@ async function loginSocial(provider, providerUid) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
+      'SELECT id, nickname, is_admin, is_deleted, push_enabled, push_friend_invite, push_attendance, push_admin_inquiry, push_admin_report, push_admin_payment, marketing_push_enabled, marketing_asked_at, marketing_consent_at, marketing_confirmed_at FROM tc_users WHERE auth_provider = $1 AND provider_uid = $2',
       [provider, providerUid]
     );
     if (result.rows.length === 0) {
@@ -8808,6 +8827,7 @@ async function loginSocial(provider, providerUid) {
       isAdmin: user.is_admin === true,
       pushEnabled: user.push_enabled !== false,
       pushFriendInvite: user.push_friend_invite !== false,
+      pushAttendance: user.push_attendance !== false,
       pushAdminInquiry: user.push_admin_inquiry !== false,
       pushAdminReport: user.push_admin_report !== false,
       pushAdminPayment: user.push_admin_payment !== false,
@@ -8956,6 +8976,14 @@ async function getLinkedSocial(userId) {
 }
 
 // Update device info on login
+/// deviceInfo.tzOffsetMinutes 를 저장할 수 있는 값으로. 못 믿을 값이면 null.
+function parseTzOffsetMinutes(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || Math.abs(n) > 14 * 60) return null;
+  return Math.trunc(n);
+}
+
 async function updateDeviceInfo(nickname, deviceInfo) {
   const client = await pool.connect();
   try {
@@ -8973,7 +9001,8 @@ async function updateDeviceInfo(nickname, deviceInfo) {
            os_version = COALESCE($5, os_version),
            app_version = COALESCE($6, app_version),
            last_ip = COALESCE($7, last_ip),
-           locale = COALESCE($8, locale)
+           locale = COALESCE($8, locale),
+           tz_offset_minutes = COALESCE($9, tz_offset_minutes)
        WHERE nickname = $1`,
       [
         nickname,
@@ -8984,12 +9013,35 @@ async function updateDeviceInfo(nickname, deviceInfo) {
         deviceInfo.appVersion || null,
         deviceInfo.lastIp || null,
         deviceInfo.locale || null,
+        // 클라이언트는 deviceInfo 를 통째로 문자열 맵으로 보내므로 숫자로
+        // 되돌린다. 0 은 유효한 값(UTC)이라 `||` 로 걸러지면 안 되고,
+        // 실재하지 않는 값은 버린다 — 실제 오프셋은 -12:00 ~ +14:00 이다.
+        parseTzOffsetMinutes(deviceInfo.tzOffsetMinutes),
       ]
     );
   } catch (err) {
     console.error('Update device info error:', err);
   } finally {
     client.release();
+  }
+}
+
+/// 출석 알림 켬/끔.
+///
+/// 이벤트·혜택 알림(마케팅 동의)과 따로 두는 이유는, 매일 오는 게 부담스러운
+/// 사람이 그것 하나 때문에 마케팅 동의 전체를 철회하지 않게 하기 위해서다.
+/// 동의 철회는 법적 기록이라 되돌리려면 다시 물어봐야 한다 — 알림 하나가
+/// 성가시다는 이유로 치르기에는 큰 값이다.
+async function setAttendancePush(nickname, enabled) {
+  try {
+    await pool.query(
+      `UPDATE tc_users SET push_attendance = $2 WHERE nickname = $1`,
+      [nickname, enabled === true],
+    );
+    return { success: true, enabled: enabled === true };
+  } catch (err) {
+    console.error('Set attendance push error:', err.message);
+    return { success: false, messageKey: 'db_push_setting_save_failed' };
   }
 }
 
@@ -11346,7 +11398,7 @@ async function claimAttendance(nickname) {
     }
     const streak = parseInt(row.current_streak, 10) || 0;
     const continues = row.continues_streak === true;
-    const newStreak = continues ? (streak >= 7 ? 1 : streak + 1) : 1;
+    const newStreak = nextAttendanceStreak(streak, continues);
     const reward = ATTENDANCE_REWARDS[newStreak - 1];
     // today_str is already 'YYYY-MM-DD' formatted by PG, TZ-safe.
     const today = row.today_str;
@@ -11388,6 +11440,144 @@ async function claimAttendance(nickname) {
     return { success: false, reason: 'error', message: err.message };
   } finally {
     client.release();
+  }
+}
+
+// ---- Attendance: the evening reminder ---------------------------------------
+
+/// 저녁 7시에 알림을 보낼 사람들.
+///
+/// "7시" 는 받는 사람의 시계 기준이다. 서버는 UTC 한 곳에서 도는데 사용자는
+/// 전 세계에 있으므로, 기기가 올려 준 오프셋(`tz_offset_minutes`)을 더해
+/// 각자의 현지 시각을 만들어 비교한다.
+///
+/// 오프셋을 안 올린 옛 클라이언트는 **한국어 사용자만** KST(+540)로 친다.
+/// 한국 사용자가 절대다수라 그 추정은 거의 맞고, 틀려도 시차가 없다. 반대로
+/// 지역을 모르는 해외 사용자에게 추정으로 보내면 새벽 세 시에 울릴 수 있다 —
+/// 그건 알림을 아예 못 보내는 것보다 나쁘다. 그 사람들은 앱을 한 번
+/// 업데이트하면 자동으로 대상이 된다.
+///
+/// 한 시간(19:00~19:59) 통째로 창을 열어 두고 보낸 날짜로 중복을 막는다.
+/// 10분마다 도는 스케줄러가 한두 번 걸러져도(재시작, 지연) 그 시간 안에
+/// 따라잡을 수 있어야 하기 때문이다.
+const ATTENDANCE_PUSH_HOUR = 19;
+
+/// 연속 몇 번을 무시하면 쉬는가, 그리고 얼마나 쉬는가.
+///
+/// 반응 없는 사람에게 매일 보내는 것은 이 알림 하나를 끄게 만드는 게 아니라
+/// 알림 전체를 끄게 만든다. 세 번 보내고 세 번 다 안 왔으면 일주일 쉰다.
+const ATTENDANCE_PUSH_IGNORE_LIMIT = 3;
+const ATTENDANCE_PUSH_MUTE_DAYS = 7;
+
+/// 오늘 받으면 며칠째가 되는가.
+///
+/// 출석 처리(claimAttendance)와 알림 문구가 각각 계산하면 언젠가 어긋난다.
+/// 어긋나면 "6일째예요, 내일 1,000골드" 라고 불러 놓고 들어가 보니 1일차인
+/// 일이 벌어진다 — 그 거짓말은 알림을 끄게 만든다.
+function nextAttendanceStreak(streak, continues) {
+  if (!continues) return 1;
+  return streak >= 7 ? 1 : streak + 1;
+}
+
+/// [hour] 는 테스트용. 기본값은 저녁 7시이고, 실제 발송은 그대로 쓴다.
+/// 하루 중 언제 돌려도 같은 답이 나와야 검증이 되기 때문에 열어 둔다.
+async function getAttendancePushTargets({ hour = ATTENDANCE_PUSH_HOUR } = {}) {
+  try {
+    const r = await pool.query(
+      `WITH u AS (
+         SELECT
+           nickname, fcm_token, locale,
+           COALESCE(tz_offset_minutes,
+                    CASE WHEN locale = 'ko' THEN 540 ELSE NULL END) AS tz
+         FROM tc_users
+         WHERE fcm_token IS NOT NULL
+           AND fcm_token_invalid_at IS NULL
+           AND is_deleted IS NOT TRUE
+           AND push_enabled IS NOT FALSE
+           AND marketing_push_enabled = TRUE
+           AND push_attendance IS NOT FALSE
+       )
+       SELECT
+         u.nickname, u.fcm_token, u.locale, u.tz,
+         (timezone('UTC', NOW()) + (u.tz || ' minutes')::interval)::date AS local_date,
+         COALESCE(a.current_streak, 0) AS current_streak,
+         a.push_last_date,
+         COALESCE(a.push_ignored, 0) AS push_ignored,
+         -- 지난번에 보냈는데 그날 이후로 출석을 안 했는가.
+         -- 보낸 적이 없으면 무시한 것도 없다 — 이걸 빼면 첫 알림부터
+         -- 무시 횟수가 1로 시작해서 예정보다 일찍 쉬게 된다.
+         (a.push_last_date IS NOT NULL
+            AND (a.last_claim_date IS NULL
+                 OR a.last_claim_date < a.push_last_date))
+           AS ignored_last,
+         (a.last_claim_date = DATE(timezone('Asia/Seoul', NOW())) - 1) AS continues_streak
+       FROM u
+       LEFT JOIN tc_attendance a ON a.nickname = u.nickname
+       WHERE u.tz IS NOT NULL
+         -- 받는 사람의 시계로 저녁 7시대인가
+         AND EXTRACT(HOUR FROM timezone('UTC', NOW()) + (u.tz || ' minutes')::interval) = $1
+         -- 오늘 아직 안 보냈는가 (그 사람의 현지 날짜 기준)
+         AND (a.push_last_date IS NULL
+              OR a.push_last_date <> (timezone('UTC', NOW()) + (u.tz || ' minutes')::interval)::date)
+         -- 오늘 아직 출석 안 했는가 (출석 리셋은 KST 자정 고정)
+         AND (a.last_claim_date IS NULL
+              OR a.last_claim_date <> DATE(timezone('Asia/Seoul', NOW())))
+         -- 쉬는 중이 아닌가
+         AND (a.push_muted_until IS NULL
+              OR a.push_muted_until < DATE(timezone('Asia/Seoul', NOW())))`,
+      [hour],
+    );
+    return r.rows.map(row => ({
+      nickname: row.nickname,
+      fcmToken: row.fcm_token,
+      locale: row.locale,
+      localDate: row.local_date,
+      // 오늘 받으면 며칠째가 되는가. claimAttendance 의 계산과 **똑같아야**
+      // 한다 — 어제 받았으면 이어지고, 7일을 채웠으면 새 주기의 1일차로
+      // 돌아가고, 하루라도 빠졌으면 1일차다. 여기가 어긋나면 "6일째예요"
+      // 라고 불러 놓고 들어가 보면 1일차인 알림이 나간다.
+      nextStreak: nextAttendanceStreak(
+        parseInt(row.current_streak, 10) || 0,
+        row.continues_streak === true,
+      ),
+      ignoredLast: row.ignored_last === true,
+      pushIgnored: parseInt(row.push_ignored, 10) || 0,
+    }));
+  } catch (err) {
+    console.error('Get attendance push targets error:', err.message);
+    return [];
+  }
+}
+
+/// 보냈다고 적는다. 무시가 쌓이면 쉬게 만드는 것도 여기서 한다.
+///
+/// tc_attendance 는 출석을 한 번이라도 한 사람에게만 행이 있다. 한 번도 안
+/// 한 사람에게야말로 보낼 이유가 있으므로 없으면 만든다.
+async function markAttendancePushSent(nickname, localDate, ignoredLast) {
+  try {
+    // 이번 건까지 세었을 때의 무시 횟수. 이걸 두 번 쓰기 때문에(넘겼는지 보고,
+    // 안 넘겼으면 저장하고) 한 번만 쓰고 이름을 붙인다.
+    const ignored = `CASE WHEN $3::bool
+                          THEN COALESCE(tc_attendance.push_ignored, 0) + 1
+                          ELSE 0 END`;
+    await pool.query(
+      `INSERT INTO tc_attendance (nickname, push_last_date, push_ignored)
+       VALUES ($1, $2::date, CASE WHEN $3::bool THEN 1 ELSE 0 END)
+       ON CONFLICT (nickname) DO UPDATE SET
+         push_last_date = $2::date,
+         -- 한도를 넘겼으면 0 으로 되돌린다. 쉬고 돌아왔을 때 첫 알림에
+         -- 곧바로 다시 걸리면 영영 못 벗어난다.
+         push_ignored = CASE WHEN ${ignored} >= $4 THEN 0 ELSE ${ignored} END,
+         push_muted_until = CASE
+           WHEN ${ignored} >= $4
+             THEN DATE(timezone('Asia/Seoul', NOW())) + $5::int
+           ELSE tc_attendance.push_muted_until END,
+         updated_at = CURRENT_TIMESTAMP`,
+      [nickname, localDate, ignoredLast === true,
+       ATTENDANCE_PUSH_IGNORE_LIMIT, ATTENDANCE_PUSH_MUTE_DAYS],
+    );
+  } catch (err) {
+    console.error('Mark attendance push error:', err.message);
   }
 }
 
@@ -12111,7 +12301,9 @@ module.exports = {
   unlinkSocial,
   getLinkedSocial,
   updateDeviceInfo,
+  parseTzOffsetMinutes,
   setPushEnabled,
+  setAttendancePush,
   setPushFriendInvite,
   setUserAdmin,
   setAdminAlertSettings,
@@ -12197,6 +12389,12 @@ module.exports = {
   getAttendanceState,
   claimAttendance,
   getAttendanceDashboardStats,
+  nextAttendanceStreak,
+  getAttendancePushTargets,
+  markAttendancePushSent,
+  ATTENDANCE_PUSH_HOUR,
+  ATTENDANCE_PUSH_IGNORE_LIMIT,
+  ATTENDANCE_PUSH_MUTE_DAYS,
   listAttendanceLog,
   getAttendanceBreakdown,
   getAttendanceForNickname,

@@ -40,6 +40,7 @@ const {
   linkSocial, unlinkSocial, getLinkedSocial,
   updateDeviceInfo,
   setPushEnabled,
+  setAttendancePush,
   setPushFriendInvite,
   setUserAdmin,
   setAdminAlertSettings,
@@ -80,6 +81,7 @@ const {
   getBroadcastFcmTokens,
   getMailbox, getUnreadMailCount, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
+  getAttendancePushTargets, markAttendancePushSent,
   getPushHistory,
   loadTitleTranslations,
   adminClearProfilePhoto,
@@ -285,6 +287,7 @@ async function probeFcmTokens(rows) {
 
 const { handleAdminRoute } = require('./admin');
 const { t } = require('./i18n');
+const { attendancePushText } = require('./attendance_push');
 const { logAdminAccess, logVerboseConnection } = require('./logger');
 
 async function sendFriendRequestPush(targetNickname, fromNickname) {
@@ -303,6 +306,34 @@ async function sendFriendRequestPush(targetNickname, fromNickname) {
   } catch (err) {
     console.error('Friend request push error:', err.message);
   }
+}
+
+// ---- 출석 알림 (저녁 7시, 받는 사람의 시계로) --------------------------------
+//
+// 보낼 사람을 고르는 조건은 전부 SQL 에 있고(getAttendancePushTargets),
+// 문구는 attendance_push.js 에 있다. 여기 남은 것은 그 둘을 잇는 일뿐이다.
+async function runAttendancePushTick() {
+  let targets;
+  try {
+    targets = await getAttendancePushTargets();
+  } catch (err) {
+    console.error('[attendance-push] target query failed:', err.message);
+    return;
+  }
+  if (targets.length === 0) return;
+
+  let sent = 0;
+  for (const u of targets) {
+    const { title, body } = attendancePushText(u.locale, u.nextStreak);
+    // 보낸 기록을 먼저 남긴다. FCM 이 느리거나 던져서 그 사이 다음 틱이
+    // 돌면 같은 사람에게 두 번 간다 — 안 보내는 것보다 두 번 보내는 쪽이
+    // 나쁘다.
+    await markAttendancePushSent(u.nickname, u.localDate, u.ignoredLast);
+    const r = await sendPushNotification(u.fcmToken, title, body,
+      { kind: 'attendance', event: 'attendance', nickname: u.nickname });
+    if (r.success) sent++;
+  }
+  console.log(`[attendance-push] ${sent}/${targets.length} sent`);
 }
 
 // Translate a handler result's message.
@@ -2129,6 +2160,12 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await cleanupExpiredProfilePhotos();
   setInterval(cleanupExpiredProfilePhotos, 60 * 60 * 1000).unref();
 
+  // 10분마다 훑는다. 대상 조건이 "받는 사람의 현지 19시대" 라 한 시간 창이
+  // 열려 있고, 보낸 날짜로 중복을 막는다 — 재시작으로 몇 틱을 걸러도 그
+  // 시간 안에 따라잡는다. 인도(+5:30)처럼 30분 단위 시간대 때문에 한 시간에
+  // 한 번으로는 부족하다.
+  setInterval(runAttendancePushTick, 10 * 60 * 1000).unref();
+
   // Say it out loud at boot. Screening silently not running is the one state
   // that contradicts what the privacy policy and the store review notes claim,
   // and 'skipped' looks exactly like 'clean' in the per-upload log line.
@@ -3579,6 +3616,10 @@ async function handleMessage(ws, data) {
         if (data.friendInvite != null) {
           setPushFriendInvite(ws.nickname, data.friendInvite === true);
         }
+        if (data.attendance != null) {
+          ws.pushAttendance = data.attendance === true;
+          setAttendancePush(ws.nickname, ws.pushAttendance);
+        }
         if (ws.isAdmin === true && (data.inquiryAlert != null || data.reportAlert != null || data.paymentAlert != null)) {
           const alertResult = await setAdminAlertSettings(
             ws.nickname,
@@ -3899,6 +3940,7 @@ async function handleLogin(ws, data) {
   ws.isAdmin = result.isAdmin === true;
   ws.pushEnabled = result.pushEnabled !== false;
   ws.pushFriendInvite = result.pushFriendInvite !== false;
+  ws.pushAttendance = result.pushAttendance !== false;
   ws.pushAdminInquiry = result.pushAdminInquiry !== false;
   ws.pushAdminReport = result.pushAdminReport !== false;
   ws.pushAdminPayment = result.pushAdminPayment !== false;
@@ -3974,6 +4016,7 @@ async function handleSocialLogin(ws, data) {
       ws.isAdmin = result.isAdmin === true;
       ws.pushEnabled = result.pushEnabled !== false;
       ws.pushFriendInvite = result.pushFriendInvite !== false;
+      ws.pushAttendance = result.pushAttendance !== false;
       ws.pushAdminInquiry = result.pushAdminInquiry !== false;
       ws.pushAdminReport = result.pushAdminReport !== false;
       ws.pushAdminPayment = result.pushAdminPayment !== false;
@@ -4250,6 +4293,7 @@ async function handleReconnection(ws) {
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
           pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAttendance: ws.pushAttendance !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4292,6 +4336,7 @@ async function handleReconnection(ws) {
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
           pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAttendance: ws.pushAttendance !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4362,6 +4407,7 @@ async function handleReconnection(ws) {
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
           pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAttendance: ws.pushAttendance !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4404,6 +4450,7 @@ async function handleReconnection(ws) {
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
           pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAttendance: ws.pushAttendance !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4468,6 +4515,7 @@ async function handleReconnection(ws) {
             isAdmin: ws.isAdmin === true,
             pushEnabled: ws.pushEnabled !== false,
             pushFriendInvite: ws.pushFriendInvite !== false,
+            pushAttendance: ws.pushAttendance !== false,
             pushAdminInquiry: ws.pushAdminInquiry !== false,
             pushAdminReport: ws.pushAdminReport !== false,
             pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4532,6 +4580,7 @@ async function handleReconnection(ws) {
           isAdmin: ws.isAdmin === true,
           pushEnabled: ws.pushEnabled !== false,
           pushFriendInvite: ws.pushFriendInvite !== false,
+          pushAttendance: ws.pushAttendance !== false,
           pushAdminInquiry: ws.pushAdminInquiry !== false,
           pushAdminReport: ws.pushAdminReport !== false,
           pushAdminPayment: ws.pushAdminPayment !== false,
@@ -4573,6 +4622,7 @@ async function handleReconnection(ws) {
     isAdmin: ws.isAdmin === true,
     pushEnabled: ws.pushEnabled !== false,
     pushFriendInvite: ws.pushFriendInvite !== false,
+    pushAttendance: ws.pushAttendance !== false,
     pushAdminInquiry: ws.pushAdminInquiry !== false,
     pushAdminReport: ws.pushAdminReport !== false,
     pushAdminPayment: ws.pushAdminPayment !== false,

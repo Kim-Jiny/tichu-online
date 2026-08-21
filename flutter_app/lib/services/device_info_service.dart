@@ -5,6 +5,17 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class DeviceInfoService {
+  /// 기기의 UTC 오프셋(분).
+  ///
+  /// 저녁 7시에 출석 알림을 보내려면 누구의 7시인지 서버가 알아야 하는데,
+  /// 서버는 UTC 한 곳에서 돌고 사용자는 전 세계에 있다. 시가 아니라 분으로
+  /// 보내는 이유는 인도(+330)·네팔(+345)처럼 시 단위가 아닌 시간대가 있어서다.
+  ///
+  /// 문자열인 것은 deviceInfo 가 통째로 `Map<String, String?>` 이기 때문이다.
+  /// 서버에서 숫자로 되돌린다.
+  static String tzOffsetMinutes() =>
+      DateTime.now().timeZoneOffset.inMinutes.toString();
+
   static Future<Map<String, String?>> collectDeviceInfo({bool includeFcmToken = true, String? locale}) async {
     String? fcmToken;
     String? devicePlatform;
@@ -32,6 +43,7 @@ class DeviceInfoService {
         'osVersion': null,
         'appVersion': webAppVersion,
         'locale': locale,
+        'tzOffsetMinutes': tzOffsetMinutes(),
       };
     }
 
@@ -92,6 +104,7 @@ class DeviceInfoService {
       'osVersion': osVersion,
       'appVersion': appVersion,
       'locale': locale,
+      'tzOffsetMinutes': tzOffsetMinutes(),
     };
   }
 }

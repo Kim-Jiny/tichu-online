@@ -8517,6 +8517,24 @@ abstract class L10n {
   /// **'Promotional messages. Never sent between 9pm and 8am'**
   String get settingsMarketingPushHint;
 
+  /// No description provided for @settingsAttendancePush.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily check-in reminder'**
+  String get settingsAttendancePush;
+
+  /// No description provided for @settingsAttendancePushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At 7pm, if you haven\'t claimed today\'s reward'**
+  String get settingsAttendancePushHint;
+
+  /// No description provided for @settingsAttendancePushBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Events and offers to receive this'**
+  String get settingsAttendancePushBlocked;
+
   /// No description provided for @pushRewardTitle.
   ///
   /// In en, this message translates to:

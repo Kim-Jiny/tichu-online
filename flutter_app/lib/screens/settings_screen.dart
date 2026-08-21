@@ -1152,6 +1152,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: SafeArea(
           child: Consumer<GameService>(
             builder: (context, game, _) {
+              // 출석 알림이 실제로 나갈 수 있는 상태인가. 푸시 자체가 꺼져
+              // 있거나 이벤트·혜택 알림에 동의하지 않았으면 이 스위치를
+              // 켜 둬도 아무것도 안 온다 — 서버가 셋 다 보기 때문이다.
+              // 그래서 스위치를 끄는 대신 비활성으로 둔다. 끄는 것은
+              // 사용자가 한 적 없는 선택이고, 나중에 동의를 켰을 때 조용히
+              // 되살아나는 것도 곤란하다.
+              final attendancePushActive =
+                  game.pushEnabled && game.marketingPushEnabled;
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
                 if (game.socialLinkResultSuccess != null) {
@@ -1380,6 +1388,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     game.pushEnabled,
                                 onChanged: game.pushEnabled
                                     ? (v) => game.setMarketingConsent(v)
+                                    : null,
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
+                            // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
+                            // 알림도 무료 재화를 받으라는 권유라 광고성으로
+                            // 보는 게 안전하고, 그래서 같은 동의 아래 둔다.
+                            //
+                            // 그러면서도 따로 끌 수 있어야 한다 — 매일 오는
+                            // 게 성가시다는 이유로 마케팅 동의 자체를
+                            // 철회하면 되돌리는 데 다시 동의를 받아야 한다.
+                            _buildRow(
+                              icon: Icons.event_available_outlined,
+                              iconColor: attendancePushActive
+                                  ? const Color(0xFF66A15E)
+                                  : const Color(0xFFC9BFB9),
+                              title: l10n.settingsAttendancePush,
+                              subtitle: attendancePushActive
+                                  ? l10n.settingsAttendancePushHint
+                                  : l10n.settingsAttendancePushBlocked,
+                              enabled: attendancePushActive,
+                              trailing: Switch(
+                                value:
+                                    game.pushAttendanceEnabled &&
+                                    attendancePushActive,
+                                onChanged: attendancePushActive
+                                    ? (v) => game.setPushAttendanceEnabled(v)
                                     : null,
                               ),
                             ),

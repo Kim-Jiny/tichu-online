@@ -430,6 +430,10 @@ class GameService extends ChangeNotifier {
   // Push settings
   bool pushEnabled = true;
   bool pushFriendInviteEnabled = true;
+
+  /// 출석 알림. 이벤트·혜택 알림 안에 딸린 스위치라 기본이 켬이다 — 마케팅
+  /// 동의가 없으면 이 값이 켬이어도 서버가 아무것도 안 보낸다.
+  bool pushAttendanceEnabled = true;
   bool isAdminUser = false;
   bool pushAdminInquiryEnabled = true;
   bool pushAdminReportEnabled = true;
@@ -849,6 +853,7 @@ class GameService extends ChangeNotifier {
         isAdminUser = data['isAdmin'] == true;
         pushEnabled = data['pushEnabled'] != false;
         pushFriendInviteEnabled = data['pushFriendInvite'] != false;
+        pushAttendanceEnabled = data['pushAttendance'] != false;
         pushAdminInquiryEnabled = data['pushAdminInquiry'] != false;
         pushAdminReportEnabled = data['pushAdminReport'] != false;
         pushAdminPaymentEnabled = data['pushAdminPayment'] != false;
@@ -4667,6 +4672,7 @@ class GameService extends ChangeNotifier {
     if (loadVersion != _pushPrefsLoadVersion || _disposed) return;
     pushEnabled = prefs.getBool('push_enabled') ?? true;
     pushFriendInviteEnabled = prefs.getBool('push_friend_invite') ?? true;
+    pushAttendanceEnabled = prefs.getBool('push_attendance') ?? true;
     notifyListeners();
   }
 
@@ -4675,6 +4681,7 @@ class GameService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('push_enabled', pushEnabled);
     await prefs.setBool('push_friend_invite', pushFriendInviteEnabled);
+    await prefs.setBool('push_attendance', pushAttendanceEnabled);
   }
 
   Future<void> setPushEnabled(bool enabled) async {
@@ -4762,6 +4769,16 @@ class GameService extends ChangeNotifier {
         'enabled': pushEnabled,
         'friendInvite': enabled,
       });
+    }
+    notifyListeners();
+  }
+
+  Future<void> setPushAttendanceEnabled(bool enabled) async {
+    pushAttendanceEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('push_attendance', enabled);
+    if (playerId.isNotEmpty) {
+      _network.send({'type': 'update_push_setting', 'attendance': enabled});
     }
     notifyListeners();
   }

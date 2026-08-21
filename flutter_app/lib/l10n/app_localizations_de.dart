@@ -4847,6 +4847,17 @@ class L10nDe extends L10n {
       'Werbenachrichten. Nie zwischen 21 und 8 Uhr';
 
   @override
+  String get settingsAttendancePush => 'Tägliche Erinnerung';
+
+  @override
+  String get settingsAttendancePushHint =>
+      'Um 19 Uhr, falls die Tagesbelohnung noch offen ist';
+
+  @override
+  String get settingsAttendancePushBlocked =>
+      'Aktiviere Events und Angebote, um sie zu erhalten';
+
+  @override
   String get pushRewardTitle => 'Belohnung erhalten!';
 
   @override

@@ -4811,6 +4811,17 @@ class L10nEn extends L10n {
       'Promotional messages. Never sent between 9pm and 8am';
 
   @override
+  String get settingsAttendancePush => 'Daily check-in reminder';
+
+  @override
+  String get settingsAttendancePushHint =>
+      'At 7pm, if you haven\'t claimed today\'s reward';
+
+  @override
+  String get settingsAttendancePushBlocked =>
+      'Turn on Events and offers to receive this';
+
+  @override
   String get pushRewardTitle => 'Reward claimed!';
 
   @override

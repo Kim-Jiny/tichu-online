@@ -4697,6 +4697,15 @@ class L10nKo extends L10n {
   String get settingsMarketingPushHint => '광고성 정보 수신 동의. 밤 9시~아침 8시에는 보내지 않습니다';
 
   @override
+  String get settingsAttendancePush => '출석 알림';
+
+  @override
+  String get settingsAttendancePushHint => '저녁 7시, 아직 출석보상을 안 받았으면 알려드려요';
+
+  @override
+  String get settingsAttendancePushBlocked => '이벤트·혜택 알림을 켜면 받을 수 있어요';
+
+  @override
   String get pushRewardTitle => '보상을 받았어요!';
 
   @override

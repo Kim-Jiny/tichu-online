@@ -81,7 +81,7 @@ const {
   getBroadcastFcmTokens,
   getMailbox, getUnreadMailCount, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
-  getAttendancePushTargets, markAttendancePushSent,
+  getAttendancePushTargets, claimAttendancePush,
   getPushHistory,
   loadTitleTranslations,
   adminClearProfilePhoto,
@@ -323,17 +323,19 @@ async function runAttendancePushTick() {
   if (targets.length === 0) return;
 
   let sent = 0;
+  let skipped = 0;
   for (const u of targets) {
+    // 보낼 권리부터 집는다. 못 집었으면 다른 프로세스가 이미 보냈다는
+    // 뜻이다 — 블루/그린 배포의 드레인 구간에서는 두 슬롯이 같이 돈다.
+    const mine = await claimAttendancePush(u.nickname, u.localDate, u.ignoredLast);
+    if (!mine) { skipped++; continue; }
     const { title, body } = attendancePushText(u.locale, u.nextStreak);
-    // 보낸 기록을 먼저 남긴다. FCM 이 느리거나 던져서 그 사이 다음 틱이
-    // 돌면 같은 사람에게 두 번 간다 — 안 보내는 것보다 두 번 보내는 쪽이
-    // 나쁘다.
-    await markAttendancePushSent(u.nickname, u.localDate, u.ignoredLast);
     const r = await sendPushNotification(u.fcmToken, title, body,
       { kind: 'attendance', event: 'attendance', nickname: u.nickname });
     if (r.success) sent++;
   }
-  console.log(`[attendance-push] ${sent}/${targets.length} sent`);
+  console.log(`[attendance-push] ${sent}/${targets.length} sent`
+    + (skipped ? ` (${skipped} claimed by another instance)` : ''));
 }
 
 // Translate a handler result's message.

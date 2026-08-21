@@ -11549,18 +11549,30 @@ async function getAttendancePushTargets({ hour = ATTENDANCE_PUSH_HOUR } = {}) {
   }
 }
 
-/// 보냈다고 적는다. 무시가 쌓이면 쉬게 만드는 것도 여기서 한다.
+/// 이 사람에게 보낼 권리를 집는다. 집었으면 true.
 ///
-/// tc_attendance 는 출석을 한 번이라도 한 사람에게만 행이 있다. 한 번도 안
-/// 한 사람에게야말로 보낼 이유가 있으므로 없으면 만든다.
-async function markAttendancePushSent(nickname, localDate, ignoredLast) {
+/// 보내고 나서 적는 게 아니라 **적고 나서 보낸다.** 그리고 적는 일을 조건부
+/// UPDATE 한 방으로 해서, 이미 오늘 적힌 행이면 아무것도 안 바꾸고 빈손으로
+/// 돌아온다. 그 경우 보내지 않는다.
+///
+/// 이렇게까지 하는 이유는 배포 방식 때문이다. 블루/그린이라 새 슬롯을 띄운
+/// 뒤 옛 슬롯을 최대 15분 드레인하는데, 그동안 두 프로세스가 같이 돌고 둘 다
+/// 10분 타이머를 갖고 있다. 목록을 읽고 나서 적는 순서였으면 둘 다 "아직 안
+/// 보냈네" 를 보고 각자 보낸다 — 사용자에게는 같은 알림이 두 번 온다.
+/// 배포는 하루에도 여러 번 하고, 사용자가 여러 시간대에 흩어져 있으니
+/// 어느 시간대인가는 늘 저녁 7시다. 드문 사고가 아니다.
+///
+/// 못 보낸 것보다 두 번 보낸 게 나쁘다고 본 판단은 그대로다 — 그래서 먼저
+/// 적는다. 다만 "먼저 적는다" 가 한 프로세스 안에서만 통하던 것을 프로세스
+/// 사이에서도 통하게 만든 것이다.
+async function claimAttendancePush(nickname, localDate, ignoredLast) {
   try {
-    // 이번 건까지 세었을 때의 무시 횟수. 이걸 두 번 쓰기 때문에(넘겼는지 보고,
-    // 안 넘겼으면 저장하고) 한 번만 쓰고 이름을 붙인다.
+    // 이번 건까지 세었을 때의 무시 횟수. 한도를 넘겼는지 보고, 안 넘겼으면
+    // 그대로 저장한다 — 두 번 쓰기 때문에 한 번만 적고 이름을 붙인다.
     const ignored = `CASE WHEN $3::bool
                           THEN COALESCE(tc_attendance.push_ignored, 0) + 1
                           ELSE 0 END`;
-    await pool.query(
+    const r = await pool.query(
       `INSERT INTO tc_attendance (nickname, push_last_date, push_ignored)
        VALUES ($1, $2::date, CASE WHEN $3::bool THEN 1 ELSE 0 END)
        ON CONFLICT (nickname) DO UPDATE SET
@@ -11572,12 +11584,17 @@ async function markAttendancePushSent(nickname, localDate, ignoredLast) {
            WHEN ${ignored} >= $4
              THEN DATE(timezone('Asia/Seoul', NOW())) + $5::int
            ELSE tc_attendance.push_muted_until END,
-         updated_at = CURRENT_TIMESTAMP`,
+         updated_at = CURRENT_TIMESTAMP
+       WHERE tc_attendance.push_last_date IS DISTINCT FROM $2::date
+       RETURNING nickname`,
       [nickname, localDate, ignoredLast === true,
        ATTENDANCE_PUSH_IGNORE_LIMIT, ATTENDANCE_PUSH_MUTE_DAYS],
     );
+    return r.rowCount > 0;
   } catch (err) {
-    console.error('Mark attendance push error:', err.message);
+    console.error('Claim attendance push error:', err.message);
+    // 적지 못했으면 보내지 않는다. 적히지 않은 채로 보내면 다음 틱에 또 보낸다.
+    return false;
   }
 }
 
@@ -12391,7 +12408,7 @@ module.exports = {
   getAttendanceDashboardStats,
   nextAttendanceStreak,
   getAttendancePushTargets,
-  markAttendancePushSent,
+  claimAttendancePush,
   ATTENDANCE_PUSH_HOUR,
   ATTENDANCE_PUSH_IGNORE_LIMIT,
   ATTENDANCE_PUSH_MUTE_DAYS,

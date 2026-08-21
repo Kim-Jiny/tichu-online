@@ -188,18 +188,32 @@ async function main() {
 
 
   console.log('\n보낸 뒤');
-  await db.markAttendancePushSent('보낸다', by['보낸다'].localDate, false);
+  check(await db.claimAttendancePush('보낸다', by['보낸다'].localDate, false) === true,
+    '처음에는 보낼 권리를 집는다');
   const again = await db.getAttendancePushTargets();
   check(!again.some(t => t.nickname === '보낸다'), '같은 날 두 번 가지 않는다');
+  check(await db.claimAttendancePush('보낸다', by['보낸다'].localDate, false) === false,
+    '이미 집힌 것은 다시 못 집는다');
+
+  console.log('\n두 프로세스가 동시에 돌 때');
+  // 블루/그린 배포는 새 슬롯을 띄운 뒤 옛 슬롯을 최대 15분 드레인한다.
+  // 그동안 두 프로세스가 같은 목록을 보고 동시에 달려든다. 이때 한 쪽만
+  // 이겨야 사용자에게 알림이 한 번 간다.
+  const races = await Promise.all(
+    [1, 2, 3, 4, 5].map(() =>
+      db.claimAttendancePush('여섯일차', by['여섯일차'].localDate, false)),
+  );
+  check(races.filter(Boolean).length === 1,
+    `동시에 다섯 번 달려들어도 한 번만 이긴다 (이긴 횟수 ${races.filter(Boolean).length})`);
 
   // 무시가 한도에 닿으면 쉰다. 지난번무시(=1) 에 두 번 더 쌓는다.
-  await db.markAttendancePushSent('지난번무시', by['지난번무시'].localDate, true);
+  await db.claimAttendancePush('지난번무시', by['지난번무시'].localDate, true);
   let row = (await c.query(
     `SELECT push_ignored, push_muted_until FROM tc_attendance WHERE nickname='지난번무시'`)).rows[0];
   check(row.push_ignored === 2 && row.push_muted_until === null,
     '두 번 무시로는 아직 쉬지 않는다');
   await c.query(`UPDATE tc_attendance SET push_last_date = NULL WHERE nickname='지난번무시'`);
-  await db.markAttendancePushSent('지난번무시', by['지난번무시'].localDate, true);
+  await db.claimAttendancePush('지난번무시', by['지난번무시'].localDate, true);
   row = (await c.query(
     `SELECT push_ignored, push_muted_until FROM tc_attendance WHERE nickname='지난번무시'`)).rows[0];
   check(row.push_ignored === 0 && row.push_muted_until !== null,

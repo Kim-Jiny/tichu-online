@@ -4558,6 +4558,11 @@ class L10nKo extends L10n {
   }
 
   @override
+  String midJoinNoticeKicked(String player, String bot) {
+    return '$player님이 자리를 비워 $bot(으)로 교체되었습니다';
+  }
+
+  @override
   String get lobbyRoomRules => '방 규칙';
 
   @override

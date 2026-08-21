@@ -1630,6 +1630,8 @@
     }
   },
   "midJoinNoticeLeft": "{player}님이 중도탈주하여 {bot}이(가) 대신합니다",
+  "midJoinNoticeKicked": "{player}님이 자리를 비워 {bot}(으)로 교체되었습니다",
+  "@midJoinNoticeKicked": {"placeholders": {"player": {"type": "String"}, "bot": {"type": "String"}}},
   "@midJoinNoticeLeft": {
     "placeholders": {
       "player": {

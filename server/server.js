@@ -8462,6 +8462,7 @@ function clearRoomTimers(roomId, room = null) {
   delete timeoutCounts[roomId];
   delete turnTimerPhases[roomId];
   delete turnTimerTargets[roomId];
+  delete turnWaitingOn[roomId];
   // Bot action timers (scheduleBotActions) live in global maps and were not
   // cleared above — drop them so the handle/entry doesn't leak after the room
   // is gone (the callback null-checks the room, but the entry would persist).

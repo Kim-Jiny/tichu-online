@@ -2632,6 +2632,8 @@
     }
   },
   "midJoinNoticeLeft": "{player} walked out — {bot} is taking over",
+  "midJoinNoticeKicked": "{player} was away — {bot} has taken the seat",
+  "@midJoinNoticeKicked": {"placeholders": {"player": {"type": "String"}, "bot": {"type": "String"}}},
   "@midJoinNoticeLeft": {
     "placeholders": {
       "player": {

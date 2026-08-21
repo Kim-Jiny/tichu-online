@@ -4706,6 +4706,11 @@ class L10nDe extends L10n {
   }
 
   @override
+  String midJoinNoticeKicked(String player, String bot) {
+    return '$player war abwesend — $bot übernimmt den Platz';
+  }
+
+  @override
   String get lobbyRoomRules => 'Raumregeln';
 
   @override

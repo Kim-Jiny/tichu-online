@@ -8289,6 +8289,12 @@ abstract class L10n {
   /// **'{player} walked out — {bot} is taking over'**
   String midJoinNoticeLeft(String player, String bot);
 
+  /// No description provided for @midJoinNoticeKicked.
+  ///
+  /// In en, this message translates to:
+  /// **'{player} was away — {bot} has taken the seat'**
+  String midJoinNoticeKicked(String player, String bot);
+
   /// No description provided for @lobbyRoomRules.
   ///
   /// In en, this message translates to:

@@ -1630,6 +1630,8 @@
     }
   },
   "midJoinNoticeLeft": "{player} ist ausgestiegen — {bot} übernimmt",
+  "midJoinNoticeKicked": "{player} war abwesend — {bot} übernimmt den Platz",
+  "@midJoinNoticeKicked": {"placeholders": {"player": {"type": "String"}, "bot": {"type": "String"}}},
   "@midJoinNoticeLeft": {
     "placeholders": {
       "player": {

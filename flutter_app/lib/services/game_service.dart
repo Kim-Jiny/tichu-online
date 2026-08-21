@@ -41,9 +41,15 @@ class SeatHandoff {
   final String botName;
   final int slot;
 
+  /// 왜 자리를 넘겼는가 — 'leave' / 'timeout' / 'kick'. 배너 문구가 갈린다.
+  /// 스스로 나간 것과 방장이 자른 것을 같은 말로 알리면, 잘린 사람은 나간
+  /// 사람이 되고 자른 방장은 아무 일도 안 한 사람이 된다.
+  final String reason;
+
   const SeatHandoff({
     required this.joined,
     required this.playerName,
+    this.reason = 'leave',
     required this.botName,
     required this.slot,
   });
@@ -2883,6 +2889,7 @@ class GameService extends ChangeNotifier {
       playerName: (data['playerName'] as String?) ?? '',
       botName: (data['botName'] as String?) ?? '',
       slot: data['slot'] is int ? data['slot'] as int : -1,
+      reason: (data['reason'] as String?) ?? 'leave',
     );
     notifyListeners();
     // The banner is a transient notice, not state the screens have to clear.

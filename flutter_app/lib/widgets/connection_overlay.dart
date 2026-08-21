@@ -54,7 +54,8 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _pausedAt ??= DateTime.now();
       _inForeground = false;
     } else if (state == AppLifecycleState.resumed) {
@@ -125,11 +126,15 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
       // halves need very different fixes.
       final startedAt = DateTime.now();
       final network = context.read<NetworkService>();
-      final success = await session.reconnectAndRestore()
-          .timeout(const Duration(seconds: 30), onTimeout: () => false);
+      final success = await session.reconnectAndRestore().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => false,
+      );
       final ms = DateTime.now().difference(startedAt).inMilliseconds;
-      debugPrint('[Reconnect] restore took ${ms}ms (success=$success, '
-          'connected=${network.isConnected})');
+      debugPrint(
+        '[Reconnect] restore took ${ms}ms (success=$success, '
+        'connected=${network.isConnected})',
+      );
 
       // If a newer attempt was started (e.g. timeout triggered _goToLogin then retry),
       // this zombie result should be ignored
@@ -246,8 +251,12 @@ class _SeatHandoffBanner extends StatelessWidget {
     );
     if (handoff == null) return const SizedBox.shrink();
     final l10n = L10n.of(context);
+    // 강퇴는 "중도탈주" 가 아니다. 스스로 나간 것과 방장이 자른 것을 같은
+    // 말로 알리면 잘린 사람이 나간 사람이 되어 버린다.
     final text = handoff.joined
         ? l10n.midJoinNoticeJoined(handoff.playerName)
+        : handoff.reason == 'kick'
+        ? l10n.midJoinNoticeKicked(handoff.playerName, handoff.botName)
         : l10n.midJoinNoticeLeft(handoff.playerName, handoff.botName);
     return Positioned(
       top: MediaQuery.of(context).padding.top + 8,

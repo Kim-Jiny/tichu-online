@@ -1346,126 +1346,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           ]),
-                          const SizedBox(height: 12),
-                          _buildSection(l10n.settingsNotificationsSection, [
-                            _buildRow(
-                              icon: Icons.notifications,
-                              iconColor: const Color(0xFF64B5F6),
-                              title: l10n.settingsPushNotifications,
-                              subtitle: l10n.settingsPushNotificationsDesc,
-                              trailing: Switch(
-                                value: game.pushEnabled,
-                                onChanged: (v) => game.setPushEnabled(v),
-                              ),
-                            ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            // Separate from the switch above on purpose. That
-                            // one is "notify me at all"; this one is consent to
-                            // advertising, which is a legal record and has to
-                            // be withdrawable on its own.
-                            //
-                            // With notifications off it goes inactive rather
-                            // than off. The server already requires both
-                            // (getMarketingAudience), so an enabled-looking
-                            // switch here promised something that could not
-                            // happen. Turning it off instead would be worse:
-                            // that is a withdrawal of consent, and it would
-                            // silently come back when notifications were
-                            // re-enabled — consent nobody gave a second time.
-                            _buildRow(
-                              icon: Icons.campaign_outlined,
-                              iconColor: game.pushEnabled
-                                  ? const Color(0xFFE08A1E)
-                                  : const Color(0xFFC9BFB9),
-                              title: l10n.settingsMarketingPush,
-                              subtitle: game.pushEnabled
-                                  ? l10n.settingsMarketingPushHint
-                                  : l10n.settingsMarketingPushBlocked,
-                              enabled: game.pushEnabled,
-                              trailing: Switch(
-                                value:
-                                    game.marketingPushEnabled &&
-                                    game.pushEnabled,
-                                onChanged: game.pushEnabled
-                                    ? (v) => game.setMarketingConsent(v)
-                                    : null,
-                              ),
-                            ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
-                            // 알림도 무료 재화를 받으라는 권유라 광고성으로
-                            // 보는 게 안전하고, 그래서 같은 동의 아래 둔다.
-                            //
-                            // 그러면서도 따로 끌 수 있어야 한다 — 매일 오는
-                            // 게 성가시다는 이유로 마케팅 동의 자체를
-                            // 철회하면 되돌리는 데 다시 동의를 받아야 한다.
-                            _buildRow(
-                              icon: Icons.event_available_outlined,
-                              iconColor: attendancePushActive
-                                  ? const Color(0xFF66A15E)
-                                  : const Color(0xFFC9BFB9),
-                              title: l10n.settingsAttendancePush,
-                              subtitle: attendancePushActive
-                                  ? l10n.settingsAttendancePushHint
-                                  : l10n.settingsAttendancePushBlocked,
-                              enabled: attendancePushActive,
-                              trailing: Switch(
-                                value:
-                                    game.pushAttendanceEnabled &&
-                                    attendancePushActive,
-                                onChanged: attendancePushActive
-                                    ? (v) => game.setPushAttendanceEnabled(v)
-                                    : null,
-                              ),
-                            ),
-                            if (game.isAdminUser) ...[
-                              const Divider(
-                                height: 1,
-                                color: Color(0xFFEAE2DE),
-                              ),
+                          // 웹에는 푸시가 없다. FCM 등록을 아예 건너뛰므로 토큰이 없고,
+                          // 여기서 무엇을 켜든 브라우저로는 아무것도 오지 않는다. 켤 수는
+                          // 있는데 오지 않는 스위치는 고장으로 읽힌다 — 그래서 통째로
+                          // 감춘다. 설정 자체는 계정에 남아 있어서, 앱을 깔면 그 기기에서
+                          // 예전에 정해 둔 대로 동작한다.
+                          if (!kIsWeb) ...[
+                            const SizedBox(height: 12),
+                            _buildSection(l10n.settingsNotificationsSection, [
                               _buildRow(
-                                icon: Icons.support_agent,
-                                iconColor: const Color(0xFFAB47BC),
-                                title: l10n.settingsInquiryNotifications,
-                                subtitle: l10n.settingsInquiryNotificationsDesc,
+                                icon: Icons.notifications,
+                                iconColor: const Color(0xFF64B5F6),
+                                title: l10n.settingsPushNotifications,
+                                subtitle: l10n.settingsPushNotificationsDesc,
                                 trailing: Switch(
-                                  value: game.pushAdminInquiryEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(inquiry: v),
+                                  value: game.pushEnabled,
+                                  onChanged: (v) => game.setPushEnabled(v),
                                 ),
                               ),
                               const Divider(
                                 height: 1,
                                 color: Color(0xFFEAE2DE),
                               ),
+                              // Separate from the switch above on purpose. That
+                              // one is "notify me at all"; this one is consent to
+                              // advertising, which is a legal record and has to
+                              // be withdrawable on its own.
+                              //
+                              // With notifications off it goes inactive rather
+                              // than off. The server already requires both
+                              // (getMarketingAudience), so an enabled-looking
+                              // switch here promised something that could not
+                              // happen. Turning it off instead would be worse:
+                              // that is a withdrawal of consent, and it would
+                              // silently come back when notifications were
+                              // re-enabled — consent nobody gave a second time.
                               _buildRow(
-                                icon: Icons.report_gmailerrorred,
-                                iconColor: const Color(0xFFEF5350),
-                                title: l10n.settingsReportNotifications,
-                                subtitle: l10n.settingsReportNotificationsDesc,
+                                icon: Icons.campaign_outlined,
+                                iconColor: game.pushEnabled
+                                    ? const Color(0xFFE08A1E)
+                                    : const Color(0xFFC9BFB9),
+                                title: l10n.settingsMarketingPush,
+                                subtitle: game.pushEnabled
+                                    ? l10n.settingsMarketingPushHint
+                                    : l10n.settingsMarketingPushBlocked,
+                                enabled: game.pushEnabled,
                                 trailing: Switch(
-                                  value: game.pushAdminReportEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(report: v),
+                                  value:
+                                      game.marketingPushEnabled &&
+                                      game.pushEnabled,
+                                  onChanged: game.pushEnabled
+                                      ? (v) => game.setMarketingConsent(v)
+                                      : null,
                                 ),
                               ),
                               const Divider(
                                 height: 1,
                                 color: Color(0xFFEAE2DE),
                               ),
+                              // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
+                              // 알림도 무료 재화를 받으라는 권유라 광고성으로
+                              // 보는 게 안전하고, 그래서 같은 동의 아래 둔다.
+                              //
+                              // 그러면서도 따로 끌 수 있어야 한다 — 매일 오는
+                              // 게 성가시다는 이유로 마케팅 동의 자체를
+                              // 철회하면 되돌리는 데 다시 동의를 받아야 한다.
                               _buildRow(
-                                icon: Icons.payments_outlined,
-                                iconColor: const Color(0xFF26A69A),
-                                title: l10n.settingsPaymentNotifications,
-                                subtitle: l10n.settingsPaymentNotificationsDesc,
+                                icon: Icons.event_available_outlined,
+                                iconColor: attendancePushActive
+                                    ? const Color(0xFF66A15E)
+                                    : const Color(0xFFC9BFB9),
+                                title: l10n.settingsAttendancePush,
+                                subtitle: attendancePushActive
+                                    ? l10n.settingsAttendancePushHint
+                                    : l10n.settingsAttendancePushBlocked,
+                                enabled: attendancePushActive,
                                 trailing: Switch(
-                                  value: game.pushAdminPaymentEnabled,
-                                  onChanged: (v) =>
-                                      game.setAdminAlertPush(payment: v),
+                                  value:
+                                      game.pushAttendanceEnabled &&
+                                      attendancePushActive,
+                                  onChanged: attendancePushActive
+                                      ? (v) => game.setPushAttendanceEnabled(v)
+                                      : null,
                                 ),
                               ),
-                            ],
-                          ]),
+                              if (game.isAdminUser) ...[
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                _buildRow(
+                                  icon: Icons.support_agent,
+                                  iconColor: const Color(0xFFAB47BC),
+                                  title: l10n.settingsInquiryNotifications,
+                                  subtitle:
+                                      l10n.settingsInquiryNotificationsDesc,
+                                  trailing: Switch(
+                                    value: game.pushAdminInquiryEnabled,
+                                    onChanged: (v) =>
+                                        game.setAdminAlertPush(inquiry: v),
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                _buildRow(
+                                  icon: Icons.report_gmailerrorred,
+                                  iconColor: const Color(0xFFEF5350),
+                                  title: l10n.settingsReportNotifications,
+                                  subtitle:
+                                      l10n.settingsReportNotificationsDesc,
+                                  trailing: Switch(
+                                    value: game.pushAdminReportEnabled,
+                                    onChanged: (v) =>
+                                        game.setAdminAlertPush(report: v),
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                _buildRow(
+                                  icon: Icons.payments_outlined,
+                                  iconColor: const Color(0xFF26A69A),
+                                  title: l10n.settingsPaymentNotifications,
+                                  subtitle:
+                                      l10n.settingsPaymentNotificationsDesc,
+                                  trailing: Switch(
+                                    value: game.pushAdminPaymentEnabled,
+                                    onChanged: (v) =>
+                                        game.setAdminAlertPush(payment: v),
+                                  ),
+                                ),
+                              ],
+                            ]),
+                          ],
                           const SizedBox(height: 12),
                           _buildSection(l10n.settingsCardViewPolicy, [
                             _buildRow(

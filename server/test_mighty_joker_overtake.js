@@ -67,7 +67,7 @@ function position({ mightyHolder, friendIsBot = false }) {
     p1: ['mighty_club_7', 'mighty_club_8', 'mighty_heart_7', 'mighty_spade_7'],
     // 프렌드: 조커콜 카드를 들고 있다 (룰이 걸리는 조건)
     [FRIEND]: [JOKER_CALL, 'mighty_club_9', 'mighty_heart_9'],
-    p3: ['mighty_club_T', 'mighty_heart_T', 'mighty_spade_T', 'mighty_club_2'],
+    p3: ['mighty_club_10', 'mighty_heart_10', 'mighty_spade_10', 'mighty_club_2'],
     p4: ['mighty_club_J', 'mighty_heart_J', 'mighty_spade_J', 'mighty_club_4'],
   };
   const mightySeat = mightyHolder === 'friend' ? FRIEND : mightyHolder;

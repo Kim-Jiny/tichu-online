@@ -1689,6 +1689,37 @@ class MightyGame {
 
   // ─── AUTO TIMEOUT ───────────────────────────────────────
 
+  /// 시간이 지나 대신 친구를 골라야 할 때 무엇을 부를 것인가.
+  ///
+  /// 예전에는 마이티를 손에 들고 있으면 곧장 노프렌즈였다. 노프렌즈는 "혼자
+  /// 다 감당하겠다" 는 선언이라 목표 점수가 올라간다. 자리를 비웠다는 이유로
+  /// 그 계약을 떠안으면 그 판은 대체로 진다 — 잠수한 사람만 손해가 아니라
+  /// 같은 편이 될 사람도, 남은 사람 전부의 한 판도 같이 버려진다.
+  ///
+  /// 그래서 부를 수 있는 카드가 하나라도 있으면 친구를 세운다. 손에 없는
+  /// 카드 중 강한 것부터 — 마이티, 조커, 기루다 위쪽, 그다음 각 무늬의 A·K.
+  /// 사람이 직접 고를 때도 대개 이 순서다.
+  ///
+  /// 손에 없는 카드를 부르는 것이 핵심이다. 자기가 든 카드를 부르면 스스로
+  /// 친구가 되어 결국 노프렌즈와 같아진다.
+  _autoFriendCard(hand) {
+    const held = new Set(hand || []);
+    const candidates = [this.getMightyCard(), 'mighty_joker'];
+    if (this.trumpSuit && this.trumpSuit !== 'no_trump') {
+      for (const rank of ['A', 'K', 'Q', 'J', '10']) {
+        candidates.push(`mighty_${this.trumpSuit}_${rank}`);
+      }
+    }
+    for (const suit of ['spade', 'diamond', 'heart', 'club']) {
+      for (const rank of ['A', 'K']) candidates.push(`mighty_${suit}_${rank}`);
+    }
+    for (const cardId of candidates) {
+      if (!held.has(cardId)) return cardId;
+    }
+    // 후보를 전부 손에 들고 있는 손패. 그런 손이면 노프렌즈가 손해도 아니다.
+    return 'no_friend';
+  }
+
   getAutoTimeoutAction(playerId) {
     if (this.state === 'bidding' && this.currentPlayer === playerId) {
       return { type: 'submit_bid', pass: true };
@@ -1727,9 +1758,8 @@ class MightyGame {
       const discards = nonPoint.length >= 3
         ? nonPoint.slice(-3)
         : safe.slice(0, 3);
-      // Pick a friend card: mighty if not in hand, otherwise no_friend
-      const friendCard = hand.includes(mighty) ? 'no_friend' : mighty;
-      return { type: 'discard_kitty', discards, friendCard };
+      return { type: 'discard_kitty', discards,
+        friendCard: this._autoFriendCard(hand) };
     }
 
     if (this.state === 'playing' && this.currentPlayer === playerId) {

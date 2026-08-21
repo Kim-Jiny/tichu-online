@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
 import '../models/sk_game_state.dart';
+import '../widgets/afk_kick_badge.dart';
 import '../widgets/turn_name_pill.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/profile_avatar.dart';
@@ -2077,19 +2078,24 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       // 라운드 코너와 정확히 같은 곡률로 감싼다.
                       Padding(
                         padding: EdgeInsets.only(bottom: spacing),
-                        child: ProfileAvatar(
-                          photoUrl: game.resolvePhotoUrl(p.photoUrl),
-                          size: avatarDiameter,
-                          blocked: game.blockedUsers.contains(p.name),
-                          border: isCurrentTurn
-                              ? Border.all(
-                                  color: const Color(0xFFE6C86A),
-                                  width: 1.5,
-                                )
-                              : null,
-                          fallback: p.isBot
-                              ? BotAvatar(size: avatarDiameter, name: p.name)
-                              : DefaultAvatar(size: avatarDiameter),
+                        child: AfkKickBadge(
+                          game: game,
+                          nickname: p.name,
+                          avatarSize: avatarDiameter,
+                          child: ProfileAvatar(
+                            photoUrl: game.resolvePhotoUrl(p.photoUrl),
+                            size: avatarDiameter,
+                            blocked: game.blockedUsers.contains(p.name),
+                            border: isCurrentTurn
+                                ? Border.all(
+                                    color: const Color(0xFFE6C86A),
+                                    width: 1.5,
+                                  )
+                                : null,
+                            fallback: p.isBot
+                                ? BotAvatar(size: avatarDiameter, name: p.name)
+                                : DefaultAvatar(size: avatarDiameter),
+                          ),
                         ),
                       ),
                       // 지금 차례면 이름에 노란 알약 — 티츄 판과 같은 표시.

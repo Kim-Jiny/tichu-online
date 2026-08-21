@@ -474,6 +474,7 @@ class GameService extends ChangeNotifier {
     if (id == null) return;
     _network.send({'type': 'kick_afk_player', 'playerId': id});
   }
+
   bool isAdminUser = false;
   bool pushAdminInquiryEnabled = true;
   bool pushAdminReportEnabled = true;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../models/ll_game_state.dart';
+import '../widgets/afk_kick_badge.dart';
 import '../widgets/turn_name_pill.dart';
 import '../widgets/love_letter_card.dart';
 import '../widgets/connection_overlay.dart';
@@ -1315,31 +1316,37 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           // 탈락한 플레이어는 사진 자체도 흐리게 —
                           // 아래 탈락 밴드와 함께 눈에 덜 걸린다.
                           opacity: player.eliminated ? 0.35 : 1.0,
-                          child: ProfileAvatar(
-                            photoUrl: _gameService?.resolvePhotoUrl(
-                              player.photoUrl,
+                          child: AfkKickBadge(
+                            game: _gameService,
+                            nickname: player.name,
+                            avatarSize: avatarDiameter,
+                            child: ProfileAvatar(
+                              photoUrl: _gameService?.resolvePhotoUrl(
+                                player.photoUrl,
+                              ),
+                              size: avatarDiameter,
+                              blocked:
+                                  _gameService?.blockedUsers.contains(
+                                    player.name,
+                                  ) ??
+                                  false,
+                              border:
+                                  (isCurrent || highlighted) &&
+                                      !player.eliminated
+                                  ? Border.all(
+                                      color: highlighted
+                                          ? const Color(0xFF64B5F6)
+                                          : const Color(0xFFE6C86A),
+                                      width: 1.8,
+                                    )
+                                  : null,
+                              fallback: player.isBot
+                                  ? BotAvatar(
+                                      size: avatarDiameter,
+                                      name: player.name,
+                                    )
+                                  : DefaultAvatar(size: avatarDiameter),
                             ),
-                            size: avatarDiameter,
-                            blocked:
-                                _gameService?.blockedUsers.contains(
-                                  player.name,
-                                ) ??
-                                false,
-                            border:
-                                (isCurrent || highlighted) && !player.eliminated
-                                ? Border.all(
-                                    color: highlighted
-                                        ? const Color(0xFF64B5F6)
-                                        : const Color(0xFFE6C86A),
-                                    width: 1.8,
-                                  )
-                                : null,
-                            fallback: player.isBot
-                                ? BotAvatar(
-                                    size: avatarDiameter,
-                                    name: player.name,
-                                  )
-                                : DefaultAvatar(size: avatarDiameter),
                           ),
                         ),
                         if (player.eliminated)

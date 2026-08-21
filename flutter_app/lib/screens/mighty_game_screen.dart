@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../models/mighty_game_state.dart';
+import '../widgets/afk_kick_badge.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/connection_overlay.dart';
@@ -2161,151 +2162,171 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   // 붙인다. 예전엔 좌석 컨테이너의 -4,-4 모서리에
                                   // 걸어놨는데, 그렇게 되면 이름/점수 위쪽 여백에
                                   // 뱃지가 붕 뜬 것처럼 보였다.
-                                  Padding(
-                                    padding: EdgeInsets.only(bottom: spacing),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      alignment: Alignment.center,
-                                      children: [
-                                        Opacity(
-                                          opacity: photoOn ? 1.0 : 0.0,
-                                          child: ProfileAvatar(
-                                            photoUrl: game.resolvePhotoUrl(
-                                              player.photoUrl,
+                                  // 잠수 교체는 사진 오른쪽 **아래**다. 위쪽 두 모서리는 카드보기
+                                  // 배지와 먹은 패 수가 이미 쓰고 있고, 겹치면 어느 쪽을 누른
+                                  // 건지 알 수 없다 — 한쪽은 되돌릴 수 없는 동작이다.
+                                  AfkKickBadge(
+                                    game: game,
+                                    nickname: player.name,
+                                    avatarSize: avatarDiameter,
+                                    corner: Alignment.bottomRight,
+                                    child: Padding(
+                                      padding: EdgeInsets.only(bottom: spacing),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Opacity(
+                                            opacity: photoOn ? 1.0 : 0.0,
+                                            child: ProfileAvatar(
+                                              photoUrl: game.resolvePhotoUrl(
+                                                player.photoUrl,
+                                              ),
+                                              size: avatarDiameter,
+                                              blocked: game.blockedUsers
+                                                  .contains(player.name),
+                                              // 테두리를 아바타에 직접 넘겨서 사진의
+                                              // 라운드 코너와 정확히 같은 곡률로 감싼다
+                                              // — 바깥 Container 로 감쌌더니 shape.circle
+                                              // 이 되어 사진 모서리에서 살짝 어긋났다.
+                                              border:
+                                                  (isCurrentTurn ||
+                                                      isDeclarer ||
+                                                      isPartner ||
+                                                      highlighted)
+                                                  ? Border.all(
+                                                      color: isCurrentTurn
+                                                          ? const Color(
+                                                              0xFFE6C86A,
+                                                            )
+                                                          : isDeclarer
+                                                          ? const Color(
+                                                              0xFFFF8A00,
+                                                            )
+                                                          : isPartner
+                                                          ? const Color(
+                                                              0xFF4CAF50,
+                                                            )
+                                                          : const Color(
+                                                              0xFF64B5F6,
+                                                            ),
+                                                      width:
+                                                          (isDeclarer ||
+                                                              isPartner)
+                                                          ? 3.5
+                                                          : 1.5,
+                                                    )
+                                                  : null,
+                                              fallback: player.isBot
+                                                  ? BotAvatar(
+                                                      size: avatarDiameter,
+                                                      name: player.name,
+                                                    )
+                                                  : DefaultAvatar(
+                                                      size: avatarDiameter,
+                                                    ),
                                             ),
-                                            size: avatarDiameter,
-                                            blocked: game.blockedUsers.contains(
-                                              player.name,
-                                            ),
-                                            // 테두리를 아바타에 직접 넘겨서 사진의
-                                            // 라운드 코너와 정확히 같은 곡률로 감싼다
-                                            // — 바깥 Container 로 감쌌더니 shape.circle
-                                            // 이 되어 사진 모서리에서 살짝 어긋났다.
-                                            border:
-                                                (isCurrentTurn ||
-                                                    isDeclarer ||
-                                                    isPartner ||
-                                                    highlighted)
-                                                ? Border.all(
-                                                    color: isCurrentTurn
+                                          ),
+                                          if (canRequestCardView && photoOn)
+                                            Positioned(
+                                              right: -4,
+                                              top: -4,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: isApproved
                                                         ? const Color(
-                                                            0xFFE6C86A,
-                                                          )
-                                                        : isDeclarer
-                                                        ? const Color(
-                                                            0xFFFF8A00,
-                                                          )
-                                                        : isPartner
-                                                        ? const Color(
-                                                            0xFF4CAF50,
+                                                            0xFF64B5F6,
                                                           )
                                                         : const Color(
-                                                            0xFF64B5F6,
+                                                            0xFFE0D8D4,
                                                           ),
-                                                    width:
-                                                        (isDeclarer ||
-                                                            isPartner)
-                                                        ? 3.5
-                                                        : 1.5,
-                                                  )
-                                                : null,
-                                            fallback: player.isBot
-                                                ? BotAvatar(
-                                                    size: avatarDiameter,
-                                                    name: player.name,
-                                                  )
-                                                : DefaultAvatar(
-                                                    size: avatarDiameter,
                                                   ),
-                                          ),
-                                        ),
-                                        if (canRequestCardView && photoOn)
-                                          Positioned(
-                                            right: -4,
-                                            top: -4,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: isApproved
-                                                      ? const Color(0xFF64B5F6)
-                                                      : const Color(0xFFE0D8D4),
                                                 ),
-                                              ),
-                                              child: Icon(
-                                                isPending
-                                                    ? Icons.schedule
-                                                    : isApproved
-                                                    ? Icons.visibility
-                                                    : Icons.visibility_outlined,
-                                                size: 12,
-                                                color: isPending
-                                                    ? const Color(0xFFFFB74D)
-                                                    : isApproved
-                                                    ? const Color(0xFF64B5F6)
-                                                    : const Color(
-                                                        0xFF8A7A72,
-                                                      ).withValues(alpha: 0.6),
+                                                child: Icon(
+                                                  isPending
+                                                      ? Icons.schedule
+                                                      : isApproved
+                                                      ? Icons.visibility
+                                                      : Icons
+                                                            .visibility_outlined,
+                                                  size: 12,
+                                                  color: isPending
+                                                      ? const Color(0xFFFFB74D)
+                                                      : isApproved
+                                                      ? const Color(0xFF64B5F6)
+                                                      : const Color(
+                                                          0xFF8A7A72,
+                                                        ).withValues(
+                                                          alpha: 0.6,
+                                                        ),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        if (hasPointCards &&
-                                            player.pointCount > 0 &&
-                                            photoOn)
-                                          Positioned(
-                                            left: -6,
-                                            top: -6,
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
+                                          if (hasPointCards &&
+                                              player.pointCount > 0 &&
+                                              photoOn)
+                                            Positioned(
+                                              left: -6,
+                                              top: -6,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius:
+                                                      BorderRadius.circular(11),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFFE53935,
+                                                    ),
+                                                    width: 1.2,
                                                   ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(11),
-                                                border: Border.all(
-                                                  color: const Color(
-                                                    0xFFE53935,
-                                                  ),
-                                                  width: 1.2,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withValues(
+                                                            alpha: 0.12,
+                                                          ),
+                                                      blurRadius: 3,
+                                                    ),
+                                                  ],
                                                 ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black
-                                                        .withValues(
-                                                          alpha: 0.12,
-                                                        ),
-                                                    blurRadius: 3,
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(
-                                                    Icons.style,
-                                                    size: 10,
-                                                    color: Color(0xFFE53935),
-                                                  ),
-                                                  const SizedBox(width: 2),
-                                                  Text(
-                                                    '${player.pointCount}',
-                                                    style: const TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w800,
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.style,
+                                                      size: 10,
                                                       color: Color(0xFFE53935),
                                                     ),
-                                                  ),
-                                                ],
+                                                    const SizedBox(width: 2),
+                                                    Text(
+                                                      '${player.pointCount}',
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: Color(
+                                                          0xFFE53935,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   Opacity(

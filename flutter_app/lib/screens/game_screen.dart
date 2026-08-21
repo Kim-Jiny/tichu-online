@@ -5,6 +5,7 @@ import 'dart:ui' show FontFeature, ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../widgets/afk_kick_badge.dart';
 import '../widgets/profile_avatar.dart';
 import '../widgets/seat_chat_bubble.dart';
 import '../widgets/bot_avatar.dart';
@@ -1540,33 +1541,38 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ),
                       ),
-                    ProfileAvatar(
-                      photoUrl: game.blockedUsers.contains(p?.name ?? '')
-                          ? null
-                          : game.resolvePhotoUrl(p?.photoUrl),
-                      size: avatarDiameter,
-                      blocked: game.blockedUsers.contains(p?.name ?? ''),
-                      // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
-                      // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
-                      border: (p?.hasLargeTichu ?? false)
-                          ? Border.all(
-                              color: const Color(0xFFD24B4B),
-                              width: 2.0,
-                            )
-                          : (p?.hasSmallTichu ?? false)
-                          ? Border.all(
-                              color: const Color(0xFF4A90D9),
-                              width: 2.0,
-                            )
-                          : isTurn
-                          ? Border.all(
-                              color: const Color(0xFFE6C86A),
-                              width: 1.5,
-                            )
-                          : null,
-                      fallback: (p?.isBot ?? false)
-                          ? BotAvatar(size: avatarDiameter, name: p!.name)
-                          : DefaultAvatar(size: avatarDiameter),
+                    AfkKickBadge(
+                      game: game,
+                      nickname: p?.name ?? '',
+                      avatarSize: avatarDiameter,
+                      child: ProfileAvatar(
+                        photoUrl: game.blockedUsers.contains(p?.name ?? '')
+                            ? null
+                            : game.resolvePhotoUrl(p?.photoUrl),
+                        size: avatarDiameter,
+                        blocked: game.blockedUsers.contains(p?.name ?? ''),
+                        // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
+                        // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
+                        border: (p?.hasLargeTichu ?? false)
+                            ? Border.all(
+                                color: const Color(0xFFD24B4B),
+                                width: 2.0,
+                              )
+                            : (p?.hasSmallTichu ?? false)
+                            ? Border.all(
+                                color: const Color(0xFF4A90D9),
+                                width: 2.0,
+                              )
+                            : isTurn
+                            ? Border.all(
+                                color: const Color(0xFFE6C86A),
+                                width: 1.5,
+                              )
+                            : null,
+                        fallback: (p?.isBot ?? false)
+                            ? BotAvatar(size: avatarDiameter, name: p!.name)
+                            : DefaultAvatar(size: avatarDiameter),
+                      ),
                     ),
                     SizedBox(height: 3 * _s),
                     if (badge != null)
@@ -3185,11 +3191,7 @@ class _GameScreenState extends State<GameScreen> {
                   const Color(0xFF007AFF),
                 ),
               ),
-              Container(
-                width: 1,
-                height: 44,
-                color: const Color(0xFFE5E5EA),
-              ),
+              Container(width: 1, height: 44, color: const Color(0xFFE5E5EA)),
               Expanded(
                 child: _scoreColumn(
                   l10n.gameScoreThem,
@@ -3468,12 +3470,9 @@ class _GameScreenState extends State<GameScreen> {
     final double step = count <= 1
         ? preferredStep * scale
         : (math
-                  .min(
-                    preferredStep,
-                    (maxTotalW - 14.0) / (count - 1),
-                  )
-                  .clamp(minStep, preferredStep)
-              * scale);
+                  .min(preferredStep, (maxTotalW - 14.0) / (count - 1))
+                  .clamp(minStep, preferredStep) *
+              scale);
     final totalW = cardW + step * (count - 1);
     // 우측 상단 카드에 살짝 겹치는 카운트 뱃지 — clipBehavior: none 이라
     // 좌석 밖으로 살짝 나가도 잘리지 않는다.

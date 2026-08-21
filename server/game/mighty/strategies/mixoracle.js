@@ -1334,6 +1334,15 @@ function _takeSurePointTrickRule(game, botId) {
   return MightyBotInternals.makePlayAction(pick, game, botId);
 }
 
+/// 이 자리가 봇인가.
+///
+/// 봇 좌석 id 는 `bot_N` 이다(GameRoom.addBot / replaceWithBot). 엔진은 좌석의
+/// 정체를 따로 들고 있지 않아서 id 규칙으로 본다 — 서버의 다른 곳들도 같은
+/// 방식이다(recordDesertionAgainst 등).
+function isBotSeat(pid) {
+  return typeof pid === 'string' && pid.startsWith('bot_');
+}
+
 /**
  * 프렌드가 조커콜을 들었으면, 그에게 선을 넘기기 전에 주공이 조커를 턴다.
  *
@@ -1345,6 +1354,11 @@ function _takeSurePointTrickRule(game, botId) {
  * 그래서 프렌즈가 이 트릭을 먹게 생겼으면 그 자리에서 조커로 덮는다. 트릭은
  * 주공이 가져가고(점수는 어차피 같은 편), 선이 프렌즈에게 안 넘어가니 쏠
  * 기회 자체가 없어지며, 조커는 값을 하고 빠진다.
+ *
+ * 프렌드가 **사람일 때만** 걸린다. 봇은 손패를 다 보고 두므로 같은 편
+ * 조커에 콜을 쏘지 않는다 — 지킬 사고가 없는데 보험료만 내는 셈이 된다.
+ * 조커를 내도 뒤에 남은 마이티에 잡히는 자리에서도 걸리지 않는다. 트릭도
+ * 못 지키고 조커만 없어지기 때문이다.
  *
  * 따라내는 자리에서만 걸린다 — 무늬를 부르지 않으므로 우리 편 마이티나
  * 프렌드 카드를 끌어낼 위험이 없다.
@@ -1371,6 +1385,24 @@ function _declarerSpendJokerBeforeFriendLeadRule(game, botId) {
   const jokerCallCard = game.getJokerCallCard();
   if (!jokerCallCard) return null;
   if (!(game.hands[winner] || []).includes(jokerCallCard)) return null;
+
+  // 그 프렌드가 **사람**이어야 위협이다.
+  //
+  // 이 룰이 지키는 사고는 "같은 편 조커가 어디 있는지 모르는 사람이 야당을
+  // 노리고 조커콜을 쏜다" 이다. 봇은 손패를 다 보기 때문에 그런 수를 애초에
+  // 고르지 않는다 — 400라운드를 세어 아군 오사 0회였다. 그러니 프렌드가
+  // 봇이면 지킬 사고가 없고, 조커를 미리 터는 것은 순수한 손해다.
+  //
+  // 실제로 유저 리포트가 그 손해였다: 봇 프렌드가 기루다 A 로 첫구를 냈는데
+  // 주공이 조커로 덮었다. 트릭은 어차피 우리 것이었으니 늘어난 트릭은 0이고,
+  // 조커는 나중에 "우리가 질 트릭" 하나를 가져올 수 있었던 카드다.
+  //
+  // 자가대국 A/B 가 이 룰에 손해만 찍었던 이유도 같다. 봇끼리 두는 판에서는
+  // 보험료만 나가고 사고는 나지 않는다.
+  if (isBotSeat(winner)) return null;
+
+  // 조커를 내도 뒤에서 마이티에 잡히면 트릭도 못 지키고 조커만 없어진다.
+  if (!MightyBotInternals.isSafeFriendWinner('mighty_joker', game, botId)) return null;
 
   return MightyBotInternals.makePlayAction('mighty_joker', game, botId);
 }

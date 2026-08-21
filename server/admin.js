@@ -8135,7 +8135,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     return `<span class="badge" style="background:${bgMap[cat] || bgMap.general};color:${colorMap[cat] || colorMap.general}">${map[cat] || cat}</span>`;
   }
 
-  function noticeStatusBadge(status) {
+  // 공지 제목에 쓸 수 있는 색. 커스텀 칭호와 같은 팔레트를 재사용한다 — 이미
+// 가독성을 보고 고른 여덟 가지고, 두 벌을 따로 관리할 이유가 없다.
+const NOTICE_TITLE_COLORS = CUSTOM_TITLE_HEX;
+
+/// 폼에서 온 값을 그대로 믿지 않는다. 팔레트에 없는 id 는 기본색으로 떨군다.
+function normalizeNoticeTitleColor(value) {
+  const id = String(value || '').trim();
+  if (!id) return null;
+  return Object.prototype.hasOwnProperty.call(NOTICE_TITLE_COLORS, id) ? id : null;
+}
+
+function noticeStatusBadge(status) {
     if (status === 'published') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">게시중</span>';
     return '<span class="badge" style="background:#fff8e1;color:#f57f17">임시저장</span>';
   }
@@ -8146,6 +8157,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const content = escapeHtml(notice?.content || '');
     const isPinned = notice?.is_pinned ? 'checked' : '';
     const status = notice?.status || 'draft';
+    const titleColor = notice?.title_color || '';
     return `
       <div class="card">
         <div style="display:grid;gap:14px">
@@ -8161,6 +8173,24 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div>
             <label style="font-weight:600;display:block;margin-bottom:4px">제목</label>
             <input type="text" name="title" value="${title}" placeholder="제목 입력" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;width:100%">
+          </div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:4px">제목 색</label>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+                <input type="radio" name="title_color" value="" ${!titleColor ? 'checked' : ''}>
+                <span style="color:#5A4038">기본</span>
+              </label>
+              ${Object.entries(NOTICE_TITLE_COLORS).map(([cid, hex]) => `
+                <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer">
+                  <input type="radio" name="title_color" value="${cid}" ${titleColor === cid ? 'checked' : ''}>
+                  <span style="color:${hex};font-weight:700">가나다</span>
+                </label>`).join('')}
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              목록과 상세 화면의 제목에 함께 적용됩니다. 눈에 띄어야 하는 공지에만 쓰세요 —
+              전부 색이 있으면 아무것도 도드라지지 않습니다.
+            </div>
           </div>
           <div>
             <label style="font-weight:600;display:block;margin-bottom:4px">내용</label>
@@ -8493,7 +8523,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           + encodeURIComponent(`"${noticeCoupon}" 쿠폰이 없습니다. 쿠폰을 먼저 만들거나 코드를 확인해 주세요.`));
       }
     }
-    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null);
+    await createNotice(body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null, normalizeNoticeTitleColor(body.title_color));
     return redirect(res, '/tc-backstage/notices');
   }
 
@@ -8527,7 +8557,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           + encodeURIComponent(`"${noticeCoupon}" 쿠폰이 없습니다. 쿠폰을 먼저 만들거나 코드를 확인해 주세요.`));
       }
     }
-    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null);
+    await updateNotice(parseInt(noticeEditMatch[1]), body.category || 'general', body.title || '', body.content || '', body.is_pinned === '1', body.status || 'draft', noticeCoupon || null, normalizeNoticeTitleColor(body.title_color));
     return redirect(res, '/tc-backstage/notices');
   }
 

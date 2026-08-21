@@ -178,6 +178,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final isPinned = item['is_pinned'] == true;
     final hasCoupon = (item['coupon_code']?.toString() ?? '').isNotEmpty;
     final publishedAt = _formatShortDate(item['published_at']);
+    final titleColor = noticeTitleColor(item['title_color']);
     final noticeId = item['id'];
     final isNew =
         noticeId is int &&
@@ -261,7 +262,9 @@ class _NoticesScreenState extends State<NoticesScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: isNew ? FontWeight.w700 : FontWeight.w500,
-                      color: const Color(0xFF5A4038),
+                      // 운영자가 고른 색이 있으면 그 색으로. 목록과 상세가
+                      // 같아야 눌렀을 때 "다른 글인가" 하지 않는다.
+                      color: titleColor ?? const Color(0xFF5A4038),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -303,6 +306,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
           category: category,
           publishedAt: publishedAt,
           couponCode: couponCode,
+          titleColor: noticeTitleColor(item['title_color']),
         ),
       ),
     );
@@ -360,6 +364,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
 class _NoticeDetailPage extends StatelessWidget {
   final String title;
   final String content;
+  final Color? titleColor;
   final String category;
   final String publishedAt;
 
@@ -369,6 +374,7 @@ class _NoticeDetailPage extends StatelessWidget {
   const _NoticeDetailPage({
     required this.title,
     required this.content,
+    this.titleColor,
     required this.category,
     required this.publishedAt,
     this.couponCode = '',
@@ -457,10 +463,11 @@ class _NoticeDetailPage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
+                          // 운영자가 고른 색이 있으면 그 색으로.
+                          color: titleColor ?? const Color(0xFF5A4038),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),

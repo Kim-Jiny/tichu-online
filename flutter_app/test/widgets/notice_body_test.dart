@@ -23,11 +23,26 @@ void main() {
       expect(b[0].text, '첫 줄\n둘째 줄');
     });
 
-    test('# 과 ## 은 제목', () {
-      final b = parseNoticeBlocks('# 큰제목\n\n## 작은제목');
+    test('# ## ### 은 세 단계 제목', () {
+      final b = parseNoticeBlocks('# 큰제목\n\n## 중간제목\n\n### 작은제목');
       expect(b[0].kind, NoticeBlockKind.heading1);
       expect(b[0].text, '큰제목');
       expect(b[1].kind, NoticeBlockKind.heading2);
+      expect(b[2].kind, NoticeBlockKind.heading3);
+      expect(b[2].text, '작은제목');
+    });
+
+    test('#### 이상은 제목이 아니라 그냥 글', () {
+      // 지원하지 않는 문법은 글자 그대로 둔다.
+      final b = parseNoticeBlocks('#### 네개');
+      expect(b[0].kind, NoticeBlockKind.paragraph);
+      expect(b[0].text, '#### 네개');
+    });
+
+    test('제목 단계가 내려갈수록 위 여백도 좁아진다', () {
+      final b = parseNoticeBlocks('# 하나\n\n## 둘\n\n### 셋');
+      expect(b[0].spacingBefore, greaterThan(b[1].spacingBefore));
+      expect(b[1].spacingBefore, greaterThan(b[2].spacingBefore));
     });
 
     test('- 와 * 는 글머리표 목록으로 묶인다', () {
@@ -98,5 +113,29 @@ void main() {
     expect(find.textContaining('**'), findsNothing, reason: '별표가 그대로 보이면 안 된다');
     expect(find.textContaining('문의하기'), findsOneWidget);
     expect(find.text('•'), findsNWidgets(2));
+  });
+
+  group('제목 색', () {
+    test('팔레트 id 를 색으로 바꾼다', () {
+      expect(noticeTitleColor('rose'), const Color(0xFFD64550));
+      expect(noticeTitleColor('slate'), const Color(0xFF455A64));
+    });
+
+    test('색을 안 고른 공지는 null — 화면이 기본색을 쓴다', () {
+      expect(noticeTitleColor(null), isNull);
+      expect(noticeTitleColor(''), isNull);
+    });
+
+    test('모르는 id 는 null 로 떨어진다', () {
+      // 서버에서만 팔레트가 늘어난 경우. 색 하나 때문에 제목이 안 보이는 것보다
+      // 기본색으로 보이는 게 낫다.
+      expect(noticeTitleColor('neon'), isNull);
+    });
+
+    test('서버 팔레트와 개수가 같다', () {
+      // moderation/customTitle.js 의 TITLE_COLORS 와 짝이다. 한쪽만 늘어나면
+      // 관리자 화면에서 고른 색이 앱에서 안 나온다.
+      expect(noticeTitleColors.length, 8);
+    });
   });
 }

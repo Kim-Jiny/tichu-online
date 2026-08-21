@@ -14,7 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// 깨진 화면보다 그냥 글씨가 낫다.
 ///
 /// 지원하는 것
-///   # 제목 / ## 소제목
+///   # 제목 / ## 소제목 / ### 작은제목
 ///   - 목록 / * 목록 / 1. 번호 목록
 ///   --- 구분선
 ///   **굵게**
@@ -67,8 +67,15 @@ class NoticeBody extends StatelessWidget {
           style: base.copyWith(
             fontSize: 17,
             height: 1.5,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
+        );
+      case NoticeBlockKind.heading3:
+        // 본문과 같은 크기에 굵기만 준다. 17 과 16 은 나란히 놓으면 구분이
+        // 안 가서, 세 번째 단계는 크기 대신 굵기로 나눈다.
+        return Text.rich(
+          _inline(context, b.text, base),
+          style: base.copyWith(height: 1.5, fontWeight: FontWeight.w700),
         );
       case NoticeBlockKind.divider:
         return const Divider(height: 1, color: Color(0xFFE8DFDA));
@@ -139,15 +146,19 @@ class NoticeBody extends StatelessWidget {
   }
 }
 
-enum NoticeBlockKind { paragraph, heading1, heading2, bullet, divider }
+enum NoticeBlockKind { paragraph, heading1, heading2, heading3, bullet, divider }
 
 class NoticeBlock {
   NoticeBlock.paragraph(this.text)
     : kind = NoticeBlockKind.paragraph,
       items = const [],
       ordered = false;
-  NoticeBlock.heading(this.text, {required bool big})
-    : kind = big ? NoticeBlockKind.heading1 : NoticeBlockKind.heading2,
+  NoticeBlock.heading(this.text, {required int level})
+    : kind = level == 1
+          ? NoticeBlockKind.heading1
+          : level == 2
+              ? NoticeBlockKind.heading2
+              : NoticeBlockKind.heading3,
       items = const [],
       ordered = false;
   NoticeBlock.bullet(this.items, {this.ordered = false})
@@ -173,6 +184,8 @@ class NoticeBlock {
         return 20;
       case NoticeBlockKind.heading2:
         return 16;
+      case NoticeBlockKind.heading3:
+        return 14;
       case NoticeBlockKind.divider:
         return 16;
       case NoticeBlockKind.bullet:
@@ -217,12 +230,12 @@ List<NoticeBlock> parseNoticeBlocks(String content) {
       blocks.add(NoticeBlock.divider());
       continue;
     }
-    final heading = RegExp(r'^(#{1,2})\s+(.*)$').firstMatch(trimmed);
+    final heading = RegExp(r'^(#{1,3})\s+(.*)$').firstMatch(trimmed);
     if (heading != null) {
       flushParagraph();
       flushBullets();
       blocks.add(
-        NoticeBlock.heading(heading.group(2)!, big: heading.group(1)!.length == 1),
+        NoticeBlock.heading(heading.group(2)!, level: heading.group(1)!.length),
       );
       continue;
     }
@@ -279,4 +292,29 @@ List<InlinePiece> parseInline(String raw) {
   // 아무 문법도 없으면 통짜 한 조각.
   if (pieces.isEmpty) pieces.add(InlinePiece(raw));
   return pieces;
+}
+
+/// 공지 제목에 쓸 수 있는 색.
+///
+/// 서버 `moderation/customTitle.js` 의 TITLE_COLORS 와 같은 값이다. 커스텀
+/// 칭호가 쓰던 팔레트를 공지 제목에도 재사용한다 — 이미 가독성을 보고 고른
+/// 여덟 가지라 배경에 묻히거나 눈이 아픈 색이 없다.
+///
+/// 서버는 id 만 내려보낸다. 모르는 id 가 오면(팔레트가 서버에서만 늘어난 경우)
+/// null 을 돌려주고 화면은 기본색을 쓴다 — 색 하나 때문에 제목이 안 보이는
+/// 것보다 낫다.
+const Map<String, Color> noticeTitleColors = {
+  'rose': Color(0xFFD64550),
+  'amber': Color(0xFFC97A0B),
+  'green': Color(0xFF2E7D32),
+  'teal': Color(0xFF00796B),
+  'blue': Color(0xFF1565C0),
+  'violet': Color(0xFF6A3FB5),
+  'pink': Color(0xFFC2185B),
+  'slate': Color(0xFF455A64),
+};
+
+Color? noticeTitleColor(Object? id) {
+  if (id == null) return null;
+  return noticeTitleColors[id.toString()];
 }

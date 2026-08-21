@@ -1506,6 +1506,11 @@ async function runMigrations() {
     // makes no difference, but on an empty one the ALTER ran first and threw,
     // which aborts the whole migration and the server never starts.
     await client.query(`ALTER TABLE tc_notices ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(40)`);
+    // 제목 글씨색. 자유 입력이 아니라 팔레트 id 를 담는다(moderation/customTitle
+    // 의 TITLE_COLORS) — 임의의 hex 를 받으면 배경과 같은 색이나 읽을 수 없는
+    // 색이 들어올 수 있고, 그걸 막는 검사를 또 만들어야 한다.
+    // NULL = 기본 색.
+    await client.query(`ALTER TABLE tc_notices ADD COLUMN IF NOT EXISTS title_color VARCHAR(16)`);
 
     // Maintenance history table
     await client.query(`
@@ -10218,7 +10223,8 @@ async function getPublishedNotices() {
   const client = await pool.connect();
   try {
     const res = await client.query(
-      `SELECT id, category, title, content, is_pinned, published_at, coupon_code
+      `SELECT id, category, title, content, is_pinned, published_at, coupon_code,
+              title_color
        FROM tc_notices
        WHERE status = 'published'
        ORDER BY is_pinned DESC, published_at DESC
@@ -10265,7 +10271,7 @@ async function getNoticeById(id) {
   }
 }
 
-async function createNotice(category, title, content, isPinned, status, couponCode = null) {
+async function createNotice(category, title, content, isPinned, status, couponCode = null, titleColor = null) {
   const client = await pool.connect();
   try {
     // UTC text, not a JS Date: this column is `timestamp without time zone`
@@ -10290,7 +10296,7 @@ async function createNotice(category, title, content, isPinned, status, couponCo
   }
 }
 
-async function updateNotice(id, category, title, content, isPinned, status, couponCode = null) {
+async function updateNotice(id, category, title, content, isPinned, status, couponCode = null, titleColor = null) {
   const client = await pool.connect();
   try {
     const existing = await client.query('SELECT status, published_at FROM tc_notices WHERE id = $1', [id]);

@@ -7153,6 +7153,32 @@ async function updateReportGroupStatus(reportedNickname, roomId, status) {
   }
 }
 
+/// 실제로 접속한 적 있는 앱 버전 목록 — 관리자 필터의 선택지.
+///
+/// 하드코딩하지 않는 이유는 릴리스마다 손대야 하기 때문이다. 최신순으로
+/// 돌려주되 숫자.숫자.숫자 꼴만 담는다(옛 클라이언트가 보낸 이상한 값이
+/// 목록을 채우면 고를 게 아니라 치울 게 된다).
+async function getAppVersionsInUse() {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT app_version, COUNT(*)::int AS users
+         FROM tc_users
+        WHERE app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$'
+          AND is_deleted IS NOT TRUE
+        GROUP BY app_version
+        ORDER BY string_to_array(app_version, '.')::int[] DESC
+        LIMIT 40`
+    );
+    return res.rows;
+  } catch (err) {
+    console.error('getAppVersionsInUse error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 // Get users with search and pagination
 async function getUsers(search = '', page = 1, limit = 20, options = {}) {
   const client = await pool.connect();
@@ -7199,6 +7225,14 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       countParams.push(`%${options.ipQuery}%`);
       paramIdx++;
     }
+    // 앱 버전. 정확히 일치로 본다 — "3.1.0 인 사람" 을 찾는 용도지 "3.1 로
+    // 시작하는" 을 찾는 용도가 아니다. 고르는 목록을 실제로 들어와 있는 값에서
+    // 뽑으므로 오타로 빈 결과가 나올 일이 없다.
+    if (options.appVersion) {
+      conditions.push(`app_version = $${paramIdx}`);
+      countParams.push(String(options.appVersion));
+      paramIdx++;
+    }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -7208,12 +7242,25 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       'rating_asc': 'rating ASC',
       'games_desc': '(COALESCE(total_games,0) + COALESCE(sk_total_games,0)'
         + ' + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) DESC',
+      'games_asc': '(COALESCE(total_games,0) + COALESCE(sk_total_games,0)'
+        + ' + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) ASC',
       'gold_desc': 'gold DESC',
+      'gold_asc': 'gold ASC',
       'level_desc': 'level DESC',
+      'level_asc': 'level ASC',
       'leaves_desc': 'leave_count DESC',
+      'leaves_asc': 'leave_count ASC',
       'login_desc': 'last_login DESC NULLS LAST',
+      'login_asc': 'last_login ASC NULLS LAST',
       'joined_desc': 'created_at DESC',
       'joined_asc': 'created_at ASC',
+      'nickname_asc': 'nickname ASC',
+      'nickname_desc': 'nickname DESC',
+      // 앱 버전을 문자열로 정렬하면 3.1.10 이 3.1.9 앞에 온다. 점으로 쪼개
+      // 숫자 배열로 비교한다. 숫자.숫자.숫자 꼴이 아닌 값(옛 클라이언트가 보낸
+      // 것, NULL)은 맨 뒤로 보낸다.
+      'version_desc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$' THEN string_to_array(app_version, '.')::int[] ELSE NULL END DESC NULLS LAST",
+      'version_asc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$' THEN string_to_array(app_version, '.')::int[] ELSE NULL END ASC NULLS LAST",
     };
     const orderBy = sortOptions[options.sort] || 'last_login DESC NULLS LAST';
 
@@ -12042,6 +12089,7 @@ module.exports = {
   getReportGroup,
   updateReportGroupStatus,
   getUsers,
+  getAppVersionsInUse,
   getUserDetail,
   getDashboardStats,
   getTodayMatches,

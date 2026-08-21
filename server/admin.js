@@ -4,7 +4,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
-  getUsers, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
+  getUsers, getAppVersionsInUse, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
@@ -4108,7 +4108,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? (url.searchParams.get('platform') || '').toLowerCase()
       : '';
     const ipQuery = url.searchParams.get('ip') || '';
-    const data = await getUsers(search, page, 20, { sort, minRating, minGames, minLeaves, platform, ipQuery });
+    const appVersion = url.searchParams.get('ver') || '';
+    const data = await getUsers(search, page, 20, { sort, minRating, minGames, minLeaves, platform, ipQuery , appVersion });
     const adminCount = data.rows.filter(u => u.is_admin && !u.is_deleted).length;
     const deletedCount = data.rows.filter(u => u.is_deleted).length;
     const highRiskUsers = data.rows.filter(u => (u.leave_count || 0) >= 3).length;
@@ -4123,40 +4124,67 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (minLeaves) qs.set('minLeaves', minLeaves);
     if (platform) qs.set('platform', platform);
     if (ipQuery) qs.set('ip', ipQuery);
+    if (appVersion) qs.set('ver', appVersion);
     const qsStr = qs.toString();
     const paginationBase = `/tc-backstage/users${qsStr ? '?' + qsStr : ''}`;
 
-    const sortOpts = [
-      ['joined_desc', '최신순'],
-      ['joined_asc', '오래된순'],
-      ['rating_desc', '레이팅 높은순'],
-      ['rating_asc', '레이팅 낮은순'],
-      ['games_desc', '게임 많은순'],
-      ['gold_desc', '골드 많은순'],
-      ['level_desc', '레벨 높은순'],
-      ['leaves_desc', '이탈 많은순'],
-      ['login_desc', '최근 로그인순'],
-    ];
+    // 실제로 들어와 있는 앱 버전만 고르게 한다. 릴리스마다 목록을 손대지
+    // 않아도 되고, 없는 버전을 골라 빈 표를 보는 일도 없다.
+    const versionsInUse = await getAppVersionsInUse();
 
+    // 정렬은 표 머리를 눌러서 한다.
+    //
+    // 예전에는 드롭다운 하나에 아홉 가지가 들어 있었다. "레벨순으로 보고
+    // 싶다" 는 생각과 "필터 상자를 열어 항목을 찾는다" 사이가 멀었고,
+    // 드롭다운에 없는 기준(닉네임, 앱 버전)은 아예 볼 수가 없었다. 지금은
+    // 보고 싶은 열을 누르면 되고, 같은 열을 다시 누르면 방향이 뒤집힌다.
+    const sortHeader = (label, key) => {
+      const desc = `${key}_desc`;
+      const asc = `${key}_asc`;
+      const active = sort === desc || sort === asc;
+      // 처음 누르면 내림차순. 순위표는 큰 값부터 보는 게 기본이다.
+      const next = sort === desc ? asc : desc;
+      const arrow = !active ? '<span style="color:#ccc">↕</span>' : (sort === desc ? '▼' : '▲');
+      const params = new URLSearchParams(qsStr);
+      params.set('sort', next);
+      params.delete('page');
+      return `<th style="white-space:nowrap"><a href="/tc-backstage/users?${params.toString()}"`
+        + ` style="color:${active ? '#6c63ff' : 'inherit'};text-decoration:none">`
+        + `${label} <span style="font-size:10px">${arrow}</span></a></th>`;
+    };
+
+    // 한 줄에 일곱 칸이 흐르던 것을 두 줄로 나눈다. 위는 "누구를 찾나"
+    // (검색·IP·OS·버전), 아래는 "어떤 조건을 넘나"(최소 레이팅·게임·이탈).
+    // 정렬은 표 머리로 옮겼지만, 필터를 다시 걸 때 보던 정렬이 풀리면
+    // 곤란하므로 hidden 으로 들고 간다.
+    const filterInput = 'padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px';
     const searchForm = `
       <div class="filter-card">
         <div class="filter-title">유저 필터</div>
-        <form method="GET" action="/tc-backstage/users" style="display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center">
-          <input type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}" style="flex:1;min-width:180px">
-          <input type="text" name="ip" placeholder="IP 검색" value="${escapeHtml(ipQuery)}" style="width:130px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <select name="platform" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-            <option value="">전체 OS</option>
-            <option value="ios"${platform === 'ios' ? ' selected' : ''}>iOS</option>
-            <option value="android"${platform === 'android' ? ' selected' : ''}>AOS</option>
-          </select>
-          <select name="sort" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-            ${sortOpts.map(([v, l]) => `<option value="${v}"${sort === v ? ' selected' : ''}>${l}</option>`).join('')}
-          </select>
-          <input type="number" name="minRating" placeholder="최소 레이팅" value="${escapeHtml(minRating)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <input type="number" name="minGames" placeholder="최소 게임" value="${escapeHtml(minGames)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <input type="number" name="minLeaves" placeholder="최소 이탈" value="${escapeHtml(minLeaves)}" style="width:100px;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px">
-          <button type="submit" class="btn btn-primary">검색</button>
-          ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">초기화</a>` : ''}
+        <form method="GET" action="/tc-backstage/users" style="display:flex;flex-direction:column;gap:8px;width:100%">
+          <input type="hidden" name="sort" value="${escapeHtml(sort)}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <input type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}" style="flex:1;min-width:200px">
+            <input type="text" name="ip" placeholder="IP" value="${escapeHtml(ipQuery)}" style="width:130px;${filterInput}">
+            <select name="platform" style="${filterInput}">
+              <option value="">전체 OS</option>
+              <option value="ios"${platform === 'ios' ? ' selected' : ''}>iOS</option>
+              <option value="android"${platform === 'android' ? ' selected' : ''}>AOS</option>
+            </select>
+            <select name="ver" style="${filterInput}">
+              <option value="">전체 버전</option>
+              ${versionsInUse.map(v => `<option value="${escapeHtml(v.app_version)}"${appVersion === v.app_version ? ' selected' : ''}>${escapeHtml(v.app_version)} (${v.users})</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <span style="font-size:12px;color:#888">최소</span>
+            <input type="number" name="minRating" placeholder="레이팅" value="${escapeHtml(minRating)}" style="width:100px;${filterInput}">
+            <input type="number" name="minGames" placeholder="게임 수" value="${escapeHtml(minGames)}" style="width:100px;${filterInput}">
+            <input type="number" name="minLeaves" placeholder="이탈 수" value="${escapeHtml(minLeaves)}" style="width:100px;${filterInput}">
+            <div style="flex:1"></div>
+            <button type="submit" class="btn btn-primary">검색</button>
+            ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">초기화</a>` : ''}
+          </div>
         </form>
       </div>
     `;
@@ -4164,7 +4192,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     let tableContent = '';
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
-        <tr><th>닉네임</th><th>권한</th><th>기기</th><th>IP</th><th>앱 버전</th><th>Lv</th><th>골드</th><th>레이팅</th><th>게임</th><th>이탈</th><th>최근 접속</th><th></th></tr>
+        <tr>
+          ${sortHeader('닉네임', 'nickname')}<th>권한</th><th>기기</th><th>IP</th>
+          ${sortHeader('앱 버전', 'version')}${sortHeader('Lv', 'level')}${sortHeader('골드', 'gold')}
+          ${sortHeader('레이팅', 'rating')}${sortHeader('게임', 'games')}${sortHeader('이탈', 'leaves')}
+          ${sortHeader('최근 접속', 'login')}${sortHeader('가입', 'joined')}<th></th>
+        </tr>
         ${data.rows.map(u => {
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
           return `<tr>
@@ -4189,6 +4222,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${(u.games_all ?? u.total_games ?? 0).toLocaleString()}</td>
           <td style="${leaveStyle}">${u.leave_count || 0}</td>
           <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
+          <td style="font-size:12px;color:#888">${u.created_at ? formatDate(u.created_at) : '-'}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
         </tr>`;
         }).join('')}

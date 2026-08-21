@@ -257,8 +257,12 @@ function _getOppositionPlayers(game, botId) {
  *
  * Note: this MUST run before rules 9/10 so a friend-card pick is never
  * overridden by force-mighty / conserve-points logic — the friend card
- * IS the partnership-reveal moment and the heuristic already knows when
- * it's the right play.
+ * IS the partnership-reveal moment.
+ *
+ * 주공이 이끄는 트릭에서 프렌드 카드를 낼 수 있으면 **낸다**. 이길 수
+ * 있느냐는 보지 않는다. 휴리스틱은 "못 이기는 카드는 아낀다" 로 판단하지만,
+ * 이 자리의 프렌드 카드는 트릭을 먹으러 내는 카드가 아니라 부름에 답하는
+ * 카드다.
  */
 function _friendCardRevealRule(game, botId) {
   if (!game.currentTrick || game.currentTrick.length === 0) return null;
@@ -276,9 +280,67 @@ function _friendCardRevealRule(game, botId) {
   }
 
   const action = _heuristicPlayAction(game, botId);
-  if (!action || action.type !== 'play_card') return null;
-  if (action.cardId !== friendCard) return null;
-  return action;
+  if (action && action.type === 'play_card' && action.cardId === friendCard) {
+    return action;
+  }
+
+  // 휴리스틱이 안 골랐어도 낸다.
+  //
+  // 유저 리포트: 기루다 A 가 프렌드 카드인데 주공이 기루다 3 을 깔았고,
+  // 뒷자리에 조커가 있다는 이유로 프렌드가 A 를 안 냈다. 휴리스틱은 "못
+  // 이기는 카드는 아낀다" 로 판단한 것인데, 이 자리에서 프렌드 카드는
+  // 트릭을 먹으러 내는 카드가 아니다. **부름에 답하는 카드**다.
+  //
+  // 주공이 기루다 밑장을 까는 것은 친구를 불러내려는 수다. 여기서 안 나오면
+  // 주공은 누가 자기 편인지 모른 채 계속 혼자 계산하고, 프렌드도 아군을
+  // 도울 수 없다. 조커에 잡혀 A 를 잃더라도 공개는 그대로 일어나므로,
+  // 잃는 것은 카드 한 장이고 얻는 것은 남은 판 전체의 호흡이다.
+  //
+  // 다만 **부름이 닿은 자리**에서만이다.
+  //
+  // 처음엔 주공이 이끄는 트릭이면 무조건 냈는데, 자가대국에서 라운드당
+  // -0.7 이 나왔다(노이즈 ±0.05). 주공이 어느 무늬를 깔든 프렌드 카드를
+  // 던지게 되어 있어서, 아직 쥐고 있어야 할 마이티나 높은 카드까지 아무
+  // 트릭에나 흘러나갔다. 부름에 답하는 것과 카드를 버리는 것은 다르다.
+  const legal = game.getLegalCards(botId) || [];
+  if (!legal.includes(friendCard)) return null;
+
+  // (1) 주공이 그 카드의 무늬를 깔았어야 한다. 다른 무늬를 깐 것은 친구를
+  //     부르는 수가 아니다.
+  const info = getCardInfo(friendCard);
+  const leadCardId = game.currentTrick[0].cardId;
+  const leadSuit = leadCardId === 'mighty_joker'
+    ? game.jokerSuitDeclared
+    : (getCardInfo(leadCardId) || {}).suit;
+  if (!info || !leadSuit || info.suit !== leadSuit) return null;
+
+  // (2) 그 무늬에서 사실상 최상위여야 한다. 낮은 카드가 프렌드 카드인
+  //     경우까지 끌려 나오면 아무 트릭에서나 정체를 밝히는 셈이 된다.
+  //     최상위라는 것은 곧 "조커·마이티만 아니면 이 트릭을 먹는다" 는 뜻이고,
+  //     주공이 밑장을 깐 이유도 그걸 부르려던 것이다.
+  if (!MightyBotInternals.isEffectiveTopOfSuit(friendCard, game)) return null;
+
+  // (3) 주공이 **밑장으로** 깔았어야 한다. 주공의 카드가 그대로 트릭을 먹게
+  //     생겼으면 부른 게 아니다 — 그 위에 프렌드 카드를 얹어 봐야 같은 편
+  //     트릭을 뺏으면서 카드만 쓴다. 부르는 수는 "내 카드로는 못 먹으니
+  //     네가 받아라" 이고, 그건 주공의 카드가 안 버틸 때다.
+  const winner = MightyBotInternals.getCurrentTrickWinner(game);
+  const oursIsWinning = winner === game.declarer || winner === botId;
+  if (oursIsWinning && MightyBotInternals.winnerCardWillHold(game, botId)) {
+    return null;
+  }
+
+  // (4) 더 싼 카드로 이 트릭을 확실히 가져올 수 있으면 그걸 쓴다.
+  //
+  // 프렌드 카드가 마이티인데 그 무늬 K 로도 트릭이 안 넘어가는 자리가 있다.
+  // 그때 마이티를 내면 트릭은 똑같이 가져오면서 게임 최강 카드를 0점짜리
+  // 트릭에 버린다. 정체를 밝히는 것은 미룰 수 있지만 마이티는 한 장뿐이다.
+  const cheaperWinner = legal.some((cardId) => cardId !== friendCard
+    && MightyBotInternals.canBeatCurrentWinner(game, cardId)
+    && MightyBotInternals.isSafeFriendWinner(cardId, game, botId));
+  if (cheaperWinner) return null;
+
+  return MightyBotInternals.makePlayAction(friendCard, game, botId);
 }
 
 /**

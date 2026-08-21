@@ -314,6 +314,9 @@ async function sendFriendRequestPush(targetNickname, fromNickname) {
 // 보낼 사람을 고르는 조건은 전부 SQL 에 있고(getAttendancePushTargets),
 // 문구는 attendance_push.js 에 있다. 여기 남은 것은 그 둘을 잇는 일뿐이다.
 async function runAttendancePushTick() {
+  // 매 틱마다 본다. 끈 순간부터 나가지 않아야지, 다음 재시작까지 나가면
+  // 스위치가 아니라 재시작 버튼이다.
+  if (!attendancePushEnabled) return;
   let targets;
   try {
     targets = await getAttendancePushTargets();
@@ -947,6 +950,43 @@ async function setCustomTitleWords(text) {
   return getCustomTitleWords();
 }
 
+/**
+ * 출석 알림 발송 스위치. tc_config 에 남아 재시작을 넘긴다.
+ *
+ * 켜 두고 배포해도 되지만, 문구가 이상하다거나 시간대가 잘못 잡혔다거나
+ * 하는 것은 실제로 나가 봐야 안다. 그때 코드를 고쳐 다시 배포하는 대신
+ * 여기서 끄고 고칠 수 있어야 한다 — 매일 저녁 나가는 알림이라 하루가
+ * 아깝다.
+ *
+ * 기본값은 켜짐이다. 스위치를 만든 이유가 "문제가 생기면 끈다" 이지
+ * "기억해서 켠다" 가 아니다 — 켜는 것을 잊으면 기능이 조용히 없는 것이
+ * 되고, 그건 아무도 눈치채지 못한다.
+ */
+let attendancePushEnabled = true;
+
+async function loadAttendancePushConfig() {
+  try {
+    const saved = await getConfig('attendance_push');
+    if (saved === 'on' || saved === 'off') {
+      attendancePushEnabled = saved === 'on';
+      console.log(`[attendance-push] switch from admin: ${saved}`);
+    }
+  } catch (e) {
+    console.error('[attendance-push] failed to load switch:', e.message);
+  }
+}
+
+function getAttendancePushSwitch() {
+  return { enabled: attendancePushEnabled };
+}
+
+async function setAttendancePushSwitch(enabled) {
+  attendancePushEnabled = enabled === true;
+  await updateConfig('attendance_push', attendancePushEnabled ? 'on' : 'off');
+  console.log(`[attendance-push] switched ${attendancePushEnabled ? 'ON' : 'OFF'} from admin`);
+  return getAttendancePushSwitch();
+}
+
 function getPhotoScreening() {
   return {
     enabled: visionSafeSearch.isEnabled(),
@@ -1229,7 +1269,7 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname.startsWith('/tc-backstage')) {
     try {
-      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords });
+      await handleAdminRoute(req, res, url, pathname, req.method, lobby, wss, { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, broadcastRoomState, sendGameStateToAll, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords, getAttendancePushSwitch, setAttendancePushSwitch });
     } catch (err) {
       console.error('Admin route error:', err);
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -2169,6 +2209,7 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   await refreshTitleTranslations();
   await loadMaintenanceConfig();
   await loadPhotoScreeningConfig();
+  await loadAttendancePushConfig();
   await loadCustomTitleWords();
   await ensureSeasonCycle();
   await cleanupExpiredProfilePhotos();
@@ -2183,6 +2224,9 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   // Say it out loud at boot. Screening silently not running is the one state
   // that contradicts what the privacy policy and the store review notes claim,
   // and 'skipped' looks exactly like 'clean' in the per-upload log line.
+  console.log(`[attendance-push] evening reminder: ${
+    attendancePushEnabled ? 'ON (19:00 각자 현지시각)' : 'OFF'}`);
+
   console.log(
     `[profile-photo] SafeSearch screening: ${
       visionSafeSearch.isEnabled() ? 'ENABLED' : 'DISABLED (uploads are NOT screened)'

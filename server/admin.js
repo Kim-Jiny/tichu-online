@@ -1908,7 +1908,8 @@ function parseGoldProductFormBody(body) {
 // ===== Route handler =====
 
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
-  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords } = maintenanceFns;
+  const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords,
+    getAttendancePushSwitch, setAttendancePushSwitch } = maintenanceFns;
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -7255,6 +7256,38 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         </form>
       </div>
       ${(() => {
+        const att = getAttendancePushSwitch ? getAttendancePushSwitch() : null;
+        if (!att) return '';
+        return `<div class="card">
+        <h3>출석 알림</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">
+          아직 출석보상을 받지 않은 사람에게 <b>저녁 7시</b>에 보냅니다. 7시는
+          받는 사람의 기기 시각 기준이고, 시간대를 올리지 않은 옛 앱은 한국어
+          사용자만 KST 로 봅니다. 이벤트·혜택 알림에 동의하고 출석 알림을 켜 둔
+          사람에게만 나갑니다.
+        </p>
+        <p style="font-size:13px;color:#888;margin-bottom:8px">
+          끄면 그 즉시 발송이 멈춥니다. 문구가 잘못 나갔거나 시간대가 이상할 때
+          코드를 고쳐 다시 배포하는 대신 여기서 멈추라고 둔 스위치입니다 —
+          매일 저녁 나가는 알림이라 하루가 아깝습니다. <b>고친 뒤 다시 켜는 것을
+          잊지 마세요.</b>
+        </p>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>현재 상태:
+            ${att.enabled
+              ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">발송 중</span>'
+              : '<span class="badge" style="background:#ffebee;color:#c62828">발송 안 함</span>'}
+          </div>
+          <form method="POST" action="/tc-backstage/settings/attendance-push" style="margin-left:auto">
+            <input type="hidden" name="enabled" value="${att.enabled ? 'off' : 'on'}">
+            <button type="submit" class="btn ${att.enabled ? 'btn-secondary' : 'btn-primary'}">
+              ${att.enabled ? '발송 끄기' : '발송 켜기'}
+            </button>
+          </form>
+        </div>
+      </div>`;
+      })()}
+      ${(() => {
         const scr = getPhotoScreening ? getPhotoScreening() : null;
         if (!scr) return '';
         return `<div class="card">
@@ -7370,6 +7403,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       // so what the admin sees on reload is what the client will get.
       channelUrl: channelUrl.startsWith('https://') ? channelUrl : '',
     }));
+    return redirect(res, '/tc-backstage/settings?saved=1');
+  }
+
+  if (pathname === '/tc-backstage/settings/attendance-push' && method === 'POST') {
+    const body = await parseBody(req);
+    if (setAttendancePushSwitch) await setAttendancePushSwitch(body.enabled === 'on');
     return redirect(res, '/tc-backstage/settings?saved=1');
   }
 

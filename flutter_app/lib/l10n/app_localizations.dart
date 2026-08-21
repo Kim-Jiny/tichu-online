@@ -258,25 +258,31 @@ abstract class L10n {
   /// No description provided for @kickAfkAction.
   ///
   /// In en, this message translates to:
-  /// **'Replace with bot'**
+  /// **'Remove'**
   String get kickAfkAction;
 
-  /// No description provided for @kickAfkConfirmTitle.
+  /// No description provided for @kickAfkConfirmTitleOffline.
   ///
   /// In en, this message translates to:
-  /// **'Replace them with a bot?'**
-  String get kickAfkConfirmTitle;
+  /// **'{nickname} has disconnected. Remove them?'**
+  String kickAfkConfirmTitleOffline(String nickname);
+
+  /// No description provided for @kickAfkConfirmTitleIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'{nickname} is not responding. Remove them?'**
+  String kickAfkConfirmTitleIdle(String nickname);
 
   /// No description provided for @kickAfkConfirmBody.
   ///
   /// In en, this message translates to:
-  /// **'A bot takes over {nickname}\'s seat and they are recorded as leaving mid-game. The match carries on.'**
-  String kickAfkConfirmBody(String nickname);
+  /// **'A bot takes over the seat and the match carries on. They are recorded as leaving mid-game.'**
+  String get kickAfkConfirmBody;
 
   /// No description provided for @kickAfkConfirmAction.
   ///
   /// In en, this message translates to:
-  /// **'Replace'**
+  /// **'Remove'**
   String get kickAfkConfirmAction;
 
   /// No description provided for @commonTotal.

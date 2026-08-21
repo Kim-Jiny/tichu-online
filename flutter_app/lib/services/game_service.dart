@@ -81,7 +81,7 @@ class GameService extends ChangeNotifier {
   /// 하는 대신 여기서 한 번에 처리한다.
   set currentRoomId(String value) {
     if (value != _currentRoomId) {
-      _kickableSeats = const {};
+      _kickReasonById = const {};
       _seatIdByName = const {};
     }
     _currentRoomId = value;
@@ -450,23 +450,28 @@ class GameService extends ChangeNotifier {
   /// 동의가 없으면 이 값이 켬이어도 서버가 아무것도 안 보낸다.
   bool pushAttendanceEnabled = true;
 
-  /// 지금 잠수 강퇴를 걸 수 있는 자리들. 서버가 **방장에게만** 실어 준다.
+  /// 지금 강퇴할 수 있는 자리와 그 이유. 서버가 **방장에게만** 실어 준다.
+  /// 값은 'disconnected'(연결 끊김) 또는 'stalling'(붙어 있는데 응답 없음).
   ///
   /// 화면이 스스로 판단하지 않는 이유는, 판단이 두 벌이면 어긋나기 때문이다.
   /// 버튼이 떠도 서버가 다시 검사해서 거절할 수 있고(그 사이 상대가 돌아온
   /// 경우), 그게 맞는 동작이다.
-  Set<String> _kickableSeats = const {};
+  Map<String, String> _kickReasonById = const {};
 
   /// 닉네임 → 자리 id. 프로필 팝업은 닉네임만 들고 열리는데 강퇴는 id 로
   /// 보내야 해서 필요하다. 게임 종류마다 상태 모델이 달라서 공통 자리인
   /// 여기서 한 번 만들어 둔다.
   Map<String, String> _seatIdByName = const {};
 
-  /// 이 사람에게 잠수 강퇴 버튼을 보여도 되는가.
-  bool canKickForAfk(String nickname) {
+  /// 이 사람을 왜 자를 수 있는가. 못 자르면 null.
+  /// 확인 문구를 이유에 맞게 고르는 데 쓴다.
+  String? kickReasonFor(String nickname) {
     final id = _seatIdByName[nickname];
-    return id != null && _kickableSeats.contains(id);
+    return id == null ? null : _kickReasonById[id];
   }
+
+  /// 이 사람에게 강퇴 버튼을 보여도 되는가.
+  bool canKickForAfk(String nickname) => kickReasonFor(nickname) != null;
 
   /// 잠수 강퇴. 서버가 조건을 다시 검사하므로 여기서는 보내기만 한다.
   void kickAfkPlayer(String nickname) {
@@ -1461,9 +1466,14 @@ class GameService extends ChangeNotifier {
           // 게임 종류를 가리기 전에 읽는다. 강퇴는 네 게임 모두에서 같은
           // 규칙이고, 서버가 방장에게만 실어 보낸다 — 목록이 안 왔으면
           // 나는 방장이 아니거나 자를 사람이 없는 것이다.
-          _kickableSeats = {
-            ...?(state['kickableSeats'] as List?)?.whereType<String>(),
-          };
+          final kickable = state['kickableSeats'];
+          _kickReasonById = kickable is Map
+              ? {
+                  for (final e in kickable.entries)
+                    if (e.key is String && e.value is String)
+                      e.key as String: e.value as String,
+                }
+              : const {};
           _seatIdByName = {
             for (final p in (state['players'] as List? ?? const []))
               if (p is Map && p['name'] is String && p['id'] is String)

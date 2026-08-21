@@ -48,7 +48,8 @@ class AfkKickBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final g = game;
-    if (g == null || !g.canKickForAfk(nickname)) return child;
+    final reason = g?.kickReasonFor(nickname);
+    if (g == null || reason == null) return child;
 
     // 사진의 40% 정도. 손가락으로 누를 수 있는 최소치는 지키되, 큰 화면에서
     // 사진만큼 커지지는 않게 위아래를 자른다.
@@ -73,7 +74,7 @@ class AfkKickBadge extends StatelessWidget {
               elevation: 2,
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: () => confirmAfkKick(context, nickname, g),
+                onTap: () => confirmAfkKick(context, nickname, g, reason),
                 child: SizedBox(
                   width: d,
                   height: d,
@@ -96,17 +97,26 @@ class AfkKickBadge extends StatelessWidget {
 ///
 /// 상대에게는 되돌릴 수 없는 일이다 — 자리를 봇이 받고 전적에 탈주가 남는다.
 /// 자리 위의 작은 버튼이라 더욱, 손이 스쳐 일어날 일은 아니어야 한다.
+///
+/// [reason] 에 따라 묻는 말이 다르다. 방장이 판단하는 근거가 "접속이
+/// 끊겼다" 와 "붙어는 있는데 안 둔다" 로 다르고, 둘을 뭉뚱그리면 접속은
+/// 멀쩡한 사람에게 연결이 끊겼다고 말하게 된다.
 Future<void> confirmAfkKick(
   BuildContext context,
   String nickname,
   GameService game,
+  String reason,
 ) async {
   final l10n = L10n.of(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      title: Text(l10n.kickAfkConfirmTitle),
-      content: Text(l10n.kickAfkConfirmBody(nickname)),
+      title: Text(
+        reason == 'disconnected'
+            ? l10n.kickAfkConfirmTitleOffline(nickname)
+            : l10n.kickAfkConfirmTitleIdle(nickname),
+      ),
+      content: Text(l10n.kickAfkConfirmBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(c, false),

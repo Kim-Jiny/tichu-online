@@ -88,18 +88,24 @@ class L10nDe extends L10n {
   String get commonCancel => 'Abbrechen';
 
   @override
-  String get kickAfkAction => 'Durch Bot ersetzen';
+  String get kickAfkAction => 'Entfernen';
 
   @override
-  String get kickAfkConfirmTitle => 'Durch einen Bot ersetzen?';
-
-  @override
-  String kickAfkConfirmBody(String nickname) {
-    return 'Ein Bot übernimmt den Platz von $nickname, und für die Person wird ein Spielabbruch vermerkt. Die Partie läuft weiter.';
+  String kickAfkConfirmTitleOffline(String nickname) {
+    return '$nickname ist getrennt. Entfernen?';
   }
 
   @override
-  String get kickAfkConfirmAction => 'Ersetzen';
+  String kickAfkConfirmTitleIdle(String nickname) {
+    return '$nickname reagiert nicht. Entfernen?';
+  }
+
+  @override
+  String get kickAfkConfirmBody =>
+      'Ein Bot übernimmt den Platz, die Partie läuft weiter. Für die Person wird ein Spielabbruch vermerkt.';
+
+  @override
+  String get kickAfkConfirmAction => 'Entfernen';
 
   @override
   String get commonTotal => 'Gesamt';

@@ -5572,12 +5572,21 @@ function kickableReason(room, playerId) {
   return kickRule(room, playerId, kickFacts(room, playerId));
 }
 
-/// 방장 화면에 보낼 "지금 자를 수 있는 자리" 목록.
+/// 방장 화면에 보낼 "지금 자를 수 있는 자리" — 자리 id 마다 그 이유.
+///
+/// 이유까지 보내는 것은 확인 문구를 가르기 위해서다. "연결이 끊긴 사람을
+/// 자를까요" 와 "응답이 없는 사람을 자를까요" 는 방장이 판단하는 근거가
+/// 다르고, 둘을 하나로 뭉뚱그리면 접속은 멀쩡한 사람에게 "연결이 끊겼다" 고
+/// 말하게 된다.
 function kickableSeats(room) {
-  if (!room || !room.game || room.isRanked) return [];
-  return room.players
-    .filter((p) => p !== null && !p.isBot && kickableReason(room, p.id))
-    .map((p) => p.id);
+  if (!room || !room.game || room.isRanked) return {};
+  const out = {};
+  for (const p of room.players) {
+    if (p === null || p.isBot) continue;
+    const reason = kickableReason(room, p.id);
+    if (reason) out[p.id] = reason;
+  }
+  return out;
 }
 
 // 한 번에 하나씩. 연타로 여러 자리를 동시에 넘기면 정산이 꼬인다.

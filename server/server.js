@@ -7591,7 +7591,12 @@ async function handleTurnTimeout(roomId, playerId) {
   const runSkullKingFallback = () => {
     if (!room.game || room.gameType !== 'skull_king') return false;
     if (room.game.state === 'bidding' && room.game.bids?.[playerId] === null) {
-      const bidResult = room.game.handleAction(playerId, { type: 'submit_bid', bid: 0 });
+      // 자리를 비운 사람은 1승. 0은 한 번이라도 먹으면 그대로 감점인데,
+      // 손을 놓은 사람은 아무 카드나 내다가 곧잘 먹는다.
+      // (엔진의 getAutoTimeoutAction 과 같은 기본값이어야 한다.)
+      const bidResult = room.game.handleAction(playerId, {
+        type: 'submit_bid', bid: Math.min(1, room.game.round),
+      });
       if (bidResult?.success) {
         if (bidResult.broadcast) broadcastGameEvent(roomId, bidResult.broadcast);
         sendGameStateToAll(roomId);

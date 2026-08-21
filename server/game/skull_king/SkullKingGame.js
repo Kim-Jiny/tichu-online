@@ -550,7 +550,17 @@ class SkullKingGame {
 
   getAutoTimeoutAction(playerId) {
     if (this.state === 'bidding' && this.bids[playerId] === null) {
-      return { type: 'submit_bid', bid: 0 };
+      // 자리를 비운 사람은 1승을 부른다.
+      //
+      // 예전에는 0이었다. 0은 "한 판도 못 먹겠다" 는 선언이라 한 번이라도
+      // 먹으면 그대로 감점이고, 손을 놓은 사람은 아무 카드나 내다가 곧잘
+      // 먹는다. 1은 맞히면 점수를 받고 틀려도 0을 어겼을 때와 같은 폭으로
+      // 깎인다 — 같은 위험에 얻을 것이 있는 쪽이다.
+      //
+      // 1라운드는 카드가 한 장이라 상한도 1이다. round 를 상한으로 씌우는
+      // 것은 라운드가 아직 0인 순간(딜 직전)에 거절당하지 않게 하기 위한
+      // 것이고, 그 경우 0으로 떨어진다.
+      return { type: 'submit_bid', bid: Math.min(1, this.round) };
     }
     if (this.state === 'playing' && this.currentPlayer === playerId) {
       const legalCards = this.getLegalCards(playerId);

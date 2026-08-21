@@ -88,6 +88,20 @@ class L10nEn extends L10n {
   String get commonCancel => 'Cancel';
 
   @override
+  String get kickAfkAction => 'Replace with bot';
+
+  @override
+  String get kickAfkConfirmTitle => 'Replace them with a bot?';
+
+  @override
+  String kickAfkConfirmBody(String nickname) {
+    return 'A bot takes over $nickname\'s seat and they are recorded as leaving mid-game. The match carries on.';
+  }
+
+  @override
+  String get kickAfkConfirmAction => 'Replace';
+
+  @override
   String get commonTotal => 'Total';
 
   @override

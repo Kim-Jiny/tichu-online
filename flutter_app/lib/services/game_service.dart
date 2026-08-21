@@ -70,7 +70,22 @@ class GameService extends ChangeNotifier {
   String playerName = '';
 
   // Room info
-  String currentRoomId = '';
+  String _currentRoomId = '';
+  String get currentRoomId => _currentRoomId;
+
+  /// 방이 바뀌면 강퇴 상태를 버린다.
+  ///
+  /// 이 목록은 게임 중에만 뜻이 있는데, 프로필 팝업은 로비·친구목록·랭킹
+  /// 에서도 열린다. 방을 나간 뒤 남아 있으면 아무 관계 없는 화면에서 "잠수
+  /// 교체" 버튼이 뜬다. 방을 비우는 곳이 일곱 군데라, 그 일곱 군데를 기억
+  /// 하는 대신 여기서 한 번에 처리한다.
+  set currentRoomId(String value) {
+    if (value != _currentRoomId) {
+      _kickableSeats = const {};
+      _seatIdByName = const {};
+    }
+    _currentRoomId = value;
+  }
 
   /// One-shot marker set when we initiate room entry (join/invite) and
   /// cleared when the first room_state arrives. Used to fire the
@@ -434,6 +449,31 @@ class GameService extends ChangeNotifier {
   /// 출석 알림. 이벤트·혜택 알림 안에 딸린 스위치라 기본이 켬이다 — 마케팅
   /// 동의가 없으면 이 값이 켬이어도 서버가 아무것도 안 보낸다.
   bool pushAttendanceEnabled = true;
+
+  /// 지금 잠수 강퇴를 걸 수 있는 자리들. 서버가 **방장에게만** 실어 준다.
+  ///
+  /// 화면이 스스로 판단하지 않는 이유는, 판단이 두 벌이면 어긋나기 때문이다.
+  /// 버튼이 떠도 서버가 다시 검사해서 거절할 수 있고(그 사이 상대가 돌아온
+  /// 경우), 그게 맞는 동작이다.
+  Set<String> _kickableSeats = const {};
+
+  /// 닉네임 → 자리 id. 프로필 팝업은 닉네임만 들고 열리는데 강퇴는 id 로
+  /// 보내야 해서 필요하다. 게임 종류마다 상태 모델이 달라서 공통 자리인
+  /// 여기서 한 번 만들어 둔다.
+  Map<String, String> _seatIdByName = const {};
+
+  /// 이 사람에게 잠수 강퇴 버튼을 보여도 되는가.
+  bool canKickForAfk(String nickname) {
+    final id = _seatIdByName[nickname];
+    return id != null && _kickableSeats.contains(id);
+  }
+
+  /// 잠수 강퇴. 서버가 조건을 다시 검사하므로 여기서는 보내기만 한다.
+  void kickAfkPlayer(String nickname) {
+    final id = _seatIdByName[nickname];
+    if (id == null) return;
+    _network.send({'type': 'kick_afk_player', 'playerId': id});
+  }
   bool isAdminUser = false;
   bool pushAdminInquiryEnabled = true;
   bool pushAdminReportEnabled = true;
@@ -1417,6 +1457,17 @@ class GameService extends ChangeNotifier {
         }
         final state = data['state'] as Map<String, dynamic>?;
         if (state != null) {
+          // 게임 종류를 가리기 전에 읽는다. 강퇴는 네 게임 모두에서 같은
+          // 규칙이고, 서버가 방장에게만 실어 보낸다 — 목록이 안 왔으면
+          // 나는 방장이 아니거나 자를 사람이 없는 것이다.
+          _kickableSeats = {
+            ...?(state['kickableSeats'] as List?)?.whereType<String>(),
+          };
+          _seatIdByName = {
+            for (final p in (state['players'] as List? ?? const []))
+              if (p is Map && p['name'] is String && p['id'] is String)
+                p['name'] as String: p['id'] as String,
+          };
           final stateGameType = state['gameType'] as String? ?? 'tichu';
 
           if (stateGameType == 'skull_king') {

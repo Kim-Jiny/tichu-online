@@ -87,6 +87,20 @@ class L10nKo extends L10n {
   String get commonCancel => '취소';
 
   @override
+  String get kickAfkAction => '잠수 교체';
+
+  @override
+  String get kickAfkConfirmTitle => '잠수로 보고 교체할까요?';
+
+  @override
+  String kickAfkConfirmBody(String nickname) {
+    return '$nickname님의 자리를 봇이 이어받고, 그분에게는 중도탈주가 기록됩니다. 게임은 그대로 이어집니다.';
+  }
+
+  @override
+  String get kickAfkConfirmAction => '교체하기';
+
+  @override
   String get commonTotal => '합계';
 
   @override

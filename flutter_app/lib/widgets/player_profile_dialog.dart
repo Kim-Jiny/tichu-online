@@ -205,12 +205,33 @@ void showPlayerProfileDialog(
                                 ),
                               ),
                             ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.commonClose),
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              // 잠수 강퇴. 방장에게, 잠수가 확인된 자리에만
+                              // 나타난다 — 서버가 그 판단을 해서 목록으로
+                              // 내려 주고, 상대가 돌아와 두기 시작하면 다음
+                              // 상태와 함께 사라진다.
+                              //
+                              // 네 게임 화면이 이 팝업 하나를 공유하므로
+                              // 여기 한 번 붙이면 전부에 붙는다.
+                              if (game.canKickForAfk(nickname))
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _confirmAfkKick(ctx, nickname, game),
+                                  icon: const Icon(Icons.smart_toy_outlined,
+                                      size: 18),
+                                  label: Text(l10n.kickAfkAction),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFFC1553F),
+                                  ),
+                                ),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: Text(l10n.commonClose),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -224,4 +245,37 @@ void showPlayerProfileDialog(
       );
     },
   );
+}
+
+/// 자르기 전에 한 번 묻는다.
+///
+/// 상대에게는 되돌릴 수 없는 일이다 — 자리를 봇이 받고 전적에 탈주가 남는다.
+/// 프로필을 보다가 손이 미끄러져 일어날 일은 아니어야 한다.
+Future<void> _confirmAfkKick(
+  BuildContext ctx,
+  String nickname,
+  GameService game,
+) async {
+  final l10n = L10n.of(ctx);
+  final ok = await showDialog<bool>(
+    context: ctx,
+    builder: (c) => AlertDialog(
+      title: Text(l10n.kickAfkConfirmTitle),
+      content: Text(l10n.kickAfkConfirmBody(nickname)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(c, false),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(c, true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFC1553F)),
+          child: Text(l10n.kickAfkConfirmAction),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  game.kickAfkPlayer(nickname);
+  if (ctx.mounted) Navigator.pop(ctx);
 }

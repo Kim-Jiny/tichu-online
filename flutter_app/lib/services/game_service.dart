@@ -794,22 +794,24 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFF4F1E9), Color(0xFFE6EDE1), Color(0xFFF0F3EC)];
       case 'theme_pio_dawn':
         return const [Color(0xFFFCEDE4), Color(0xFFFDF4E8), Color(0xFFEDF3F7)];
-      // 시즌 이벤트 테마 5종. 짝을 이루는 배너(banner_seollal 등)는 진하지만
+      // 시즌 이벤트 테마 6종. 짝을 이루는 배너(banner_seollal 등)는 진하지만
       // 여기는 위 규칙대로 옅게 — 배너 색을 그대로 옮기지 않고 톤만 가져왔다.
-      // 채도를 낮추다 보면 다섯이 전부 같은 크림색으로 뭉개지므로, 밝기는
-      // 맞추되 색상환에서는 서로 확실히 떨어뜨렸다: 설날=레드/골드,
-      // 추석=단풍(빨강→노랑→초록), 연말=그린/골드, 애니버서리=바이올렛/틸,
-      // 한글날=먹빛 파치먼트+주홍.
+      // 채도를 낮추다 보면 전부 같은 크림색으로 뭉개지므로, 밝기는 맞추되
+      // 색상환에서는 서로 확실히 떨어뜨렸다: 설날=레드/골드,
+      // 추석=단풍(빨강→노랑→초록), 연말=그린/골드, 개천절=바이올렛/틸,
+      // 한글날=먹빛 파치먼트+주홍, 크리스마스=레드/크림/골드.
       case 'theme_seollal':
         return const [Color(0xFFFFE3DE), Color(0xFFFFC9C2), Color(0xFFFCE0A8)];
       case 'theme_chuseok':
         return const [Color(0xFFFFD6C7), Color(0xFFFFEDAD), Color(0xFFD7EAC0)];
       case 'theme_yearend':
         return const [Color(0xFFD7ECDC), Color(0xFFB9DEC3), Color(0xFFEBDCA0)];
-      case 'theme_anniversary':
+      case 'theme_gaecheonjeol':
         return const [Color(0xFFE6DAF8), Color(0xFFCFC0EF), Color(0xFFC3EFE6)];
       case 'theme_hangeul':
         return const [Color(0xFFEDE7D8), Color(0xFFD9D2BD), Color(0xFFF0C8BE)];
+      case 'theme_christmas':
+        return const [Color(0xFFFCE4E1), Color(0xFFFFF6EC), Color(0xFFF5E3B8)];
       default:
         return const [Color(0xFFF8F4F6), Color(0xFFEDE6F0), Color(0xFFE0ECF6)];
     }
@@ -876,10 +878,12 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFFFC7B3), Color(0xFFE8B563), Color(0xFFA9D18E)];
       case 'theme_yearend':
         return const [Color(0xFFBFE0C9), Color(0xFF95C9A4), Color(0xFFE0C878)];
-      case 'theme_anniversary':
+      case 'theme_gaecheonjeol':
         return const [Color(0xFFD3BEF0), Color(0xFFB49EE6), Color(0xFFA0E4D6)];
       case 'theme_hangeul':
         return const [Color(0xFFDCD2B4), Color(0xFFC2B896), Color(0xFFE8AC9C)];
+      case 'theme_christmas':
+        return const [Color(0xFFF7C9C2), Color(0xFFE0A03C), Color(0xFFF0D584)];
       default:
         return const [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
     }

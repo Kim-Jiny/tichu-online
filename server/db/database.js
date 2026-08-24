@@ -1091,7 +1091,8 @@ async function runMigrations() {
         ('theme_pio_sage', '개척자 · 린넨과 세이지 테마', '개척자 · 린넨과 세이지 테마', 'Pioneer · Linen and Sage Theme', 'Pioneer · Linen and Sage Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
         ('theme_pio_dawn', '개척자 · 여명 테마', '개척자 · 여명 테마', 'Pioneer · First Light Theme', 'Pioneer · First Light Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
 
-        -- 시즌 이벤트 배너·테마 5종. 배너와 테마는 짝을 이루는 색이지만
+        -- 시즌 이벤트 배너·테마 6종(설날/추석/연말/개천절/한글날/크리스마스).
+        -- 배너와 테마는 짝을 이루는 색이지만
         -- 밝기 기준이 다르다: 배너는 진하게(위 개척자 세트처럼), 테마는
         -- 앱 전체 배경이라 반드시 밝게 — 실제 그라디언트 값은
         -- game_service.dart 의 themeGradientFor/cardBackColorsFor 에 있다.
@@ -1108,8 +1109,10 @@ async function runMigrations() {
         ('theme_chuseok', '추석 테마', '추석 테마', 'Chuseok Theme', 'Chuseok-Thema', 'theme', 550, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"park","iconColor":"#C97A3D","borderColor":"#A9D18E","background":{"kind":"gradient","angle":135,"stops":[{"color":"#FFD6C7","at":0.0},{"color":"#FFEDAD","at":0.5},{"color":"#D7EAC0","at":1.0}]}}}}'::jsonb),
         ('banner_yearend', '연말 배너', '연말 배너', 'Year-End Banner', 'Jahresend-Banner', 'banner', 380, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"ac_unit","iconColor":"#D4AF37","borderColor":"#123829","background":{"kind":"gradient","angle":0,"stops":[{"color":"#123829","at":0.0},{"color":"#D4AF37","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#0F3D2E","at":0.0},{"color":"#1B4332","at":0.5},{"color":"#D4AF37","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
         ('theme_yearend', '연말 테마', '연말 테마', 'Year-End Theme', 'Jahresend-Thema', 'theme', 580, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"ac_unit","iconColor":"#2E7D52","borderColor":"#D4AF37","background":{"kind":"gradient","angle":0,"stops":[{"color":"#D7ECDC","at":0.0},{"color":"#EBDCA0","at":1.0}]}}}}'::jsonb),
-        ('banner_anniversary', '애니버서리 배너', '애니버서리 배너', 'Anniversary Banner', 'Jubiläums-Banner', 'banner', 400, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#2FD9C4","borderColor":"#1A1330","background":{"kind":"gradient","angle":0,"stops":[{"color":"#1A1330","at":0.0},{"color":"#2FD9C4","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#1A1330","at":0.0},{"color":"#241B3A","at":0.5},{"color":"#2FD9C4","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
-        ('theme_anniversary', '애니버서리 테마', '애니버서리 테마', 'Anniversary Theme', 'Jubiläums-Thema', 'theme', 650, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#5B4B9E","borderColor":"#2FD9C4","background":{"kind":"gradient","angle":0,"stops":[{"color":"#E6DAF8","at":0.0},{"color":"#C3EFE6","at":1.0}]}}}}'::jsonb),
+        ('banner_gaecheonjeol', '개천절 배너', '개천절 배너', 'National Foundation Day Banner', 'Banner zum Tag der Staatsgründung', 'banner', 400, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#2FD9C4","borderColor":"#1A1330","background":{"kind":"gradient","angle":0,"stops":[{"color":"#1A1330","at":0.0},{"color":"#2FD9C4","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#1A1330","at":0.0},{"color":"#241B3A","at":0.5},{"color":"#2FD9C4","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_gaecheonjeol', '개천절 테마', '개천절 테마', 'National Foundation Day Theme', 'Thema zum Tag der Staatsgründung', 'theme', 650, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#5B4B9E","borderColor":"#2FD9C4","background":{"kind":"gradient","angle":0,"stops":[{"color":"#E6DAF8","at":0.0},{"color":"#C3EFE6","at":1.0}]}}}}'::jsonb),
+        ('banner_christmas', '크리스마스 배너', '크리스마스 배너', 'Christmas Banner', 'Weihnachts-Banner', 'banner', 380, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"star","iconColor":"#F4D03F","borderColor":"#7A1F2B","background":{"kind":"gradient","angle":135,"stops":[{"color":"#7A1F2B","at":0.0},{"color":"#F4D03F","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":135,"stops":[{"color":"#7A1F2B","at":0.0},{"color":"#C62828","at":0.55},{"color":"#F4D03F","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_christmas', '크리스마스 테마', '크리스마스 테마', 'Christmas Theme', 'Weihnachts-Thema', 'theme', 600, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"star","iconColor":"#C62828","borderColor":"#F4D03F","background":{"kind":"gradient","angle":135,"stops":[{"color":"#FCE4E1","at":0.0},{"color":"#FFF6EC","at":0.5},{"color":"#F5E3B8","at":1.0}]}}}}'::jsonb),
         ('banner_hangeul', '한글날 배너', '한글날 배너', 'Hangeul Day Banner', 'Hangeul-Tag-Banner', 'banner', 450, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"workspace_premium","iconColor":"#C23B22","borderColor":"#14161F","background":{"kind":"gradient","angle":0,"stops":[{"color":"#14161F","at":0.0},{"color":"#C23B22","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#14161F","at":0.0},{"color":"#20263D","at":0.5},{"color":"#C23B22","at":1.0}]}},"text":{"color":"#F5E9D8"}}}'::jsonb),
         ('theme_hangeul', '한글날 테마', '한글날 테마', 'Hangeul Day Theme', 'Hangeul-Tag-Thema', 'theme', 700, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"workspace_premium","iconColor":"#20263D","borderColor":"#C23B22","background":{"kind":"gradient","angle":0,"stops":[{"color":"#EDE7D8","at":0.0},{"color":"#F0C8BE","at":1.0}]}}}}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
@@ -5500,6 +5503,11 @@ async function buyItem(nickname, itemKey) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_item_not_purchasable' };
     }
+    // sale_start/sale_end are deliberately not checked here. They gate
+    // discovery — getShopItems() hides the item outside that window so a new
+    // buyer can't start one late — but someone who already owns it can keep
+    // extending past the window on the same terms they bought in on. Only
+    // is_purchasable being switched off in admin cuts that off for everyone.
     // Season items are reward-only — never purchasable or extendable through
     // the shop, even if a stale client sends a buy request for one already in
     // the user's inventory.

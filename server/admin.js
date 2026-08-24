@@ -322,6 +322,9 @@ body {
 .metric-inline .name { font-size: 13px; color: var(--muted); }
 .metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+/* 화면 여러 곳이 .table-responsive 를 붙여 쓰고 있었는데 CSS 에 정의가
+   없어 아무 일도 하지 않았다 — 폰에서 표가 그대로 삐져나갔다. */
+.table-responsive,
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); scrollbar-width: thin; max-width: 100%; width: 100%; }
 table { width: 100%; max-width: 100%; border-collapse: separate; border-spacing: 0; }
 th { text-align: left; padding: 10px 14px; background: #faf9f6; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; text-transform: none; letter-spacing: 0; position: sticky; top: 0; z-index: 1; }
@@ -371,6 +374,23 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   margin-bottom: 18px;
 }
 .filter-title { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 10px; font-weight: 700; }
+/* 필터 한 줄.
+ *
+ * 예전에는 폼마다 style="display:flex;..." 와 style="width:130px" 을 직접
+ * 박았다. 인라인은 클래스가 못 이기므로 좁은 화면 규칙이 통하지 않았고,
+ * 폰에서 칸이 줄을 넘지 못해 가로로 삐져나갔다. 폭을 클래스로 옮겨 둔다.
+ *   f-grow  검색처럼 남는 자리를 먹는 칸
+ *   f-mid   IP·OS·버전처럼 중간 폭
+ *   f-num   최소 레이팅·게임·이탈처럼 짧은 숫자
+ *   f-gap   버튼을 오른쪽으로 미는 빈칸 (폰에서는 사라진다)
+ */
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+.filter-row .f-grow { flex: 1 1 200px; min-width: 0; }
+.filter-row .f-mid { flex: 0 1 130px; min-width: 0; }
+.filter-row .f-num { flex: 0 1 100px; min-width: 0; }
+.filter-row .f-gap { flex: 1 1 0; }
+.filter-row .f-label { font-size: 12px; color: var(--muted); }
+.filter-form { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .subtab-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
 .subtab-link {
   display: inline-flex;
@@ -522,6 +542,28 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
   .search-bar > * { width: 100%; min-width: 0 !important; }
   .search-bar .btn { width: 100%; text-align: center; }
   .filter-card { padding: 14px; border-radius: 16px; }
+  /* 칸을 줄 단위로 눕힌다. 검색은 한 줄을 통째로, 나머지는 두세 개씩
+   * 나눠 담아 세로로 끝없이 길어지지 않게 한다. */
+  .filter-row { gap: 10px; }
+  .filter-row .f-grow { flex: 1 1 100%; }
+  .filter-row .f-mid { flex: 1 1 calc(50% - 5px); }
+  .filter-row .f-num { flex: 1 1 calc(33.333% - 7px); }
+  .filter-row .f-gap { display: none; }
+  .filter-row .btn { flex: 1 1 auto; text-align: center; }
+  /* 폰에서는 볼 자리가 없는 열을 접는다. 표가 가로로 스크롤되긴 하지만,
+   * 열세 칸을 밀어 가며 보는 것과 필요한 것만 보는 것은 다르다. */
+  .col-hide-sm { display: none; }
+  /* 인라인 style="display:flex" 로 짠 줄들은 클래스가 없어 하나씩 잡을 수가
+   * 없다. 그렇다고 전부 접으면 막대그래프(align-items:flex-end 로 세운 것)
+   * 처럼 접히면 안 되는 것까지 무너진다. **입력칸이 든 줄만** 고른다 —
+   * 폰에서 삐져나가는 건 그쪽이고, 차트에는 입력칸이 없다. */
+  [style*="display:flex"]:has(input, select, textarea) { flex-wrap: wrap; }
+  /* 그 줄 안에 인라인으로 박힌 폭이 화면보다 넓어도 화면을 넘지는 않게.
+   * width 를 덮어쓰지 않고 상한만 씌우므로, 화면에 들어가는 폭은 그대로다. */
+  .card input, .card select, .card textarea,
+  .filter-card input, .filter-card select, .filter-card textarea {
+    max-width: 100%;
+  }
   .subtab-bar,
   .preset-bar {
     flex-wrap: nowrap;
@@ -3836,10 +3878,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
       ${rows.length === 0
         ? '<div class="empty">돌아가는 봇방이 없습니다</div>'
-        : `<table class="table">
+        : `<div class="table-responsive"><table class="table">
              <thead><tr><th>닉네임</th><th>게임</th><th>봇 속도</th><th>상태</th><th>관전</th><th>관전자</th><th>생성</th><th></th></tr></thead>
              <tbody>${list}</tbody>
-           </table>`}
+           </table></div>`}
     `;
     return html(res, layout('봇방', content, 'filler-rooms'));
   }
@@ -4139,7 +4181,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // 싶다" 는 생각과 "필터 상자를 열어 항목을 찾는다" 사이가 멀었고,
     // 드롭다운에 없는 기준(닉네임, 앱 버전)은 아예 볼 수가 없었다. 지금은
     // 보고 싶은 열을 누르면 되고, 같은 열을 다시 누르면 방향이 뒤집힌다.
-    const sortHeader = (label, key) => {
+    const sortHeader = (label, key, { hideSm = false } = {}) => {
       const desc = `${key}_desc`;
       const asc = `${key}_asc`;
       const active = sort === desc || sort === asc;
@@ -4149,7 +4191,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       const params = new URLSearchParams(qsStr);
       params.set('sort', next);
       params.delete('page');
-      return `<th style="white-space:nowrap"><a href="/tc-backstage/users?${params.toString()}"`
+      return `<th class="${hideSm ? 'col-hide-sm' : ''}" style="white-space:nowrap"><a href="/tc-backstage/users?${params.toString()}"`
         + ` style="color:${active ? '#6c63ff' : 'inherit'};text-decoration:none">`
         + `${label} <span style="font-size:10px">${arrow}</span></a></th>`;
     };
@@ -4158,33 +4200,34 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // (검색·IP·OS·버전), 아래는 "어떤 조건을 넘나"(최소 레이팅·게임·이탈).
     // 정렬은 표 머리로 옮겼지만, 필터를 다시 걸 때 보던 정렬이 풀리면
     // 곤란하므로 hidden 으로 들고 간다.
-    const filterInput = 'padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:13px';
+    // 폭은 클래스로만 준다(.filter-row 의 f-grow / f-mid / f-num). 인라인
+    // 으로 박으면 좁은 화면 규칙이 못 이겨서 폰에서 칸이 삐져나간다.
     const searchForm = `
       <div class="filter-card">
         <div class="filter-title">유저 필터</div>
-        <form method="GET" action="/tc-backstage/users" style="display:flex;flex-direction:column;gap:8px;width:100%">
+        <form method="GET" action="/tc-backstage/users" class="filter-form">
           <input type="hidden" name="sort" value="${escapeHtml(sort)}">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-            <input type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}" style="flex:1;min-width:200px">
-            <input type="text" name="ip" placeholder="IP" value="${escapeHtml(ipQuery)}" style="width:130px;${filterInput}">
-            <select name="platform" style="${filterInput}">
+          <div class="filter-row">
+            <input class="f-grow" type="text" name="q" placeholder="닉네임 또는 계정명 검색..." value="${escapeHtml(search)}">
+            <input class="f-mid" type="text" name="ip" placeholder="IP" value="${escapeHtml(ipQuery)}">
+            <select class="f-mid" name="platform">
               <option value="">전체 OS</option>
               <option value="ios"${platform === 'ios' ? ' selected' : ''}>iOS</option>
               <option value="android"${platform === 'android' ? ' selected' : ''}>AOS</option>
             </select>
-            <select name="ver" style="${filterInput}">
+            <select class="f-mid" name="ver">
               <option value="">전체 버전</option>
               ${versionsInUse.map(v => `<option value="${escapeHtml(v.app_version)}"${appVersion === v.app_version ? ' selected' : ''}>${escapeHtml(v.app_version)} (${v.users})</option>`).join('')}
             </select>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-            <span style="font-size:12px;color:#888">최소</span>
-            <input type="number" name="minRating" placeholder="레이팅" value="${escapeHtml(minRating)}" style="width:100px;${filterInput}">
-            <input type="number" name="minGames" placeholder="게임 수" value="${escapeHtml(minGames)}" style="width:100px;${filterInput}">
-            <input type="number" name="minLeaves" placeholder="이탈 수" value="${escapeHtml(minLeaves)}" style="width:100px;${filterInput}">
-            <div style="flex:1"></div>
+          <div class="filter-row">
+            <span class="f-label">최소</span>
+            <input class="f-num" type="number" name="minRating" placeholder="레이팅" value="${escapeHtml(minRating)}">
+            <input class="f-num" type="number" name="minGames" placeholder="게임 수" value="${escapeHtml(minGames)}">
+            <input class="f-num" type="number" name="minLeaves" placeholder="이탈 수" value="${escapeHtml(minLeaves)}">
+            <div class="f-gap"></div>
             <button type="submit" class="btn btn-primary">검색</button>
-            ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary" style="font-size:12px">초기화</a>` : ''}
+            ${qsStr ? `<a href="/tc-backstage/users" class="btn btn-secondary">초기화</a>` : ''}
           </div>
         </form>
       </div>
@@ -4194,10 +4237,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (data.rows.length > 0) {
       tableContent = `<div class="table-wrap"><table>
         <tr>
-          ${sortHeader('닉네임', 'nickname')}<th>권한</th><th>기기</th><th>IP</th>
+          ${sortHeader('닉네임', 'nickname')}<th>권한</th>
+          <th class="col-hide-sm">기기</th><th class="col-hide-sm">IP</th>
           ${sortHeader('앱 버전', 'version')}${sortHeader('Lv', 'level')}${sortHeader('골드', 'gold')}
           ${sortHeader('레이팅', 'rating')}${sortHeader('게임', 'games')}${sortHeader('이탈', 'leaves')}
-          ${sortHeader('최근 접속', 'login')}${sortHeader('가입', 'joined')}<th></th>
+          ${sortHeader('최근 접속', 'login')}
+          ${sortHeader('가입', 'joined', { hideSm: true })}<th></th>
         </tr>
         ${data.rows.map(u => {
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
@@ -4206,8 +4251,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>
             ${u.is_deleted ? '<span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : `<span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>`}
           </td>
-          <td>${deviceBadge(u.device_platform)}</td>
-          <td style="font-size:12px;color:#666">${escapeHtml(u.last_ip || '-')}</td>
+          <td class="col-hide-sm">${deviceBadge(u.device_platform)}</td>
+          <td class="col-hide-sm" style="font-size:12px;color:#666">${escapeHtml(u.last_ip || '-')}</td>
           <td style="font-size:12px;color:#666">${escapeHtml(u.app_version || '-')}</td>
           <td>${u.level || 1}</td>
           <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
@@ -4223,7 +4268,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${(u.games_all ?? u.total_games ?? 0).toLocaleString()}</td>
           <td style="${leaveStyle}">${u.leave_count || 0}</td>
           <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
-          <td style="font-size:12px;color:#888">${u.created_at ? formatDate(u.created_at) : '-'}</td>
+          <td class="col-hide-sm" style="font-size:12px;color:#888">${u.created_at ? formatDate(u.created_at) : '-'}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
         </tr>`;
         }).join('')}
@@ -7046,7 +7091,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const body = rows.length === 0
       ? '<div class="empty">해당하는 요청이 없습니다</div>'
-      : `<table>
+      : `<div class="table-responsive"><table>
           <thead><tr>
             <th>요청시각</th><th>계정</th><th>입금자명</th><th>상품</th>
             <th style="text-align:right">금액</th><th style="text-align:right">지급골드</th>
@@ -7095,7 +7140,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <td>${actions}</td>
             </tr>`;
           }).join('')}</tbody>
-        </table>`;
+        </table></div>`;
 
     const content = `
       <h1 class="page-title">입금 확인 요청</h1>
@@ -8438,10 +8483,10 @@ function noticeStatusBadge(status) {
 
       <div class="card">
         ${coupons.length === 0 ? '<div class="empty">아직 쿠폰이 없습니다</div>' : `
-        <table>
+        <div class="table-responsive"><table>
           <tr><th>코드</th><th>상태</th><th>보상</th><th>등록</th><th>마감</th><th>메모</th><th></th></tr>
           ${rows}
-        </table>`}
+        </table></div>`}
       </div>
 
       <script>
@@ -8505,14 +8550,14 @@ function noticeStatusBadge(status) {
       ${pageHeader(`${escapeHtml(code)} 등록자`, `${rows.length}명`)}
       <div class="card">
         ${rows.length === 0 ? '<div class="empty">아직 아무도 등록하지 않았습니다</div>' : `
-        <table>
+        <div class="table-responsive"><table>
           <tr><th>닉네임</th><th>받은 것</th><th>시각</th></tr>
           ${rows.map((r) => `<tr>
             <td>${escapeHtml(r.nickname)}</td>
             <td style="font-size:12px;color:#888">${escapeHtml(r.reward_summary || '')}</td>
             <td style="font-size:12px;color:#888">${formatDate(r.redeemed_at)}</td>
           </tr>`).join('')}
-        </table>`}
+        </table></div>`}
       </div>
       <a href="/tc-backstage/coupons" class="btn btn-secondary" style="margin-top:12px">목록으로</a>
     `;

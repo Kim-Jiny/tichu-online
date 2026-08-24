@@ -3870,6 +3870,13 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'submit_bid', 'pass': true});
   }
 
+  /// Toggle: commit to passing the instant it's my turn, so I don't have to
+  /// sit through everyone else's bidding just to tap pass myself. Sending it
+  /// again withdraws the reservation.
+  void mightyReservePass() {
+    _network.send({'type': 'reserve_pass'});
+  }
+
   void mightyDeclareDealMiss() {
     _network.send({'type': 'declare_deal_miss'});
   }

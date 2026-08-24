@@ -2785,6 +2785,16 @@ class L10nEn extends L10n {
   String get mtPass => 'Pass';
 
   @override
+  String get mtReservePass => 'Reserve pass';
+
+  @override
+  String get mtReservePassHint =>
+      'Automatically pass the moment it\'s your turn';
+
+  @override
+  String get mtReservePassed => 'Reserved';
+
+  @override
   String get mtDealMiss => 'Deal miss';
 
   @override

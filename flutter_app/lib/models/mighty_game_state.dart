@@ -4,6 +4,7 @@ class MightyPlayer {
   final String position;
   final int cardCount;
   final dynamic bid; // null, 'pass', or Map {points, suit}
+  final bool reservedPass;
   final int trickCount;
   final int pointCount;
   final List<String> pointCards;
@@ -23,6 +24,7 @@ class MightyPlayer {
     this.position = '',
     this.cardCount = 0,
     this.bid,
+    this.reservedPass = false,
     this.trickCount = 0,
     this.pointCount = 0,
     this.pointCards = const [],
@@ -41,6 +43,7 @@ class MightyPlayer {
       position: json['position'] ?? '',
       cardCount: json['cardCount'] ?? 0,
       bid: json['bid'],
+      reservedPass: json['reservedPass'] == true,
       trickCount: json['trickCount'] ?? 0,
       pointCount: json['pointCount'] ?? 0,
       pointCards: List<String>.from(json['pointCards'] ?? const []),
@@ -265,6 +268,8 @@ class MightyGameStateData {
   final Map<String, dynamic>? remainingTrumps;
   final int dealMissPool;
   final bool canDeclareDealMiss;
+  final bool canReservePass;
+  final bool reservedPass;
   final MightyDealMissEvent? lastDealMissEvent;
   final bool canDeclareSetting;
   final MightySettingEvent? lastSettingEvent;
@@ -306,6 +311,8 @@ class MightyGameStateData {
     this.remainingTrumps,
     this.dealMissPool = 0,
     this.canDeclareDealMiss = false,
+    this.canReservePass = false,
+    this.reservedPass = false,
     this.lastDealMissEvent,
     this.canDeclareSetting = false,
     this.lastSettingEvent,
@@ -424,6 +431,8 @@ class MightyGameStateData {
           : null,
       dealMissPool: (json['dealMissPool'] as num?)?.toInt() ?? 0,
       canDeclareDealMiss: json['canDeclareDealMiss'] == true,
+      canReservePass: json['canReservePass'] == true,
+      reservedPass: json['reservedPass'] == true,
       lastDealMissEvent: json['lastDealMissEvent'] == null
           ? null
           : MightyDealMissEvent.fromJson(Map<String, dynamic>.from(json['lastDealMissEvent'])),

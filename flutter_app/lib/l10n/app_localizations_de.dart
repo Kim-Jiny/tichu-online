@@ -2800,6 +2800,15 @@ class L10nDe extends L10n {
   String get mtPass => 'Passen';
 
   @override
+  String get mtReservePass => 'Pass reservieren';
+
+  @override
+  String get mtReservePassHint => 'Passt automatisch, sobald du am Zug bist';
+
+  @override
+  String get mtReservePassed => 'Reserviert';
+
+  @override
   String get mtDealMiss => 'Deal-Miss';
 
   @override

@@ -5067,6 +5067,24 @@ abstract class L10n {
   /// **'Pass'**
   String get mtPass;
 
+  /// No description provided for @mtReservePass.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserve pass'**
+  String get mtReservePass;
+
+  /// No description provided for @mtReservePassHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically pass the moment it\'s your turn'**
+  String get mtReservePassHint;
+
+  /// No description provided for @mtReservePassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved'**
+  String get mtReservePassed;
+
   /// No description provided for @mtDealMiss.
   ///
   /// In en, this message translates to:

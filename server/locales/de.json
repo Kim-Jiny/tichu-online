@@ -266,6 +266,7 @@
   "mighty_bid_invalid_suit": "Ungültige Trumpffarbe",
   "mighty_no_trump_not_allowed": "Ohne-Trumpf-Gebot ist nicht erlaubt",
   "mighty_bid_too_low": "Gebot muss höher als das aktuelle Gebot sein",
+  "mighty_already_bid": "Du hast in dieser Hand bereits geboten oder gepasst",
   "mighty_not_kitty_phase": "Nicht in der Kitty-Tauschphase",
   "mighty_not_declarer": "Nur der Alleinspieler kann diese Aktion ausführen",
   "mighty_trump_change_disabled": "Trumpfwechsel sind nicht erlaubt",

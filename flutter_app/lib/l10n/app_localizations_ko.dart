@@ -2721,6 +2721,15 @@ class L10nKo extends L10n {
   String get mtPass => '패스';
 
   @override
+  String get mtReservePass => '패스 예약';
+
+  @override
+  String get mtReservePassHint => '내 차례가 오면 자동으로 패스합니다';
+
+  @override
+  String get mtReservePassed => '예약됨';
+
+  @override
   String get mtDealMiss => '딜미스';
 
   @override

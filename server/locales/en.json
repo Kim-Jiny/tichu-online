@@ -266,6 +266,7 @@
   "mighty_bid_invalid_suit": "Invalid trump suit",
   "mighty_no_trump_not_allowed": "No-trump bid is not allowed",
   "mighty_bid_too_low": "Bid must be higher than current bid",
+  "mighty_already_bid": "You have already bid or passed this hand",
   "mighty_not_kitty_phase": "Not in the kitty exchange phase",
   "mighty_not_declarer": "Only the declarer can perform this action",
   "mighty_trump_change_disabled": "Trump changes are not allowed",

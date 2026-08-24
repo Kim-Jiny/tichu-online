@@ -266,6 +266,7 @@
   "mighty_bid_invalid_suit": "유효하지 않은 트럼프 수트입니다",
   "mighty_no_trump_not_allowed": "노트럼프 비드가 허용되지 않습니다",
   "mighty_bid_too_low": "현재 비드보다 높아야 합니다",
+  "mighty_already_bid": "이미 비딩에 참여했습니다",
   "mighty_not_kitty_phase": "키티 교환 단계가 아닙니다",
   "mighty_not_declarer": "주공만 이 액션을 수행할 수 있습니다",
   "mighty_trump_change_disabled": "기루다 변경이 허용되지 않습니다",

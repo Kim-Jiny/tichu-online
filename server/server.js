@@ -3502,6 +3502,7 @@ async function handleMessage(ws, data) {
     case 'declare_deal_miss':
     case 'declare_kill':
     case 'declare_setting':
+    case 'reserve_pass':
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':
@@ -6303,6 +6304,10 @@ function handleGameAction(ws, data) {
   // Mighty: submit_bid IS turn-based (not simultaneous), so it should clear the timer
   const phaseActions = ['pass_large_tichu', 'declare_large_tichu', 'exchange_cards', 'declare_small_tichu', 'effect_ack', 'select_target', 'guard_guess'];
   if (room.gameType !== 'mighty') phaseActions.push('submit_bid');
+  // reserve_pass usually targets a future turn, not the current bidder's —
+  // clearing the shared timer here would reset whoever IS currently up.
+  // (Their own turn resolves it as a real pass instead, see _handleReservePass.)
+  if (room.gameType === 'mighty') phaseActions.push('reserve_pass');
   const prevPhase = room.game.state;
 
   if (data.type === 'next_round') {
@@ -7372,8 +7377,13 @@ function startTurnTimer(roomId) {
 
   // Mighty bidding: sequential turn-based (not simultaneous like SK)
   if (room.gameType === 'mighty' && gameState === 'bidding') {
-    clearTurnTimer(roomId);
     const currentPlayer = room.game.currentPlayer;
+    // Already ticking for this same bidder — a bystander reserving their own
+    // future pass re-broadcasts state but must not reset someone else's
+    // clock, or repeatedly toggling the reservation becomes a free timer
+    // extension for whoever is actually up.
+    if (turnTimers[roomId] && turnWaitingOn[roomId]?.[0] === currentPlayer) return;
+    clearTurnTimer(roomId);
     if (!currentPlayer || seatIsAutoPlayed(room, currentPlayer)) return;
     const timeLimit = turnTimeLimitMs(room, currentPlayer);
     room.turnDeadline = Date.now() + timeLimit;
@@ -7808,6 +7818,14 @@ function handOffSeatToBot(room, playerId, reason, options = {}) {
 
   const result = room.replaceWithBot(playerId, locale);
   if (!result.success) return null;
+
+  // The bot inherits this playerId, not a fresh one — so a queued mighty
+  // "auto-pass when it's my turn" would otherwise silently override the
+  // bot's own bidding logic the moment its turn comes. That reservation
+  // belonged to the human who is now gone.
+  if (room.gameType === 'mighty' && room.game.pendingPassReservations) {
+    room.game.pendingPassReservations.delete(playerId);
+  }
 
   releasePeerPending(nickname);
   // No seat to return to — the bot has it. Drop the reconnect pointer so a

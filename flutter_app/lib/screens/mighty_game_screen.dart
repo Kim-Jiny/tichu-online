@@ -2058,6 +2058,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       );
     } else if (state.phase == 'bidding' && player.bid != null) {
       roleLabel = _bidScoreboardBadge(player.bid);
+    } else if (state.phase == 'bidding' &&
+        player.bid == null &&
+        player.reservedPass) {
+      roleLabel = Text(
+        L10n.of(context).mtReservePassed,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFBDBDBD),
+        ),
+      );
     }
 
     // 두 패스로 그릴 때 photo 패스는 탭을 받지 않는다 — 겹친 두 위젯이
@@ -4976,9 +4987,43 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               .map((p) => p.name)
               .firstOrNull ??
           '...';
-      return Text(
-        L10n.of(context).mtWaitingFor(waitingName),
-        style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+      final l10n = L10n.of(context);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.mtWaitingFor(waitingName),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+          ),
+          if (state.canReservePass) ...[
+            const SizedBox(height: 6),
+            Tooltip(
+              message: l10n.mtReservePassHint,
+              child: OutlinedButton.icon(
+                onPressed: () => game.mightyReservePass(),
+                icon: Icon(
+                  state.reservedPass
+                      ? Icons.check_circle
+                      : Icons.schedule_send,
+                  size: 16,
+                ),
+                label: Text(
+                  state.reservedPass ? l10n.mtReservePassed : l10n.mtReservePass,
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: state.reservedPass
+                      ? const Color(0xFF4BAA6A)
+                      : const Color(0xFF8A7A72),
+                  side: BorderSide(
+                    color: state.reservedPass
+                        ? const Color(0xFF4BAA6A)
+                        : const Color(0xFFBDBDBD),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       );
     }
 

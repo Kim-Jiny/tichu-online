@@ -53,6 +53,9 @@ class MightyGame {
     this.currentBid = { points: 0, suit: null, bidder: null };
     this.bids = {};
     this.passCount = 0;
+    // Players who reserved "auto-pass the instant it's my turn," so they can
+    // stop watching everyone else's bidding once they know their hand is bad.
+    this.pendingPassReservations = new Set();
     this.bidOrder = [];
     this.currentBidderIndex = 0;
     this.currentPlayer = null;
@@ -98,6 +101,9 @@ class MightyGame {
     this.currentBid = { points: 0, suit: null, bidder: null };
     this.bids = {};
     this.passCount = 0;
+    // A fresh hand means fresh cards — a reservation made against last hand's
+    // cards says nothing about this one.
+    this.pendingPassReservations = new Set();
     this.currentPlayer = null;
     this.tricks = [];
     this.currentTrick = [];
@@ -158,6 +164,7 @@ class MightyGame {
   handleAction(playerId, action) {
     switch (action.type) {
       case 'submit_bid': return this._handleBid(playerId, action);
+      case 'reserve_pass': return this._handleReservePass(playerId, action);
       case 'declare_deal_miss': return this._handleDealMiss(playerId, action);
       case 'declare_kill': return this._handleDeclareKill(playerId, action);
       case 'change_trump': return this._handleChangeTrump(playerId, action);
@@ -208,6 +215,31 @@ class MightyGame {
     this.bids[playerId] = { points, suit };
     this.currentBid = { points, suit, bidder: playerId };
     return this._advanceBidding();
+  }
+
+  /**
+   * Toggle: commit now to passing the moment it becomes my turn, so a player
+   * who already knows their hand is dead doesn't have to sit watching every
+   * other bidder before tapping pass themselves. Pressing it again withdraws
+   * the reservation. Meaningless once it actually IS their turn — that's just
+   * a normal pass — or once they've already bid/passed this hand.
+   */
+  _handleReservePass(playerId, action) {
+    if (this.state !== 'bidding') {
+      return { success: false, messageKey: 'mighty_not_bidding_phase' };
+    }
+    if (this.bids[playerId] !== undefined) {
+      return { success: false, messageKey: 'mighty_already_bid' };
+    }
+    if (playerId === this.currentPlayer) {
+      return this._handleBid(playerId, { type: 'submit_bid', pass: true });
+    }
+    if (this.pendingPassReservations.has(playerId)) {
+      this.pendingPassReservations.delete(playerId);
+    } else {
+      this.pendingPassReservations.add(playerId);
+    }
+    return { success: true };
   }
 
   // ─── DEAL MISS ──────────────────────────────────────────
@@ -365,6 +397,15 @@ class MightyGame {
     }
 
     this.currentPlayer = next;
+    if (this.pendingPassReservations.has(next)) {
+      // currentPlayer must already point at them (set above) — _findNextBidder
+      // walks forward from this.currentPlayer, so leaving it stale here would
+      // restart the scan from the wrong seat.
+      this.pendingPassReservations.delete(next);
+      this.bids[next] = 'pass';
+      this.passCount++;
+      return this._advanceBidding();
+    }
     return { success: true };
   }
 
@@ -548,6 +589,7 @@ class MightyGame {
     this.currentBid = { points: 0, suit: null, bidder: null };
     this.bids = {};
     this.passCount = 0;
+    this.pendingPassReservations = new Set();
 
     // Bid order: active (non-excluded) seats starting from left of original dealer
     this.bidOrder = this._buildBidOrder();
@@ -1411,6 +1453,7 @@ class MightyGame {
         position: isSelf ? 'self' : `player_${i}`,
         cardCount: (this.hands[pid] || []).length,
         bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
+        reservedPass: this.pendingPassReservations.has(pid),
         trickCount: cache.trickCounts[pid] || 0,
         pointCount: cache.pointCounts[pid] || 0,
         pointCards: isGovt ? [] : (this.pointCards[pid] || []),
@@ -1454,6 +1497,9 @@ class MightyGame {
       lastDealMissEvent: this.lastDealMissEvent,
       canDeclareDealMiss: this._canDeclareDealMiss(playerId),
       canDeclareSetting: this._canDeclareSetting(playerId),
+      canReservePass: this.state === 'bidding' && this.bids[playerId] === undefined
+        && playerId !== this.currentPlayer,
+      reservedPass: this.pendingPassReservations.has(playerId),
       lastSettingEvent: this.lastSettingEvent,
       mode: this.mode,
       excludedPlayers: cache.excludedPlayers,
@@ -1494,6 +1540,7 @@ class MightyGame {
       canViewCards: permittedPlayerIds.has(pid),
       cardCount: (this.hands[pid] || []).length,
       bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
+      reservedPass: this.pendingPassReservations.has(pid),
       trickCount: cache.trickCounts[pid] || 0,
       pointCount: cache.pointCounts[pid] || 0,
       pointCards: cache.governmentIds.has(pid) ? [] : (this.pointCards[pid] || []),
@@ -1609,6 +1656,12 @@ class MightyGame {
     // bidOrder
     const bidIdx = this.bidOrder.indexOf(oldId);
     if (bidIdx >= 0) this.bidOrder[bidIdx] = newId;
+
+    // pendingPassReservations
+    if (this.pendingPassReservations.has(oldId)) {
+      this.pendingPassReservations.delete(oldId);
+      this.pendingPassReservations.add(newId);
+    }
 
     // currentPlayer
     if (this.currentPlayer === oldId) this.currentPlayer = newId;

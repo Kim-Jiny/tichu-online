@@ -1111,24 +1111,33 @@ function formatDateTimeInputKst(d) {
 /**
  * The inverse: a KST wall-clock string from a form back to a real instant.
  *
- * Returns a UTC-naive TEXT string ("YYYY-MM-DD HH:MM:SS"), not a JS Date —
- * on purpose. Every expires_at/sale_start/sale_end/... column here is
- * TIMESTAMP WITHOUT TIME ZONE, and pg's Date serialization is asymmetric for
- * those: writing a Date renders it using the DRIVER PROCESS's local
- * timezone, but reading one back treats the stored naive text as UTC. On a
- * prod host (OS timezone UTC) those two sides happen to agree, so this went
- * unnoticed — but on a KST dev machine, writing lands the value 9 hours off.
- * A plain string sidesteps pg's Date serialization entirely: it is written
- * and read back as the same naive text everywhere, matching how this
- * codebase already treats other timestamp columns (write UTC as text,
- * compare in SQL).
+ * Returns a full ISO-8601 UTC string with the trailing 'Z' ("2026-08-18T21:
+ * 00:00.000Z"), not a bare JS Date and not a naive "YYYY-MM-DD HH:MM:SS"
+ * either — both of those broke one of this value's two consumers:
+ *
+ * - A raw Date object serializes to a TIMESTAMP WITHOUT TIME ZONE column
+ *   using the DRIVER PROCESS's local timezone on write, but is read back
+ *   treating the stored naive text as UTC — asymmetric, and on a KST dev
+ *   host that lands the value 9 hours off (agrees by coincidence on a UTC
+ *   prod host, which is how this went unnoticed).
+ * - Some of these values (maintenance notice/window) never touch a DB
+ *   column at all — server.js JSON.stringifies them straight into tc_config
+ *   and the client re-parses that JSON with Dart's DateTime.parse(), which
+ *   treats a string with no offset as LOCAL device time, not UTC. A naive
+ *   string here (this function's previous fix for the point above) silently
+ *   broke that path instead — same 9-hour class of bug, moved client-side.
+ *
+ * A 'Z'-suffixed string satisfies both: Postgres parses it as an absolute
+ * instant and stores the equivalent naive value correctly since the pool's
+ * session timezone is UTC (verified — see gotcha_timestamp_utc_kst), and
+ * DateTime.parse() on the client correctly reads the 'Z' as UTC.
  */
 function parseKstDateTimeInput(value) {
   if (!value) return null;
   const withSeconds = /T\d{2}:\d{2}$/.test(value) ? `${value}:00` : value;
   const dt = new Date(`${withSeconds}+09:00`);
   if (isNaN(dt.getTime())) return null;
-  return dt.toISOString().slice(0, 19).replace('T', ' ');
+  return dt.toISOString();
 }
 
 function kstDateKey(d) {

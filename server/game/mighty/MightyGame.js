@@ -1888,6 +1888,7 @@ class MightyGame {
     c.currentBid = { ...this.currentBid };
     c.scores = { ...this.scores };
     c.excludedPlayers = new Set(this.excludedPlayers);
+    c.pendingPassReservations = new Set(this.pendingPassReservations);
     c.hands = {};
     for (const pid of this.playerIds) c.hands[pid] = (this.hands[pid] || []).slice();
     c.pointCards = {};
@@ -1958,6 +1959,7 @@ class MightyGame {
       currentBid: this.currentBid,
       scores: this.scores,
       excludedPlayers: [...this.excludedPlayers], // Set -> array
+      pendingPassReservations: [...this.pendingPassReservations], // Set -> array
       hands: this.hands,
       pointCards: this.pointCards,
       newlyReceivedCards: this.newlyReceivedCards,
@@ -1979,6 +1981,7 @@ class MightyGame {
     const c = Object.create(MightyGame.prototype);
     Object.assign(c, s);
     c.excludedPlayers = new Set(s.excludedPlayers || []); // array -> Set
+    c.pendingPassReservations = new Set(s.pendingPassReservations || []); // array -> Set
     return c;
   }
 }

@@ -1728,6 +1728,21 @@ class GameService extends ChangeNotifier {
               spectators = [];
             }
             gameState = GameStateData.fromJson(state);
+            // SK/Mighty/LL re-sync this from every game_state broadcast (see
+            // above); classic Tichu only updated it from the discrete
+            // turn_timeout/timeout_reset events. If one of those is ever
+            // missed — a socket silently dead while backgrounded, the exact
+            // window before the resume ping-probe catches it — this player's
+            // own reset button stays stuck stale (usually invisible) even
+            // though every other client's badge for them is already current,
+            // since it reads the same per-player field off this same
+            // broadcast. Backfilling it here every time closes that gap.
+            final selfPlayer = gameState!.players.where(
+              (p) => p.position == 'self',
+            );
+            myTimeoutCount = selfPlayer.isNotEmpty
+                ? selfPlayer.first.timeoutCount
+                : 0;
           }
         }
         notifyListeners();

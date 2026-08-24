@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:flutter/semantics.dart';
@@ -102,10 +104,37 @@ void main() async {
         );
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
+    // iOS shows the foreground banner itself (AppDelegate's willPresent).
+    // Android has no such auto-display — FCM only hits the system tray while
+    // backgrounded/killed, so a foreground message has to be shown by hand.
+    if (Platform.isAndroid) await _initAndroidForegroundNotifications();
+    // onMessageOpenedApp/getInitialMessage never fire for a tap on that
+    // native banner while the app was already foreground — AppDelegate
+    // catches the tap itself and reports it over this channel instead.
+    if (Platform.isIOS) _initIOSPushTapChannel();
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint(
         'Foreground push: ${message.notification?.title} - ${message.notification?.body}',
       );
+      final notification = message.notification;
+      if (Platform.isAndroid && notification != null) {
+        _localNotifications.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              _androidChannel.id,
+              _androidChannel.name,
+              channelDescription: _androidChannel.description,
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+          ),
+          payload: jsonEncode(message.data),
+        );
+      }
     });
 
     _startCampaignTapListeners();
@@ -134,6 +163,55 @@ final ValueNotifier<List<int>> pendingCampaignTaps = ValueNotifier(const []);
 /// independently, so the id alone would be ambiguous.
 final ValueNotifier<List<({String kind, int id})>> pendingPushOpens =
     ValueNotifier(const []);
+
+final FlutterLocalNotificationsPlugin _localNotifications =
+    FlutterLocalNotificationsPlugin();
+
+const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
+  'high_importance_channel',
+  '중요 알림',
+  description: '게임 초대, 우편, 공지 등 즉시 확인이 필요한 알림',
+  importance: Importance.high,
+);
+
+/// Android-only: create the channel FCM foreground pushes are shown through,
+/// and route a tap on one of them the same way a background tap is routed
+/// (a locally-shown notification never reaches onMessageOpenedApp).
+Future<void> _initAndroidForegroundNotifications() async {
+  await _localNotifications
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(_androidChannel);
+  await _localNotifications.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+    onDidReceiveNotificationResponse: (response) {
+      final payload = response.payload;
+      if (payload == null) return;
+      try {
+        recordPushTap(jsonDecode(payload) as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('Local notification payload decode failed: $e');
+      }
+    },
+  );
+}
+
+const MethodChannel _iosPushTapChannel = MethodChannel(
+  'com.jiny.tichuOnline/push_tap',
+);
+
+/// iOS-only: AppDelegate owns the notification-tap delegate and reports a tap
+/// here directly, since Firebase's own onMessageOpenedApp never fires for one
+/// that lands while the app was already foreground.
+void _initIOSPushTapChannel() {
+  _iosPushTapChannel.setMethodCallHandler((call) async {
+    if (call.method != 'tap') return;
+    final args = call.arguments;
+    if (args is Map) recordPushTap(Map<String, dynamic>.from(args));
+  });
+}
 
 void _rememberCampaignTap(RemoteMessage message) => recordPushTap(message.data);
 

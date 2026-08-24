@@ -254,7 +254,7 @@ const goldOf = async (n) => Number((await db.pool.query(
     (await db.pool.query(
       'SELECT COUNT(*)::int n FROM tc_mail WHERE id = $1', [closed.id])).rows[0].n === 1);
 
-  console.log('\n[30일 보존]');
+  console.log('\n[14일 보존]');
   const old = await db.sendMail({
     title: `오래된 ${run}`, body: 'x', rewardGold: 100,
     targetKind: 'user', nicknames: [A], createdBy: 'tester',
@@ -263,16 +263,16 @@ const goldOf = async (n) => Number((await db.pool.query(
   // 이 한 통이 빠지는지를 본다.
   const unreadBefore = await db.getUnreadMailCount(A);
   await db.pool.query(
-    `UPDATE tc_mail_recipients SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '31 days'
+    `UPDATE tc_mail_recipients SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '15 days'
       WHERE mail_id = $1`, [old.id]);
-  check('31일 지난 편지는 우편함에 안 보인다',
+  check('15일 지난 편지는 우편함에 안 보인다',
     !(await db.getMailbox(A)).mail.some((m) => m.id === old.id));
   const unreadAfter = await db.getUnreadMailCount(A);
   check('안 읽음 수에서도 빠진다', unreadAfter === unreadBefore - 1,
     `${unreadBefore} → ${unreadAfter}`);
   const lateClaim = await db.claimMail(A, old.id);
   check('수령도 안 된다', lateClaim.success === false, JSON.stringify(lateClaim));
-  const purged = await db.purgeOldMail(30);
+  const purged = await db.purgeOldMail(14);
   check('정리 작업이 사본을 지운다', purged.purged >= 1, JSON.stringify(purged));
   const snap = (await db.listMail({ limit: 200 })).rows.find((r) => r.id === old.id);
   check('그래도 어드민 통계는 남는다 (스냅샷)',

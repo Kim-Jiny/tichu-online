@@ -84,7 +84,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
 
   /// Kept in step with the server's MAIL_RETENTION_DAYS. Shown to the player,
   /// so it is a promise: after this the letter is gone and its reward with it.
-  static const int _retentionDays = 30;
+  static const int _retentionDays = 14;
 
   Future<void> _confirmDelete(GameService game, int id, L10n l10n) async {
     final ok = await showDialog<bool>(

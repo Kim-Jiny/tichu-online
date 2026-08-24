@@ -4144,7 +4144,7 @@ async function sendMail({
  * are swept on the same schedule (purgeOldMail) — the filter is what makes the
  * promise true the moment it passes, without waiting for the sweep.
  */
-const MAIL_RETENTION_DAYS = 30;
+const MAIL_RETENTION_DAYS = 14;
 
 /** One player's mailbox, newest first. */
 async function getMailbox(nickname, limit = 50) {
@@ -8987,6 +8987,18 @@ function parseTzOffsetMinutes(raw) {
 async function updateDeviceInfo(nickname, deviceInfo) {
   const client = await pool.connect();
   try {
+    if (deviceInfo.fcmToken) {
+      // A token identifies one physical device's current install, not an
+      // account. Logging out and into a different account on the same phone
+      // reuses the same token, so whoever held it before must be cleared here
+      // — otherwise a broadcast still matches their row too and the one
+      // device gets the same push twice.
+      await client.query(
+        `UPDATE tc_users SET fcm_token = NULL, fcm_token_invalid_at = NULL
+         WHERE fcm_token = $1 AND nickname <> $2`,
+        [deviceInfo.fcmToken, nickname]
+      );
+    }
     await client.query(
       `UPDATE tc_users
        SET fcm_token = COALESCE($2, fcm_token),

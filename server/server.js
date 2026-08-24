@@ -3028,7 +3028,7 @@ setTimeout(() => { purgePushLogs().catch(() => {}); }, 5 * 60 * 1000);
 setInterval(() => { sweepExpiredCosmetics().catch(() => {}); }, 6 * 60 * 60 * 1000);
 setTimeout(() => { sweepExpiredCosmetics().catch(() => {}); }, 3 * 60 * 1000);
 
-// Letters past their 30 days. The mailbox query already hides them the moment
+// Letters past their 14 days. The mailbox query already hides them the moment
 // the window passes, so this is the storage side of a promise the app has
 // already kept — and it snapshots the read/claim counts before the copies go.
 setInterval(() => { purgeOldMail().catch(() => {}); }, 24 * 60 * 60 * 1000);

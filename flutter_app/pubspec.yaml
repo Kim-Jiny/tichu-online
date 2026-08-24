@@ -82,6 +82,10 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.0.2 # MediaType for the multipart upload Content-Type
   cached_network_image: ^3.4.1
+  # Android has no system tray display for FCM while the app is foregrounded
+  # (unlike iOS, which we handle natively via AppDelegate's willPresent) — the
+  # app has to show the banner itself through a notification channel.
+  flutter_local_notifications: ^19.0.0
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,8 @@ import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private var pushTapChannel: FlutterMethodChannel?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -25,6 +27,10 @@ import FirebaseMessaging
     // any plugin would, through its own registrar.
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AppSettingsChannel") {
       registerAppSettingsChannel(registrar.messenger())
+      pushTapChannel = FlutterMethodChannel(
+        name: "com.jiny.tichuOnline/push_tap",
+        binaryMessenger: registrar.messenger()
+      )
     }
   }
 
@@ -67,5 +73,39 @@ import FirebaseMessaging
   ) {
     print("[iOS][APNs] FAILED - \(error.localizedDescription)")
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
+  }
+
+  // Owning UNUserNotificationCenter.delegate (above) means we must decide
+  // presentation ourselves — without this, iOS defaults to showing nothing
+  // while the app is foregrounded, even though the Dart side already asked
+  // for alert/badge/sound via setForegroundNotificationPresentationOptions.
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.banner, .list, .sound, .badge])
+  }
+
+  // FirebaseMessaging's onMessageOpenedApp/getInitialMessage only cover a tap
+  // that brings the app from background/killed to foreground — a tap on the
+  // banner shown by willPresent above, while the app was already active,
+  // reaches neither. Since we already own this delegate, catch that tap here
+  // directly and hand the payload to Dart ourselves rather than depend on a
+  // Firebase code path that does not fire for it. Runs for every tap (this
+  // app was foreground or not), which can double up with onMessageOpenedApp
+  // for the background case — recordPushTap on the Dart side is idempotent,
+  // so that overlap is harmless.
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    var data: [String: String] = [:]
+    for (key, value) in response.notification.request.content.userInfo {
+      if let k = key as? String, let v = value as? String { data[k] = v }
+    }
+    if !data.isEmpty { pushTapChannel?.invokeMethod("tap", arguments: data) }
+    completionHandler()
   }
 }

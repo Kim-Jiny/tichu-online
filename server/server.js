@@ -6390,16 +6390,22 @@ async function saveGameResult(room) {
   delete timeoutCounts[room.id];
 
   if (room.gameType === 'skull_king') {
-    return saveSKGameResult(room);
+    await saveSKGameResult(room);
+    await refreshConnectedRatings(room);
+    return;
   }
 
   // Love Letter: no separate DB save for now (uses SK format)
   if (room.gameType === 'love_letter') {
-    return saveLLGameResult(room);
+    await saveLLGameResult(room);
+    await refreshConnectedRatings(room);
+    return;
   }
 
   if (room.gameType === 'mighty') {
-    return saveMightyGameResult(room);
+    await saveMightyGameResult(room);
+    await refreshConnectedRatings(room);
+    return;
   }
 
   const game = room.game;
@@ -6447,6 +6453,38 @@ async function saveGameResult(room) {
     console.log(`Match result saved for room ${room.name}`);
   } catch (err) {
     console.error('Error saving match result:', err);
+  }
+  await refreshConnectedRatings(room);
+}
+
+/**
+ * Refresh the connected sockets' cached rating/level snapshot after a match
+ * ends.
+ *
+ * ws.seasonRating (+ sk/mighty variants, ws.level) is a copy taken once at
+ * login and never touched again — every place that reads it for display
+ * (lobby room list, waiting-room seats) shows that stale number until the
+ * player's next full reconnect. The post-game popup looks fine because it
+ * does its own live DB read (get_profile) instead of trusting this cache;
+ * this closes the same gap for the lobby/room views, which never ask again.
+ */
+async function refreshConnectedRatings(room) {
+  const nicknames = (room.players || [])
+    .filter((p) => p && p.nickname && !p.isBot)
+    .map((p) => p.nickname);
+  for (const nickname of nicknames) {
+    const ws = findWsByNickname(nickname);
+    if (!ws) continue;
+    try {
+      const profile = await getUserProfile(nickname, ws.locale || 'ko');
+      if (!profile) continue;
+      ws.level = Number.isFinite(profile.level) ? profile.level : ws.level;
+      ws.seasonRating = Number.isFinite(profile.seasonRating) ? profile.seasonRating : null;
+      ws.skSeasonRating = Number.isFinite(profile.skSeasonRating) ? profile.skSeasonRating : null;
+      ws.mightySeasonRating = Number.isFinite(profile.mightySeasonRating) ? profile.mightySeasonRating : null;
+    } catch (e) {
+      console.error(`[ratings] refresh failed for ${nickname}:`, e.message);
+    }
   }
 }
 

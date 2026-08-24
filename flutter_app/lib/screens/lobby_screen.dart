@@ -3720,6 +3720,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ],
               ),
             ),
+            // Same visibility the custom-room branch below gives — ranked SK
+            // expansions are host-picked too (nothing forces a fixed set for
+            // ranked), so without this chip row the only place to see them
+            // was mid-game, past the point of backing out.
+            if (game.currentGameType == 'skull_king' &&
+                game.roomSkExpansions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final exp in game.roomSkExpansions)
+                    _buildSkExpansionChip(exp),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             // Ranked Tichu stays one per row: its seats are teams (0+2 vs
             // 1+3), and a grid would sit 0 next to 1 and say the opposite.
@@ -5081,18 +5098,37 @@ class _LobbyScreenState extends State<LobbyScreen> {
             },
           ),
           if (isReady)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Center(
-                  // Scaled with the seat (was 56 in a 68-tall row). A watermark
-                  // that reaches the edges stops reading as a background mark.
-                  child: Icon(
-                    Icons.check_circle,
-                    size: 48,
-                    color: const Color(0xFF43A047).withValues(alpha: 0.18),
+            Builder(
+              builder: (_) {
+                // Same override the nickname/title use — plain green at 18%
+                // reads fine on the default light seat, but disappears against
+                // a dark banner (개천절/크리스마스/한글날 etc). The banner's
+                // own text color is already guaranteed readable against it, so
+                // reuse that instead of a fixed color; bumped up a bit past the
+                // nickname's alpha since a flat white/black watermark is
+                // fainter at a given opacity than the original saturated green.
+                // isReady already implies player != null (isReady's own
+                // definition short-circuits on !isEmpty).
+                final bannerTextOverride = (!isBot && player.connected)
+                    ? game.bannerTextColor(player.bannerKey)
+                    : null;
+                final readyColor = bannerTextOverride ?? const Color(0xFF43A047);
+                final readyAlpha = bannerTextOverride != null ? 0.28 : 0.18;
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      // Scaled with the seat (was 56 in a 68-tall row). A
+                      // watermark that reaches the edges stops reading as a
+                      // background mark.
+                      child: Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: readyColor.withValues(alpha: readyAlpha),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           if (player != null && !isBot && player.isHost)
             const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),

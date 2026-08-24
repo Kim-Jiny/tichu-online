@@ -1870,6 +1870,7 @@
   "shopButtonUse": "Use",
   "shopButtonEquip": "Equip",
   "shopTagSeason": "Season Item",
+  "shopTagLimited": "LIMITED",
   "shopTagPermanent": "Permanent",
   "shopTagDuration": "{days}d duration",
   "@shopTagDuration": {

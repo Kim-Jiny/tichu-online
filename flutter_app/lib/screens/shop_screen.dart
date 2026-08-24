@@ -1488,7 +1488,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           )
                         else if (onSale)
                           _badge(
-                            'SALE',
+                            l10n.shopTagLimited,
                             const Color(0xFFD32F2F),
                             const Color(0xFFFFEBEE),
                           ),
@@ -2848,7 +2848,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               )
                             else if (onSale)
                               _badge(
-                                'SALE',
+                                l10n.shopTagLimited,
                                 const Color(0xFFD32F2F),
                                 const Color(0xFFFFEBEE),
                               ),

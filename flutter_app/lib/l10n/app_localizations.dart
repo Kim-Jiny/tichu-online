@@ -6315,6 +6315,12 @@ abstract class L10n {
   /// **'Season Item'**
   String get shopTagSeason;
 
+  /// No description provided for @shopTagLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'LIMITED'**
+  String get shopTagLimited;
+
   /// No description provided for @shopTagPermanent.
   ///
   /// In en, this message translates to:

@@ -1096,6 +1096,7 @@
   "shopButtonUse": "사용",
   "shopButtonEquip": "장착",
   "shopTagSeason": "시즌 아이템",
+  "shopTagLimited": "한정판매",
   "shopTagPermanent": "영구",
   "shopTagDuration": "기간제 {days}일",
   "shopTagDurationOnly": "기간제",

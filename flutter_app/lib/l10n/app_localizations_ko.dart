@@ -3434,6 +3434,9 @@ class L10nKo extends L10n {
   String get shopTagSeason => '시즌 아이템';
 
   @override
+  String get shopTagLimited => '한정판매';
+
+  @override
   String get shopTagPermanent => '영구';
 
   @override

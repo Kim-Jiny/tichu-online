@@ -112,16 +112,15 @@ const wipe = async (key) => db.pool.query(
      ON CONFLICT (nickname) DO UPDATE SET banner_key = EXCLUDED.banner_key,
                                           title_key = EXCLUDED.title_key`,
     [NICK, timed]);
-  const before = await db.getUserProfile(NICK, 'ko');
-  check('정리 전에는 그대로 보인다', before.bannerKey === timed, `${before.bannerKey}`);
-  await db.getUserItems(NICK); // 인벤토리를 여는 것이 정리 시점
+  // getUserProfile 자체가 정리 시점이다 — 재접속 때 이 함수가 불리므로,
+  // 인벤토리를 연 적 없어도 첫 조회에서 바로 풀려 있어야 한다.
+  const profile = await db.getUserProfile(NICK, 'ko');
+  check('프로필 조회 시점에 바로 풀린다', !profile.bannerKey, `${profile.bannerKey}`);
   const equips = (await db.pool.query(
     'SELECT banner_key, title_key FROM tc_user_equips WHERE nickname = $1', [NICK])).rows[0];
   check('장착이 풀린다', equips.banner_key === null, `${equips.banner_key}`);
   check('커스텀 칭호는 건드리지 않는다 (인벤토리에 행이 없는 정상 상태)',
     equips.title_key === 'custom:FF0000', `${equips.title_key}`);
-  const afterProfile = await db.getUserProfile(NICK, 'ko');
-  check('프로필에도 더 이상 안 나온다', !afterProfile.bannerKey, `${afterProfile.bannerKey}`);
 
   console.log('\n[한 번도 접속 안 한 사람도 정리된다]');
   await db.pool.query(

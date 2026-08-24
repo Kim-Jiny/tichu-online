@@ -1108,12 +1108,27 @@ function formatDateTimeInputKst(d) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
-/** The inverse: a KST wall-clock string from a form back to a real instant. */
+/**
+ * The inverse: a KST wall-clock string from a form back to a real instant.
+ *
+ * Returns a UTC-naive TEXT string ("YYYY-MM-DD HH:MM:SS"), not a JS Date —
+ * on purpose. Every expires_at/sale_start/sale_end/... column here is
+ * TIMESTAMP WITHOUT TIME ZONE, and pg's Date serialization is asymmetric for
+ * those: writing a Date renders it using the DRIVER PROCESS's local
+ * timezone, but reading one back treats the stored naive text as UTC. On a
+ * prod host (OS timezone UTC) those two sides happen to agree, so this went
+ * unnoticed — but on a KST dev machine, writing lands the value 9 hours off.
+ * A plain string sidesteps pg's Date serialization entirely: it is written
+ * and read back as the same naive text everywhere, matching how this
+ * codebase already treats other timestamp columns (write UTC as text,
+ * compare in SQL).
+ */
 function parseKstDateTimeInput(value) {
   if (!value) return null;
   const withSeconds = /T\d{2}:\d{2}$/.test(value) ? `${value}:00` : value;
   const dt = new Date(`${withSeconds}+09:00`);
-  return isNaN(dt.getTime()) ? null : dt;
+  if (isNaN(dt.getTime())) return null;
+  return dt.toISOString().slice(0, 19).replace('T', ' ');
 }
 
 function kstDateKey(d) {
@@ -1875,8 +1890,11 @@ function parseShopFormBody(body) {
     description_de: body.description_de || '',
     price: parseInt(body.price) || 0,
     is_purchasable: body.is_purchasable === 'on',
-    sale_start: body.sale_start || null,
-    sale_end: body.sale_end || null,
+    // datetime-local gives a naive "YYYY-MM-DDTHH:MM" with no timezone — the
+    // admin typed it as KST, so it must go through the same KST→UTC parse as
+    // every other admin date field, or it lands 9 hours off (server/DB run UTC).
+    sale_start: parseKstDateTimeInput(body.sale_start),
+    sale_end: parseKstDateTimeInput(body.sale_end),
     visual: buildVisualFromBody(body),
   };
   if (body.structure === 'on') {
@@ -7032,10 +7050,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     if (setMaintenanceConfig) {
       const body = await parseBody(req);
       const config = {
-        noticeStart: body.noticeStart || null,
-        noticeEnd: body.noticeEnd || null,
-        maintenanceStart: body.maintenanceStart || null,
-        maintenanceEnd: body.maintenanceEnd || null,
+        // Same KST→UTC fix as the shop sale window — these were being saved
+        // as the raw naive input, landing 9 hours later than the admin set.
+        noticeStart: parseKstDateTimeInput(body.noticeStart),
+        noticeEnd: parseKstDateTimeInput(body.noticeEnd),
+        maintenanceStart: parseKstDateTimeInput(body.maintenanceStart),
+        maintenanceEnd: parseKstDateTimeInput(body.maintenanceEnd),
         message_ko: body.message_ko || '',
         message_en: body.message_en || '',
         message_de: body.message_de || '',

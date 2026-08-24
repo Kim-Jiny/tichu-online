@@ -1106,6 +1106,7 @@
   "shopButtonUse": "Benutzen",
   "shopButtonEquip": "Ausrüsten",
   "shopTagSeason": "Saisonartikel",
+  "shopTagLimited": "LIMITIERT",
   "shopTagPermanent": "Dauerhaft",
   "shopTagDuration": "{days} Tage Laufzeit",
   "shopTagDurationOnly": "Befristet",

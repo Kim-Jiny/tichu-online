@@ -3530,6 +3530,9 @@ class L10nDe extends L10n {
   String get shopTagSeason => 'Saisonartikel';
 
   @override
+  String get shopTagLimited => 'LIMITIERT';
+
+  @override
   String get shopTagPermanent => 'Dauerhaft';
 
   @override

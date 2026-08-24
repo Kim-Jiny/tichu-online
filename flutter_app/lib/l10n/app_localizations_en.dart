@@ -3514,6 +3514,9 @@ class L10nEn extends L10n {
   String get shopTagSeason => 'Season Item';
 
   @override
+  String get shopTagLimited => 'LIMITED';
+
+  @override
   String get shopTagPermanent => 'Permanent';
 
   @override

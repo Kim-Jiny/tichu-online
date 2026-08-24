@@ -468,6 +468,11 @@ async function runMigrations() {
         source VARCHAR(30) DEFAULT 'shop'
       )
     `);
+    // Every lookup here filters by nickname (often plus item_key) — profile
+    // fetches, ownership checks, cleanupExpiredItems — and without this it's
+    // a full-table scan on every one of them, scaling with total items ever
+    // sold rather than one player's own row count.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tc_user_items_nickname ON tc_user_items (nickname, item_key)`);
 
     // User equipped cosmetics
     await client.query(`
@@ -1080,7 +1085,29 @@ async function runMigrations() {
         ('theme_pio_champagne', '개척자 · 샴페인 테마', '개척자 · 샴페인 테마', 'Pioneer · Champagne Theme', 'Pioneer · Champagne Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
         ('theme_pio_haze', '개척자 · 아침안개 테마', '개척자 · 아침안개 테마', 'Pioneer · Morning Haze Theme', 'Pioneer · Morning Haze Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
         ('theme_pio_sage', '개척자 · 린넨과 세이지 테마', '개척자 · 린넨과 세이지 테마', 'Pioneer · Linen and Sage Theme', 'Pioneer · Linen and Sage Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
-        ('theme_pio_dawn', '개척자 · 여명 테마', '개척자 · 여명 테마', 'Pioneer · First Light Theme', 'Pioneer · First Light Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb)
+        ('theme_pio_dawn', '개척자 · 여명 테마', '개척자 · 여명 테마', 'Pioneer · First Light Theme', 'Pioneer · First Light Theme', 'theme', 0, FALSE, TRUE, NULL, FALSE, NULL, NULL, '{"includesCardSkin": true}'::jsonb),
+
+        -- 시즌 이벤트 배너·테마 5종. 배너와 테마는 짝을 이루는 색이지만
+        -- 밝기 기준이 다르다: 배너는 진하게(위 개척자 세트처럼), 테마는
+        -- 앱 전체 배경이라 반드시 밝게 — 실제 그라디언트 값은
+        -- game_service.dart 의 themeGradientFor/cardBackColorsFor 에 있다.
+        -- is_purchasable = FALSE 로 나가고 그대로 둔다 (custom_title_7d 등
+        -- 위 feature 5종과 같은 이유): 그라디언트가 클라이언트에 하드코딩돼
+        -- 있어서, 이 행이 배포된 뒤에도 앱이 구버전이면 기본 그라디언트로
+        -- 떨어진다. 이 항목들을 쓸 수 있는 앱 빌드가 스토어에 올라간 뒤
+        -- 어드민에서 켠다 — is_purchasable 은 ON CONFLICT 갱신 목록에 없어서
+        -- 그 스위치는 이후 재부팅에도 살아남는다. 한글날 세트는 추가로
+        -- sale_start/sale_end 를 걸어 판매 기간까지 좁힐 수 있다.
+        ('banner_seollal', '설날 배너', '설날 배너', 'Lunar New Year Banner', 'Neujahrsfest-Banner', 'banner', 350, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"card_giftcard","iconColor":"#E7B94C","borderColor":"#8E1F2B","background":{"kind":"gradient","angle":0,"stops":[{"color":"#8E1F2B","at":0.0},{"color":"#E7B94C","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#7A1B27","at":0.0},{"color":"#C6303E","at":0.5},{"color":"#E7B94C","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_seollal', '설날 테마', '설날 테마', 'Lunar New Year Theme', 'Neujahrsfest-Thema', 'theme', 550, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"celebration","iconColor":"#C6303E","borderColor":"#E7B94C","background":{"kind":"gradient","angle":0,"stops":[{"color":"#FFE3DE","at":0.0},{"color":"#FCE0A8","at":1.0}]}}}}'::jsonb),
+        ('banner_chuseok', '추석 배너', '추석 배너', 'Chuseok Banner', 'Chuseok-Banner', 'banner', 350, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"park","iconColor":"#E0A83E","borderColor":"#B23A2E","background":{"kind":"gradient","angle":135,"stops":[{"color":"#B23A2E","at":0.0},{"color":"#4C8C4A","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":135,"stops":[{"color":"#B23A2E","at":0.0},{"color":"#E0A83E","at":0.5},{"color":"#4C8C4A","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_chuseok', '추석 테마', '추석 테마', 'Chuseok Theme', 'Chuseok-Thema', 'theme', 550, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"park","iconColor":"#C97A3D","borderColor":"#A9D18E","background":{"kind":"gradient","angle":135,"stops":[{"color":"#FFD6C7","at":0.0},{"color":"#FFEDAD","at":0.5},{"color":"#D7EAC0","at":1.0}]}}}}'::jsonb),
+        ('banner_yearend', '연말 배너', '연말 배너', 'Year-End Banner', 'Jahresend-Banner', 'banner', 380, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"ac_unit","iconColor":"#D4AF37","borderColor":"#123829","background":{"kind":"gradient","angle":0,"stops":[{"color":"#123829","at":0.0},{"color":"#D4AF37","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#0F3D2E","at":0.0},{"color":"#1B4332","at":0.5},{"color":"#D4AF37","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_yearend', '연말 테마', '연말 테마', 'Year-End Theme', 'Jahresend-Thema', 'theme', 580, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"ac_unit","iconColor":"#2E7D52","borderColor":"#D4AF37","background":{"kind":"gradient","angle":0,"stops":[{"color":"#D7ECDC","at":0.0},{"color":"#EBDCA0","at":1.0}]}}}}'::jsonb),
+        ('banner_anniversary', '애니버서리 배너', '애니버서리 배너', 'Anniversary Banner', 'Jubiläums-Banner', 'banner', 400, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#2FD9C4","borderColor":"#1A1330","background":{"kind":"gradient","angle":0,"stops":[{"color":"#1A1330","at":0.0},{"color":"#2FD9C4","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#1A1330","at":0.0},{"color":"#241B3A","at":0.5},{"color":"#2FD9C4","at":1.0}]}},"text":{"color":"#FFFFFF"}}}'::jsonb),
+        ('theme_anniversary', '애니버서리 테마', '애니버서리 테마', 'Anniversary Theme', 'Jubiläums-Thema', 'theme', 650, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"auto_awesome","iconColor":"#5B4B9E","borderColor":"#2FD9C4","background":{"kind":"gradient","angle":0,"stops":[{"color":"#E6DAF8","at":0.0},{"color":"#C3EFE6","at":1.0}]}}}}'::jsonb),
+        ('banner_hangeul', '한글날 배너', '한글날 배너', 'Hangeul Day Banner', 'Hangeul-Tag-Banner', 'banner', 450, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"visual": {"version":1,"thumbnail":{"icon":"workspace_premium","iconColor":"#C23B22","borderColor":"#14161F","background":{"kind":"gradient","angle":0,"stops":[{"color":"#14161F","at":0.0},{"color":"#C23B22","at":1.0}]}},"preview":{"background":{"kind":"gradient","angle":120,"stops":[{"color":"#14161F","at":0.0},{"color":"#20263D","at":0.5},{"color":"#C23B22","at":1.0}]}},"text":{"color":"#F5E9D8"}}}'::jsonb),
+        ('theme_hangeul', '한글날 테마', '한글날 테마', 'Hangeul Day Theme', 'Hangeul-Tag-Thema', 'theme', 700, FALSE, FALSE, 30, FALSE, NULL, NULL, '{"includesCardSkin": true, "visual": {"version":1,"thumbnail":{"icon":"workspace_premium","iconColor":"#20263D","borderColor":"#C23B22","background":{"kind":"gradient","angle":0,"stops":[{"color":"#EDE7D8","at":0.0},{"color":"#F0C8BE","at":1.0}]}}}}'::jsonb)
       ON CONFLICT (item_key) DO UPDATE SET
         name = EXCLUDED.name_ko,
         name_ko = EXCLUDED.name_ko,
@@ -1094,6 +1121,14 @@ async function runMigrations() {
         effect_value = EXCLUDED.effect_value
       `
     );
+
+    // 한글날 세트 판매기간: 10/1~10/16(양력 고정 10/9 앞뒤 2주). sale_start
+    // 가 비어있을 때만 채워서, 어드민이 나중에 직접 바꾼 값이 재시작마다
+    // 되돌아가지 않게 한다.
+    await client.query(`
+      UPDATE tc_shop_items SET sale_start = '2026-10-01 00:00:00', sale_end = '2026-10-16 23:59:59'
+      WHERE item_key IN ('banner_hangeul', 'theme_hangeul') AND sale_start IS NULL
+    `);
 
     // Shop copy. Every item needs a line saying what it actually does — an
     // empty description leaves the detail sheet with a name and a price and
@@ -2668,6 +2703,14 @@ async function saveMatchResultWithStats(matchData, players) {
 async function getUserProfile(nickname, locale = 'ko') {
   const client = await pool.connect();
   try {
+    // Reconnecting is exactly the case cleanupExpiredItems was written for
+    // but wasn't wired into: an item can expire while nobody has opened the
+    // shop/inventory since, and the periodic sweep runs only every 6h — so
+    // without this, a freshly-expired banner keeps showing on this player's
+    // own reconnect (and everyone who views their profile) until one of
+    // those two catches up. See cleanupExpiredItems' own comment.
+    await cleanupExpiredItems(client, nickname);
+
     // Whitelist the locale-specific column to stay safe against accidental
     // injection even though the locale only comes from server-side state.
     const titleCol = locale === 'en' ? 'name_en'

@@ -1739,6 +1739,10 @@ function shopForm(action, values, isEdit = false) {
       <input type="datetime-local" name="sale_start" value="${formatDatetimeLocal(v('sale_start'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
       <label>판매 종료</label>
       <input type="datetime-local" name="sale_end" value="${formatDatetimeLocal(v('sale_end'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <label>NEW 표시 기한
+        <span style="font-weight:400;color:#888;font-size:12px;display:block">비워두면 NEW 배지 없음. 이 시각까지 상점 맨 위에 뜹니다.</span>
+      </label>
+      <input type="datetime-local" name="new_until" value="${formatDatetimeLocal(v('new_until'))}" style="padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px">
     </div>
 
     <h3 style="margin-top:24px;margin-bottom:8px">시각 (썸네일)</h3>
@@ -1895,6 +1899,7 @@ function parseShopFormBody(body) {
     // every other admin date field, or it lands 9 hours off (server/DB run UTC).
     sale_start: parseKstDateTimeInput(body.sale_start),
     sale_end: parseKstDateTimeInput(body.sale_end),
+    new_until: parseKstDateTimeInput(body.new_until),
     visual: buildVisualFromBody(body),
   };
   if (body.structure === 'on') {
@@ -5620,6 +5625,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">기간 중</span>';
     }
 
+    function newBadge(item) {
+      if (!item.new_until) return '';
+      const until = new Date(item.new_until);
+      if (until < now) return '';
+      return ' <span class="badge" style="background:#ffebee;color:#d32f2f">NEW</span>';
+    }
+
     // The everyday question about an item is "is it on sale", so that is the
     // one thing this page lets you change — one button, no form fields, no way
     // to reshape the item by accident.
@@ -5659,7 +5671,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         : '<span style="color:#bbb">-</span>'}</td>
       <td style="text-align:right;font-weight:600;color:#d07a16">${formatNumber(item.price || 0)}</td>
       <td style="font-size:12px">${item.is_permanent ? '영구' : (item.duration_days ? item.duration_days + '일' : '-')}</td>
-      <td style="font-size:12px">${saleWindow(item)}${item.is_season ? ' <span class="badge" style="background:#fff8e1;color:#8d6e00">시즌</span>' : ''}</td>
+      <td style="font-size:12px">${saleWindow(item)}${item.is_season ? ' <span class="badge" style="background:#fff8e1;color:#8d6e00">시즌</span>' : ''}${newBadge(item)}</td>
       <td style="text-align:right;font-size:12px">${holderCell(item)}</td>
       <td>${saleButton(item)}</td>
       <td><a href="/tc-backstage/shop/${item.id}" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">수정</a></td>

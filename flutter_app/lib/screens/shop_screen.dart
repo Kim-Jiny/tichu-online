@@ -66,6 +66,13 @@ class _ShopScreenState extends State<ShopScreen> {
     return item['description_ko']?.toString() ?? '';
   }
 
+  bool _isNew(Map<String, dynamic> item) {
+    final until = item['new_until'];
+    if (until == null) return false;
+    final dt = DateTime.tryParse(until.toString());
+    return dt != null && DateTime.now().isBefore(dt);
+  }
+
   bool _isOnSale(Map<String, dynamic> item) {
     final start = item['sale_start'];
     final end = item['sale_end'];
@@ -1287,7 +1294,7 @@ class _ShopScreenState extends State<ShopScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildShopRowVisual(first, 58),
+              _buildShopRowVisual(first, 58, isNew: _isNew(first)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1453,7 +1460,7 @@ class _ShopScreenState extends State<ShopScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildShopRowVisual(item, 58),
+              _buildShopRowVisual(item, 58, isNew: _isNew(item)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1602,7 +1609,11 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildShopRowVisual(Map<String, dynamic> item, double size) {
+  Widget _buildShopRowVisual(
+    Map<String, dynamic> item,
+    double size, {
+    bool isNew = false,
+  }) {
     final category = item['category']?.toString() ?? '';
     final itemKey = item['item_key']?.toString() ?? '';
     final visual = _resolveThumbnailStyle(itemKey, category, item);
@@ -1614,7 +1625,7 @@ class _ShopScreenState extends State<ShopScreen> {
         (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
     final borderColor =
         (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
-    return Container(
+    final thumbnail = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -1628,6 +1639,55 @@ class _ShopScreenState extends State<ShopScreen> {
       ),
       child: Center(
         child: Icon(iconData, color: iconColor, size: size * 0.45),
+      ),
+    );
+    if (!isNew) return thumbnail;
+    // A sticker, not a chip — this is the one badge meant to grab the eye
+    // before anything else on the row does, so it deliberately breaks from
+    // the flat muted colors every other badge here uses.
+    return SizedBox(
+      width: size + 6,
+      height: size + 6,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(left: 6, top: 6, child: thumbnail),
+          Positioned(
+            left: -4,
+            top: -4,
+            child: Transform.rotate(
+              angle: -0.35,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)],
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF5F6D).withValues(alpha: 0.5),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'NEW',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2775,19 +2835,69 @@ class _ShopScreenState extends State<ShopScreen> {
                             ),
                           ),
                         ),
-                        Container(
-                          height: 140,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: gradient,
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              height: 140,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: gradient,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  iconData,
+                                  color: iconColor,
+                                  size: 64,
+                                ),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Center(
-                            child: Icon(iconData, color: iconColor, size: 64),
-                          ),
+                            if (_isNew(item))
+                              Positioned(
+                                left: 10,
+                                top: -8,
+                                child: Transform.rotate(
+                                  angle: -0.2,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFF5F6D),
+                                          Color(0xFFFFC371),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(
+                                            0xFFFF5F6D,
+                                          ).withValues(alpha: 0.5),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         // Cosmetics are bought on how they look, so show the
                         // thing itself applied: a banner and a title on a

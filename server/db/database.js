@@ -431,6 +431,7 @@ async function runMigrations() {
         metadata JSONB,
         sale_start TIMESTAMP,
         sale_end TIMESTAMP,
+        new_until TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -438,6 +439,9 @@ async function runMigrations() {
     // Add sale_start/sale_end columns if not exists (for existing tables)
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_start TIMESTAMP`);
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS sale_end TIMESTAMP`);
+    // "NEW" badge + top-of-list sort, admin-set with an expiry so it doesn't
+    // need to be manually turned off later.
+    await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS new_until TIMESTAMP`);
 
     // Add name_ko/name_en/name_de columns; keep original 'name' column for rollback safety
     await client.query(`ALTER TABLE tc_shop_items ADD COLUMN IF NOT EXISTS name_ko VARCHAR(100) NOT NULL DEFAULT ''`);
@@ -5289,12 +5293,16 @@ async function getShopItems() {
              description_ko, description_en, description_de,
              category, price, is_season, is_permanent,
              duration_days, is_purchasable, effect_type, effect_value, metadata,
-             sale_start, sale_end
+             sale_start, sale_end, new_until
       FROM tc_shop_items
       WHERE is_purchasable = TRUE AND is_season = FALSE
         AND (sale_start IS NULL OR sale_start <= NOW())
         AND (sale_end IS NULL OR sale_end >= NOW())
-      ORDER BY category ASC, price ASC, name_ko ASC
+      -- Still-fresh NEW items float to the very top of the whole list,
+      -- ahead of the normal category grouping; once new_until passes they
+      -- fall back into category/price order with everything else.
+      ORDER BY (new_until IS NOT NULL AND new_until >= NOW()) DESC,
+               category ASC, price ASC, name_ko ASC
       `
     );
     return { success: true, items: result.rows };
@@ -8702,8 +8710,8 @@ async function addShopItem(data) {
         (item_key, name, name_ko, name_en, name_de,
          description_ko, description_en, description_de,
          category, price, is_permanent, duration_days, is_purchasable, is_season,
-         effect_type, effect_value, sale_start, sale_end, metadata)
-       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18::jsonb)
+         effect_type, effect_value, sale_start, sale_end, new_until, metadata)
+       VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb)
        RETURNING *`,
       [
         data.item_key, data.name_ko || '', data.name_en || '', data.name_de || '',
@@ -8712,7 +8720,7 @@ async function addShopItem(data) {
         data.is_permanent !== false, data.duration_days || null,
         data.is_purchasable !== false, data.is_season || false,
         data.effect_type || null, data.effect_value || null,
-        data.sale_start || null, data.sale_end || null,
+        data.sale_start || null, data.sale_end || null, data.new_until || null,
         metadata,
       ]
     );
@@ -8763,6 +8771,7 @@ async function updateShopItem(id, data) {
     if (has('is_purchasable')) put('is_purchasable', data.is_purchasable !== false);
     if (has('sale_start')) put('sale_start', data.sale_start || null);
     if (has('sale_end')) put('sale_end', data.sale_end || null);
+    if (has('new_until')) put('new_until', data.new_until || null);
     // Structural — see above.
     if (has('category')) put('category', data.category);
     if (has('effect_type')) put('effect_type', data.effect_type || null);

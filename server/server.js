@@ -185,6 +185,15 @@ async function sendPushNotification(fcmToken, title, body, meta = null) {
 // data value to be a string; numbers pass validation on some paths and are
 // dropped on others, so they are stringified here rather than at each caller.
 async function sendBroadcastPush(tokenRows, title, body, data = null) {
+  // Two account rows can end up holding the same fcm_token (stale data from
+  // before a device-clearing guard existed, or a login race) — send once per
+  // token so the one physical device doesn't get the same push twice.
+  const seenTokens = new Set();
+  tokenRows = tokenRows.filter(r => {
+    if (seenTokens.has(r.fcm_token)) return false;
+    seenTokens.add(r.fcm_token);
+    return true;
+  });
   if (!firebaseAdmin) return { successCount: 0, failCount: tokenRows.length, invalidUserIds: [], results: tokenRows.map(r => ({ userId: r.id, success: false, invalid: false })), error: 'Firebase not configured' };
   const BATCH_SIZE = 500;
   let successCount = 0;

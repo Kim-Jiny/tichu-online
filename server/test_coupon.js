@@ -174,7 +174,8 @@ async function cleanup(codes, n) {
   // owned twice, and duplicates inflate the backstage inventory and the
   // "쓰는 중" holder counts.
   const permItem = (await db.pool.query(
-    `SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE LIMIT 1`)).rows[0];
+    `SELECT item_key FROM tc_shop_items
+      WHERE is_permanent = TRUE AND category <> 'utility' LIMIT 1`)).rows[0];
   if (permItem) {
     const rows = async () => (await db.pool.query(
       'SELECT COUNT(*)::int n FROM tc_user_items WHERE nickname = $1 AND item_key = $2',
@@ -188,6 +189,24 @@ async function cleanup(codes, n) {
       check(`영구 아이템 지급 (${suffix})`, got.success === true, got.messageKey || '');
     }
     check('두 번 받아도 행은 하나', (await rows()) === 1, `${await rows()} rows`);
+  }
+
+  const utilityItem = (await db.pool.query(
+    `SELECT item_key FROM tc_shop_items
+      WHERE is_permanent = TRUE AND category = 'utility' LIMIT 1`)).rows[0];
+  if (utilityItem) {
+    const rows = async () => (await db.pool.query(
+      'SELECT COUNT(*)::int n FROM tc_user_items WHERE nickname = $1 AND item_key = $2',
+      [nick(8), utilityItem.item_key])).rows[0].n;
+    for (const suffix of ['A', 'B']) {
+      const code = `UTIL${suffix}${run.toUpperCase()}`;
+      codes.push(code);
+      await db.upsertCoupon({
+        code, rewardType: 'item', rewardItemKey: utilityItem.item_key });
+      const got = await db.redeemCoupon(nick(8), code);
+      check(`영구 소모품 지급 (${suffix})`, got.success === true, got.messageKey || '');
+    }
+    check('영구 소모품은 두 장 보유할 수 있다', (await rows()) === 2, `${await rows()} rows`);
   }
 
   const dupTemp = (await db.pool.query(

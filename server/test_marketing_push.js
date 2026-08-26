@@ -192,7 +192,8 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
 
   console.log('\n[캠페인이 이미 가진 영구 아이템을 줄 때]');
   const permItem2 = (await db.pool.query(
-    'SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE LIMIT 1')).rows[0];
+    `SELECT item_key FROM tc_shop_items
+      WHERE is_permanent = TRUE AND category <> 'utility' LIMIT 1`)).rows[0];
   if (permItem2) {
     const campI = await db.createPushCampaign({
       title: '(광고) 아이템', body: 'x',
@@ -266,6 +267,11 @@ const mine = (rows) => rows.filter((r) => r.nickname.startsWith(`푸시${run}_`)
   check('someone who was not sent it cannot claim',
     stranger.success === false && stranger.messageKey === 'push_reward_not_yours',
     stranger.messageKey);
+
+  const failedRecipient = await db.claimPushCampaign(nick(5), camp.id);
+  check('someone whose delivery failed cannot claim',
+    failedRecipient.success === false && failedRecipient.messageKey === 'push_reward_not_yours',
+    failedRecipient.messageKey);
 
   const before = await goldOf(nick(1));
   const first = await db.claimPushCampaign(nick(1), camp.id);

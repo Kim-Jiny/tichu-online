@@ -4549,6 +4549,7 @@ async function claimPushCampaign(nickname, campaignId) {
       `SELECT r.id, r.claimed_at FROM tc_push_campaign_recipients r
        JOIN tc_users u ON u.nickname = r.nickname
        WHERE r.campaign_id = $1 AND r.nickname = $2
+         AND r.status <> 'failed'
          AND r.created_at >= u.created_at
        FOR UPDATE OF r`,
       [campaignId, nickname],
@@ -4583,9 +4584,11 @@ async function claimPushCampaign(nickname, campaignId) {
       return { success: false, messageKey: 'push_reward_not_yours' };
     }
     const expired = (await client.query(
-      `SELECT $1::timestamp IS NOT NULL
-              AND $1::timestamp < (NOW() AT TIME ZONE 'UTC') AS expired`,
-      [camp.claim_deadline])).rows[0].expired;
+      `SELECT claim_deadline IS NOT NULL
+              AND claim_deadline < (NOW() AT TIME ZONE 'UTC') AS expired
+         FROM tc_push_campaigns
+        WHERE id = $1`,
+      [campaignId])).rows[0]?.expired === true;
     if (expired) {
       await client.query('COMMIT'); // the open still counts
       return { success: false, messageKey: 'push_reward_expired' };

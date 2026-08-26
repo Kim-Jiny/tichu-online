@@ -187,19 +187,44 @@ async function sendPushNotification(fcmToken, title, body, meta = null) {
 async function sendBroadcastPush(tokenRows, title, body, data = null) {
   // Two account rows can end up holding the same fcm_token (stale data from
   // before a device-clearing guard existed, or a login race) — send once per
-  // token so the one physical device doesn't get the same push twice.
-  const seenTokens = new Set();
-  tokenRows = tokenRows.filter(r => {
-    if (seenTokens.has(r.fcm_token)) return false;
-    seenTokens.add(r.fcm_token);
-    return true;
-  });
-  if (!firebaseAdmin) return { successCount: 0, failCount: tokenRows.length, invalidUserIds: [], results: tokenRows.map(r => ({ userId: r.id, success: false, invalid: false })), error: 'Firebase not configured' };
+  // token so the one physical device doesn't get the same push twice, then
+  // fan the FCM result back out to every account row that shared that token.
+  // Campaign rewards and push history are account-scoped; dropping duplicate
+  // rows from `results` would leave those accounts stuck at "pending".
+  const tokenGroups = new Map();
+  const uniqueTokenRows = [];
+  for (const row of tokenRows) {
+    const token = row.fcm_token;
+    if (!tokenGroups.has(token)) {
+      tokenGroups.set(token, []);
+      uniqueTokenRows.push(row);
+    }
+    tokenGroups.get(token).push(row);
+  }
+  tokenRows = uniqueTokenRows;
+  const groupedRows = (row) => tokenGroups.get(row.fcm_token) || [row];
+  if (!firebaseAdmin) {
+    const results = [];
+    for (const row of tokenRows) {
+      for (const grouped of groupedRows(row)) {
+        results.push({ userId: grouped.id, success: false, invalid: false });
+      }
+    }
+    return { successCount: 0, failCount: results.length, invalidUserIds: [], results, error: 'Firebase not configured' };
+  }
   const BATCH_SIZE = 500;
   let successCount = 0;
   let failCount = 0;
   const invalidUserIds = [];
   const results = [];
+  const addResult = (row, success, invalid = false) => {
+    for (const grouped of groupedRows(row)) {
+      if (success) successCount++;
+      else failCount++;
+      if (invalid) invalidUserIds.push(grouped.id);
+      results.push({ userId: grouped.id, success, invalid });
+    }
+  };
 
   for (let i = 0; i < tokenRows.length; i += BATCH_SIZE) {
     const batch = tokenRows.slice(i, i + BATCH_SIZE);
@@ -215,22 +240,16 @@ async function sendBroadcastPush(tokenRows, title, body, data = null) {
       });
       result.responses.forEach((resp, idx) => {
         if (resp.success) {
-          successCount++;
-          results.push({ userId: batch[idx].id, success: true, invalid: false });
+          addResult(batch[idx], true, false);
         } else {
-          failCount++;
           const code = resp.error?.code;
           const isInvalid = code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token';
-          if (isInvalid) {
-            invalidUserIds.push(batch[idx].id);
-          }
-          results.push({ userId: batch[idx].id, success: false, invalid: isInvalid });
+          addResult(batch[idx], false, isInvalid);
         }
       });
     } catch (err) {
       console.error('Broadcast push batch error:', err.message);
-      failCount += batch.length;
-      batch.forEach(r => results.push({ userId: r.id, success: false, invalid: false }));
+      batch.forEach(r => addResult(r, false, false));
     }
   }
   return { successCount, failCount, invalidUserIds, results };

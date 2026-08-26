@@ -1453,7 +1453,9 @@ class MightyGame {
         position: isSelf ? 'self' : `player_${i}`,
         cardCount: (this.hands[pid] || []).length,
         bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
-        reservedPass: this.pendingPassReservations.has(pid),
+        // Only reveal to the reserving player themselves — other seats must
+        // not see who has pre-committed to passing during bidding.
+        reservedPass: isSelf && this.pendingPassReservations.has(pid),
         trickCount: cache.trickCounts[pid] || 0,
         pointCount: cache.pointCounts[pid] || 0,
         pointCards: isGovt ? [] : (this.pointCards[pid] || []),
@@ -1540,7 +1542,9 @@ class MightyGame {
       canViewCards: permittedPlayerIds.has(pid),
       cardCount: (this.hands[pid] || []).length,
       bid: this.bids[pid] !== undefined ? this.bids[pid] : null,
-      reservedPass: this.pendingPassReservations.has(pid),
+      // Spectators aren't playing, but pass reservations are still a private
+      // strategic signal — never surface them outside the reserving player.
+      reservedPass: false,
       trickCount: cache.trickCounts[pid] || 0,
       pointCount: cache.pointCounts[pid] || 0,
       pointCards: cache.governmentIds.has(pid) ? [] : (this.pointCards[pid] || []),

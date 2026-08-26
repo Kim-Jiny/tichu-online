@@ -652,5 +652,46 @@ check('fix3: friend preserves joker on locked trick',
     got => got !== 'mighty_joker');
 })();
 
+// ── Fix 14: 조커 프렌즈는 방어 카드나 1트릭 보장 승리가 있을 때만 ──
+// 유저 리포트: 주공이 조커콜 카드도 없고 1트릭도 못 잡는데 조커 프렌즈를
+// 부르면, 선을 넘긴 뒤 조커콜에 프렌즈 조커가 죽는다. 단 1트릭을 잡을 수
+// 있으면 조커 프렌즈를 불러도 문제 없다.
+(() => {
+  const c = (s) => s.split(' ').map(x => `mighty_${x}`);
+  const build = (hand) => position({
+    declarer: 'p0', partner: null, friendRevealed: false,
+    friendCard: null, trumpSuit: 'heart',
+    tricksLen: 0, currentPlayer: 'p0', currentTrick: [],
+    hands: {
+      p0: hand,
+      p1: c('club_4 club_5 club_6 club_7 club_8'),
+      p2: c('diamond_A diamond_5 diamond_6 diamond_7 diamond_8'),
+      p3: c('club_A spade_2 spade_3 spade_4 spade_5'),
+      p4: c('diamond_K diamond_Q diamond_J diamond_10 diamond_9'),
+    },
+  });
+
+  const noProtectionHand = c('heart_A heart_K heart_Q heart_J diamond_2 club_8 club_9');
+  const firstWinHand = c('spade_A heart_A heart_K heart_Q heart_J diamond_2 club_8');
+  const withCallCardHand = c('spade_A heart_A heart_K heart_Q heart_J diamond_2 club_3');
+  const noNeededHand = c('spade_A diamond_A diamond_K club_A club_K heart_A heart_K joker');
+
+  check('fix14: 조커콜 카드도 1트릭 승리도 없으면 조커 프렌즈 금지',
+    MightyBot.pickFriendCard(noProtectionHand, build(noProtectionHand)),
+    got => got !== 'mighty_joker');
+
+  check('fix14: 조커콜 카드가 없어도 1트릭을 이기면 조커 프렌즈 허용',
+    MightyBot.pickFriendCard(firstWinHand, build(firstWinHand)),
+    got => got === 'mighty_joker');
+
+  check('fix14: 조커콜 카드가 있으면 조커 프렌즈 가능',
+    MightyBot.pickFriendCard(withCallCardHand, build(withCallCardHand)),
+    got => got === 'mighty_joker');
+
+  check('fix14: 필요한 카드가 없으면 초구 프렌즈',
+    MightyBot.pickFriendCard(noNeededHand, build(noNeededHand)),
+    got => got === 'first_trick');
+})();
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

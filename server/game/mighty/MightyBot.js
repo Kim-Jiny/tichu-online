@@ -652,7 +652,7 @@ function scoreKittyDiscardCard(cardId, game, suitGroups) {
 /**
  * Pick a friend card by scoring multiple candidate calls:
  *   1. Non-trump Ace of a suit where declarer has a 1-3 card holding (best
- *      when singleton, still ok when void).
+ *      when singleton).
  *   2. Non-trump King of a suit where declarer already holds the Ace — the
  *      friend's K backs up declarer's A for two guaranteed wins.
  *   3. Joker call — whoever holds the joker becomes friend; extra-valuable
@@ -717,29 +717,33 @@ function pickFriendCard(hand, game) {
     candidates.push({ cardId: kingId, score });
   }
 
-  // Option 3: joker call. Sim data shows joker calls win ~45-49% — as strong
-  // as a mighty call. Boost the base so it outranks a marginal side-A.
-  if (!hasJoker) {
+  // Option 3: joker friend. Safe when we either hold the joker-call card
+  // ourselves, or can keep the first-trick lead with a guaranteed winner.
+  // Without either, a joker-friend round can hand tempo away immediately and
+  // leave the hidden friend joker exposed to a later joker-call.
+  const jokerCallCard = game.getJokerCallCard();
+  const hasJokerCallCard = trumpSuit
+    && trumpSuit !== 'no_trump'
+    && jokerCallCard
+    && hand.includes(jokerCallCard);
+  const canProtectJokerFriend = hasJokerCallCard || _canWinFirstTrickLead(hand, game);
+  if (!hasJoker && canProtectJokerFriend) {
     let score = 16;
     const trumpCount = trumpSuit !== 'no_trump' ? (suitInfo[trumpSuit]?.count || 0) : 0;
     if (trumpCount >= 4) score += 2;
-    if (!trumpSuit || trumpSuit === 'no_trump') score += 2;
     candidates.push({ cardId: 'mighty_joker', score });
   }
 
   if (candidates.length > 0) {
     candidates.sort((a, b) => b.score - a.score);
     const winner = candidates[0];
-    // If even the best candidate is poor (e.g., the only option left is a
-    // void-suit A because the declarer is self-sufficient in every other
-    // suit), solo is a better call than a friend who can never actually
-    // win their suit. Threshold 5 sits comfortably between the void-A
-    // floor (2) and the 4+-length-A floor (7).
+    // If even the best candidate is poor, use first-trick friend instead of
+    // inventing a side-card friend with no clear job.
     if (winner.score < 5) {
       if (typeof globalThis.__mightySimHook === 'function') {
-        try { globalThis.__mightySimHook(hand, 'no_friend', candidates.slice(0, 3)); } catch { /* ignore */ }
+        try { globalThis.__mightySimHook(hand, 'first_trick', candidates.slice(0, 3)); } catch { /* ignore */ }
       }
-      return 'no_friend';
+      return 'first_trick';
     }
     if (typeof globalThis.__mightySimHook === 'function') {
       try { globalThis.__mightySimHook(hand, winner.cardId, candidates.slice(0, 3)); } catch { /* ignore */ }
@@ -757,7 +761,71 @@ function pickFriendCard(hand, game) {
     return `mighty_${suit}_K`;
   }
 
-  return 'no_friend';
+  return 'first_trick';
+}
+
+function _canWinFirstTrickLead(hand, game) {
+  if (!game || !Array.isArray(hand) || hand.length === 0) return false;
+
+  const original = {
+    hand: game.hands?.[game.declarer],
+    currentTrick: game.currentTrick,
+    tricks: game.tricks,
+    jokerCallActive: game.jokerCallActive,
+    jokerSuitDeclared: game.jokerSuitDeclared,
+  };
+
+  try {
+    if (!game.hands) game.hands = {};
+    game.hands[game.declarer] = hand;
+    game.currentTrick = [];
+    game.tricks = [];
+    game.jokerCallActive = false;
+    game.jokerSuitDeclared = null;
+
+    let leadable = hand.slice();
+    if (game.trumpSuit && game.trumpSuit !== 'no_trump') {
+      const nonTrump = hand.filter(c => {
+        if (c === 'mighty_joker') return true;
+        return getCardInfo(c).suit !== game.trumpSuit;
+      });
+      if (nonTrump.length > 0) leadable = nonTrump;
+    }
+
+    for (const lead of leadable) {
+      if (lead === 'mighty_joker' && !game.options.firstTrickJokerPower) continue;
+      game.currentTrick = [{ pid: game.declarer, cardId: lead }];
+      const leadSuit = game._leadSuitOf(game.currentTrick);
+      const leadPriority = game._getCardPriority(
+        lead, leadSuit, !game.options.firstTrickJokerPower, game.getMightyCard());
+      let beaten = false;
+
+      for (const pid of game.playerIds) {
+        if (pid === game.declarer) continue;
+        if (game.excludedPlayers && game.excludedPlayers.has(pid)) continue;
+        const legal = game._getLegalCards(pid) || [];
+        for (const cardId of legal) {
+          const priority = game._getCardPriority(
+            cardId, leadSuit, !game.options.firstTrickJokerPower, game.getMightyCard());
+          if (priority > leadPriority) {
+            beaten = true;
+            break;
+          }
+        }
+        if (beaten) break;
+      }
+
+      if (!beaten) return true;
+    }
+  } finally {
+    game.hands[game.declarer] = original.hand;
+    game.currentTrick = original.currentTrick;
+    game.tricks = original.tricks;
+    game.jokerCallActive = original.jokerCallActive;
+    game.jokerSuitDeclared = original.jokerSuitDeclared;
+  }
+
+  return false;
 }
 
 // ═══════════════════════════════════════════════════════════

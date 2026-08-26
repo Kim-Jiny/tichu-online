@@ -1753,28 +1753,63 @@ class MightyGame {
   /// 그 계약을 떠안으면 그 판은 대체로 진다 — 잠수한 사람만 손해가 아니라
   /// 같은 편이 될 사람도, 남은 사람 전부의 한 판도 같이 버려진다.
   ///
-  /// 그래서 부를 수 있는 카드가 하나라도 있으면 친구를 세운다. 손에 없는
-  /// 카드 중 강한 것부터 — 마이티, 조커, 기루다 위쪽, 그다음 각 무늬의 A·K.
-  /// 사람이 직접 고를 때도 대개 이 순서다.
+  /// 그래서 부를 수 있는 카드가 하나라도 있으면 친구를 세운다. 단, 내 손패와
+  /// 이어지는 카드만 부른다 — 들고 있지도 않은 문양의 A 를 막 부르면 그 친구가
+  /// 나올 길이 없다. 굳이 필요한 카드가 없으면 초구 프렌즈로 둔다.
   ///
   /// 손에 없는 카드를 부르는 것이 핵심이다. 자기가 든 카드를 부르면 스스로
   /// 친구가 되어 결국 노프렌즈와 같아진다.
   _autoFriendCard(hand) {
     const held = new Set(hand || []);
-    const candidates = [this.getMightyCard(), 'mighty_joker'];
+    const candidates = [];
+    const pushMissing = (cardId) => {
+      if (cardId && !held.has(cardId) && !candidates.includes(cardId)) {
+        candidates.push(cardId);
+      }
+    };
+
+    pushMissing(this.getMightyCard());
+
+    const jokerCallCard = this.getJokerCallCard();
+    if (!held.has('mighty_joker')
+        && this.trumpSuit
+        && this.trumpSuit !== 'no_trump'
+        && held.has(jokerCallCard)) {
+      pushMissing('mighty_joker');
+    }
+
+    const suitInfo = {};
+    for (const suit of SUITS) {
+      suitInfo[suit] = { count: 0, hasA: false, hasK: false };
+    }
+    for (const cardId of hand || []) {
+      if (cardId === 'mighty_joker' || cardId === this.getMightyCard()) continue;
+      const info = getCardInfo(cardId);
+      if (!info || !info.suit) continue;
+      suitInfo[info.suit].count++;
+      if (info.rank === 'A') suitInfo[info.suit].hasA = true;
+      if (info.rank === 'K') suitInfo[info.suit].hasK = true;
+    }
+
     if (this.trumpSuit && this.trumpSuit !== 'no_trump') {
-      for (const rank of ['A', 'K', 'Q', 'J', '10']) {
-        candidates.push(`mighty_${this.trumpSuit}_${rank}`);
+      const trumpInfo = suitInfo[this.trumpSuit];
+      if (trumpInfo && trumpInfo.count > 0) {
+        for (const rank of ['A', 'K', 'Q', 'J', '10']) {
+          pushMissing(`mighty_${this.trumpSuit}_${rank}`);
+        }
       }
     }
-    for (const suit of ['spade', 'diamond', 'heart', 'club']) {
-      for (const rank of ['A', 'K']) candidates.push(`mighty_${suit}_${rank}`);
+    for (const suit of SUITS) {
+      if (suit === this.trumpSuit) continue;
+      const s = suitInfo[suit];
+      if (!s || s.count === 0) continue;
+      if (!s.hasA) pushMissing(`mighty_${suit}_A`);
+      else if (!s.hasK) pushMissing(`mighty_${suit}_K`);
     }
     for (const cardId of candidates) {
       if (!held.has(cardId)) return cardId;
     }
-    // 후보를 전부 손에 들고 있는 손패. 그런 손이면 노프렌즈가 손해도 아니다.
-    return 'no_friend';
+    return 'first_trick';
   }
 
   getAutoTimeoutAction(playerId) {

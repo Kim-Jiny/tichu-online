@@ -36,7 +36,7 @@ function game({ trumpSuit = 'diamond' } = {}) {
 const MIGHTY = 'mighty_spade_A';   // 기루다가 스페이드가 아닐 때
 const JOKER = 'mighty_joker';
 
-console.log('손에 없는 카드 중 강한 것부터 부른다');
+console.log('필요한 카드 중 강한 것부터 부른다');
 {
   const g = game();
   check('마이티가 손에 없으면 마이티',
@@ -44,15 +44,24 @@ console.log('손에 없는 카드 중 강한 것부터 부른다');
 }
 {
   const g = game();
-  check('마이티를 들고 있으면 조커',
-    g._autoFriendCard([MIGHTY, 'mighty_club_5']) === JOKER);
+  check('마이티를 들고 있고 조커콜 카드가 있으면 조커',
+    g._autoFriendCard([MIGHTY, 'mighty_club_3']) === JOKER);
 }
 {
   const g = game();
   // 리포트 상황: 마이티도 조커도 손에 있다. 예전에는 여기서 노프렌즈였다.
-  const got = g._autoFriendCard([MIGHTY, JOKER, 'mighty_club_5']);
+  const got = g._autoFriendCard([MIGHTY, JOKER,
+    'mighty_spade_A', 'mighty_spade_K',
+    'mighty_diamond_A', 'mighty_diamond_K', 'mighty_diamond_Q', 'mighty_diamond_J', 'mighty_diamond_10',
+    'mighty_heart_A', 'mighty_heart_K',
+    'mighty_club_A', 'mighty_club_K']);
   check('마이티·조커를 다 들고 있어도 노프렌즈가 아니다', got !== 'no_friend', `골른 것 ${got}`);
-  check('그때는 기루다 A 를 부른다', got === 'mighty_diamond_A', `골른 것 ${got}`);
+  check('필요한 카드가 없으면 초구 프렌즈', got === 'first_trick', `골른 것 ${got}`);
+}
+{
+  const g = game();
+  const got = g._autoFriendCard([MIGHTY, JOKER, 'mighty_diamond_5']);
+  check('기루다를 들고 있을 때만 기루다 A 를 부른다', got === 'mighty_diamond_A', `골른 것 ${got}`);
 }
 {
   const g = game();
@@ -62,8 +71,7 @@ console.log('손에 없는 카드 중 강한 것부터 부른다');
 {
   const g = game({ trumpSuit: 'no_trump' });
   const got = g._autoFriendCard([MIGHTY, JOKER]);
-  check('노기루다면 무늬 A 로 내려간다', got === 'mighty_spade_A' || /_(A|K)$/.test(got),
-    `골른 것 ${got}`);
+  check('노기루다에서 이어지는 문양이 없으면 초구 프렌즈', got === 'first_trick', `골른 것 ${got}`);
 }
 
 console.log('\n부를 수 있는 카드가 없을 때만 노프렌즈');
@@ -75,7 +83,7 @@ console.log('\n부를 수 있는 카드가 없을 때만 노프렌즈');
   for (const s of ['spade', 'diamond', 'heart', 'club']) {
     for (const r of ['A', 'K']) all.push(`mighty_${s}_${r}`);
   }
-  check('후보가 전부 손에 있으면 노프렌즈', g._autoFriendCard(all) === 'no_friend');
+  check('후보가 전부 손에 있으면 초구 프렌즈', g._autoFriendCard(all) === 'first_trick');
 }
 
 console.log('\n실제 시간 초과 경로');

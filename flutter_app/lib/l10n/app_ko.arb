@@ -1089,15 +1089,26 @@
   "shopExtendTitle": "기간 연장",
   "shopExtendConfirm": "이미 보유하고 있는 아이템입니다.\n{name}의 기간을 {days}일 연장하시겠습니까?\n\n비용: {price} 골드",
   "shopExtendAction": "연장하기",
+  "shopUseConfirmTitle": "아이템 사용",
+  "shopUseConfirmBody": "{name}\n\n사용하면 되돌릴 수 없습니다. 사용할까요?",
+  "@shopUseConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shopNoInventoryItems": "보유한 아이템이 없어요",
   "shopStatusActivated": "활성화됨",
   "shopStatusInUse": "사용 중",
+  "shopStatusReadyToUse": "사용 가능",
   "shopPermanentOwned": "영구 보유",
   "shopButtonUse": "사용",
   "shopButtonEquip": "장착",
   "shopTagSeason": "시즌 아이템",
   "shopTagLimited": "한정판매",
   "shopTagPermanent": "영구",
+  "shopTagConsumable": "소모품",
   "shopTagDuration": "기간제 {days}일",
   "shopTagDurationOnly": "기간제",
   "shopExpireDate": "만료: {date}",
@@ -1116,6 +1127,7 @@
   "shopDetailCategoryItem": "아이템",
   "shopDetailNormalItem": "일반 아이템",
   "shopDetailPermanent": "영구",
+  "shopDetailConsumable": "소모품",
   "shopDetailDuration": "기간제 {days}일",
   "shopEffectNicknameChange": "효과: 닉네임 1회 변경",
   "shopEffectLeaveReduce": "효과: 탈주 -{value}",

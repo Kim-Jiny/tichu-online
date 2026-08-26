@@ -6273,6 +6273,18 @@ abstract class L10n {
   /// **'Extend'**
   String get shopExtendAction;
 
+  /// No description provided for @shopUseConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Item'**
+  String get shopUseConfirmTitle;
+
+  /// No description provided for @shopUseConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\n\nThis cannot be undone. Use it now?'**
+  String shopUseConfirmBody(String name);
+
   /// No description provided for @shopNoInventoryItems.
   ///
   /// In en, this message translates to:
@@ -6290,6 +6302,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'In Use'**
   String get shopStatusInUse;
+
+  /// No description provided for @shopStatusReadyToUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to Use'**
+  String get shopStatusReadyToUse;
 
   /// No description provided for @shopPermanentOwned.
   ///
@@ -6326,6 +6344,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Permanent'**
   String get shopTagPermanent;
+
+  /// No description provided for @shopTagConsumable.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumable'**
+  String get shopTagConsumable;
 
   /// No description provided for @shopTagDuration.
   ///
@@ -6434,6 +6458,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Permanent'**
   String get shopDetailPermanent;
+
+  /// No description provided for @shopDetailConsumable.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumable'**
+  String get shopDetailConsumable;
 
   /// No description provided for @shopDetailDuration.
   ///

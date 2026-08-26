@@ -1863,15 +1863,26 @@
     }
   },
   "shopExtendAction": "Extend",
+  "shopUseConfirmTitle": "Use Item",
+  "shopUseConfirmBody": "{name}\n\nThis cannot be undone. Use it now?",
+  "@shopUseConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shopNoInventoryItems": "No items in inventory",
   "shopStatusActivated": "Activated",
   "shopStatusInUse": "In Use",
+  "shopStatusReadyToUse": "Ready to Use",
   "shopPermanentOwned": "Permanent",
   "shopButtonUse": "Use",
   "shopButtonEquip": "Equip",
   "shopTagSeason": "Season Item",
   "shopTagLimited": "LIMITED",
   "shopTagPermanent": "Permanent",
+  "shopTagConsumable": "Consumable",
   "shopTagDuration": "{days}d duration",
   "@shopTagDuration": {
     "placeholders": {
@@ -1911,6 +1922,7 @@
   "shopDetailCategoryItem": "Item",
   "shopDetailNormalItem": "Normal Item",
   "shopDetailPermanent": "Permanent",
+  "shopDetailConsumable": "Consumable",
   "shopDetailDuration": "{days}d duration",
   "@shopDetailDuration": {
     "placeholders": {

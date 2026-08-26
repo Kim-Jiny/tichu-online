@@ -4179,7 +4179,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const minRating = url.searchParams.get('minRating') || '';
     const minGames = url.searchParams.get('minGames') || '';
     const minLeaves = url.searchParams.get('minLeaves') || '';
-    const platform = ['ios', 'android'].includes((url.searchParams.get('platform') || '').toLowerCase())
+    const platform = ['ios', 'android', 'web'].includes((url.searchParams.get('platform') || '').toLowerCase())
       ? (url.searchParams.get('platform') || '').toLowerCase()
       : '';
     const ipQuery = url.searchParams.get('ip') || '';
@@ -4246,6 +4246,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="">전체 OS</option>
               <option value="ios"${platform === 'ios' ? ' selected' : ''}>iOS</option>
               <option value="android"${platform === 'android' ? ' selected' : ''}>AOS</option>
+              <option value="web"${platform === 'web' ? ' selected' : ''}>Web</option>
             </select>
             <select class="f-mid" name="ver">
               <option value="">전체 버전</option>

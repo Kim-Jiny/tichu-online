@@ -1099,15 +1099,26 @@
   "shopExtendTitle": "Laufzeit verlängern",
   "shopExtendConfirm": "Du besitzt diesen Gegenstand bereits.\n{name} um {days} Tage verlängern?\n\nKosten: {price} Gold",
   "shopExtendAction": "Verlängern",
+  "shopUseConfirmTitle": "Gegenstand verwenden",
+  "shopUseConfirmBody": "{name}\n\nDies kann nicht rückgängig gemacht werden. Jetzt verwenden?",
+  "@shopUseConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "shopNoInventoryItems": "Keine Gegenstände im Inventar",
   "shopStatusActivated": "Aktiviert",
   "shopStatusInUse": "In Benutzung",
+  "shopStatusReadyToUse": "Einsatzbereit",
   "shopPermanentOwned": "Dauerhaft",
   "shopButtonUse": "Benutzen",
   "shopButtonEquip": "Ausrüsten",
   "shopTagSeason": "Saisonartikel",
   "shopTagLimited": "LIMITIERT",
   "shopTagPermanent": "Dauerhaft",
+  "shopTagConsumable": "Verbrauchsartikel",
   "shopTagDuration": "{days} Tage Laufzeit",
   "shopTagDurationOnly": "Befristet",
   "shopExpireDate": "Läuft ab: {date}",
@@ -1126,6 +1137,7 @@
   "shopDetailCategoryItem": "Gegenstand",
   "shopDetailNormalItem": "Normaler Gegenstand",
   "shopDetailPermanent": "Dauerhaft",
+  "shopDetailConsumable": "Verbrauchsartikel",
   "shopDetailDuration": "{days} Tage Laufzeit",
   "shopEffectNicknameChange": "Effekt: 1 Namensänderung",
   "shopEffectLeaveReduce": "Effekt: Verlassen -{value}",

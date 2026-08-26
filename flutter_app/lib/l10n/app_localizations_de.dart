@@ -3509,6 +3509,14 @@ class L10nDe extends L10n {
   String get shopExtendAction => 'Verlängern';
 
   @override
+  String get shopUseConfirmTitle => 'Gegenstand verwenden';
+
+  @override
+  String shopUseConfirmBody(String name) {
+    return '$name\n\nDies kann nicht rückgängig gemacht werden. Jetzt verwenden?';
+  }
+
+  @override
   String get shopNoInventoryItems => 'Keine Gegenstände im Inventar';
 
   @override
@@ -3516,6 +3524,9 @@ class L10nDe extends L10n {
 
   @override
   String get shopStatusInUse => 'In Benutzung';
+
+  @override
+  String get shopStatusReadyToUse => 'Einsatzbereit';
 
   @override
   String get shopPermanentOwned => 'Dauerhaft';
@@ -3534,6 +3545,9 @@ class L10nDe extends L10n {
 
   @override
   String get shopTagPermanent => 'Dauerhaft';
+
+  @override
+  String get shopTagConsumable => 'Verbrauchsartikel';
 
   @override
   String shopTagDuration(int days) {
@@ -3597,6 +3611,9 @@ class L10nDe extends L10n {
 
   @override
   String get shopDetailPermanent => 'Dauerhaft';
+
+  @override
+  String get shopDetailConsumable => 'Verbrauchsartikel';
 
   @override
   String shopDetailDuration(int days) {

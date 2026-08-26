@@ -3770,12 +3770,19 @@ async function grantItemToUser(client, nickname, item, days, source) {
   }
   const permanent = !timed;
   if (permanent) {
-    const owned = await client.query(
-      'SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
-      [nickname, item.item_key],
-    );
-    if (owned.rows.length > 0) {
-      return { itemKey: item.item_key, expiresAt: null, alreadyOwned: true };
+    // Same split as buyItem: a permanent cosmetic is one entitlement (a
+    // second grant has nothing to add), but a permanent *utility* item is a
+    // one-shot consumable — holding several unused copies is normal, so a
+    // mail/coupon/campaign grant must not no-op just because one is already
+    // held.
+    if (item.category !== 'utility') {
+      const owned = await client.query(
+        'SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1',
+        [nickname, item.item_key],
+      );
+      if (owned.rows.length > 0) {
+        return { itemKey: item.item_key, expiresAt: null, alreadyOwned: true };
+      }
     }
     await client.query(
       `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
@@ -4343,7 +4350,7 @@ async function claimMail(nickname, mailId) {
       reward = { type: 'gold', gold: mail.reward_gold, newGold: updated.rows[0].gold };
     } else if (mail.reward_item_key) {
       const item = (await client.query(
-        `SELECT item_key, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1`,
+        `SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1`,
         [mail.reward_item_key])).rows[0];
       if (!item) {
         await client.query('ROLLBACK');
@@ -4602,7 +4609,7 @@ async function claimPushCampaign(nickname, campaignId) {
       reward = { type: 'gold', gold: camp.reward_gold, newGold: updated.rows[0].gold };
     } else if (camp.reward_item_key) {
       const item = (await client.query(
-        `SELECT item_key, is_permanent, duration_days FROM tc_shop_items
+        `SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items
          WHERE item_key = $1`, [camp.reward_item_key])).rows[0];
       if (!item) {
         await client.query('ROLLBACK');
@@ -5602,8 +5609,16 @@ async function buyItem(nickname, itemKey) {
       return { success: true, extended: isExtend };
     }
 
-    // Prevent duplicate ownership / extend duration for temp items
-    if (item.is_permanent) {
+    // Prevent duplicate ownership / extend duration for temp items.
+    //
+    // A permanent *cosmetic* (banner_pioneer_*, theme_pio_*, …) is one
+    // entitlement — own it once, equip it forever, buying a second is
+    // meaningless. A permanent *utility* item (탈주 카운트 -1/-3, 전적
+    // 초기화권, 닉네임 변경권, …) is a one-shot consumable instead: each
+    // purchase is a separate use that gets deleted from tc_user_items the
+    // moment it's used, so holding several unused copies at once is the
+    // normal case, not a duplicate.
+    if (item.is_permanent && item.category !== 'utility') {
       const owned = await client.query(
         `SELECT 1 FROM tc_user_items WHERE nickname = $1 AND item_key = $2 LIMIT 1`,
         [nickname, itemKey]
@@ -5612,7 +5627,7 @@ async function buyItem(nickname, itemKey) {
         await client.query('ROLLBACK');
         return { success: false, messageKey: 'db_item_already_owned' };
       }
-    } else {
+    } else if (!item.is_permanent) {
       const ownedActive = await client.query(
         `SELECT 1 FROM tc_user_items
          WHERE nickname = $1 AND item_key = $2
@@ -7234,18 +7249,21 @@ async function updateReportGroupStatus(reportedNickname, roomId, status) {
 /// 실제로 접속한 적 있는 앱 버전 목록 — 관리자 필터의 선택지.
 ///
 /// 하드코딩하지 않는 이유는 릴리스마다 손대야 하기 때문이다. 최신순으로
-/// 돌려주되 숫자.숫자.숫자 꼴만 담는다(옛 클라이언트가 보낸 이상한 값이
-/// 목록을 채우면 고를 게 아니라 치울 게 된다).
+/// 돌려주되 숫자.숫자.숫자(+빌드번호)? 꼴만 담는다 — 클라이언트는 항상
+/// "3.1.3+53" 처럼 빌드번호를 붙여 보내므로(device_info_service.dart) 그것도
+/// 받아줘야 한다. 그 외 이상한 값(옛 클라이언트, NULL)이 목록을 채우면
+/// 고를 게 아니라 치울 게 된다.
 async function getAppVersionsInUse() {
   const client = await pool.connect();
   try {
     const res = await client.query(
       `SELECT app_version, COUNT(*)::int AS users
          FROM tc_users
-        WHERE app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$'
+        WHERE app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+([+][0-9]+)?$'
           AND is_deleted IS NOT TRUE
         GROUP BY app_version
-        ORDER BY string_to_array(app_version, '.')::int[] DESC
+        ORDER BY string_to_array(split_part(app_version, '+', 1), '.')::int[] DESC,
+                 CASE WHEN app_version ~ '[+][0-9]+$' THEN split_part(app_version, '+', 2)::int ELSE 0 END DESC
         LIMIT 40`
     );
     return res.rows;
@@ -7293,7 +7311,7 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       countParams.push(parseInt(options.minLeaves));
       paramIdx++;
     }
-    if (options.platform && ['ios', 'android'].includes(String(options.platform).toLowerCase())) {
+    if (options.platform && ['ios', 'android', 'web'].includes(String(options.platform).toLowerCase())) {
       conditions.push(`LOWER(device_platform) = $${paramIdx}`);
       countParams.push(String(options.platform).toLowerCase());
       paramIdx++;
@@ -7335,10 +7353,16 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       'nickname_asc': 'nickname ASC',
       'nickname_desc': 'nickname DESC',
       // 앱 버전을 문자열로 정렬하면 3.1.10 이 3.1.9 앞에 온다. 점으로 쪼개
-      // 숫자 배열로 비교한다. 숫자.숫자.숫자 꼴이 아닌 값(옛 클라이언트가 보낸
-      // 것, NULL)은 맨 뒤로 보낸다.
-      'version_desc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$' THEN string_to_array(app_version, '.')::int[] ELSE NULL END DESC NULLS LAST",
-      'version_asc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+$' THEN string_to_array(app_version, '.')::int[] ELSE NULL END ASC NULLS LAST",
+      // 숫자 배열로 비교한다. 클라이언트는 항상 "3.1.3+53" 처럼 빌드번호를
+      // 붙여 보내므로(device_info_service.dart) 그 뒤에 오는 +빌드번호는
+      // 떼어내고 비교하되, 같은 버전(핫픽스로 버전은 안 올리고 빌드만 올린
+      // 경우, 예: 2.4.0+30/31/32)의 순서를 가르는 2차 기준으로 빌드번호를
+      // 그대로 쓴다. 숫자.숫자.숫자(+숫자)? 꼴이 아닌 값(옛 클라이언트, NULL)은
+      // 맨 뒤로 보낸다.
+      'version_desc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+([+][0-9]+)?$' THEN string_to_array(split_part(app_version, '+', 1), '.')::int[] ELSE NULL END DESC NULLS LAST, "
+        + "CASE WHEN app_version ~ '[+][0-9]+$' THEN split_part(app_version, '+', 2)::int ELSE 0 END DESC",
+      'version_asc': "CASE WHEN app_version ~ '^[0-9]+[.][0-9]+[.][0-9]+([+][0-9]+)?$' THEN string_to_array(split_part(app_version, '+', 1), '.')::int[] ELSE NULL END ASC NULLS LAST, "
+        + "CASE WHEN app_version ~ '[+][0-9]+$' THEN split_part(app_version, '+', 2)::int ELSE 0 END ASC",
     };
     const orderBy = sortOptions[options.sort] || 'last_login DESC NULLS LAST';
 
@@ -9354,7 +9378,7 @@ async function redeemCoupon(nickname, rawCode) {
       reward = { type: 'gold', gold: amount, newGold: updated.rows[0].gold };
     } else {
       const itemRes = await client.query(
-        'SELECT item_key, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1',
+        'SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1',
         [coupon.reward_item_key],
       );
       const item = itemRes.rows[0];

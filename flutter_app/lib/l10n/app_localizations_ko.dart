@@ -3413,6 +3413,14 @@ class L10nKo extends L10n {
   String get shopExtendAction => '연장하기';
 
   @override
+  String get shopUseConfirmTitle => '아이템 사용';
+
+  @override
+  String shopUseConfirmBody(String name) {
+    return '$name\n\n사용하면 되돌릴 수 없습니다. 사용할까요?';
+  }
+
+  @override
   String get shopNoInventoryItems => '보유한 아이템이 없어요';
 
   @override
@@ -3420,6 +3428,9 @@ class L10nKo extends L10n {
 
   @override
   String get shopStatusInUse => '사용 중';
+
+  @override
+  String get shopStatusReadyToUse => '사용 가능';
 
   @override
   String get shopPermanentOwned => '영구 보유';
@@ -3438,6 +3449,9 @@ class L10nKo extends L10n {
 
   @override
   String get shopTagPermanent => '영구';
+
+  @override
+  String get shopTagConsumable => '소모품';
 
   @override
   String shopTagDuration(int days) {
@@ -3498,6 +3512,9 @@ class L10nKo extends L10n {
 
   @override
   String get shopDetailPermanent => '영구';
+
+  @override
+  String get shopDetailConsumable => '소모품';
 
   @override
   String shopDetailDuration(int days) {

@@ -1434,6 +1434,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final isPermanent = item['is_permanent'] == true;
     final durationDays = item['duration_days'];
     final itemKey = item['item_key']?.toString() ?? '';
+    final category = item['category']?.toString() ?? '';
     // Titles, themes and banners are all duration items, so keying the owned
     // state off isPermanent hid it for every one of them: you could hold a
     // title and the shop would still look like you had never bought it, with
@@ -1443,7 +1444,10 @@ class _ShopScreenState extends State<ShopScreen> {
     );
     final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
     final owned = ownedInv != null;
-    final ownedPermanent = owned && isPermanent;
+    // A permanent *utility* item is a one-shot consumable (탈주 카운트 -1/-3,
+    // 전적 초기화권, …), stackable by design — owning one must not hide the
+    // price as if a further purchase were pointless.
+    final ownedPermanent = owned && isPermanent && category != 'utility';
     final ownedExpiry = ownedInv?['expires_at'];
     final ownedExpiryText = ownedExpiry != null
         ? _formatExpire(context, ownedExpiry)
@@ -1511,6 +1515,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         isSeason,
                         isPermanent,
                         durationDays,
+                        category,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1702,6 +1707,38 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Text(
         text,
         style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  // Consumable items are deleted from inventory the instant they're used
+  // (e.g. 탈주 카운트 초기화) — a single misplaced tap otherwise burns one with
+  // no way back, so this gates every use behind an explicit confirm.
+  void _showUseConfirmDialog(
+    BuildContext context,
+    String itemKey,
+    String name,
+    VoidCallback onConfirm,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(L10n.of(context).shopUseConfirmTitle),
+        content: Text(L10n.of(context).shopUseConfirmBody(name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(L10n.of(context).commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onConfirm();
+            },
+            child: Text(L10n.of(context).shopButtonUse),
+          ),
+        ],
       ),
     );
   }
@@ -1946,7 +1983,10 @@ class _ShopScreenState extends State<ShopScreen> {
                       ),
                     ],
                     Text(
-                      expiresText ?? l10n.shopPermanentOwned,
+                      expiresText ??
+                          (isConsumable
+                              ? l10n.shopStatusReadyToUse
+                              : l10n.shopPermanentOwned),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -2109,9 +2149,14 @@ class _ShopScreenState extends State<ShopScreen> {
                                       } else if (effectType == 'custom_title') {
                                         _showCustomTitleDialog(context, game);
                                       } else if (isConsumable) {
-                                        _runItemAction(
+                                        _showUseConfirmDialog(
+                                          context,
                                           itemKey,
-                                          () => game.useItem(itemKey),
+                                          name,
+                                          () => _runItemAction(
+                                            itemKey,
+                                            () => game.useItem(itemKey),
+                                          ),
                                         );
                                       } else if (equipped) {
                                         // Same button, other direction: what is
@@ -2781,7 +2826,10 @@ class _ShopScreenState extends State<ShopScreen> {
     final canBuy = game.gold >= price;
     final ownedInv = _ownedEntitlement(game, item);
     final owned = ownedInv != null;
-    final ownedPermanent = owned && isPermanent;
+    // A permanent *utility* item is a one-shot consumable (탈주 카운트 -1/-3,
+    // 전적 초기화권, …) — same split as the server's buyItem/grantItemToUser.
+    // Owning an unused one must not block buying another.
+    final ownedPermanent = owned && isPermanent && category != 'utility';
     final ownedExpiry = ownedInv?['expires_at'];
     final ownedExpiryText = ownedExpiry != null
         ? _formatExpire(context, ownedExpiry)
@@ -3005,7 +3053,9 @@ class _ShopScreenState extends State<ShopScreen> {
                             _chip(_categoryLabel(context, category)),
                             _chip(
                               isPermanent
-                                  ? l10n.shopDetailPermanent
+                                  ? (category == 'utility'
+                                        ? l10n.shopDetailConsumable
+                                        : l10n.shopDetailPermanent)
                                   : (durationDays != null
                                         ? l10n.shopDetailDuration(
                                             durationDays as int,
@@ -3114,6 +3164,16 @@ class _ShopScreenState extends State<ShopScreen> {
                             // owned-season the same as owned-permanent here.
                             final lockedAsOwned =
                                 ownedPermanent || (isSeason && owned);
+                            // A permanent utility item is a one-shot consumable
+                            // (탈주 카운트 -1/-3, 전적 초기화권, …) — each purchase
+                            // is a separate, independent copy, not an extension
+                            // of the one already held. "연장" ("extend by N
+                            // days") makes no sense for something with no
+                            // duration_days, and buying a second one must read
+                            // exactly like buying the first.
+                            final isStackableConsumable =
+                                isPermanent && category == 'utility';
+                            final treatAsExtend = owned && !isStackableConsumable;
                             final action = owned
                                 ? _ownedActions(ctx, game, item)
                                 : null;
@@ -3125,7 +3185,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     : (canBuy
                                           ? () {
                                               Navigator.pop(ctx);
-                                              if (owned) {
+                                              if (treatAsExtend) {
                                                 _showExtendConfirmDialog(
                                                   context,
                                                   game,
@@ -3137,10 +3197,10 @@ class _ShopScreenState extends State<ShopScreen> {
                                             }
                                           : null),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: owned
+                                  backgroundColor: treatAsExtend
                                       ? const Color(0xFFBBDEFB)
                                       : const Color(0xFFC7E6D0),
-                                  foregroundColor: owned
+                                  foregroundColor: treatAsExtend
                                       ? const Color(0xFF1565C0)
                                       : const Color(0xFF2E5A3A),
                                   disabledBackgroundColor: const Color(
@@ -3157,7 +3217,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 child: Text(
                                   lockedAsOwned
                                       ? l10n.shopItemOwned
-                                      : (owned
+                                      : (treatAsExtend
                                             ? l10n.shopButtonExtend
                                             : l10n.shopButtonPurchase),
                                   style: const TextStyle(
@@ -3351,11 +3411,24 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
+  /// effect_types the server shares one entitlement across duration tiers for
+  /// (`buyItem`'s FEATURE_EFFECTS in db/database.js, plus profile_photo which
+  /// gets the same treatment via its own branch) — a 7-day and 30-day row of
+  /// these are the same thing, so owning either counts as owning the feature.
+  /// Every other utility item (탈주 카운트 -1/-3, 전적 초기화권, …) is a
+  /// separate one-shot consumable per item_key with no shared entitlement —
+  /// matching those by effect_type would make owning one variant block buying
+  /// a different one.
+  static const _sharedFeatureEffects = {
+    'top_card_counter',
+    'mighty_trump_counter',
+    'mighty_prev_trick',
+    'profile_private',
+    'custom_title',
+    'profile_photo',
+  };
+
   /// The inventory row that makes this item "owned".
-  ///
-  /// Matched by effect_type when the item has one, because that is how the
-  /// server grants and extends these: the 7-day and 30-day rows of one feature
-  /// are the same entitlement.
   Map<String, dynamic>? _ownedEntitlement(
     GameService game,
     Map<String, dynamic> item,
@@ -3364,7 +3437,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final effectType = item['effect_type']?.toString() ?? '';
     final byKey = game.inventoryItems.where((i) => i['item_key'] == itemKey);
     if (byKey.isNotEmpty) return byKey.first;
-    if (effectType.isEmpty) return null;
+    if (!_sharedFeatureEffects.contains(effectType)) return null;
     final byEffect = game.inventoryItems.where(
       (i) => (i['effect_type']?.toString() ?? '') == effectType,
     );
@@ -4330,13 +4403,17 @@ class _ShopScreenState extends State<ShopScreen> {
     bool isSeason,
     bool isPermanent,
     dynamic durationDays,
+    String category,
   ) {
     final l10n = L10n.of(context);
     if (isSeason) {
       return l10n.shopTagSeason;
     }
     if (isPermanent) {
-      return l10n.shopTagPermanent;
+      // "영구" ("permanent") reads as "own it forever, like a cosmetic" — true
+      // for a pioneer banner/theme, false for a one-shot consumable that
+      // disappears from inventory the moment it's used.
+      return category == 'utility' ? l10n.shopTagConsumable : l10n.shopTagPermanent;
     }
     if (durationDays != null) {
       return l10n.shopTagDuration(durationDays as int);

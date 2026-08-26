@@ -2573,6 +2573,11 @@ class GameService extends ChangeNotifier {
           // so pull a fresh one instead of leaving them on the old cosmetics.
           if (playerName.isNotEmpty) requestProfile(playerName);
         }
+        if (type == 'use_item_result' && data['success'] == true) {
+          // Some consumables change stats the profile popup reads (e.g. 탈주
+          // 카운트 초기화) — same staleness as equip, same fix.
+          if (playerName.isNotEmpty) requestProfile(playerName);
+        }
         notifyListeners();
         break;
 

@@ -3493,6 +3493,14 @@ class L10nEn extends L10n {
   String get shopExtendAction => 'Extend';
 
   @override
+  String get shopUseConfirmTitle => 'Use Item';
+
+  @override
+  String shopUseConfirmBody(String name) {
+    return '$name\n\nThis cannot be undone. Use it now?';
+  }
+
+  @override
   String get shopNoInventoryItems => 'No items in inventory';
 
   @override
@@ -3500,6 +3508,9 @@ class L10nEn extends L10n {
 
   @override
   String get shopStatusInUse => 'In Use';
+
+  @override
+  String get shopStatusReadyToUse => 'Ready to Use';
 
   @override
   String get shopPermanentOwned => 'Permanent';
@@ -3518,6 +3529,9 @@ class L10nEn extends L10n {
 
   @override
   String get shopTagPermanent => 'Permanent';
+
+  @override
+  String get shopTagConsumable => 'Consumable';
 
   @override
   String shopTagDuration(int days) {
@@ -3581,6 +3595,9 @@ class L10nEn extends L10n {
 
   @override
   String get shopDetailPermanent => 'Permanent';
+
+  @override
+  String get shopDetailConsumable => 'Consumable';
 
   @override
   String shopDetailDuration(int days) {

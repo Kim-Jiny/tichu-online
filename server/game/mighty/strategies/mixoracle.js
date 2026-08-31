@@ -251,6 +251,35 @@ function _getOppositionPlayers(game, botId) {
 }
 
 /**
+ * 조커콜 방어: 조커콜이 뜬 트릭에서 조커와 마이티를 둘 다 들고 있으면
+ * 마이티로 받는다.
+ *
+ * 문의: 마이티 프렌드가 조커콜 맞았는데 마이티로 방어 안 하고 조커를
+ * 냈다. 확인해 보니 이 방어 로직 자체는 MightyBot.js의 decidePlay 에
+ * 예전부터 있었는데, 실서버가 쓰는 strategy='mixoracle' 경로는
+ * decidePlay 를 아예 안 거쳐서 죽은 코드였다.
+ *
+ * 조커콜은 조커의 힘만 무효화한다(가장 약한 카드 취급) — 마이티는 그대로
+ * 최강이라 조커콜로도 못 뚫는다. 마이티를 내면 트릭도 이기고 조커도
+ * 그대로 손에 남는다. 조커를 내면 그 트릭은 대개 지고 조커의 값(다음
+ * 트릭을 확실히 먹는 힘)만 사라진다 — 손해 볼 구석이 없는 선택이라
+ * 다른 어떤 판단보다 먼저 걸어도 된다.
+ */
+function _jokerCallMightyDefenseRule(game, botId) {
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  const leadCard = game.currentTrick[0]?.cardId;
+  const jokerCallCard = game.getJokerCallCard();
+  if (!jokerCallCard || leadCard !== jokerCallCard || !game.jokerCallActive) return null;
+
+  const mightyCard = game.getMightyCard();
+  if (!mightyCard) return null;
+  const legal = game.getLegalCards(botId);
+  if (!legal || !legal.includes('mighty_joker') || !legal.includes(mightyCard)) return null;
+
+  return MightyBotInternals.makePlayAction(mightyCard, game, botId);
+}
+
+/**
  * Rule 1+2 mirror: unrevealed friend honors the heuristic's friend-card
  * pick on a declarer-led trick. Covers all friend variants where the
  * friend is a specific card (joker, mighty, or any regular suit card).
@@ -1473,6 +1502,7 @@ function _declarerSpendJokerBeforeFriendLeadRule(game, botId) {
 // 수를 냈는지 추적할 수 있어야 시뮬레이션에서 원인을 짚을 수 있어서다
 // (global.__mightyRuleTrace).
 const HARD_RULES = [
+  ['jokerCallMightyDefense', _jokerCallMightyDefenseRule],
   ['friendCardReveal', _friendCardRevealRule],
   // declarerSavesAllyWin 보다 앞이다. 그 룰은 "아군이 이기는 트릭은 덮지
   // 말고 버려라" 인데, 이건 그 예외다 — 덮는 이유가 트릭이 아니라 조커를

@@ -2375,6 +2375,31 @@ function _teammateHoldsJoker(game, botId) {
   return false;
 }
 
+/**
+ * Called suit for a joker-friend game: the suit the declarer led to draw the
+ * joker-holding friend out (mirrors mixoracle.js's _calledSuit, scoped to
+ * the joker-friend case since that's the only one _pickJokerLeadSuit needs).
+ * If the joker's already been played, it's the leadSuit of the trick it
+ * appeared in (only counts as a "call" if the declarer led that trick). If
+ * the joker hasn't been revealed yet, it's the declarer's very first lead
+ * this round — that's the suit they're baiting the joker out with.
+ */
+function _jokerCalledSuit(game) {
+  if (game.friendCard !== 'mighty_joker') return null;
+  for (const trick of game.tricks || []) {
+    if (!(trick.cards || []).some(c => c.cardId === 'mighty_joker')) continue;
+    if (trick.leader !== game.declarer) return null;
+    return trick.leadSuit || null;
+  }
+  if (!game.friendRevealed) {
+    for (const trick of game.tricks || []) {
+      if (trick.leader !== game.declarer) continue;
+      return trick.leadSuit || null;
+    }
+  }
+  return null;
+}
+
 /** Get the suit of the friend-declared card */
 function _getFriendCardSuit(game) {
   if (!game.friendCard || game.friendCard === 'no_friend' || game.friendCard === 'first_trick') {
@@ -2679,6 +2704,16 @@ function _pickJokerLeadSuit(game, botId) {
     }
 
     suitScore[suit] = score;
+  }
+
+  // 부른 문양(주공이 조커를 끌어내려고 리드한 무늬) 보너스. 이어서 진짜
+  // 이길 수 있는 무늬(hasTop/hasSecondTop, +100~200)가 있으면 그게 여전히
+  // 이긴다 — 이건 그런 무늬가 하나도 없을 때 "상대 보유/장수" 같은 부차
+  // 기준으로 사실상 아무 무늬나 골라버리는 대신, 부른 문양으로 응답하게
+  // 만드는 폴백이다. 상대가 하나도 안 든 무늬(-200)는 그대로 배제된다.
+  const calledSuit = _jokerCalledSuit(game);
+  if (calledSuit && suitScore[calledSuit] != null) {
+    suitScore[calledSuit] += 60;
   }
 
   // Known-void boosts (forced discards from those seats).

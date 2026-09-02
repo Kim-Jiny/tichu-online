@@ -21,7 +21,7 @@ const webApp = require('./webApp');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
-  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, setProfilePrivateHidePhoto,
+  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, getSentFriendRequests, setProfilePrivateHidePhoto,
   unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
   acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
@@ -3608,6 +3608,9 @@ async function handleMessage(ws, data) {
       break;
     case 'get_pending_friend_requests':
       await handleGetPendingFriendRequests(ws);
+      break;
+    case 'get_sent_friend_requests':
+      await handleGetSentFriendRequests(ws);
       break;
     case 'accept_friend_request':
       await handleAcceptFriendRequest(ws, data);
@@ -10621,6 +10624,17 @@ async function handleGetPendingFriendRequests(ws) {
   }
   const requests = await getPendingFriendRequests(ws.nickname);
   sendTo(ws, { type: 'pending_friend_requests', requests });
+}
+
+// Get requests I've sent that are still pending — the Requests tab's "sent"
+// side, so it can show how long ago each went out and offer to cancel it.
+async function handleGetSentFriendRequests(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'sent_friend_requests', requests: [] });
+    return;
+  }
+  const requests = await getSentFriendRequests(ws.nickname);
+  sendTo(ws, { type: 'sent_friend_requests', requests });
 }
 
 // Accept friend request handler

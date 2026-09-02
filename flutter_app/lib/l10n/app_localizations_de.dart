@@ -3236,6 +3236,36 @@ class L10nDe extends L10n {
   String get friendsRejected => 'Freundschaftsanfrage abgelehnt';
 
   @override
+  String get friendsReceivedSection => 'Erhalten';
+
+  @override
+  String get friendsSentSection => 'Gesendet';
+
+  @override
+  String get friendsCancelRequest => 'Zurückziehen';
+
+  @override
+  String get friendsSentAgoJustNow => 'Gerade eben angefragt';
+
+  @override
+  String friendsSentAgoMinutes(int n) {
+    return 'Vor $n Min. angefragt';
+  }
+
+  @override
+  String friendsSentAgoHours(int n) {
+    return 'Vor $n Std. angefragt';
+  }
+
+  @override
+  String friendsSentAgoDays(int n) {
+    return 'Vor $n T. angefragt';
+  }
+
+  @override
+  String get friendsSentAgoLongAgo => 'Vor über einem Monat angefragt';
+
+  @override
   String get friendsDmEmpty => 'Keine Nachrichten.\nSende die erste Nachricht!';
 
   @override

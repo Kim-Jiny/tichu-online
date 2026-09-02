@@ -3146,6 +3146,36 @@ class L10nKo extends L10n {
   String get friendsRejected => '친구 요청을 거절했습니다';
 
   @override
+  String get friendsReceivedSection => '받은 요청';
+
+  @override
+  String get friendsSentSection => '보낸 요청';
+
+  @override
+  String get friendsCancelRequest => '취소';
+
+  @override
+  String get friendsSentAgoJustNow => '방금 요청함';
+
+  @override
+  String friendsSentAgoMinutes(int n) {
+    return '$n분 전 요청';
+  }
+
+  @override
+  String friendsSentAgoHours(int n) {
+    return '$n시간 전 요청';
+  }
+
+  @override
+  String friendsSentAgoDays(int n) {
+    return '$n일 전 요청';
+  }
+
+  @override
+  String get friendsSentAgoLongAgo => '한 달 이상 전 요청';
+
+  @override
   String get friendsDmEmpty => '메시지가 없습니다.\n첫 메시지를 보내보세요!';
 
   @override

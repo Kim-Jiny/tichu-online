@@ -2503,6 +2503,28 @@ async function getPendingFriendRequests(nickname) {
   }
 }
 
+// Requests I sent that are still waiting on the other side — the mirror of
+// getPendingFriendRequests. Includes created_at so the Requests tab can show
+// how long ago each was sent, which is also what tells someone it might be
+// worth cancelling a stale one.
+async function getSentFriendRequests(nickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT friend_nickname as to_user, created_at FROM tc_friends
+       WHERE user_nickname = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [nickname]
+    );
+    return result.rows.map(r => ({ nickname: r.to_user, createdAt: r.created_at }));
+  } catch (err) {
+    console.error('Get sent requests error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 // Save match result
 async function saveMatchResult(matchData) {
   const client = await pool.connect();
@@ -12322,6 +12344,7 @@ module.exports = {
   setCustomTitleByAdmin,
   setFeatureEnabled,
   getPendingFriendRequests,
+  getSentFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,
   cancelFriendRequest,

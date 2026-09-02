@@ -216,6 +216,11 @@ class GameService extends ChangeNotifier {
   int pendingFriendRequestCount = 0;
   List<Map<String, dynamic>> roomInvites = [];
   Set<String> sentFriendRequests = {};
+  // Requests tab's "sent" side — {nickname, createdAt} per pending outgoing
+  // request, server-authoritative (unlike sentFriendRequests above, which is
+  // just this session's optimistic add/cancel tracking for button state and
+  // goes blank again on reload).
+  List<Map<String, dynamic>> sentFriendRequestsDetailed = [];
 
   // Profile
   final ProfileStore _profiles = ProfileStore();
@@ -1927,6 +1932,7 @@ class GameService extends ChangeNotifier {
         // Refresh friends list and pending requests after add action
         requestFriends();
         requestPendingFriendRequests();
+        requestSentFriendRequests();
         notifyListeners();
         break;
 
@@ -1937,10 +1943,28 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'sent_friend_requests':
+        final sentReqs = data['requests'] as List? ?? [];
+        sentFriendRequestsDetailed = sentReqs
+            .whereType<Map>()
+            .map((r) => Map<String, dynamic>.from(r))
+            .toList();
+        // Server-authoritative — replaces this session's optimistic guesses
+        // with what's actually still pending, so a reload doesn't lose the
+        // hourglass state on profile/search buttons for requests sent
+        // earlier.
+        sentFriendRequests = sentFriendRequestsDetailed
+            .map((r) => r['nickname'] as String? ?? '')
+            .where((n) => n.isNotEmpty)
+            .toSet();
+        notifyListeners();
+        break;
+
       case 'friend_request_result':
-        // Refresh after accept/reject
+        // Refresh after accept/reject/cancel
         requestFriends();
         requestPendingFriendRequests();
+        requestSentFriendRequests();
         notifyListeners();
         break;
 
@@ -3239,6 +3263,7 @@ class GameService extends ChangeNotifier {
     pendingFriendRequests = [];
     pendingFriendRequestCount = 0;
     sentFriendRequests = {};
+    sentFriendRequestsDetailed = [];
     blockedUsers = {};
     dmConversations = [];
     dmMessages = {};
@@ -3340,6 +3365,7 @@ class GameService extends ChangeNotifier {
     pendingFriendRequestCount = 0;
     roomInvites = [];
     sentFriendRequests = {};
+    sentFriendRequestsDetailed = [];
     _roomInviteCooldowns.clear();
     rankings = [];
     rankingsLoading = false;
@@ -4545,6 +4571,10 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_pending_friend_requests'});
   }
 
+  void requestSentFriendRequests() {
+    _network.send({'type': 'get_sent_friend_requests'});
+  }
+
   void acceptFriendRequest(String nickname) {
     _network.send({'type': 'accept_friend_request', 'nickname': nickname});
   }
@@ -4560,6 +4590,7 @@ class GameService extends ChangeNotifier {
   void cancelFriendRequestAction(String nickname) {
     _network.send({'type': 'cancel_friend_request', 'nickname': nickname});
     sentFriendRequests.remove(nickname);
+    sentFriendRequestsDetailed.removeWhere((r) => r['nickname'] == nickname);
     for (final user in searchResults) {
       if (user['nickname'] == nickname && user['friendStatus'] == 'pending_outgoing') {
         user['friendStatus'] = 'none';

@@ -1678,6 +1678,35 @@
   "friendsAccept": "Accept",
   "friendsReject": "Reject",
   "friendsRejected": "Friend request rejected",
+  "friendsReceivedSection": "Received",
+  "friendsSentSection": "Sent",
+  "friendsCancelRequest": "Cancel",
+  "friendsSentAgoJustNow": "Requested just now",
+  "friendsSentAgoMinutes": "Requested {n}m ago",
+  "friendsSentAgoHours": "Requested {n}h ago",
+  "friendsSentAgoDays": "Requested {n}d ago",
+  "friendsSentAgoLongAgo": "Requested over a month ago",
+  "@friendsSentAgoMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@friendsSentAgoHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "@friendsSentAgoDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "friendsDmEmpty": "No messages.\nSend the first message!",
   "friendsDmInputHint": "Enter a message",
   "friendsRemoveTitle": "Remove Friend",

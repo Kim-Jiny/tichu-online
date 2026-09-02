@@ -5817,6 +5817,54 @@ abstract class L10n {
   /// **'Friend request rejected'**
   String get friendsRejected;
 
+  /// No description provided for @friendsReceivedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get friendsReceivedSection;
+
+  /// No description provided for @friendsSentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get friendsSentSection;
+
+  /// No description provided for @friendsCancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get friendsCancelRequest;
+
+  /// No description provided for @friendsSentAgoJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested just now'**
+  String get friendsSentAgoJustNow;
+
+  /// No description provided for @friendsSentAgoMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}m ago'**
+  String friendsSentAgoMinutes(int n);
+
+  /// No description provided for @friendsSentAgoHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}h ago'**
+  String friendsSentAgoHours(int n);
+
+  /// No description provided for @friendsSentAgoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}d ago'**
+  String friendsSentAgoDays(int n);
+
+  /// No description provided for @friendsSentAgoLongAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested over a month ago'**
+  String get friendsSentAgoLongAgo;
+
   /// No description provided for @friendsDmEmpty.
   ///
   /// In en, this message translates to:

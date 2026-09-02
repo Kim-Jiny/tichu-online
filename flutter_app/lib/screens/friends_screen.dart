@@ -43,6 +43,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       _gameService = game;
       game.requestFriends();
       game.requestPendingFriendRequests();
+      game.requestSentFriendRequests();
       game.requestDmConversations();
       game.requestUnreadDmCount();
     });
@@ -558,6 +559,7 @@ class _FriendsScreenState extends State<FriendsScreen>
     final game = context.read<GameService>();
     game.requestFriends();
     game.requestPendingFriendRequests();
+    game.requestSentFriendRequests();
     game.requestDmConversations();
   }
 
@@ -855,7 +857,9 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _buildRequestsTab() {
     return Consumer<GameService>(
       builder: (context, game, _) {
-        if (game.pendingFriendRequests.isEmpty) {
+        final received = game.pendingFriendRequests;
+        final sent = game.sentFriendRequestsDetailed;
+        if (received.isEmpty && sent.isEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -878,121 +882,205 @@ class _FriendsScreenState extends State<FriendsScreen>
           );
         }
 
-        return ListView.separated(
+        final l10n = L10n.of(context);
+        // A section label only earns its place once there are two kinds of
+        // request to tell apart — with just one list, the old unlabeled
+        // layout already read fine and a header would be pure clutter.
+        final showLabels = received.isNotEmpty && sent.isNotEmpty;
+        return ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: game.pendingFriendRequests.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final nickname = game.pendingFriendRequests[index];
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFCE93D8).withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  // A friend request has no photo to show yet, so this stands
-                  // in for one — same shape as every other avatar.
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCE93D8),
-                      borderRadius: BorderRadius.circular(
-                        avatarCornerRadius(32),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      nickname.isNotEmpty ? nickname[0] : '?',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      nickname,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF5A4038),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      game.acceptFriendRequest(nickname);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            L10n.of(context).friendsAccepted(nickname),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF81C784),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        L10n.of(context).friendsAccept,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () {
-                      game.rejectFriendRequest(nickname);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(L10n.of(context).friendsRejected),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE57373),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        L10n.of(context).friendsReject,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+          children: [
+            if (received.isNotEmpty) ...[
+              if (showLabels) _buildRequestsSectionLabel(l10n.friendsReceivedSection),
+              for (final nickname in received) ...[
+                _buildReceivedRequestCard(context, game, nickname),
+                const SizedBox(height: 8),
+              ],
+            ],
+            if (sent.isNotEmpty) ...[
+              if (showLabels) ...[
+                const SizedBox(height: 4),
+                _buildRequestsSectionLabel(l10n.friendsSentSection),
+              ],
+              for (final req in sent) ...[
+                _buildSentRequestCard(context, game, req),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildRequestsSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 2),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF9A8E8A),
+        ),
+      ),
+    );
+  }
+
+  // Initial-letter avatar stand-in shared by both request card kinds — a
+  // request has no photo to show yet.
+  Widget _requestAvatar(String nickname, Color color) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(avatarCornerRadius(32)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        nickname.isNotEmpty ? nickname[0] : '?',
+        style: const TextStyle(
+          fontSize: 14,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _requestActionButton(String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReceivedRequestCard(
+    BuildContext context,
+    GameService game,
+    String nickname,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFCE93D8).withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          _requestAvatar(nickname, const Color(0xFFCE93D8)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              nickname,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF5A4038),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          _requestActionButton(L10n.of(context).friendsAccept, const Color(0xFF81C784), () {
+            game.acceptFriendRequest(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(L10n.of(context).friendsAccepted(nickname))),
+            );
+          }),
+          const SizedBox(width: 6),
+          _requestActionButton(L10n.of(context).friendsReject, const Color(0xFFE57373), () {
+            game.rejectFriendRequest(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(L10n.of(context).friendsRejected)),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// "3시간 전 요청" — same bucketing as _lastSeenText, different wording:
+  /// this is when a request was sent, not when someone was last online.
+  String _sentAgoText(L10n l10n, dynamic createdAt) {
+    final iso = createdAt?.toString();
+    if (iso == null || iso.isEmpty) return '';
+    final parsed = DateTime.tryParse(iso.endsWith('Z') ? iso : '${iso}Z');
+    if (parsed == null) return '';
+    final bucket = lastSeenBucket(parsed, DateTime.now().toUtc());
+    return switch (bucket.unit) {
+      LastSeenUnit.justNow => l10n.friendsSentAgoJustNow,
+      LastSeenUnit.minutes => l10n.friendsSentAgoMinutes(bucket.amount),
+      LastSeenUnit.hours => l10n.friendsSentAgoHours(bucket.amount),
+      LastSeenUnit.days => l10n.friendsSentAgoDays(bucket.amount),
+      LastSeenUnit.longAgo => l10n.friendsSentAgoLongAgo,
+    };
+  }
+
+  Widget _buildSentRequestCard(
+    BuildContext context,
+    GameService game,
+    Map<String, dynamic> request,
+  ) {
+    final nickname = request['nickname'] as String? ?? '';
+    final l10n = L10n.of(context);
+    final agoText = _sentAgoText(l10n, request['createdAt']);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF90CAF9).withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          _requestAvatar(nickname, const Color(0xFF64B5F6)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  nickname,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF5A4038),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (agoText.isNotEmpty)
+                  Text(
+                    agoText,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
+                  ),
+              ],
+            ),
+          ),
+          _requestActionButton(l10n.friendsCancelRequest, const Color(0xFF90A4AE), () {
+            game.cancelFriendRequestAction(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+            );
+          }),
+        ],
+      ),
     );
   }
 

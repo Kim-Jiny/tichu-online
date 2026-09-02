@@ -221,6 +221,10 @@ class GameService extends ChangeNotifier {
   // just this session's optimistic add/cancel tracking for button state and
   // goes blank again on reload).
   List<Map<String, dynamic>> sentFriendRequestsDetailed = [];
+  // Requests tab's "received" side — same profile summary, keyed off
+  // pendingFriendRequests (kept as a plain nickname list since that one also
+  // drives the badge count).
+  List<Map<String, dynamic>> pendingFriendRequestsDetailed = [];
 
   // Profile
   final ProfileStore _profiles = ProfileStore();
@@ -1943,6 +1947,15 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'pending_friend_requests_detailed':
+        final detailedReqs = data['requests'] as List? ?? [];
+        pendingFriendRequestsDetailed = detailedReqs
+            .whereType<Map>()
+            .map((r) => Map<String, dynamic>.from(r))
+            .toList();
+        notifyListeners();
+        break;
+
       case 'sent_friend_requests':
         final sentReqs = data['requests'] as List? ?? [];
         sentFriendRequestsDetailed = sentReqs
@@ -1975,6 +1988,10 @@ class GameService extends ChangeNotifier {
             !pendingFriendRequests.contains(fromNickname)) {
           pendingFriendRequests.add(fromNickname);
           pendingFriendRequestCount = pendingFriendRequests.length;
+          // The push has no photo/level/etc — pull the full row for the
+          // Requests tab rather than showing it with a blank avatar until
+          // the next unrelated refresh happens to fire.
+          requestPendingFriendRequests();
         }
         notifyListeners();
         break;
@@ -1993,6 +2010,8 @@ class GameService extends ChangeNotifier {
         if (cancelledFrom.isNotEmpty &&
             pendingFriendRequests.remove(cancelledFrom)) {
           pendingFriendRequestCount = pendingFriendRequests.length;
+          pendingFriendRequestsDetailed
+              .removeWhere((r) => r['nickname'] == cancelledFrom);
         }
         notifyListeners();
         break;
@@ -3261,6 +3280,7 @@ class GameService extends ChangeNotifier {
     friends = [];
     friendsData = [];
     pendingFriendRequests = [];
+    pendingFriendRequestsDetailed = [];
     pendingFriendRequestCount = 0;
     sentFriendRequests = {};
     sentFriendRequestsDetailed = [];
@@ -3362,6 +3382,7 @@ class GameService extends ChangeNotifier {
     _profiles.clear();
     friendsData = [];
     pendingFriendRequests = [];
+    pendingFriendRequestsDetailed = [];
     pendingFriendRequestCount = 0;
     roomInvites = [];
     sentFriendRequests = {};
@@ -4560,6 +4581,21 @@ class GameService extends ChangeNotifier {
   void addFriendAction(String nickname) {
     _network.send({'type': 'add_friend', 'nickname': nickname});
     sentFriendRequests.add(nickname);
+    // Mirrors cancelFriendRequestAction's optimistic update in the other
+    // direction — without this, the search tab's chip stayed on "add
+    // friend" until the next fresh search re-fetched friendStatus from the
+    // server, so tapping it looked like nothing happened.
+    for (final user in searchResults) {
+      if (user['nickname'] == nickname && user['friendStatus'] == 'none') {
+        user['friendStatus'] = 'pending_outgoing';
+      }
+    }
+    if (!sentFriendRequestsDetailed.any((r) => r['nickname'] == nickname)) {
+      sentFriendRequestsDetailed.add({
+        'nickname': nickname,
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      });
+    }
     notifyListeners();
   }
 

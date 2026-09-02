@@ -8,7 +8,6 @@ import '../utils/friend_order.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
-import '../widgets/profile_avatar.dart';
 import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -927,29 +926,11 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
-  // Initial-letter avatar stand-in shared by both request card kinds — a
-  // request has no photo to show yet.
-  Widget _requestAvatar(String nickname, Color color) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(avatarCornerRadius(32)),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        nickname.isNotEmpty ? nickname[0] : '?',
-        style: const TextStyle(
-          fontSize: 14,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _requestActionButton(String label, Color color, VoidCallback onTap) {
+    // Its own tap target, deliberately not the row's — the row opens the
+    // profile (same as everywhere else a person is listed); this is the one
+    // thing on the row that does something else, so it needs a boundary
+    // InkWell's own ripple won't blur into a "the whole card did that" feel.
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -970,44 +951,48 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
+  /// Row data for one request, looked up from the server-enriched detail
+  /// list by nickname. Falls back to a bare nickname-only map — the enriched
+  /// fetch can lag a beat behind the plain list (e.g. right after a live
+  /// friend_request_received push) and the row should still render rather
+  /// than disappear or throw.
+  Map<String, dynamic> _requestDetail(List<Map<String, dynamic>> detailed, String nickname) {
+    return detailed.firstWhere(
+      (r) => r['nickname'] == nickname,
+      orElse: () => {'nickname': nickname},
+    );
+  }
+
   Widget _buildReceivedRequestCard(
     BuildContext context,
     GameService game,
     String nickname,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFCE93D8).withValues(alpha: 0.5)),
-      ),
-      child: Row(
+    final detail = _requestDetail(game.pendingFriendRequestsDetailed, nickname);
+    final l10n = L10n.of(context);
+    return ProfileIdentityCell(
+      game: game,
+      nickname: nickname,
+      photoUrl: detail['photoUrl'] as String?,
+      bannerKey: detail['bannerKey'] as String?,
+      titleKey: detail['titleKey'] as String?,
+      titleName: detail['titleName'] as String?,
+      level: detail['level'] as int?,
+      onTap: () => showPlayerProfileDialog(context, nickname, game),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _requestAvatar(nickname, const Color(0xFFCE93D8)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              nickname,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF5A4038),
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          _requestActionButton(L10n.of(context).friendsAccept, const Color(0xFF81C784), () {
+          _requestActionButton(l10n.friendsAccept, const Color(0xFF81C784), () {
             game.acceptFriendRequest(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(L10n.of(context).friendsAccepted(nickname))),
+              SnackBar(content: Text(l10n.friendsAccepted(nickname))),
             );
           }),
           const SizedBox(width: 6),
-          _requestActionButton(L10n.of(context).friendsReject, const Color(0xFFE57373), () {
+          _requestActionButton(l10n.friendsReject, const Color(0xFFE57373), () {
             game.rejectFriendRequest(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(L10n.of(context).friendsRejected)),
+              SnackBar(content: Text(l10n.friendsRejected)),
             );
           }),
         ],
@@ -1040,47 +1025,22 @@ class _FriendsScreenState extends State<FriendsScreen>
     final nickname = request['nickname'] as String? ?? '';
     final l10n = L10n.of(context);
     final agoText = _sentAgoText(l10n, request['createdAt']);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF90CAF9).withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          _requestAvatar(nickname, const Color(0xFF64B5F6)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  nickname,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF5A4038),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (agoText.isNotEmpty)
-                  Text(
-                    agoText,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
-                  ),
-              ],
-            ),
-          ),
-          _requestActionButton(l10n.friendsCancelRequest, const Color(0xFF90A4AE), () {
-            game.cancelFriendRequestAction(nickname);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
-            );
-          }),
-        ],
-      ),
+    return ProfileIdentityCell(
+      game: game,
+      nickname: nickname,
+      photoUrl: request['photoUrl'] as String?,
+      bannerKey: request['bannerKey'] as String?,
+      titleKey: request['titleKey'] as String?,
+      titleName: request['titleName'] as String?,
+      level: request['level'] as int?,
+      subtitle: agoText.isEmpty ? null : agoText,
+      onTap: () => showPlayerProfileDialog(context, nickname, game),
+      trailing: _requestActionButton(l10n.friendsCancelRequest, const Color(0xFF90A4AE), () {
+        game.cancelFriendRequestAction(nickname);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+        );
+      }),
     );
   }
 

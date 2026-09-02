@@ -21,7 +21,7 @@ const webApp = require('./webApp');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
-  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, getSentFriendRequests, setProfilePrivateHidePhoto,
+  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, getPendingFriendRequestsDetailed, getSentFriendRequests, setProfilePrivateHidePhoto,
   unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
   acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
@@ -10616,6 +10616,22 @@ async function handleGetFriends(ws) {
   sendTo(ws, { type: 'friends_list', friends });
 }
 
+// A request row (getPendingFriendRequestsDetailed / getSentFriendRequests)
+// carries the same profile fields a friends-list row does — this applies the
+// same per-viewer visibility rules handleGetFriends does, so a request row
+// can't leak a photo/title a report or privacy pass would otherwise hide.
+function visibleRequestRow(ws, row) {
+  return {
+    nickname: row.nickname,
+    createdAt: row.createdAt,
+    level: row.level,
+    bannerKey: row.bannerKey,
+    titleKey: titleReported(ws, row.nickname, row.titleName) ? null : row.titleKey,
+    titleName: titleReported(ws, row.nickname, row.titleName) ? null : row.titleName,
+    photoUrl: visiblePhoto(ws, row.nickname, profilePhotoUrlFrom(row)),
+  };
+}
+
 // Get pending friend requests handler
 async function handleGetPendingFriendRequests(ws) {
   if (!ws.nickname) {
@@ -10624,6 +10640,14 @@ async function handleGetPendingFriendRequests(ws) {
   }
   const requests = await getPendingFriendRequests(ws.nickname);
   sendTo(ws, { type: 'pending_friend_requests', requests });
+  // Same list, with the profile summary the Requests tab draws each row
+  // from — a separate message rather than changing the shape above, since
+  // that one's plain string array is also how searchUsers checks membership.
+  const detailed = await getPendingFriendRequestsDetailed(ws.nickname, ws.locale || 'ko');
+  sendTo(ws, {
+    type: 'pending_friend_requests_detailed',
+    requests: detailed.map((r) => visibleRequestRow(ws, r)),
+  });
 }
 
 // Get requests I've sent that are still pending — the Requests tab's "sent"
@@ -10633,8 +10657,11 @@ async function handleGetSentFriendRequests(ws) {
     sendTo(ws, { type: 'sent_friend_requests', requests: [] });
     return;
   }
-  const requests = await getSentFriendRequests(ws.nickname);
-  sendTo(ws, { type: 'sent_friend_requests', requests });
+  const requests = await getSentFriendRequests(ws.nickname, ws.locale || 'ko');
+  sendTo(ws, {
+    type: 'sent_friend_requests',
+    requests: requests.map((r) => visibleRequestRow(ws, r)),
+  });
 }
 
 // Accept friend request handler

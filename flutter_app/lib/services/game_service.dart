@@ -1350,6 +1350,16 @@ class GameService extends ChangeNotifier {
           playerId = '';
           playerName = '';
           duplicateLoginKicked = true;
+          // The server closes the socket right after this message. Without
+          // this, ConnectionOverlay sees the disconnect, shouldAutoReconnect
+          // is still true (only session.logout()'s intentional disconnect
+          // ever flips it, and that call lives in a UI path — LobbyScreen's
+          // Consumer — that this same state change can race past before it
+          // runs), and it reconnects using the still-persisted saved
+          // session. That logs straight back into the account the other tab
+          // is holding, which gets duplicate-login-kicked again — an
+          // infinite reconnect loop that reads as a stuck loading spinner.
+          _network.disconnect(intentional: true);
         }
         errorMessage = kickMessage;
         notifyListeners();

@@ -1251,8 +1251,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         : Colors.white.withValues(alpha: 0.98);
 
     final isBot = player['isBot'] == true;
-    final avatarSize = (ringMode ? (compact ? 56 : 72) : (compact ? 44 : 56))
-        .toDouble();
+    // Web has room to spare and no touch-target minimums to respect, so it
+    // gets a bump — the native sizes below were tuned for a phone screen and
+    // read as noticeably small on a desktop-width browser tab.
+    final webBoost = kIsWeb ? 1.35 : 1.0;
+    final avatarSize =
+        ((ringMode ? (compact ? 56 : 72) : (compact ? 44 : 56)) * webBoost)
+            .toDouble();
     // 좌석 탭: 아직 승인 전이면 패 보기 요청, 승인 후엔 하단 손패 영역에
     // 이 사람의 패를 열거나 닫는다. 프로필 다이얼로그는 롱프레스로 이동
     // (SK 관전과 동일).
@@ -1504,11 +1509,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// `_buildCompactHandBacks` 와 같은 모양 — 폭이 좁으니 겹쳐 그리고,
   /// 장수는 오른쪽 끝 배지로 읽는다.
   Widget _compactHandBacks(int count, {required bool compact}) {
-    final scale = compact ? 0.85 : 1.0;
+    // Web 부스트는 프로필 사진과 같은 비율 — 이 스트립도 그만큼 작아 보였다.
+    final webBoost = kIsWeb ? 1.35 : 1.0;
+    final scale = (compact ? 0.85 : 1.0) * webBoost;
     final cardW = 14.0 * scale;
     final cardH = 20.0 * scale;
     const double preferredStep = 4.0;
-    const double maxTotalW = 60.0;
+    final double maxTotalW = 60.0 * webBoost;
     final double step = count <= 1
         ? preferredStep * scale
         : (math
@@ -1516,6 +1523,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   .clamp(2.0, preferredStep) *
               scale);
     final totalW = cardW + step * (count - 1);
+    // 우측 상단 카드에 살짝 겹치는 카운트 뱃지 — 게임 화면과 동일. 주석은
+    // 예전부터 "장수는 배지로 읽는다"고 적혀 있었는데 실제 배지는 빠져
+    // 있었다 — 몇 장 남았는지 셀 방법이 카드를 직접 세는 것뿐이었다.
+    final double badgeSize = 18.0 * scale;
     return SizedBox(
       width: totalW,
       height: cardH,
@@ -1533,6 +1544,29 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 isInteractive: false,
               ),
             ),
+          Positioned(
+            right: -badgeSize * 0.35,
+            top: -badgeSize * 0.35,
+            child: Container(
+              width: badgeSize,
+              height: badgeSize,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5A4038),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11 * scale,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

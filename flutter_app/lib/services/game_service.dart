@@ -1353,13 +1353,17 @@ class GameService extends ChangeNotifier {
         }
         errorMessage = kickMessage;
         notifyListeners();
-        if (!isDuplicateLogin) {
-          Future.delayed(const Duration(seconds: 3), () {
-            if (_disposed) return; // C2: Don't notify after disposal
-            errorMessage = null;
-            notifyListeners();
-          });
-        }
+        // Always auto-clear — the duplicate-login banner used to be left up
+        // forever on the assumption that the lobby's dedicated snackbar flow
+        // would take over, but that flow only runs if LobbyScreen happens to
+        // still be mounted when this fires (it won't be if the destination
+        // switch to the login screen wins the same-frame race). Without this
+        // timer the banner then never goes away.
+        Future.delayed(const Duration(seconds: 3), () {
+          if (_disposed) return; // C2: Don't notify after disposal
+          errorMessage = null;
+          notifyListeners();
+        });
         break;
 
       case 'room_closed':

@@ -1121,7 +1121,7 @@ setInterval(() => {
 async function profilePhotoRow(userId) {
   const { pool } = require('./db/database');
   const r = await pool.query(
-    'SELECT profile_photo_key, profile_photo_status, profile_photo_expires_at FROM tc_users WHERE id = $1',
+    'SELECT nickname, profile_photo_key, profile_photo_status, profile_photo_expires_at FROM tc_users WHERE id = $1',
     [userId],
   );
   return r.rows[0] || null;
@@ -1391,6 +1391,26 @@ const server = http.createServer(async (req, res) => {
       );
       if (scan.verdict === 'reject') {
         console.warn(`[profile-photo] rejected user=${userId} worst=${scan.worst}`);
+        // Best-effort, fire-and-forget: keep the rejected image + reason so
+        // tc-backstage can show admins what actually got refused, not just
+        // that it happened. Never lets storage/DB trouble slow or fail the
+        // 422 the client is waiting on.
+        (async () => {
+          try {
+            const { key } = await minioClient.uploadRejectedPhoto(userId, processed, 'image/jpeg');
+            const { recordPhotoRejection } = require('./db/database');
+            await recordPhotoRejection({
+              userId,
+              nickname: row.nickname,
+              imageKey: key,
+              worst: scan.worst,
+              scores: scan.scores,
+              labels: scan.labels,
+            });
+          } catch (e) {
+            console.error('[profile-photo] failed to archive rejected photo:', e.message);
+          }
+        })();
         throw httpErr(422, 'image_rejected');
       }
       if (scan.verdict === 'error') {

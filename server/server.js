@@ -21,9 +21,9 @@ const webApp = require('./webApp');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
-  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, setProfilePrivateHidePhoto,
+  addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, getPendingFriendRequestsDetailed, getSentFriendRequests, setProfilePrivateHidePhoto,
   unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
-  acceptFriendRequest, rejectFriendRequest, removeFriend,
+  acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   redeemCoupon, normalizeCouponCode,
@@ -3629,11 +3629,17 @@ async function handleMessage(ws, data) {
     case 'get_pending_friend_requests':
       await handleGetPendingFriendRequests(ws);
       break;
+    case 'get_sent_friend_requests':
+      await handleGetSentFriendRequests(ws);
+      break;
     case 'accept_friend_request':
       await handleAcceptFriendRequest(ws, data);
       break;
     case 'reject_friend_request':
       await handleRejectFriendRequest(ws, data);
+      break;
+    case 'cancel_friend_request':
+      await handleCancelFriendRequest(ws, data);
       break;
     case 'remove_friend':
       await handleRemoveFriend(ws, data);
@@ -10630,6 +10636,22 @@ async function handleGetFriends(ws) {
   sendTo(ws, { type: 'friends_list', friends });
 }
 
+// A request row (getPendingFriendRequestsDetailed / getSentFriendRequests)
+// carries the same profile fields a friends-list row does — this applies the
+// same per-viewer visibility rules handleGetFriends does, so a request row
+// can't leak a photo/title a report or privacy pass would otherwise hide.
+function visibleRequestRow(ws, row) {
+  return {
+    nickname: row.nickname,
+    createdAt: row.createdAt,
+    level: row.level,
+    bannerKey: row.bannerKey,
+    titleKey: titleReported(ws, row.nickname, row.titleName) ? null : row.titleKey,
+    titleName: titleReported(ws, row.nickname, row.titleName) ? null : row.titleName,
+    photoUrl: visiblePhoto(ws, row.nickname, profilePhotoUrlFrom(row)),
+  };
+}
+
 // Get pending friend requests handler
 async function handleGetPendingFriendRequests(ws) {
   if (!ws.nickname) {
@@ -10638,6 +10660,28 @@ async function handleGetPendingFriendRequests(ws) {
   }
   const requests = await getPendingFriendRequests(ws.nickname);
   sendTo(ws, { type: 'pending_friend_requests', requests });
+  // Same list, with the profile summary the Requests tab draws each row
+  // from — a separate message rather than changing the shape above, since
+  // that one's plain string array is also how searchUsers checks membership.
+  const detailed = await getPendingFriendRequestsDetailed(ws.nickname, ws.locale || 'ko');
+  sendTo(ws, {
+    type: 'pending_friend_requests_detailed',
+    requests: detailed.map((r) => visibleRequestRow(ws, r)),
+  });
+}
+
+// Get requests I've sent that are still pending — the Requests tab's "sent"
+// side, so it can show how long ago each went out and offer to cancel it.
+async function handleGetSentFriendRequests(ws) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'sent_friend_requests', requests: [] });
+    return;
+  }
+  const requests = await getSentFriendRequests(ws.nickname, ws.locale || 'ko');
+  sendTo(ws, {
+    type: 'sent_friend_requests',
+    requests: requests.map((r) => visibleRequestRow(ws, r)),
+  });
 }
 
 // Accept friend request handler
@@ -10693,6 +10737,26 @@ async function handleRejectFriendRequest(ws, data) {
   if (!nickname) return;
   const result = await rejectFriendRequest(ws.nickname, nickname);
   sendTo(ws, { type: 'friend_request_result', action: 'reject', nickname, success: result.success });
+}
+
+// Cancel a request I sent, before the other side accepts/rejects it.
+async function handleCancelFriendRequest(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const nickname = data.nickname;
+  if (!nickname) return;
+  const result = await cancelFriendRequest(ws.nickname, nickname);
+  sendTo(ws, { type: 'friend_request_result', action: 'cancel', nickname, success: result.success });
+  // Symmetric to friend_request_received: if they're online, their pending
+  // (incoming) list should drop it live rather than waiting on a refresh.
+  if (result.success) {
+    const targetWs = findWsByNickname(nickname);
+    if (targetWs) {
+      sendTo(targetWs, { type: 'friend_request_cancelled', nickname: ws.nickname });
+    }
+  }
 }
 
 // Remove friend handler

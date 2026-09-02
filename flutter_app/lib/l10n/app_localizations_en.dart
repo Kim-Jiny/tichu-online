@@ -1443,6 +1443,12 @@ class L10nEn extends L10n {
   String get gameRequestPending => 'Request pending';
 
   @override
+  String get gameCancelFriendRequestTooltip => 'Cancel request';
+
+  @override
+  String get gameFriendRequestCancelled => 'Friend request cancelled';
+
+  @override
   String get gameAddFriend => 'Friend';
 
   @override
@@ -3212,6 +3218,36 @@ class L10nEn extends L10n {
 
   @override
   String get friendsRejected => 'Friend request rejected';
+
+  @override
+  String get friendsReceivedSection => 'Received';
+
+  @override
+  String get friendsSentSection => 'Sent';
+
+  @override
+  String get friendsCancelRequest => 'Cancel';
+
+  @override
+  String get friendsSentAgoJustNow => 'Requested just now';
+
+  @override
+  String friendsSentAgoMinutes(int n) {
+    return 'Requested ${n}m ago';
+  }
+
+  @override
+  String friendsSentAgoHours(int n) {
+    return 'Requested ${n}h ago';
+  }
+
+  @override
+  String friendsSentAgoDays(int n) {
+    return 'Requested ${n}d ago';
+  }
+
+  @override
+  String get friendsSentAgoLongAgo => 'Requested over a month ago';
 
   @override
   String get friendsDmEmpty => 'No messages.\nSend the first message!';

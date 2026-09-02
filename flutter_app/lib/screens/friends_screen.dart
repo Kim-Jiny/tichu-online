@@ -8,7 +8,6 @@ import '../utils/friend_order.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
-import '../widgets/profile_avatar.dart';
 import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -43,6 +42,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       _gameService = game;
       game.requestFriends();
       game.requestPendingFriendRequests();
+      game.requestSentFriendRequests();
       game.requestDmConversations();
       game.requestUnreadDmCount();
     });
@@ -558,6 +558,7 @@ class _FriendsScreenState extends State<FriendsScreen>
     final game = context.read<GameService>();
     game.requestFriends();
     game.requestPendingFriendRequests();
+    game.requestSentFriendRequests();
     game.requestDmConversations();
   }
 
@@ -822,10 +823,16 @@ class _FriendsScreenState extends State<FriendsScreen>
         );
       case 'pending_outgoing':
         return chip(
-          null,
+          Icons.close,
           l10n.friendsStatusPendingShort,
           const Color(0xFF1976D2),
           const Color(0xFFE3F2FD),
+          onTap: () {
+            game.cancelFriendRequestAction(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+            );
+          },
         );
       default:
         return chip(
@@ -849,7 +856,9 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _buildRequestsTab() {
     return Consumer<GameService>(
       builder: (context, game, _) {
-        if (game.pendingFriendRequests.isEmpty) {
+        final received = game.pendingFriendRequests;
+        final sent = game.sentFriendRequestsDetailed;
+        if (received.isEmpty && sent.isEmpty) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -872,121 +881,166 @@ class _FriendsScreenState extends State<FriendsScreen>
           );
         }
 
-        return ListView.separated(
+        final l10n = L10n.of(context);
+        // A section label only earns its place once there are two kinds of
+        // request to tell apart — with just one list, the old unlabeled
+        // layout already read fine and a header would be pure clutter.
+        final showLabels = received.isNotEmpty && sent.isNotEmpty;
+        return ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: game.pendingFriendRequests.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final nickname = game.pendingFriendRequests[index];
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFCE93D8).withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  // A friend request has no photo to show yet, so this stands
-                  // in for one — same shape as every other avatar.
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCE93D8),
-                      borderRadius: BorderRadius.circular(
-                        avatarCornerRadius(32),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      nickname.isNotEmpty ? nickname[0] : '?',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      nickname,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF5A4038),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      game.acceptFriendRequest(nickname);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            L10n.of(context).friendsAccepted(nickname),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF81C784),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        L10n.of(context).friendsAccept,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () {
-                      game.rejectFriendRequest(nickname);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(L10n.of(context).friendsRejected),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE57373),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        L10n.of(context).friendsReject,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+          children: [
+            if (received.isNotEmpty) ...[
+              if (showLabels) _buildRequestsSectionLabel(l10n.friendsReceivedSection),
+              for (final nickname in received) ...[
+                _buildReceivedRequestCard(context, game, nickname),
+                const SizedBox(height: 8),
+              ],
+            ],
+            if (sent.isNotEmpty) ...[
+              if (showLabels) ...[
+                const SizedBox(height: 4),
+                _buildRequestsSectionLabel(l10n.friendsSentSection),
+              ],
+              for (final req in sent) ...[
+                _buildSentRequestCard(context, game, req),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildRequestsSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 2),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF9A8E8A),
+        ),
+      ),
+    );
+  }
+
+  Widget _requestActionButton(String label, Color color, VoidCallback onTap) {
+    // Its own tap target, deliberately not the row's — the row opens the
+    // profile (same as everywhere else a person is listed); this is the one
+    // thing on the row that does something else, so it needs a boundary
+    // InkWell's own ripple won't blur into a "the whole card did that" feel.
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Row data for one request, looked up from the server-enriched detail
+  /// list by nickname. Falls back to a bare nickname-only map — the enriched
+  /// fetch can lag a beat behind the plain list (e.g. right after a live
+  /// friend_request_received push) and the row should still render rather
+  /// than disappear or throw.
+  Map<String, dynamic> _requestDetail(List<Map<String, dynamic>> detailed, String nickname) {
+    return detailed.firstWhere(
+      (r) => r['nickname'] == nickname,
+      orElse: () => {'nickname': nickname},
+    );
+  }
+
+  Widget _buildReceivedRequestCard(
+    BuildContext context,
+    GameService game,
+    String nickname,
+  ) {
+    final detail = _requestDetail(game.pendingFriendRequestsDetailed, nickname);
+    final l10n = L10n.of(context);
+    return ProfileIdentityCell(
+      game: game,
+      nickname: nickname,
+      photoUrl: detail['photoUrl'] as String?,
+      bannerKey: detail['bannerKey'] as String?,
+      titleKey: detail['titleKey'] as String?,
+      titleName: detail['titleName'] as String?,
+      level: detail['level'] as int?,
+      onTap: () => showPlayerProfileDialog(context, nickname, game),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _requestActionButton(l10n.friendsAccept, const Color(0xFF81C784), () {
+            game.acceptFriendRequest(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.friendsAccepted(nickname))),
+            );
+          }),
+          const SizedBox(width: 6),
+          _requestActionButton(l10n.friendsReject, const Color(0xFFE57373), () {
+            game.rejectFriendRequest(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.friendsRejected)),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// "3시간 전 요청" — same bucketing as _lastSeenText, different wording:
+  /// this is when a request was sent, not when someone was last online.
+  String _sentAgoText(L10n l10n, dynamic createdAt) {
+    final iso = createdAt?.toString();
+    if (iso == null || iso.isEmpty) return '';
+    final parsed = DateTime.tryParse(iso.endsWith('Z') ? iso : '${iso}Z');
+    if (parsed == null) return '';
+    final bucket = lastSeenBucket(parsed, DateTime.now().toUtc());
+    return switch (bucket.unit) {
+      LastSeenUnit.justNow => l10n.friendsSentAgoJustNow,
+      LastSeenUnit.minutes => l10n.friendsSentAgoMinutes(bucket.amount),
+      LastSeenUnit.hours => l10n.friendsSentAgoHours(bucket.amount),
+      LastSeenUnit.days => l10n.friendsSentAgoDays(bucket.amount),
+      LastSeenUnit.longAgo => l10n.friendsSentAgoLongAgo,
+    };
+  }
+
+  Widget _buildSentRequestCard(
+    BuildContext context,
+    GameService game,
+    Map<String, dynamic> request,
+  ) {
+    final nickname = request['nickname'] as String? ?? '';
+    final l10n = L10n.of(context);
+    final agoText = _sentAgoText(l10n, request['createdAt']);
+    return ProfileIdentityCell(
+      game: game,
+      nickname: nickname,
+      photoUrl: request['photoUrl'] as String?,
+      bannerKey: request['bannerKey'] as String?,
+      titleKey: request['titleKey'] as String?,
+      titleName: request['titleName'] as String?,
+      level: request['level'] as int?,
+      subtitle: agoText.isEmpty ? null : agoText,
+      onTap: () => showPlayerProfileDialog(context, nickname, game),
+      trailing: _requestActionButton(l10n.friendsCancelRequest, const Color(0xFF90A4AE), () {
+        game.cancelFriendRequestAction(nickname);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+        );
+      }),
     );
   }
 

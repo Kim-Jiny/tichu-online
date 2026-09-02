@@ -2703,6 +2703,18 @@ abstract class L10n {
   /// **'Request pending'**
   String get gameRequestPending;
 
+  /// No description provided for @gameCancelFriendRequestTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get gameCancelFriendRequestTooltip;
+
+  /// No description provided for @gameFriendRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend request cancelled'**
+  String get gameFriendRequestCancelled;
+
   /// No description provided for @gameAddFriend.
   ///
   /// In en, this message translates to:
@@ -5804,6 +5816,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Friend request rejected'**
   String get friendsRejected;
+
+  /// No description provided for @friendsReceivedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get friendsReceivedSection;
+
+  /// No description provided for @friendsSentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get friendsSentSection;
+
+  /// No description provided for @friendsCancelRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get friendsCancelRequest;
+
+  /// No description provided for @friendsSentAgoJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested just now'**
+  String get friendsSentAgoJustNow;
+
+  /// No description provided for @friendsSentAgoMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}m ago'**
+  String friendsSentAgoMinutes(int n);
+
+  /// No description provided for @friendsSentAgoHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}h ago'**
+  String friendsSentAgoHours(int n);
+
+  /// No description provided for @friendsSentAgoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested {n}d ago'**
+  String friendsSentAgoDays(int n);
+
+  /// No description provided for @friendsSentAgoLongAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested over a month ago'**
+  String get friendsSentAgoLongAgo;
 
   /// No description provided for @friendsDmEmpty.
   ///

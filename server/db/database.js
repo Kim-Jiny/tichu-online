@@ -2465,6 +2465,29 @@ async function rejectFriendRequest(userNickname, friendNickname) {
   }
 }
 
+// Cancel a request I sent (delete pending row I own as the requester —
+// mirrors rejectFriendRequest, which deletes the same row from the other
+// side's perspective).
+async function cancelFriendRequest(userNickname, friendNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM tc_friends
+       WHERE user_nickname = $1 AND friend_nickname = $2 AND status = 'pending'`,
+      [userNickname, friendNickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, messageKey: 'db_friend_request_not_found' };
+    }
+    return { success: true, messageKey: 'db_friend_request_cancelled' };
+  } catch (err) {
+    console.error('Cancel friend request error:', err);
+    return { success: false, messageKey: 'db_friend_cancel_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 // Remove friend (delete accepted row, both directions)
 async function removeFriend(userNickname, friendNickname) {
   const client = await pool.connect();
@@ -2499,6 +2522,99 @@ async function getPendingFriendRequests(nickname) {
     return result.rows.map(r => r.from_user);
   } catch (err) {
     console.error('Get pending requests error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+/// Same photo/level/banner/title join as getFriendsWithLastSeen, just keyed
+/// off an arbitrary `SELECT nickname[, created_at]` subquery instead of the
+/// friends CTE. A friend-request row deserves the same profile summary a
+/// friends-list row gets — the Requests tab used to draw a bare initial
+/// letter because these two functions returned nothing more than a name.
+async function _enrichRequestRows(client, baseSql, params, locale) {
+  const titleCol = locale === 'en' ? 'name_en'
+    : locale === 'de' ? 'name_de'
+    : 'name_ko';
+  const result = await client.query(
+    `WITH base AS (${baseSql})
+     SELECT base.*, u.level,
+            u.profile_photo_key, u.profile_photo_status,
+            u.profile_photo_expires_at, u.profile_private_hide_photo,
+            u.custom_title_text,
+            e.banner_key, e.title_key,
+            si.${titleCol} AS title_name,
+            EXISTS (
+              SELECT 1 FROM tc_user_items ui
+              JOIN tc_shop_items s2 ON s2.item_key = ui.item_key
+              WHERE ui.nickname = u.nickname AND s2.effect_type = 'custom_title'
+                AND (ui.expires_at IS NULL OR ui.expires_at >= NOW())
+            ) AS has_custom_title
+     FROM base
+     LEFT JOIN tc_users u ON u.nickname = base.nickname
+     LEFT JOIN tc_user_equips e ON e.nickname = base.nickname
+     LEFT JOIN tc_shop_items si ON si.item_key = e.title_key`,
+    params,
+  );
+  return result.rows.map((r) => {
+    const wearingCustom = (r.title_key || '').startsWith('custom:');
+    const customActive = wearingCustom && r.has_custom_title && !!r.custom_title_text;
+    return {
+      nickname: r.nickname,
+      createdAt: r.created_at || null,
+      level: r.level,
+      bannerKey: r.banner_key || null,
+      titleKey: wearingCustom && !customActive ? null : (r.title_key || null),
+      titleName: customActive ? r.custom_title_text : (r.title_name || null),
+      profilePhotoKey: r.profile_photo_key || null,
+      profilePhotoStatus: r.profile_photo_status || 'none',
+      profilePhotoExpiresAt: r.profile_photo_expires_at || null,
+      profilePrivateHidePhoto: r.profile_private_hide_photo === true,
+    };
+  });
+}
+
+// getPendingFriendRequests, with the same profile summary a friends-list row
+// carries. Separate function (rather than changing getPendingFriendRequests
+// itself) because that one's plain string-array shape is relied on elsewhere
+// (searchUsers' pendingIncoming.includes(nick) check).
+async function getPendingFriendRequestsDetailed(nickname, locale = 'ko') {
+  const client = await pool.connect();
+  try {
+    return await _enrichRequestRows(
+      client,
+      `SELECT user_nickname AS nickname, created_at FROM tc_friends
+       WHERE friend_nickname = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [nickname],
+      locale,
+    );
+  } catch (err) {
+    console.error('Get pending requests detailed error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+// Requests I sent that are still waiting on the other side — the mirror of
+// getPendingFriendRequestsDetailed. Includes the same profile summary plus
+// created_at, so the Requests tab can show how long ago each was sent (also
+// what tells someone it might be worth cancelling a stale one).
+async function getSentFriendRequests(nickname, locale = 'ko') {
+  const client = await pool.connect();
+  try {
+    return await _enrichRequestRows(
+      client,
+      `SELECT friend_nickname AS nickname, created_at FROM tc_friends
+       WHERE user_nickname = $1 AND status = 'pending'
+       ORDER BY created_at DESC`,
+      [nickname],
+      locale,
+    );
+  } catch (err) {
+    console.error('Get sent requests detailed error:', err);
     return [];
   } finally {
     client.release();
@@ -12372,8 +12488,11 @@ module.exports = {
   setCustomTitleByAdmin,
   setFeatureEnabled,
   getPendingFriendRequests,
+  getPendingFriendRequestsDetailed,
+  getSentFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,
+  cancelFriendRequest,
   removeFriend,
   saveMatchResult,
   saveMatchResultWithStats,

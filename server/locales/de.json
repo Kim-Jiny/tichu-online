@@ -125,6 +125,8 @@
   "db_friend_accept_failed": "Freundschaftsanfrage konnte nicht angenommen werden",
   "db_friend_rejected": "Freundschaftsanfrage abgelehnt",
   "db_friend_reject_failed": "Freundschaftsanfrage konnte nicht abgelehnt werden",
+  "db_friend_request_cancelled": "Freundschaftsanfrage zurückgezogen",
+  "db_friend_cancel_failed": "Freundschaftsanfrage konnte nicht zurückgezogen werden",
   "db_friend_not_found": "Freund nicht gefunden",
   "db_friend_removed": "Freund entfernt",
   "db_friend_remove_failed": "Freund konnte nicht entfernt werden",

@@ -323,6 +323,31 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_key VARCHAR(255)`);        // minio object key (NULL = default avatar)
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_expires_at TIMESTAMP`);    // 7-day item expiry (NULL = inactive)
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS profile_photo_status VARCHAR(20) DEFAULT 'none'`); // none | active
+
+    // Photos rejected by SafeSearch screening on upload. Before this, a
+    // reject just threw image_rejected and the buffer was dropped — the only
+    // trace was a console log line, so an admin could see "who got rejected"
+    // but never what the image actually was. Kept in the same bucket as
+    // active profile photos, under a rejected/ prefix, so publicUrl() works
+    // unchanged.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_photo_rejections (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        nickname VARCHAR(50) NOT NULL,
+        image_key VARCHAR(255) NOT NULL,
+        worst VARCHAR(20),
+        adult_score VARCHAR(20),
+        racy_score VARCHAR(20),
+        violence_score VARCHAR(20),
+        labels TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_photo_rejections_created
+      ON tc_photo_rejections (created_at DESC)
+    `);
     // Profile privacy: the entitlement itself is an ordinary feature item in
     // tc_user_items (effect_type 'profile_private'); only the owner's choice of
     // how far it reaches lives here.
@@ -6233,6 +6258,54 @@ async function listActiveProfilePhotos({ page = 1, limit = 24 } = {}) {
   } catch (err) {
     console.error('List active profile photos error:', err);
     return { success: false, photos: [], total: 0, page, limit };
+  } finally {
+    client.release();
+  }
+}
+
+// Best-effort — a screening record is diagnostic, never worth failing the
+// upload response (which has already sent image_rejected) over.
+async function recordPhotoRejection({ userId, nickname, imageKey, worst, scores, labels }) {
+  try {
+    await pool.query(
+      `INSERT INTO tc_photo_rejections
+         (user_id, nickname, image_key, worst, adult_score, racy_score, violence_score, labels)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        userId, nickname, imageKey, worst || null,
+        scores?.adult || null, scores?.racy || null, scores?.violence || null,
+        (labels && labels.length) ? labels.join(', ') : null,
+      ],
+    );
+  } catch (err) {
+    console.error('Record photo rejection error:', err);
+  }
+}
+
+// Rejected-photo history for admin review, newest first.
+async function getPhotoRejections({ page = 1, limit = 24 } = {}) {
+  const client = await pool.connect();
+  try {
+    const offset = (page - 1) * limit;
+    const totalRes = await client.query('SELECT COUNT(*) FROM tc_photo_rejections');
+    const rows = await client.query(
+      `SELECT id, user_id, nickname, image_key, worst,
+              adult_score, racy_score, violence_score, labels, created_at
+       FROM tc_photo_rejections
+       ORDER BY created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset],
+    );
+    return {
+      success: true,
+      rejections: rows.rows,
+      total: parseInt(totalRes.rows[0].count, 10),
+      page,
+      limit,
+    };
+  } catch (err) {
+    console.error('Get photo rejections error:', err);
+    return { success: false, rejections: [], total: 0, page, limit };
   } finally {
     client.release();
   }
@@ -12372,6 +12445,8 @@ module.exports = {
   getReportedTitles,
   isPhotoKeyReported,
   listActiveProfilePhotos,
+  recordPhotoRejection,
+  getPhotoRejections,
   getActiveSeason,
   createSeason,
   getSeasons,

@@ -62,4 +62,19 @@ async function deleteProfilePhoto(key) {
   try { await client.removeObject(BUCKET, key); } catch (_) { /* best-effort */ }
 }
 
-module.exports = { isEnabled, uploadProfilePhoto, deleteProfilePhoto, publicUrl, BUCKET };
+// A rejected/ prefix in the same bucket keeps publicUrl() and the nginx
+// /media/profile-photos/ route working unchanged for the admin review page —
+// it's just another key, never linked from anywhere a player can reach.
+async function uploadRejectedPhoto(userId, buffer, mimeType) {
+  if (!client) throw new Error('minio not configured');
+  const ext = mimeType === 'image/png' ? 'png'
+    : mimeType === 'image/webp' ? 'webp'
+    : 'jpg';
+  const key = `rejected/${userId}/${Date.now()}.${ext}`;
+  await client.putObject(BUCKET, key, buffer, buffer.length, { 'Content-Type': mimeType });
+  return { key, url: publicUrl(key) };
+}
+
+module.exports = {
+  isEnabled, uploadProfilePhoto, uploadRejectedPhoto, deleteProfilePhoto, publicUrl, BUCKET,
+};

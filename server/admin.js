@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getAppVersionsInUse, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
@@ -660,6 +660,7 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
     <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
     <a href="/tc-backstage/profile-photos" class="${activePage === 'profile-photos' ? 'active' : ''}" onclick="closeSidebar()">프로필사진</a>
+    <a href="/tc-backstage/photo-rejections" class="${activePage === 'photo-rejections' ? 'active' : ''}" onclick="closeSidebar()">리젝 사진</a>
     <a href="/tc-backstage/filler-rooms" class="${activePage === 'filler-rooms' ? 'active' : ''}" onclick="closeSidebar()">봇방</a>
     <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
     <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
@@ -3982,6 +3983,62 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? '정리 기능을 쓸 수 없습니다 (스토리지 미설정).'
       : `${formatNumber(r.cleared || 0)}건 정리했습니다.`;
     return redirect(res, '/tc-backstage/profile-photos?msg=' + encodeURIComponent(msg));
+  }
+
+  if (pathname === '/tc-backstage/photo-rejections' && method === 'GET') {
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const LIMIT = 24;
+    const data = await getPhotoRejections({ page, limit: LIMIT });
+
+    // Vision's five-step scale, worst first — same order visionSafeSearch.js
+    // ranks by, so a glance at the badge row tells you what actually tripped it.
+    const SCORE_COLOR = {
+      VERY_LIKELY: '#c62828', LIKELY: '#e65100', POSSIBLE: '#f9a825',
+      UNLIKELY: '#9e9e9e', VERY_UNLIKELY: '#9e9e9e', UNKNOWN: '#9e9e9e',
+    };
+    const scoreBadge = (label, value) => {
+      if (!value) return '';
+      const color = SCORE_COLOR[value] || '#9e9e9e';
+      return `<span class="badge" style="background:${color}1a;color:${color};margin-right:4px">${label} ${value}</span>`;
+    };
+
+    const cards = data.rejections.map((r) => {
+      const photoUrl = minioClient.publicUrl(r.image_key);
+      const userUrl = `/tc-backstage/users/${encodeURIComponent(r.nickname)}`;
+      return `
+      <div style="border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;background:#fff">
+        <a href="${escapeHtml(photoUrl)}" target="_blank" rel="noopener">
+          <img src="${escapeHtml(photoUrl)}" alt="" loading="lazy"
+               style="width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#f4f4f4">
+        </a>
+        <div style="padding:10px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <a href="${userUrl}" style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.nickname)}</a>
+            ${r.worst ? `<span class="badge" style="background:#ffebee;color:#c62828">worst: ${escapeHtml(r.worst)}</span>` : ''}
+          </div>
+          <div style="margin-bottom:6px">
+            ${scoreBadge('adult', r.adult_score)}
+            ${scoreBadge('racy', r.racy_score)}
+            ${scoreBadge('violence', r.violence_score)}
+          </div>
+          ${r.labels ? `<div class="muted" style="font-size:11px;margin-bottom:4px">라벨: ${escapeHtml(r.labels)}</div>` : ''}
+          <div class="muted" style="font-size:11px">${formatDate(r.created_at)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const content = `
+      <h1 class="page-title">리젝 사진 (${formatNumber(data.total)})</h1>
+      <div class="muted" style="margin-bottom:12px">
+        업로드 시 SafeSearch 스크리닝에서 거부된 사진입니다. 유저에게는 노출된 적 없고,
+        여기서만 사유(worst)와 점수를 함께 볼 수 있습니다. 최신순입니다.
+      </div>
+      ${data.rejections.length === 0
+        ? '<div class="empty">리젝된 사진이 없습니다</div>'
+        : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">${cards}</div>`}
+      ${pagination(data.page, data.total, data.limit, '/tc-backstage/photo-rejections')}
+    `;
+    return html(res, layout('리젝 사진', content, 'photo-rejections'));
   }
 
   if (pathname === '/tc-backstage/reports' && method === 'GET') {

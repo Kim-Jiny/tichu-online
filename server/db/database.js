@@ -2440,6 +2440,29 @@ async function rejectFriendRequest(userNickname, friendNickname) {
   }
 }
 
+// Cancel a request I sent (delete pending row I own as the requester —
+// mirrors rejectFriendRequest, which deletes the same row from the other
+// side's perspective).
+async function cancelFriendRequest(userNickname, friendNickname) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM tc_friends
+       WHERE user_nickname = $1 AND friend_nickname = $2 AND status = 'pending'`,
+      [userNickname, friendNickname]
+    );
+    if (result.rowCount === 0) {
+      return { success: false, messageKey: 'db_friend_request_not_found' };
+    }
+    return { success: true, messageKey: 'db_friend_request_cancelled' };
+  } catch (err) {
+    console.error('Cancel friend request error:', err);
+    return { success: false, messageKey: 'db_friend_cancel_failed' };
+  } finally {
+    client.release();
+  }
+}
+
 // Remove friend (delete accepted row, both directions)
 async function removeFriend(userNickname, friendNickname) {
   const client = await pool.connect();
@@ -12301,6 +12324,7 @@ module.exports = {
   getPendingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,
+  cancelFriendRequest,
   removeFriend,
   saveMatchResult,
   saveMatchResultWithStats,

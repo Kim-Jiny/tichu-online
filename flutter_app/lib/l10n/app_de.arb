@@ -446,6 +446,8 @@
   "gameAlreadyFriend": "Freund",
   "gameAlreadyFriendToast": "Ihr seid bereits befreundet",
   "gameRequestPending": "Anfrage ausstehend",
+  "gameCancelFriendRequestTooltip": "Anfrage zurückziehen",
+  "gameFriendRequestCancelled": "Freundschaftsanfrage zurückgezogen",
   "gameAddFriend": "Freund",
   "gameFriendRequestSent": "Freundschaftsanfrage gesendet",
   "gameUnblock": "Entsperren",

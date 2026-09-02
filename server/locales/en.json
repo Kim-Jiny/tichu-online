@@ -122,6 +122,8 @@
   "db_friend_accept_failed": "Failed to accept friend request",
   "db_friend_rejected": "Friend request rejected",
   "db_friend_reject_failed": "Failed to reject friend request",
+  "db_friend_request_cancelled": "Friend request cancelled",
+  "db_friend_cancel_failed": "Failed to cancel friend request",
   "db_friend_not_found": "Friend not found",
   "db_friend_removed": "Friend removed",
   "db_friend_remove_failed": "Failed to remove friend",

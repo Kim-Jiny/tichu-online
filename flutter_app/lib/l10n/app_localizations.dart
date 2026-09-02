@@ -2703,6 +2703,18 @@ abstract class L10n {
   /// **'Request pending'**
   String get gameRequestPending;
 
+  /// No description provided for @gameCancelFriendRequestTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get gameCancelFriendRequestTooltip;
+
+  /// No description provided for @gameFriendRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend request cancelled'**
+  String get gameFriendRequestCancelled;
+
   /// No description provided for @gameAddFriend.
   ///
   /// In en, this message translates to:

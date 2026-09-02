@@ -1453,6 +1453,12 @@ class L10nDe extends L10n {
   String get gameRequestPending => 'Anfrage ausstehend';
 
   @override
+  String get gameCancelFriendRequestTooltip => 'Anfrage zurückziehen';
+
+  @override
+  String get gameFriendRequestCancelled => 'Freundschaftsanfrage zurückgezogen';
+
+  @override
   String get gameAddFriend => 'Freund';
 
   @override

@@ -436,6 +436,8 @@
   "gameAlreadyFriend": "친구",
   "gameAlreadyFriendToast": "이미 친구입니다",
   "gameRequestPending": "요청 중",
+  "gameCancelFriendRequestTooltip": "요청 취소",
+  "gameFriendRequestCancelled": "친구 요청을 취소했습니다",
   "gameAddFriend": "친구",
   "gameFriendRequestSent": "친구 요청을 보냈습니다",
   "gameUnblock": "해제",

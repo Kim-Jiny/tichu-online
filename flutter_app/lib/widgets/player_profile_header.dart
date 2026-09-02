@@ -342,9 +342,15 @@ class PlayerProfileHeader extends StatelessWidget {
       return _iconButton(
         icon: Icons.hourglass_top,
         color: const Color(0xFFBDBDBD),
-        tooltip: l10n.gameRequestPending,
+        tooltip: l10n.gameCancelFriendRequestTooltip,
         onBanner: onBanner,
-        onTap: () {},
+        onTap: () {
+          final messenger = ScaffoldMessenger.of(context);
+          game.cancelFriendRequestAction(nickname);
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+          );
+        },
       );
     }
     return _iconButton(

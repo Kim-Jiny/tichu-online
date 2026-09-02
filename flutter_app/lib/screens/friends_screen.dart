@@ -822,10 +822,16 @@ class _FriendsScreenState extends State<FriendsScreen>
         );
       case 'pending_outgoing':
         return chip(
-          null,
+          Icons.close,
           l10n.friendsStatusPendingShort,
           const Color(0xFF1976D2),
           const Color(0xFFE3F2FD),
+          onTap: () {
+            game.cancelFriendRequestAction(nickname);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+            );
+          },
         );
       default:
         return chip(

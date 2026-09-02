@@ -784,6 +784,8 @@
   "gameAlreadyFriend": "Friend",
   "gameAlreadyFriendToast": "You are already friends",
   "gameRequestPending": "Request pending",
+  "gameCancelFriendRequestTooltip": "Cancel request",
+  "gameFriendRequestCancelled": "Friend request cancelled",
   "gameAddFriend": "Friend",
   "gameFriendRequestSent": "Friend request sent",
   "gameUnblock": "Unblock",

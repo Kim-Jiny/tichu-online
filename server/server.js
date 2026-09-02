@@ -23,7 +23,7 @@ const {
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
   addFriend, getFriends, getFriendsWithLastSeen, touchLastSeen, getPendingFriendRequests, setProfilePrivateHidePhoto,
   unequipCategory, setCustomTitle, clearCustomTitle, setFeatureEnabled,
-  acceptFriendRequest, rejectFriendRequest, removeFriend,
+  acceptFriendRequest, rejectFriendRequest, cancelFriendRequest, removeFriend,
   saveMatchResult, saveMatchResultWithStats, updateUserStats, getUserProfile, getRecentMatches, updateCardViewPref,
   submitInquiry, getUserInquiries, markInquiriesRead, getRankings,
   redeemCoupon, normalizeCouponCode,
@@ -3614,6 +3614,9 @@ async function handleMessage(ws, data) {
       break;
     case 'reject_friend_request':
       await handleRejectFriendRequest(ws, data);
+      break;
+    case 'cancel_friend_request':
+      await handleCancelFriendRequest(ws, data);
       break;
     case 'remove_friend':
       await handleRemoveFriend(ws, data);
@@ -10673,6 +10676,26 @@ async function handleRejectFriendRequest(ws, data) {
   if (!nickname) return;
   const result = await rejectFriendRequest(ws.nickname, nickname);
   sendTo(ws, { type: 'friend_request_result', action: 'reject', nickname, success: result.success });
+}
+
+// Cancel a request I sent, before the other side accepts/rejects it.
+async function handleCancelFriendRequest(ws, data) {
+  if (!ws.nickname) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'login_required') });
+    return;
+  }
+  const nickname = data.nickname;
+  if (!nickname) return;
+  const result = await cancelFriendRequest(ws.nickname, nickname);
+  sendTo(ws, { type: 'friend_request_result', action: 'cancel', nickname, success: result.success });
+  // Symmetric to friend_request_received: if they're online, their pending
+  // (incoming) list should drop it live rather than waiting on a refresh.
+  if (result.success) {
+    const targetWs = findWsByNickname(nickname);
+    if (targetWs) {
+      sendTo(targetWs, { type: 'friend_request_cancelled', nickname: ws.nickname });
+    }
+  }
 }
 
 // Remove friend handler

@@ -1443,6 +1443,12 @@ class L10nEn extends L10n {
   String get gameRequestPending => 'Request pending';
 
   @override
+  String get gameCancelFriendRequestTooltip => 'Cancel request';
+
+  @override
+  String get gameFriendRequestCancelled => 'Friend request cancelled';
+
+  @override
   String get gameAddFriend => 'Friend';
 
   @override

@@ -1961,6 +1961,18 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'friend_request_cancelled':
+        // Someone withdrew a request they'd sent us — drop it from our
+        // incoming list the same way accept/reject would once we acted on
+        // it, except nobody here did anything.
+        final cancelledFrom = data['nickname'] as String? ?? '';
+        if (cancelledFrom.isNotEmpty &&
+            pendingFriendRequests.remove(cancelledFrom)) {
+          pendingFriendRequestCount = pendingFriendRequests.length;
+        }
+        notifyListeners();
+        break;
+
       case 'friend_removed':
         final removedNick = data['nickname'] as String? ?? '';
         if (removedNick.isNotEmpty) {
@@ -4539,6 +4551,21 @@ class GameService extends ChangeNotifier {
 
   void rejectFriendRequest(String nickname) {
     _network.send({'type': 'reject_friend_request', 'nickname': nickname});
+  }
+
+  /// Withdraw a request I sent, before the other side acts on it. Mirrors
+  /// addFriendAction's optimistic update — flips sentFriendRequests and any
+  /// matching search result back immediately rather than waiting on a round
+  /// trip, so the button reverts to "add friend" right away.
+  void cancelFriendRequestAction(String nickname) {
+    _network.send({'type': 'cancel_friend_request', 'nickname': nickname});
+    sentFriendRequests.remove(nickname);
+    for (final user in searchResults) {
+      if (user['nickname'] == nickname && user['friendStatus'] == 'pending_outgoing') {
+        user['friendStatus'] = 'none';
+      }
+    }
+    notifyListeners();
   }
 
   void removeFriendAction(String nickname) {

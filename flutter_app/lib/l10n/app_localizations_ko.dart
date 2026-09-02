@@ -1411,6 +1411,12 @@ class L10nKo extends L10n {
   String get gameRequestPending => '요청 중';
 
   @override
+  String get gameCancelFriendRequestTooltip => '요청 취소';
+
+  @override
+  String get gameFriendRequestCancelled => '친구 요청을 취소했습니다';
+
+  @override
   String get gameAddFriend => '친구';
 
   @override

@@ -2314,6 +2314,7 @@
   "goldHistoryShopPurchase": "Shop purchase",
   "goldHistoryIapPurchase": "Gold top-up",
   "goldHistoryAttendance": "Daily check-in",
+  "goldHistoryPushCampaign": "Push event reward",
   "attendanceBannerTitle": "Check-in: Day {day}",
   "@attendanceBannerTitle": {
     "placeholders": {

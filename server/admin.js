@@ -901,7 +901,7 @@ function renderGoldHistoryTable(history) {
                 shop_purchase: '상점',
                 mail: '우편함',
                 coupon: '쿠폰',
-                push_campaign: '캠페인',
+                push_campaign: '이벤트',
                 attendance: '출석',
                 iap: '결제',
                 iap_refund: '환불',
@@ -909,10 +909,17 @@ function renderGoldHistoryTable(history) {
                 admin_adjust: '어드민',
               };
               const sourceLabel = sourceMap[item.source] || item.source || '-';
+              // A push campaign's title is whatever text the admin wrote for
+              // that specific send — useful in the campaign list, but a wall
+              // of one-off marketing copy in a gold ledger reads as noise.
+              // The badge already says the category; this just names it.
+              const contentLabel = item.source === 'push_campaign'
+                ? '푸시이벤트 보상'
+                : (item.title || '-');
               return `<tr>
                 <td style="font-size:12px;color:#888">${formatDate(item.createdAt)}</td>
                 <td><span class="badge" style="background:${positive ? '#e8f5e9' : '#fff3e0'};color:${positive ? '#2e7d32' : '#ef6c00'}">${escapeHtml(sourceLabel)}</span></td>
-                <td style="font-weight:600">${escapeHtml(item.title || '-')}</td>
+                <td style="font-weight:600">${escapeHtml(contentLabel)}</td>
                 <td style="font-size:12px;color:#666">${escapeHtml(item.description || '-')}</td>
                 <td style="font-weight:700;color:${positive ? '#2e7d32' : '#ef6c00'}">${positive ? '+' : ''}${delta.toLocaleString()}</td>
               </tr>`;

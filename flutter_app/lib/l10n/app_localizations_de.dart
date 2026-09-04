@@ -4138,6 +4138,9 @@ class L10nDe extends L10n {
   String get goldHistoryAttendance => 'Tägliche Anwesenheit';
 
   @override
+  String get goldHistoryPushCampaign => 'Push-Event-Belohnung';
+
+  @override
   String attendanceBannerTitle(int day) {
     return 'Anwesenheit: Tag $day';
   }

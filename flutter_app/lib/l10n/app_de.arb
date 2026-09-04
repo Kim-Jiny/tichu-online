@@ -1239,6 +1239,7 @@
   "goldHistoryShopPurchase": "Shop-Kauf",
   "goldHistoryIapPurchase": "Gold-Aufladung",
   "goldHistoryAttendance": "Tägliche Anwesenheit",
+  "goldHistoryPushCampaign": "Push-Event-Belohnung",
   "attendanceBannerTitle": "Anwesenheit: Tag {day}",
   "@attendanceBannerTitle": {
     "placeholders": {

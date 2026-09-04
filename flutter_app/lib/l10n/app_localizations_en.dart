@@ -4102,6 +4102,9 @@ class L10nEn extends L10n {
   String get goldHistoryAttendance => 'Daily check-in';
 
   @override
+  String get goldHistoryPushCampaign => 'Push event reward';
+
+  @override
   String attendanceBannerTitle(int day) {
     return 'Check-in: Day $day';
   }

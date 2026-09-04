@@ -1422,6 +1422,7 @@
   "goldHistoryShopPurchase": "상점 구매",
   "goldHistoryIapPurchase": "골드 충전",
   "goldHistoryAttendance": "출석 보상",
+  "goldHistoryPushCampaign": "푸시 이벤트 보상",
   "attendanceBannerTitle": "오늘의 출석! {day}일차",
   "@attendanceBannerTitle": {
     "placeholders": {

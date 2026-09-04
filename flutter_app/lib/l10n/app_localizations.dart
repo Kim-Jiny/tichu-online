@@ -7305,6 +7305,12 @@ abstract class L10n {
   /// **'Daily check-in'**
   String get goldHistoryAttendance;
 
+  /// No description provided for @goldHistoryPushCampaign.
+  ///
+  /// In en, this message translates to:
+  /// **'Push event reward'**
+  String get goldHistoryPushCampaign;
+
   /// No description provided for @attendanceBannerTitle.
   ///
   /// In en, this message translates to:

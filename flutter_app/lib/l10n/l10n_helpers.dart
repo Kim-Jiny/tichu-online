@@ -239,6 +239,10 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
     // desc holds 'mail:<id>' — an internal handle, useless to the reader.
     case 'mail':
       return l10n.goldHistoryMailClaimed;
+    // desc holds 'campaign:<id>' — same story, and the title above it is
+    // already the specific push text, so this line just names the category.
+    case 'push_campaign':
+      return l10n.goldHistoryPushCampaign;
     default:
       return desc;
   }

@@ -4002,6 +4002,9 @@ class L10nKo extends L10n {
   String get goldHistoryAttendance => '출석 보상';
 
   @override
+  String get goldHistoryPushCampaign => '푸시 이벤트 보상';
+
+  @override
   String attendanceBannerTitle(int day) {
     return '오늘의 출석! $day일차';
   }

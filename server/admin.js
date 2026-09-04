@@ -896,6 +896,7 @@ function renderGoldHistoryTable(history) {
               // how a new one announces itself here.
               const sourceMap = {
                 match: '게임',
+                mighty_match: '마이티',
                 ad_reward: '광고',
                 season_reward: '시즌',
                 shop_purchase: '상점',

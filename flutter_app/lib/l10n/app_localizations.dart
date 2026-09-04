@@ -7461,6 +7461,36 @@ abstract class L10n {
   /// **'Skull King casual loss'**
   String get goldHistorySkCasualLoss;
 
+  /// No description provided for @goldHistoryMightyLeaveDefeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty desertion loss'**
+  String get goldHistoryMightyLeaveDefeat;
+
+  /// No description provided for @goldHistoryMightyRankedWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty ranked win'**
+  String get goldHistoryMightyRankedWin;
+
+  /// No description provided for @goldHistoryMightyCasualWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty casual win'**
+  String get goldHistoryMightyCasualWin;
+
+  /// No description provided for @goldHistoryMightyRankedLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty ranked loss'**
+  String get goldHistoryMightyRankedLoss;
+
+  /// No description provided for @goldHistoryMightyCasualLoss.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty casual loss'**
+  String get goldHistoryMightyCasualLoss;
+
   /// No description provided for @goldHistoryAdminGrant.
   ///
   /// In en, this message translates to:

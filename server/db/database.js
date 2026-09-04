@@ -3702,6 +3702,36 @@ async function getGoldHistory(nickname, limit = 30, offset = 0) {
 
         UNION ALL
 
+        -- Mighty never got this branch when it was added — saveMightyMatchResultWithStats
+        -- updates tc_users.gold directly (same as every other game type) but nothing
+        -- ever reconstructed those wins/losses into the ledger, so a Mighty win was
+        -- real gold with no visible reason for it. Mirrors the sk_match/ll_match
+        -- shape above; tc_mighty_match_players has no is_draw column (draws are a
+        -- desertion side effect, not a real game outcome), so a desertion's
+        -- non-deserter side is reconstructed as 0 gold the same way the save path
+        -- computes it (isDraw skips the gold update entirely) and gets filtered
+        -- out below same as every other zero-delta row.
+        SELECT
+          h.created_at,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') THEN 0
+            WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+            ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+          END AS gold_delta,
+          'mighty_match' AS source,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN 'mighty_leave_defeat'
+            WHEN h.end_reason IN ('leave', 'timeout') THEN 'mighty_draw'
+            WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 'mighty_ranked_win' ELSE 'mighty_casual_win' END
+            ELSE CASE WHEN h.is_ranked THEN 'mighty_ranked_loss' ELSE 'mighty_casual_loss' END
+          END AS title,
+          CONCAT(p.rank, ':', p.score) AS description
+        FROM tc_mighty_match_players p
+        JOIN tc_mighty_match_history h ON h.id = p.match_id
+        WHERE p.nickname = $1
+
+        UNION ALL
+
         SELECT
           ui.acquired_at AS created_at,
           -si.price AS gold_delta,

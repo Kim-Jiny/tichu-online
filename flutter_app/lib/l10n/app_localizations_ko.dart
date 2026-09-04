@@ -4098,6 +4098,21 @@ class L10nKo extends L10n {
   String get goldHistorySkCasualLoss => '스컬킹 일반전 패배';
 
   @override
+  String get goldHistoryMightyLeaveDefeat => '마이티 탈주 패배';
+
+  @override
+  String get goldHistoryMightyRankedWin => '마이티 랭크전 승리';
+
+  @override
+  String get goldHistoryMightyCasualWin => '마이티 일반전 승리';
+
+  @override
+  String get goldHistoryMightyRankedLoss => '마이티 랭크전 패배';
+
+  @override
+  String get goldHistoryMightyCasualLoss => '마이티 일반전 패배';
+
+  @override
   String get goldHistoryAdminGrant => '관리자 지급';
 
   @override

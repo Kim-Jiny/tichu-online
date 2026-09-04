@@ -4236,6 +4236,21 @@ class L10nDe extends L10n {
   String get goldHistorySkCasualLoss => 'Skull King Casual-Niederlage';
 
   @override
+  String get goldHistoryMightyLeaveDefeat => 'Mighty Verlassen-Niederlage';
+
+  @override
+  String get goldHistoryMightyRankedWin => 'Mighty Rangliste-Sieg';
+
+  @override
+  String get goldHistoryMightyCasualWin => 'Mighty Casual-Sieg';
+
+  @override
+  String get goldHistoryMightyRankedLoss => 'Mighty Rangliste-Niederlage';
+
+  @override
+  String get goldHistoryMightyCasualLoss => 'Mighty Casual-Niederlage';
+
+  @override
   String get goldHistoryAdminGrant => 'Admin-Zuweisung';
 
   @override

@@ -4201,6 +4201,21 @@ class L10nEn extends L10n {
   String get goldHistorySkCasualLoss => 'Skull King casual loss';
 
   @override
+  String get goldHistoryMightyLeaveDefeat => 'Mighty desertion loss';
+
+  @override
+  String get goldHistoryMightyRankedWin => 'Mighty ranked win';
+
+  @override
+  String get goldHistoryMightyCasualWin => 'Mighty casual win';
+
+  @override
+  String get goldHistoryMightyRankedLoss => 'Mighty ranked loss';
+
+  @override
+  String get goldHistoryMightyCasualLoss => 'Mighty casual loss';
+
+  @override
   String get goldHistoryAdminGrant => 'Admin grant';
 
   @override

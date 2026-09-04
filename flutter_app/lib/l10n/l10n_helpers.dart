@@ -187,6 +187,21 @@ String localizeGoldTitle(String? title, String? source, L10n l10n, String locale
       return l10n.goldHistorySkRankedLoss;
     case 'sk_casual_loss':
       return l10n.goldHistorySkCasualLoss;
+    case 'mighty_leave_defeat':
+      return l10n.goldHistoryMightyLeaveDefeat;
+    case 'mighty_ranked_win':
+      return l10n.goldHistoryMightyRankedWin;
+    case 'mighty_casual_win':
+      return l10n.goldHistoryMightyCasualWin;
+    case 'mighty_ranked_loss':
+      return l10n.goldHistoryMightyRankedLoss;
+    case 'mighty_casual_loss':
+      return l10n.goldHistoryMightyCasualLoss;
+    // Desertion's non-deserter side — reconstructed at 0 gold and filtered
+    // out server-side same as every other zero-delta row, but the case
+    // exists so an unfiltered read never falls through with a raw key.
+    case 'mighty_draw':
+      return l10n.goldHistoryDraw;
     // A confirmed bank transfer is a purchase, not a hand-out — the player's
     // history says so rather than reading like an admin adjustment.
     case 'bank_deposit_grant':
@@ -222,6 +237,7 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
       return l10n.goldHistorySeasonRank(desc);
     case 'sk_match':
     case 'll_match':
+    case 'mighty_match':
       // desc is "rank:score"
       final parts = desc.split(':');
       if (parts.length == 2) {

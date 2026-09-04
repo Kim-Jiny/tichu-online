@@ -6,7 +6,7 @@ const {
   getReports, getReportGroup, updateReportGroupStatus,
   getUsers, getAppVersionsInUse, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
-  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, deletePhotoRejection, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
@@ -3989,6 +3989,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
     const LIMIT = 24;
     const data = await getPhotoRejections({ page, limit: LIMIT });
+    const back = `/tc-backstage/photo-rejections${page > 1 ? `?page=${page}` : ''}`;
 
     // Vision's five-step scale, worst first — same order visionSafeSearch.js
     // ranks by, so a glance at the badge row tells you what actually tripped it.
@@ -4023,6 +4024,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </div>
           ${r.labels ? `<div class="muted" style="font-size:11px;margin-bottom:4px">라벨: ${escapeHtml(r.labels)}</div>` : ''}
           <div class="muted" style="font-size:11px">${formatDate(r.created_at)}</div>
+          <form method="POST" action="/tc-backstage/photo-rejections/${r.id}/delete?back=${encodeURIComponent(back)}"
+                style="margin-top:8px"
+                onsubmit="return confirm('이 리젝 기록과 이미지를 삭제하시겠습니까?')">
+            <button type="submit" class="btn btn-secondary" style="width:100%;color:#c62828;border-color:#f0c0c0">삭제</button>
+          </form>
         </div>
       </div>`;
     }).join('');
@@ -4039,6 +4045,19 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ${pagination(data.page, data.total, data.limit, '/tc-backstage/photo-rejections')}
     `;
     return html(res, layout('리젝 사진', content, 'photo-rejections'));
+  }
+
+  const deleteRejectionMatch = pathname.match(/^\/tc-backstage\/photo-rejections\/(\d+)\/delete$/);
+  if (deleteRejectionMatch && method === 'POST') {
+    const id = parseInt(deleteRejectionMatch[1], 10);
+    const result = await deletePhotoRejection(id);
+    // Never shown to a player and no report system tracks it, unlike an
+    // active profile photo — nothing else could still need this object.
+    if (result.success && result.imageKey) {
+      minioClient.deleteProfilePhoto(result.imageKey); // best-effort, don't await
+    }
+    const back = url.searchParams.get('back') || '/tc-backstage/photo-rejections';
+    return redirect(res, back);
   }
 
   if (pathname === '/tc-backstage/reports' && method === 'GET') {

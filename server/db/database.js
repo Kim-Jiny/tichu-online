@@ -6427,6 +6427,23 @@ async function getPhotoRejections({ page = 1, limit = 24 } = {}) {
   }
 }
 
+// Drop one rejection record — the reviewer has seen what it was, no reason
+// to keep the image and its scores around after that. Returns the image_key
+// so the caller can also remove the object from storage.
+async function deletePhotoRejection(id) {
+  try {
+    const result = await pool.query(
+      `DELETE FROM tc_photo_rejections WHERE id = $1 RETURNING image_key`,
+      [id],
+    );
+    if (result.rowCount === 0) return { success: false };
+    return { success: true, imageKey: result.rows[0].image_key };
+  } catch (err) {
+    console.error('Delete photo rejection error:', err);
+    return { success: false };
+  }
+}
+
 async function adminClearProfilePhoto(nickname) {
   const client = await pool.connect();
   try {
@@ -12566,6 +12583,7 @@ module.exports = {
   listActiveProfilePhotos,
   recordPhotoRejection,
   getPhotoRejections,
+  deletePhotoRejection,
   getActiveSeason,
   createSeason,
   getSeasons,

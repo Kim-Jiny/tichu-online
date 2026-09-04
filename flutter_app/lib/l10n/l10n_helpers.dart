@@ -195,6 +195,12 @@ String localizeGoldTitle(String? title, String? source, L10n l10n, String locale
       return l10n.goldHistoryAdminGrant;
     case 'admin_deduct':
       return l10n.goldHistoryAdminDeduct;
+    // title is whatever marketing copy the admin wrote for that specific
+    // send ("🎉가을맞이 특가!🎉") — fine as a push notification, but not
+    // as a ledger line. Show the category instead, same as every other
+    // source here; only the description below still varies per source.
+    case 'push_campaign':
+      return l10n.goldHistoryPushCampaign;
     default:
       return title; // fallback for legacy/unrecognized entries
   }

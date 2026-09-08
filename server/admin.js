@@ -896,6 +896,8 @@ function renderGoldHistoryTable(history) {
               // how a new one announces itself here.
               const sourceMap = {
                 match: '게임',
+                sk_match: '스컬킹',
+                ll_match: '러브레터',
                 mighty_match: '마이티',
                 ad_reward: '광고',
                 season_reward: '시즌',
@@ -910,13 +912,33 @@ function renderGoldHistoryTable(history) {
                 admin_adjust: '어드민',
               };
               const sourceLabel = sourceMap[item.source] || item.source || '-';
-              // A push campaign's title is whatever text the admin wrote for
-              // that specific send — useful in the campaign list, but a wall
-              // of one-off marketing copy in a gold ledger reads as noise.
-              // The badge already says the category; this just names it.
-              const contentLabel = item.source === 'push_campaign'
-                ? '푸시이벤트 보상'
-                : (item.title || '-');
+              // Mirrors localizeGoldTitle on the client (l10n_helpers.dart) —
+              // same title keys, same idea, one language. A raw key like
+              // "mighty_casual_loss" is fine as a value to match on, but
+              // nobody reading this table wants to decode it by hand.
+              const titleMap = {
+                leave_defeat: '탈주 패배', ranked_win: '랭크전 승리', casual_win: '일반전 승리',
+                draw: '무승부 종료', ranked_loss: '랭크전 패배', casual_loss: '일반전 패배',
+                ad_reward: '광고 보상', season_reward: '시즌 보상', shop_purchase: '상점 구매',
+                iap_purchase: '골드 충전', iap_refund: '골드 환불', attendance: '출석 보상',
+                sk_leave_defeat: '스컬킹 탈주 패배', sk_ranked_win: '스컬킹 랭크전 승리',
+                sk_casual_win: '스컬킹 일반전 승리', sk_ranked_loss: '스컬킹 랭크전 패배',
+                sk_casual_loss: '스컬킹 일반전 패배',
+                ll_leave_defeat: '러브레터 탈주 패배', ll_win: '러브레터 승리', ll_loss: '러브레터 패배',
+                mighty_leave_defeat: '마이티 탈주 패배', mighty_ranked_win: '마이티 랭크전 승리',
+                mighty_casual_win: '마이티 일반전 승리', mighty_ranked_loss: '마이티 랭크전 패배',
+                mighty_casual_loss: '마이티 일반전 패배', mighty_draw: '무승부 종료',
+                bank_deposit_grant: '입금 확인', admin_grant: '관리자 지급', admin_deduct: '관리자 차감',
+                push_campaign: '푸시이벤트 보상',
+              };
+              // 우편함 보상은 편지 제목이 곧 title — 발신자가 쓴 자유 텍스트라
+              // 카테고리로 대체한다(클라이언트와 동일한 규칙).
+              // 상점 구매는 "ko|en|de" 파이프 형식이라 한국어 이름만 꺼낸다.
+              const contentLabel = item.source === 'mail'
+                ? '우편함 수령'
+                : (item.title && item.title.includes('|'))
+                  ? item.title.split('|')[0] || item.title
+                  : (titleMap[item.title] || item.title || '-');
               return `<tr>
                 <td style="font-size:12px;color:#888">${formatDate(item.createdAt)}</td>
                 <td><span class="badge" style="background:${positive ? '#e8f5e9' : '#fff3e0'};color:${positive ? '#2e7d32' : '#ef6c00'}">${escapeHtml(sourceLabel)}</span></td>

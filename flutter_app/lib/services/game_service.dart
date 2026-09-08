@@ -13,6 +13,7 @@ import '../models/sk_game_state.dart';
 import '../models/ll_game_state.dart';
 import '../models/shop_visual.dart';
 import '../models/mighty_game_state.dart';
+import '../models/skull_bidding_game_state.dart';
 import 'analytics_service.dart';
 import 'network_service.dart';
 import 'profile_store.dart';
@@ -28,6 +29,7 @@ enum AppDestination {
   skGame,
   llGame,
   mightyGame,
+  skullBiddingGame,
 }
 
 /// A seat changing hands mid-match, for the announcement banner.
@@ -67,6 +69,7 @@ class GameService extends ChangeNotifier {
   GameStateData? _prevGameState;
   SKGameStateData? _prevSKGameState;
   LLGameStateData? _prevLLGameState;
+  SkullBiddingGameStateData? _prevSkullBiddingGameState;
   MightyGameStateData? _prevMightyGameState;
   final SfxService _sfx = SfxService();
   final RestoreSyncTracker _restoreSync = RestoreSyncTracker();
@@ -189,6 +192,7 @@ class GameService extends ChangeNotifier {
   GameStateData? gameState;
   SKGameStateData? skGameState;
   LLGameStateData? llGameState;
+  SkullBiddingGameStateData? skullBiddingGameState;
   MightyGameStateData? mightyGameState;
   String currentGameType = 'tichu';
 
@@ -334,6 +338,11 @@ class GameService extends ChangeNotifier {
       }
     }
     for (final p in mightyGameState?.players ?? const []) {
+      if (p.name == nickname && p.photoUrl != null) {
+        return resolvePhotoUrl(p.photoUrl);
+      }
+    }
+    for (final p in skullBiddingGameState?.players ?? const []) {
       if (p.name == nickname && p.photoUrl != null) {
         return resolvePhotoUrl(p.photoUrl);
       }
@@ -696,6 +705,11 @@ class GameService extends ChangeNotifier {
         llGameState!.phase != 'game_end') {
       return true;
     }
+    if (skullBiddingGameState != null &&
+        skullBiddingGameState!.phase.isNotEmpty &&
+        skullBiddingGameState!.phase != 'game_end') {
+      return true;
+    }
     return gameState != null &&
         gameState!.phase.isNotEmpty &&
         gameState!.phase != 'waiting' &&
@@ -718,12 +732,16 @@ class GameService extends ChangeNotifier {
       if (currentGameType == 'skull_king') return AppDestination.skGame;
       if (currentGameType == 'love_letter') return AppDestination.llGame;
       if (currentGameType == 'mighty') return AppDestination.mightyGame;
+      if (currentGameType == 'skull_bidding') {
+        return AppDestination.skullBiddingGame;
+      }
       return AppDestination.spectator;
     }
     if (!hasRoom) return AppDestination.lobby;
     if (mightyGameState != null) return AppDestination.mightyGame;
     if (llGameState != null) return AppDestination.llGame;
     if (skGameState != null) return AppDestination.skGame;
+    if (skullBiddingGameState != null) return AppDestination.skullBiddingGame;
     if (gameState != null) return AppDestination.game;
     return AppDestination.waitingRoom;
   }
@@ -1118,6 +1136,7 @@ class GameService extends ChangeNotifier {
         _prevLLGameState = null;
         llGameState = null;
         mightyGameState = null;
+        skullBiddingGameState = null;
         _prevMightyGameState = null;
         spectatorGameState = null;
         pendingCardViewRequests = {};
@@ -1135,6 +1154,7 @@ class GameService extends ChangeNotifier {
         _prevLLGameState = null;
         llGameState = null;
         mightyGameState = null;
+        skullBiddingGameState = null;
         _prevMightyGameState = null;
         pendingCardViewRequests = {};
         approvedCardViews = {};
@@ -1174,6 +1194,7 @@ class GameService extends ChangeNotifier {
         _prevLLGameState = null;
         llGameState = null;
         mightyGameState = null;
+        skullBiddingGameState = null;
         _prevMightyGameState = null;
         spectatorGameState = null;
         currentGameType = 'tichu';
@@ -1220,6 +1241,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             llGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             _prevGameState = null;
             _prevMightyGameState = null;
           } else if (stateGameType == 'love_letter') {
@@ -1229,6 +1251,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             skGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
@@ -1240,6 +1263,19 @@ class GameService extends ChangeNotifier {
             gameState = null;
             skGameState = null;
             llGameState = null;
+            skullBiddingGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
+            _prevLLGameState = null;
+            _prevMightyGameState = null;
+          } else if (stateGameType == 'skull_bidding') {
+            currentGameType = 'skull_bidding';
+            skullBiddingGameState = SkullBiddingGameStateData.fromJson(state);
+            spectatorGameState = null;
+            gameState = null;
+            skGameState = null;
+            llGameState = null;
+            mightyGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
@@ -1249,6 +1285,7 @@ class GameService extends ChangeNotifier {
             skGameState = null;
             llGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             _prevMightyGameState = null;
           }
           final spectatorList = state['spectators'] as List?;
@@ -1344,6 +1381,7 @@ class GameService extends ChangeNotifier {
         _prevLLGameState = null;
         llGameState = null;
         mightyGameState = null;
+        skullBiddingGameState = null;
         _prevMightyGameState = null;
         currentGameType = 'tichu';
         roomMaxPlayers = 4;
@@ -1414,6 +1452,7 @@ class GameService extends ChangeNotifier {
         _prevLLGameState = null;
         llGameState = null;
         mightyGameState = null;
+        skullBiddingGameState = null;
         _prevMightyGameState = null;
         currentGameType = 'tichu';
         chatMessages = [];
@@ -1488,6 +1527,7 @@ class GameService extends ChangeNotifier {
             skGameState = null;
             llGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             spectatorGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
@@ -1550,6 +1590,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             llGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             _prevGameState = null;
             _prevLLGameState = null;
             _prevMightyGameState = null;
@@ -1608,6 +1649,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             skGameState = null;
             llGameState = null;
+            skullBiddingGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevLLGameState = null;
@@ -1660,6 +1702,7 @@ class GameService extends ChangeNotifier {
             gameState = null;
             skGameState = null;
             mightyGameState = null;
+            skullBiddingGameState = null;
             _prevGameState = null;
             _prevSKGameState = null;
             _prevMightyGameState = null;
@@ -1689,6 +1732,59 @@ class GameService extends ChangeNotifier {
             final llSpectatorList = state['spectators'] as List?;
             if (llSpectatorList != null) {
               spectators = llSpectatorList
+                  .map(
+                    (s) => {
+                      'id': (s['id'] ?? '').toString(),
+                      'nickname': (s['nickname'] ?? '').toString(),
+                      // Already filtered server-side for blocks/reports; empty
+                      // when they have no photo or the viewer may not see it.
+                      'photoUrl': (s['photoUrl'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
+            } else {
+              spectators = [];
+            }
+          } else if (stateGameType == 'skull_bidding') {
+            // Skull game state
+            currentGameType = 'skull_bidding';
+            final nextSkullBidding = SkullBiddingGameStateData.fromJson(state);
+            _prevSkullBiddingGameState = nextSkullBidding;
+            skullBiddingGameState = nextSkullBidding;
+            gameState = null;
+            skGameState = null;
+            llGameState = null;
+            mightyGameState = null;
+            _prevGameState = null;
+            _prevSKGameState = null;
+            _prevLLGameState = null;
+            _prevMightyGameState = null;
+            if (nextSkullBidding.phase != 'game_end') {
+              desertedPlayerName = null;
+              desertedReason = null;
+            }
+            final selfPlayer = nextSkullBidding.players.where(
+              (p) => p.position == 'self',
+            );
+            myTimeoutCount = selfPlayer.isNotEmpty
+                ? selfPlayer.first.timeoutCount
+                : 0;
+            final viewers = state['cardViewers'] as List?;
+            if (viewers != null) {
+              cardViewers = viewers
+                  .map(
+                    (v) => {
+                      'id': (v['id'] ?? '').toString(),
+                      'nickname': (v['nickname'] ?? '').toString(),
+                    },
+                  )
+                  .toList();
+            } else {
+              cardViewers = [];
+            }
+            final skullBiddingSpectatorList = state['spectators'] as List?;
+            if (skullBiddingSpectatorList != null) {
+              spectators = skullBiddingSpectatorList
                   .map(
                     (s) => {
                       'id': (s['id'] ?? '').toString(),
@@ -3383,6 +3479,7 @@ class GameService extends ChangeNotifier {
     skGameState = null;
     llGameState = null;
     mightyGameState = null;
+    skullBiddingGameState = null;
     _prevMightyGameState = null;
     errorMessage = null;
     chatMessages = [];
@@ -3496,6 +3593,7 @@ class GameService extends ChangeNotifier {
     skGameState = null;
     llGameState = null;
     mightyGameState = null;
+    skullBiddingGameState = null;
     spectatorGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
@@ -3835,6 +3933,7 @@ class GameService extends ChangeNotifier {
     _prevLLGameState = null;
     llGameState = null;
     mightyGameState = null;
+    skullBiddingGameState = null;
     _prevMightyGameState = null;
     spectatorGameState = null;
     pendingCardViewRequests = {};
@@ -3982,6 +4081,31 @@ class GameService extends ChangeNotifier {
 
   void llEffectAck() {
     _network.send({'type': 'effect_ack'});
+  }
+
+  // Skull actions
+  void skullBiddingPlaceDisc(String discType) {
+    _network.send({'type': 'place_disc', 'discType': discType});
+  }
+
+  void skullBiddingStartBid(int amount) {
+    _network.send({'type': 'start_bid', 'amount': amount});
+  }
+
+  void skullBiddingRaiseBid(int amount) {
+    _network.send({'type': 'raise_bid', 'amount': amount});
+  }
+
+  void skullBiddingPass() {
+    _network.send({'type': 'pass'});
+  }
+
+  void skullBiddingRevealTarget(String targetId) {
+    _network.send({'type': 'reveal_target', 'targetId': targetId});
+  }
+
+  void skullBiddingDiscardDisc(String discardType) {
+    _network.send({'type': 'discard_disc', 'discardType': discardType});
   }
 
   // Mighty actions
@@ -4209,6 +4333,7 @@ class GameService extends ChangeNotifier {
     skGameState = null;
     llGameState = null;
     mightyGameState = null;
+    skullBiddingGameState = null;
     _prevGameState = null;
     _prevSKGameState = null;
     _prevLLGameState = null;

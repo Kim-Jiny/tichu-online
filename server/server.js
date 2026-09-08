@@ -16,6 +16,7 @@ const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
+const { decideSkullBiddingBotAction } = require('./game/skull_bidding/SkullBiddingBot');
 const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const webApp = require('./webApp');
 const {
@@ -62,7 +63,7 @@ const {
   getUserDetail,
   isUserAdmin,
   getDetailedAdminStats,
-  saveSKMatchResult, saveSKMatchResultWithStats, saveLLMatchResultWithStats, saveMightyMatchResultWithStats,
+  saveSKMatchResult, saveSKMatchResultWithStats, saveLLMatchResultWithStats, saveMightyMatchResultWithStats, saveSkullBiddingMatchResultWithStats,
   updateSKUserStats,
   getSKRankings,
   getCurrentSKSeasonRankings,
@@ -745,6 +746,8 @@ const SK_EXPANSION_MIN_VERSION = '2.1.0';
 const LL_MIN_VERSION = '2.2.0';
 // Mighty version gating
 const MIGHTY_MIN_VERSION = '2.3.0';
+// Skull("스컬") version gating — bump to whatever version this actually ships in
+const SKULL_BIDDING_MIN_VERSION = '3.2.0';
 // Tichu random seating UI shipped with the Mighty client.
 const RANDOM_SEATING_MIN_VERSION = '2.3.0';
 // New banner pack (10 SKUs) shipped with the 2.4.0 client. Pre-2.4.0 apps
@@ -808,6 +811,10 @@ function clientSupportsLL(ws) {
 
 function clientSupportsMighty(ws) {
   return compareVersions(ws.appVersion, MIGHTY_MIN_VERSION) >= 0;
+}
+
+function clientSupportsSkullBidding(ws) {
+  return compareVersions(ws.appVersion, SKULL_BIDDING_MIN_VERSION) >= 0;
 }
 
 function clientSupportsRandomSeating(ws) {
@@ -878,6 +885,7 @@ function clientCanAccessRoom(ws, room) {
   if (!room) return true;
   if (room.gameType === 'mighty') return clientSupportsMighty(ws);
   if (room.gameType === 'love_letter') return clientSupportsLL(ws);
+  if (room.gameType === 'skull_bidding') return clientSupportsSkullBidding(ws);
   if (room.gameType !== 'skull_king') return true;
   if (!clientSupportsSK(ws)) return false;
   if (roomHasSKExpansions(room) && !clientSupportsSKExpansions(ws)) return false;
@@ -887,6 +895,7 @@ function clientCanAccessRoom(ws, room) {
 function roomAccessUpdateMessage(locale, room, action = 'join') {
   if (room && room.gameType === 'mighty') return t(locale, 'mighty_update_required');
   if (room && room.gameType === 'love_letter') return t(locale, 'll_update_required');
+  if (room && room.gameType === 'skull_bidding') return t(locale, 'skull_bidding_update_required');
   if (roomHasSKExpansions(room)) return t(locale, 'sk_expansion_update_required');
   return t(locale, 'sk_update_' + action);
 }
@@ -3558,6 +3567,11 @@ async function handleMessage(ws, data) {
     case 'select_target':
     case 'guard_guess':
     case 'effect_ack':
+    // Game actions (Skull) — raise_bid, pass, next_round already listed above
+    case 'place_disc':
+    case 'start_bid':
+    case 'reveal_target':
+    case 'discard_disc':
       handleGameAction(ws, data);
       break;
     case 'reset_timeout':
@@ -4787,7 +4801,8 @@ function handleCreateRoom(ws, data) {
   const isRanked = !!data.isRanked;
   const gameType = data.gameType === 'skull_king' ? 'skull_king'
     : data.gameType === 'love_letter' ? 'love_letter'
-    : data.gameType === 'mighty' ? 'mighty' : 'tichu';
+    : data.gameType === 'mighty' ? 'mighty'
+    : data.gameType === 'skull_bidding' ? 'skull_bidding' : 'tichu';
 
   // Version gating
   if (gameType === 'skull_king' && !clientSupportsSK(ws)) {
@@ -4800,6 +4815,10 @@ function handleCreateRoom(ws, data) {
   }
   if (gameType === 'mighty' && !clientSupportsMighty(ws)) {
     sendTo(ws, { type: 'error', message: t(ws.locale, 'mighty_update_required') });
+    return;
+  }
+  if (gameType === 'skull_bidding' && !clientSupportsSkullBidding(ws)) {
+    sendTo(ws, { type: 'error', message: t(ws.locale, 'skull_bidding_update_required') });
     return;
   }
 
@@ -4824,6 +4843,8 @@ function handleCreateRoom(ws, data) {
     maxPlayers = 6; // Mighty: 6 seats by default, 1 seat blockable for 5-player mode
   } else if (gameType === 'love_letter') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 4);
+  } else if (gameType === 'skull_bidding') {
+    maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 3), 6);
   } else if (gameType === 'skull_king') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
     // Validate skExpansions: accept only known ids, dedupe, cap to 3
@@ -6462,6 +6483,12 @@ async function saveGameResult(room) {
     return;
   }
 
+  if (room.gameType === 'skull_bidding') {
+    await saveSkullBiddingGameResult(room);
+    await refreshConnectedRatings(room);
+    return;
+  }
+
   const game = room.game;
   const totalScores = game.totalScores;
   const winnerTeam = totalScores.teamA >= totalScores.teamB ? 'A' : 'B';
@@ -6591,6 +6618,35 @@ async function saveLLGameResult(room) {
     console.log(`LL match result saved for room ${room.name}`);
   } catch (err) {
     console.error('Error saving LL match result:', err);
+  }
+}
+
+async function saveSkullBiddingGameResult(room) {
+  try {
+    const game = room.game;
+    const rankings = game.getRankings();
+
+    await saveSkullBiddingMatchResultWithStats({
+      playerCount: game.playerCount,
+      isRanked: false,
+      endReason: 'normal',
+      deserterNickname: null,
+      // The rank-1 tie LL/SK use (r.rank === 1) doesn't fit here: an
+      // instant win off a full-table bid can leave the actual winner
+      // sitting below someone else's higher success count on paper.
+      // gameWinner is the engine's own authoritative call.
+      players: rankings.map(r => ({
+        nickname: r.nickname,
+        score: r.score,
+        rank: r.rank,
+        isWinner: r.playerId === game.gameWinner,
+        isBot: r.playerId.startsWith('bot_'),
+      })),
+    });
+
+    console.log(`Skull match result saved for room ${room.name}`);
+  } catch (err) {
+    console.error('Error saving Skull match result:', err);
   }
 }
 
@@ -7078,7 +7134,12 @@ function scheduleBotActions(roomId, forceReschedule = false) {
     const isSK = r.gameType === 'skull_king';
     const isLL = r.gameType === 'love_letter';
     const isMighty = r.gameType === 'mighty';
-    const baseDecideFn = isMighty ? decideMightyBotAction : isLL ? decideLLBotAction : isSK ? decideSKBotAction : decideBotAction;
+    const isSkullBidding = r.gameType === 'skull_bidding';
+    const baseDecideFn = isMighty ? decideMightyBotAction
+      : isLL ? decideLLBotAction
+      : isSK ? decideSKBotAction
+      : isSkullBidding ? decideSkullBiddingBotAction
+      : decideBotAction;
     // Async: expensive strategies are offloaded to the worker pool (the await
     // yields the event loop instead of blocking it). Cheap strategies resolve
     // inline via an already-settled promise (microtask only — no I/O gap). On
@@ -8106,6 +8167,45 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
       });
 
       console.log(`LL desertion result saved for room ${room.name} by ${deserterNick}`);
+    } else if (room.gameType === 'skull_bidding') {
+      const deserterScore = game.successCount?.[playerId] ?? 0;
+      const rankings = game.getRankings();
+      const remaining = rankings.filter((r) => r.playerId !== playerId);
+      const players = [];
+
+      let currentRank = 1;
+      for (let i = 0; i < remaining.length; i++) {
+        if (i > 0 && remaining[i].score < remaining[i - 1].score) {
+          currentRank = i + 1;
+        }
+        players.push({
+          nickname: remaining[i].nickname,
+          score: remaining[i].score,
+          rank: currentRank,
+          isWinner: false,
+          isDraw: true,
+          isBot: remaining[i].playerId.startsWith('bot_'),
+        });
+      }
+
+      players.push({
+        nickname: deserterNick || playerId,
+        score: deserterScore,
+        rank: game.playerCount,
+        isWinner: false,
+        isDraw: false,
+        isBot: playerId.startsWith('bot_'),
+      });
+
+      await saveSkullBiddingMatchResultWithStats({
+        playerCount: game.playerCount,
+        isRanked: false,
+        endReason: reason,
+        deserterNickname: deserterNick || null,
+        players,
+      });
+
+      console.log(`Skull desertion result saved for room ${room.name} by ${deserterNick}`);
     } else if (room.gameType === 'skull_king') {
       const deserterScore = game.totalScores[playerId] ?? 0;
       const rankings = game.getRankings();

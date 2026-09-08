@@ -1443,6 +1443,32 @@ async function runMigrations() {
 
     await client.query(`ALTER TABLE tc_ll_match_history ADD COLUMN IF NOT EXISTS deserter_nickname VARCHAR(50)`);
 
+    // ===== Skull("스컬") Tables =====
+    // Full names, not an "sk_"/"skull" abbreviation — server/game/skull_king
+    // already owns those (SkullKingGame, tc_sk_match_*, admin key 'skull').
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_skull_bidding_match_history (
+        id SERIAL PRIMARY KEY,
+        player_count INT NOT NULL,
+        is_ranked BOOLEAN DEFAULT FALSE,
+        end_reason VARCHAR(20) DEFAULT 'normal',
+        deserter_nickname VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_skull_bidding_match_players (
+        id SERIAL PRIMARY KEY,
+        match_id INT NOT NULL REFERENCES tc_skull_bidding_match_history(id),
+        nickname VARCHAR(50) NOT NULL,
+        score INT NOT NULL,
+        rank INT NOT NULL,
+        is_winner BOOLEAN DEFAULT FALSE,
+        is_bot BOOLEAN DEFAULT FALSE
+      )
+    `);
+
     // ===== Mighty Tables =====
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_mighty_match_history (
@@ -1494,6 +1520,11 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_total_games INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_wins INT DEFAULT 0`);
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS ll_losses INT DEFAULT 0`);
+
+    // Skull user stats columns — 'skb_' prefix, not 'sk_' (Skull King owns that)
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS skb_total_games INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS skb_wins INT DEFAULT 0`);
+    await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS skb_losses INT DEFAULT 0`);
 
     // Mighty user stats columns
     await client.query(`ALTER TABLE tc_users ADD COLUMN IF NOT EXISTS mighty_total_games INT DEFAULT 0`);
@@ -3698,6 +3729,34 @@ async function getGoldHistory(nickname, limit = 30, offset = 0) {
           CONCAT(p.rank, ':', p.score) AS description
         FROM tc_ll_match_players p
         JOIN tc_ll_match_history h ON h.id = p.match_id
+        WHERE p.nickname = $1
+
+        UNION ALL
+
+        -- Unlike sk_match/ll_match above (which only zero the literal
+        -- deserter and still credit win/loss gold to the isDraw survivors of
+        -- the same aborted match — those never actually got that gold, see
+        -- saveLLMatchResultWithStats' isDraw branch), this zeroes the whole
+        -- match on desertion, matching what saveSkullBiddingMatchResultWithStats
+        -- actually does: every isDraw player skips the gold update, not just
+        -- the deserter.
+        SELECT
+          h.created_at,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') THEN 0
+            WHEN p.is_winner THEN 10
+            ELSE 3
+          END AS gold_delta,
+          'skull_bidding_match' AS source,
+          CASE
+            WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = $1 THEN 'skb_leave_defeat'
+            WHEN h.end_reason IN ('leave', 'timeout') THEN 'skb_draw'
+            WHEN p.is_winner THEN 'skb_win'
+            ELSE 'skb_loss'
+          END AS title,
+          CONCAT(p.rank, ':', p.score) AS description
+        FROM tc_skull_bidding_match_players p
+        JOIN tc_skull_bidding_match_history h ON h.id = p.match_id
         WHERE p.nickname = $1
 
         UNION ALL
@@ -10373,6 +10432,71 @@ async function saveLLMatchResultWithStats(data) {
   }
 }
 
+async function saveSkullBiddingMatchResultWithStats(data) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const matchRes = await client.query(
+      `INSERT INTO tc_skull_bidding_match_history (player_count, is_ranked, end_reason, deserter_nickname)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [data.playerCount, data.isRanked, data.endReason || 'normal', data.deserterNickname || null]
+    );
+    const matchId = matchRes.rows[0].id;
+
+    for (const p of data.players) {
+      await client.query(
+        `INSERT INTO tc_skull_bidding_match_players (match_id, nickname, score, rank, is_winner, is_bot)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [matchId, p.nickname, p.score, p.rank, p.isWinner, p.isBot]
+      );
+    }
+
+    const humanPlayers = data.players.filter(p => p.nickname && !p.isBot);
+    for (const p of humanPlayers) {
+      const won = p.isWinner === true;
+      const isDraw = p.isDraw === true;
+      const isDeserter =
+        ['leave', 'timeout'].includes(data.endReason || 'normal') &&
+        data.deserterNickname === p.nickname;
+
+      if (isDraw) {
+        const expGain = 3;
+        await client.query(
+          `UPDATE tc_users SET
+            skb_total_games = skb_total_games + 1,
+            exp_total = exp_total + $2,
+            level = tc_compute_level(exp_total + $2)
+           WHERE nickname = $1`,
+          [p.nickname, expGain]
+        );
+      } else {
+        const goldReward = isDeserter ? 0 : (won ? 10 : 3);
+        const expGain = isDeserter ? 0 : (won ? 15 : 5);
+        await client.query(
+          `UPDATE tc_users SET
+            skb_total_games = skb_total_games + 1,
+            skb_wins = skb_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+            skb_losses = skb_losses + CASE WHEN $2 THEN 0 ELSE 1 END,
+            gold = gold + $3,
+            exp_total = exp_total + $4,
+            level = tc_compute_level(exp_total + $4)
+           WHERE nickname = $1`,
+          [p.nickname, won, goldReward, expGain]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true, matchId };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('saveSkullBiddingMatchResultWithStats error:', err);
+    return { success: false, message: err.message };
+  } finally {
+    client.release();
+  }
+}
+
 // ===== Mighty DB Functions =====
 
 async function saveMightyMatchResultWithStats(data) {
@@ -12701,6 +12825,7 @@ module.exports = {
   getSKSeasonRankings,
   saveLLMatchResultWithStats,
   saveMightyMatchResultWithStats,
+  saveSkullBiddingMatchResultWithStats,
   getMightyRankings,
   getCurrentMightySeasonRankings,
   getMightySeasonRankings,

@@ -4,6 +4,7 @@ const { logVerboseConnection } = require('../logger');
 let SkullKingGame; // Lazy-loaded to avoid circular dependency
 let LoveLetterGame; // Lazy-loaded
 let MightyGame; // Lazy-loaded
+let SkullBiddingGame; // Lazy-loaded
 
 let nextBotNum = 1;
 
@@ -34,8 +35,8 @@ class GameRoom {
     this.turnTimeLimit = turnTimeLimit; // seconds
     this.targetScore = targetScore;
     this.turnDeadline = null; // epoch ms when active
-    this.gameType = gameType; // 'tichu', 'skull_king', 'love_letter', or 'mighty'
-    this.maxPlayers = maxPlayers; // 4 for tichu, 2-6 for skull_king, 2-4 for love_letter
+    this.gameType = gameType; // 'tichu', 'skull_king', 'love_letter', 'mighty', or 'skull_bidding'
+    this.maxPlayers = maxPlayers; // 4 for tichu, 2-6 for skull_king, 2-4 for love_letter, 3-6 for skull_bidding
     // Enabled Skull King expansions (only meaningful when gameType === 'skull_king').
     // Subset of ['kraken', 'white_whale', 'loot'].
     this.skExpansions = Array.isArray(skExpansions) ? skExpansions.slice() : [];
@@ -171,6 +172,7 @@ class GameRoom {
     // If game was running and not enough players, end game
     // But preserve game if already ended (so remaining players can see results)
     const minPlayersForGame = this.gameType === 'mighty' ? 5
+      : this.gameType === 'skull_bidding' ? 3
       : (this.gameType === 'skull_king' || this.gameType === 'love_letter') ? 2
       : this.maxPlayers;
     if (this.game && this.getPlayerCount() < minPlayersForGame && this.game.state !== 'game_end') {
@@ -771,8 +773,10 @@ class GameRoom {
     if (this.players[slotIndex] !== null) {
       return { success: false, messageKey: 'room_slot_taken' };
     }
-    // Minimum effective capacity: SK/LL need 2, Mighty needs 5
-    const minEffective = this.gameType === 'mighty' ? 5 : 2;
+    // Minimum effective capacity: SK/LL need 2, Skull needs 3, Mighty needs 5
+    const minEffective = this.gameType === 'mighty' ? 5
+      : this.gameType === 'skull_bidding' ? 3
+      : 2;
     const remainingAfterBlock = this.maxPlayers - this.blockedSlots.size - 1;
     if (remainingAfterBlock < minEffective) {
       return { success: false, messageKey: 'room_full' };
@@ -857,6 +861,13 @@ class GameRoom {
       if (activePlayers.length < 5) return false;
       this._preGamePlayers = this.players.slice();
       this.players = activePlayers;
+    } else if (this.gameType === 'skull_bidding') {
+      // Skull needs 3-6 — below 3 there's no real bidding war (see the
+      // rules note in SkullBiddingGame.js).
+      const activePlayers = this.players.filter(p => p !== null);
+      if (activePlayers.length < 3) return false;
+      this._preGamePlayers = this.players.slice();
+      this.players = activePlayers;
     } else {
       // Tichu: all slots must be non-null
       if (this.players.some((p) => p === null)) return false;
@@ -874,7 +885,7 @@ class GameRoom {
       playerIds = resume.seatOrder.map((nickname) => idByNickname.get(nickname));
     } else {
       playerIds = this.players.map((p) => p.id);
-      if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.isRanked || this.randomSeating) {
+      if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.gameType === 'skull_bidding' || this.isRanked || this.randomSeating) {
         // SK/LL/ranked/random-seating Tichu: fully shuffle all seats. For
         // random-seating Tichu this also produces the random team assignment
         // the host opted into.
@@ -908,6 +919,11 @@ class GameRoom {
         LoveLetterGame = require('./love_letter/LoveLetterGame');
       }
       this.game = new LoveLetterGame(playerIds, playerNames, {});
+    } else if (this.gameType === 'skull_bidding') {
+      if (!SkullBiddingGame) {
+        SkullBiddingGame = require('./skull_bidding/SkullBiddingGame');
+      }
+      this.game = new SkullBiddingGame(playerIds, playerNames, {});
     } else {
       this.game = new TichuGame(playerIds, playerNames);
       this.game.targetScore = this.targetScore;
@@ -957,7 +973,7 @@ class GameRoom {
     // All non-null human players (except host) must be ready. Bots are always ready.
     for (const p of this.players) {
       if (p === null) {
-        if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty') continue;
+        if (this.gameType === 'skull_king' || this.gameType === 'love_letter' || this.gameType === 'mighty' || this.gameType === 'skull_bidding') continue;
         return false; // tichu needs all slots filled
       }
       if (p.isBot) continue;
@@ -966,6 +982,8 @@ class GameRoom {
     }
     // SK/LL requires at least 2 players
     if ((this.gameType === 'skull_king' || this.gameType === 'love_letter') && this.getPlayerCount() < 2) return false;
+    // Skull requires at least 3 players
+    if (this.gameType === 'skull_bidding' && this.getPlayerCount() < 3) return false;
     // Mighty requires exactly 5 players
     if (this.gameType === 'mighty' && this.getPlayerCount() < 5) return false;
     return true;

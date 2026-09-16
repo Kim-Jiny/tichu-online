@@ -747,7 +747,7 @@ const LL_MIN_VERSION = '2.2.0';
 // Mighty version gating
 const MIGHTY_MIN_VERSION = '2.3.0';
 // Skull("스컬") version gating — bump to whatever version this actually ships in
-const SKULL_BIDDING_MIN_VERSION = '3.2.0';
+const SKULL_BIDDING_MIN_VERSION = '4.0.0';
 // Tichu random seating UI shipped with the Mighty client.
 const RANDOM_SEATING_MIN_VERSION = '2.3.0';
 // New banner pack (10 SKUs) shipped with the 2.4.0 client. Pre-2.4.0 apps
@@ -7590,6 +7590,24 @@ function startTurnTimer(roomId) {
         handleTurnTimeout(roomId, targetPlayer);
       }, timeLimit);
     }
+    return;
+  }
+
+  // Skull: single active player straight through placing/bidding/revealing —
+  // currentPlayer stays the challenger even while a discard is pending (see
+  // turnGuard.js). round_end/game_end need no timer, same as every other
+  // game below once gameState isn't one of these.
+  if (room.gameType === 'skull_bidding' &&
+      ['placing', 'bidding', 'revealing'].includes(gameState)) {
+    clearTurnTimer(roomId);
+    const targetPlayer = room.game.currentPlayer;
+    if (!targetPlayer || seatIsAutoPlayed(room, targetPlayer)) return;
+    const timeLimit = turnTimeLimitMs(room, targetPlayer);
+    room.turnDeadline = Date.now() + timeLimit;
+    turnWaitingOn[roomId] = [targetPlayer];
+    turnTimers[roomId] = setTimeout(() => {
+      handleTurnTimeout(roomId, targetPlayer);
+    }, timeLimit);
     return;
   }
 

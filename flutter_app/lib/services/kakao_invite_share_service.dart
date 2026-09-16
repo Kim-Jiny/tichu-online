@@ -62,6 +62,8 @@ class KakaoInviteShareService {
         return '러브레터';
       case 'mighty':
         return '마이티';
+      case 'skull_bidding':
+        return '스컬';
       case 'tichu':
       default:
         return '티츄';

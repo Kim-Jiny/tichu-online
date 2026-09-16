@@ -76,6 +76,22 @@ console.log('\n=== mighty ===');
   check('game_end', playerStillNeedsToAct('mighty', mg('game_end'), ME), false);
 }
 
+// ── Skull — currentPlayer stays the challenger through a pending discard ───
+console.log('\n=== skull_bidding ===');
+{
+  const skb = (state, extra = {}) => ({ state, currentPlayer: ME, ...extra });
+
+  check('my turn to place', playerStillNeedsToAct('skull_bidding', skb('placing'), ME), true);
+  check("someone else's turn to place",
+    playerStillNeedsToAct('skull_bidding', skb('placing', { currentPlayer: OTHER }), ME), false);
+  check('my turn to bid', playerStillNeedsToAct('skull_bidding', skb('bidding'), ME), true);
+  check('my turn to reveal', playerStillNeedsToAct('skull_bidding', skb('revealing'), ME), true);
+  check('pending discard, still armed for the challenger',
+    playerStillNeedsToAct('skull_bidding', skb('revealing', { pendingDiscard: { playerId: ME } }), ME), true);
+  check('round_end', playerStillNeedsToAct('skull_bidding', skb('round_end'), ME), false);
+  check('game_end', playerStillNeedsToAct('skull_bidding', skb('game_end'), ME), false);
+}
+
 // ── Tichu — the turn can be owed by someone other than currentPlayer ───────
 console.log('\n=== tichu ===');
 {

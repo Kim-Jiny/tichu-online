@@ -909,6 +909,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     String selectedGameType = 'tichu';
     bool gamePickerOpen = false;
     final Set<String> skExpansionsSelected = <String>{};
+    int skullBiddingMaxPlayers = 4;
     String? errorText;
     void Function(void Function())? dialogSetState;
     showDialog(
@@ -1067,7 +1068,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               );
               if (selectedGameType == 'skull_king' ||
                   selectedGameType == 'love_letter' ||
-                  selectedGameType == 'mighty') {
+                  selectedGameType == 'mighty' ||
+                  selectedGameType == 'skull_bidding') {
                 isRanked = false;
               }
               if (selectedGameType == 'mighty') {
@@ -1138,6 +1140,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     case 'mighty':
                                       gameLabel = l10n.lobbyMighty;
                                       gameBgColor = const Color(0xFF5C6BC0);
+                                      gameFgColor = Colors.white;
+                                      break;
+                                    case 'skull_bidding':
+                                      gameLabel = l10n.lobbySkullBidding;
+                                      gameBgColor = gameTypeColor('skull_bidding');
                                       gameFgColor = Colors.white;
                                       break;
                                     default:
@@ -1331,6 +1338,65 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ],
                                 ),
                               ],
+                              if (selectedGameType == 'skull_bidding') ...[
+                                const SizedBox(height: 14),
+                                Text(
+                                  l10n.lobbyMaxPlayers,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    for (final n in const [3, 4, 5, 6]) ...[
+                                      if (n > 3) const SizedBox(width: 6),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () => setState(
+                                            () => skullBiddingMaxPlayers = n,
+                                          ),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 150,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 8,
+                                            ),
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color: skullBiddingMaxPlayers == n
+                                                  ? const Color(0xFF6A5A52)
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.82,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: skullBiddingMaxPlayers == n
+                                                    ? const Color(0xFF6A5A52)
+                                                    : const Color(0xFFE0D5D0),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              '$n',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                color: skullBiddingMaxPlayers == n
+                                                    ? Colors.white
+                                                    : const Color(0xFF8A7A72),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 16),
                               // Name field with the dice on the same line. The random
                               // button was a low-contrast text button floating above the
@@ -1430,6 +1496,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     setState(() => allowMidGameJoin = v),
                               ),
                               if (selectedGameType != 'love_letter' &&
+                                  selectedGameType != 'skull_bidding' &&
                                   context.read<GameService>().authProvider !=
                                       'local') ...[
                                 optionCard(
@@ -1608,6 +1675,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           'mighty',
                                           'skull_king',
                                           'love_letter',
+                                          'skull_bidding',
                                         ])
                                           (
                                             t,
@@ -1710,6 +1778,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ? 6
                             : selectedGameType == 'love_letter'
                             ? 4
+                            : selectedGameType == 'skull_bidding'
+                            ? skullBiddingMaxPlayers
                             : 4,
                         skExpansions: selectedGameType == 'skull_king'
                             ? skExpansionsSelected.toList()
@@ -2489,6 +2559,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ('mighty', l10n.rankingMighty, const Color(0xFF5C6BC0)),
       ('skull_king', l10n.lobbySkullKing, const Color(0xFF21455F)),
       ('love_letter', l10n.lobbyLoveLetter, const Color(0xFFE91E63)),
+      ('skull_bidding', l10n.lobbySkullBidding, gameTypeColor('skull_bidding')),
     ];
     return [
       for (final (type, label, color) in chips)
@@ -2582,6 +2653,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final isSK = room.isSkullKing;
     final isLL = room.gameType == 'love_letter';
     final isMighty = room.gameType == 'mighty';
+    final isSkullBidding = room.gameType == 'skull_bidding';
     final l10n = L10n.of(context);
 
     // Only the left strip and the game badge carry the game's colour. Every game
@@ -2603,6 +2675,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       badgeText = l10n.lobbyMightyBadge;
     } else if (isSK) {
       badgeText = l10n.lobbySkullKingBadge;
+    } else if (isSkullBidding) {
+      badgeText = l10n.lobbySkullBiddingBadge;
     } else {
       badgeText = l10n.lobbyTichuBadge;
     }
@@ -3516,7 +3590,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               builder: (_) {
                 final isSeatCounted =
                     game.currentGameType == 'skull_king' ||
-                    game.currentGameType == 'love_letter';
+                    game.currentGameType == 'love_letter' ||
+                    game.currentGameType == 'skull_bidding';
                 final full = game.playerCount >= game.effectiveRoomMaxPlayers;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -3753,7 +3828,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               _buildSeatGrid(game),
           ] else if (game.currentGameType == 'skull_king' ||
               game.currentGameType == 'love_letter' ||
-              game.currentGameType == 'mighty') ...[
+              game.currentGameType == 'mighty' ||
+              game.currentGameType == 'skull_bidding') ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -3761,6 +3837,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ? const Color(0xFF8B1A1A)
                     : game.currentGameType == 'mighty'
                     ? const Color(0xFF1565C0)
+                    : game.currentGameType == 'skull_bidding'
+                    ? gameTypeColor('skull_bidding')
                     : const Color(0xFF2D2D3D),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -3776,6 +3854,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ).lobbyLoveLetterPlayers(game.roomMaxPlayers)
                         : game.currentGameType == 'mighty'
                         ? 'Mighty ${game.playerCount}/${game.effectiveRoomMaxPlayers}'
+                        : game.currentGameType == 'skull_bidding'
+                        ? L10n.of(
+                            context,
+                          ).lobbySkullBiddingPlayers(game.roomMaxPlayers)
                         : L10n.of(
                             context,
                           ).lobbySkullKingPlayers(game.roomMaxPlayers),
@@ -3909,6 +3991,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ? game.playerCount >= 2
                     : game.currentGameType == 'mighty'
                     ? game.playerCount >= 5
+                    : game.currentGameType == 'skull_bidding'
+                    ? game.playerCount >= 3
                     : game.playerCount >= game.effectiveRoomMaxPlayers;
                 if (!canStart) return const SizedBox.shrink();
                 final everyoneReady = _allNonHostReady(game);

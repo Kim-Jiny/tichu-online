@@ -16,6 +16,8 @@ Color gameTypeColor(String gameType) {
       return const Color(0xFFE91E63);
     case 'mighty':
       return const Color(0xFF5C6BC0);
+    case 'skull_bidding':
+      return const Color(0xFF4A3C36);
     default:
       return const Color(0xFF64B5F6);
   }
@@ -54,6 +56,16 @@ String gameTypeAsset(String gameType) {
 /// laying out square slots. It carries its own colours, so unlike the glyph it
 /// takes no tint.
 Widget gameTypeSymbol(String gameType, {double size = 20}) {
+  // No commissioned artwork exists yet for Skull, unlike the other three —
+  // an emoji glyph in a tinted box until one does, rather than pointing
+  // gameTypeAsset at a file that isn't there.
+  if (gameType == 'skull_bidding') {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Center(child: Text('💀', style: TextStyle(fontSize: size * 0.85))),
+    );
+  }
   return Image.asset(
     gameTypeAsset(gameType),
     width: size,
@@ -72,6 +84,8 @@ String gameTypeLabel(L10n l10n, String gameType) {
       return l10n.lobbyLoveLetter;
     case 'mighty':
       return l10n.lobbyMighty;
+    case 'skull_bidding':
+      return l10n.lobbySkullBidding;
     default:
       return l10n.lobbyTichu;
   }

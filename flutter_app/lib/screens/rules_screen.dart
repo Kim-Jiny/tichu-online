@@ -109,6 +109,7 @@ class _RulesScreenState extends State<RulesScreen> {
                     'skull_king' => _buildSkullKingRules(),
                     'love_letter' => _buildLoveLetterRules(),
                     'mighty' => _buildMightyRules(),
+                    'skull_bidding' => _buildSkullBiddingRules(),
                     _ => _buildTichuRules(),
                   },
                 ),
@@ -122,13 +123,14 @@ class _RulesScreenState extends State<RulesScreen> {
 
   // ─── Game picker helpers ───────────────────────────────────────────────────
 
-  static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty'];
+  static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty', 'skull_bidding'];
 
   IconData _gameIcon(String key) => switch (key) {
         'tichu' => Icons.style,
         'skull_king' => Icons.anchor,
         'love_letter' => Icons.favorite,
         'mighty' => Icons.military_tech,
+        'skull_bidding' => Icons.casino,
         _ => Icons.style,
       };
 
@@ -137,6 +139,7 @@ class _RulesScreenState extends State<RulesScreen> {
         'skull_king' => const Color(0xFF2D2D3D),
         'love_letter' => const Color(0xFFE91E63),
         'mighty' => const Color(0xFF1565C0),
+        'skull_bidding' => const Color(0xFF4A3C36),
         _ => const Color(0xFF6C63FF),
       };
 
@@ -145,6 +148,7 @@ class _RulesScreenState extends State<RulesScreen> {
         'skull_king' => L10n.of(context).rulesTabSkullKing,
         'love_letter' => L10n.of(context).rulesTabLoveLetter,
         'mighty' => L10n.of(context).rulesTabMighty,
+        'skull_bidding' => L10n.of(context).rulesTabSkullBidding,
         _ => '',
       };
 
@@ -1001,6 +1005,104 @@ class _RulesScreenState extends State<RulesScreen> {
             L10n.of(context).rulesMtWinBody,
             style: _bodyStyle,
           ),
+        ),
+      ],
+    );
+  }
+
+  // ─── SKULL ───────────────────────────────────────────────────────────────
+
+  Widget _buildSkullBiddingRules() {
+    const skbAccent = Color(0xFF4A3C36);
+    final l10n = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _section(
+          icon: Icons.flag,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleGoalTitle,
+          child: Text(l10n.skullBiddingRuleGoalBody, style: _bodyStyle),
+        ),
+        _section(
+          icon: Icons.style,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleSetupTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.skullBiddingRuleSetupBody, style: _bodyStyle),
+              const SizedBox(height: 10),
+              _CardCountRow(
+                label: l10n.skullBiddingRoseLabel,
+                sub: l10n.skullBiddingRoseSub,
+                count: 3,
+                leading: _cardAsset('assets/cards/skull_rose.webp'),
+              ),
+              const _Divider(),
+              _CardCountRow(
+                label: l10n.skullBiddingSkullLabel,
+                sub: l10n.skullBiddingSkullSub,
+                count: 1,
+                leading: _cardAsset('assets/cards/skull_skull.webp'),
+              ),
+            ],
+          ),
+        ),
+        _section(
+          icon: Icons.add_circle_outline,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRulePlaceTitle,
+          child: Text(l10n.skullBiddingRulePlaceBody, style: _bodyStyle),
+        ),
+        _section(
+          icon: Icons.gavel_outlined,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleBidTitle,
+          child: Text(l10n.skullBiddingRuleBidBody, style: _bodyStyle),
+        ),
+        _section(
+          icon: Icons.visibility_outlined,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleRevealTitle,
+          child: Text(l10n.skullBiddingRuleRevealBody, style: _bodyStyle),
+        ),
+        _section(
+          icon: Icons.dangerous_outlined,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleSkullTitle,
+          child: Text(l10n.skullBiddingRuleSkullBody, style: _bodyStyle),
+        ),
+        _section(
+          icon: Icons.format_list_numbered,
+          iconColor: skbAccent,
+          title: l10n.rulesSkbExampleTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ExampleBlock(
+                title: l10n.rulesSkbExample1Title,
+                setup: l10n.rulesSkbExample1Setup,
+                calc: l10n.rulesSkbExample1Calc,
+                result: l10n.rulesSkbExample1Result,
+                positive: true,
+              ),
+              const SizedBox(height: 8),
+              _ExampleBlock(
+                title: l10n.rulesSkbExample2Title,
+                setup: l10n.rulesSkbExample2Setup,
+                calc: l10n.rulesSkbExample2Calc,
+                result: l10n.rulesSkbExample2Result,
+                positive: false,
+              ),
+            ],
+          ),
+        ),
+        _section(
+          icon: Icons.emoji_events,
+          iconColor: skbAccent,
+          title: l10n.skullBiddingRuleWinTitle,
+          child: Text(l10n.skullBiddingRuleWinBody, style: _bodyStyle),
         ),
       ],
     );

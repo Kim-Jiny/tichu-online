@@ -53,18 +53,21 @@ const MAX_PLAYERS = {
   skull_king: 6,
   love_letter: 4,
   mighty: 6,
+  skull_bidding: 6,
 };
 const MIN_PLAYERS = {
   tichu: 4,
   skull_king: 2,
   love_letter: 2,
   mighty: 5,
+  skull_bidding: 3,
 };
 const DEFAULT_PLAYERS = {
   tichu: 4,
   skull_king: 6,
   love_letter: 4,
   mighty: 5,
+  skull_bidding: 6,
 };
 
 const BOT_STRATEGY = {
@@ -72,6 +75,7 @@ const BOT_STRATEGY = {
   mighty: 'mixoracle',
   skull_king: 'heuristic',
   love_letter: 'heuristic',
+  skull_bidding: 'heuristic',
 };
 
 function isFillerRoom(roomId) {

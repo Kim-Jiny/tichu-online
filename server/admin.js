@@ -997,7 +997,7 @@ function renderUserMatchTable(matches) {
               <td style="font-size:12px;color:#888">${formatDate(m.createdAt)}</td>
             </tr>`;
             }
-            if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty') {
+            if (m.gameType === 'skull_king' || m.gameType === 'love_letter' || m.gameType === 'mighty' || m.gameType === 'skull_bidding') {
               const playersText = m.players ? m.players.map(p => escapeHtml(p.nickname) + '(' + p.score + '점 #' + p.rank + ')').join(', ') : '-';
               return `<tr>
               <td>${m.id}</td>
@@ -1355,6 +1355,9 @@ function gameTypeBadge(gameType) {
   if (gameType === 'mighty') {
     return '<span class="badge" style="background:#1565C0;color:#fff">마이티</span>';
   }
+  if (gameType === 'skull_bidding') {
+    return '<span class="badge" style="background:#4A3C36;color:#fff">스컬</span>';
+  }
   return '<span class="badge" style="background:#6c63ff;color:#fff">티츄</span>';
 }
 
@@ -1405,7 +1408,7 @@ function renderAdminRecentMatchesTable(matches, { compact = false } = {}) {
         endBadge = `<span class="badge" style="background:#fff8e1;color:#f57f17">시간초과</span>${m.deserter_nickname ? `<br><span style="font-size:11px;color:#f57f17">${escapeHtml(m.deserter_nickname)}</span>` : ''}`;
       }
       const rankedBadge = m.is_ranked ? '<span class="badge" style="background:#fff3e0;color:#e65100">랭크</span>' : '<span class="badge" style="background:#f5f5f5;color:#999">일반</span>';
-      if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty') {
+      if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty' || m.game_type === 'skull_bidding') {
         return `<tr>
           <td>${m.id}</td>
           <td>${gameTypeBadge(m.game_type)}</td>
@@ -1449,6 +1452,7 @@ function dashboardActivityMeta(period = 'week', game = 'all') {
     skull_king: { label: 'SK', title: 'SK 게임량' },
     love_letter: { label: 'LL', title: 'LL 게임량' },
     mighty: { label: '마이티', title: '마이티 게임량' },
+    skull_bidding: { label: '스컬', title: '스컬 게임량' },
   };
   const safePeriod = activityLabels[period] ? period : 'week';
   const safeGame = activityGameLabels[game] ? game : 'all';
@@ -1474,7 +1478,7 @@ function dashboardActivityLink(period, game, label, active) {
  */
 function renderAdminRecentMatchesCompact(matches) {
   const line = (m) => {
-    if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty') {
+    if (m.game_type === 'skull_king' || m.game_type === 'love_letter' || m.game_type === 'mighty' || m.game_type === 'skull_bidding') {
       return m.player_a1 || '-';
     }
     return `${m.team_a_score}:${m.team_b_score} · ${m.player_a1}, ${m.player_a2} vs ${m.player_b1}, ${m.player_b2}`;
@@ -1523,6 +1527,7 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
     ['skull_king', 'SK'],
     ['love_letter', 'LL'],
     ['mighty', '마이티'],
+    ['skull_bidding', '스컬'],
   ].map(([g, label]) => dashboardActivityLink(meta.period, g, label, g === meta.game)).join('');
 
   const table = topPlayers && topPlayers.length > 0
@@ -1534,6 +1539,7 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
           const skGames = parseInt(p.sk_games) || 0;
           const llGames = parseInt(p.ll_games) || 0;
           const mightyGames = parseInt(p.mighty_games) || 0;
+          const skbGames = parseInt(p.skb_games) || 0;
           const rankGames = meta.game === 'tichu'
             ? tichuGames
             : meta.game === 'skull_king'
@@ -1542,8 +1548,10 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
                 ? llGames
                 : meta.game === 'mighty'
                   ? mightyGames
-                  : parseInt(p.activity_games) || 0;
-          const totalGamesAll = (parseInt(p.total_games) || 0) + (parseInt(p.sk_total_games) || 0) + (parseInt(p.ll_total_games) || 0) + (parseInt(p.mighty_total_games) || 0);
+                  : meta.game === 'skull_bidding'
+                    ? skbGames
+                    : parseInt(p.activity_games) || 0;
+          const totalGamesAll = (parseInt(p.total_games) || 0) + (parseInt(p.sk_total_games) || 0) + (parseInt(p.ll_total_games) || 0) + (parseInt(p.mighty_total_games) || 0) + (parseInt(p.skb_total_games) || 0);
           return `<tr>
             <td style="text-align:center">${medal}</td>
             <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
@@ -1552,7 +1560,8 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
               <span style="color:#5f62d6">티츄 ${formatNumber(tichuGames)}</span> ·
               <span style="color:#ff7043">SK ${formatNumber(skGames)}</span> ·
               <span style="color:#E91E63">LL ${formatNumber(llGames)}</span> ·
-              <span style="color:#1565C0">마이티 ${formatNumber(mightyGames)}</span>
+              <span style="color:#1565C0">마이티 ${formatNumber(mightyGames)}</span> ·
+              <span style="color:#4A3C36">스컬 ${formatNumber(skbGames)}</span>
             </td>
             <td>${formatNumber(totalGamesAll)}판</td>
             <td style="font-weight:700">${p.rating}</td>
@@ -2102,7 +2111,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const activityPeriod = ['today', 'week', 'month'].includes(url.searchParams.get('activity'))
       ? url.searchParams.get('activity')
       : 'week';
-    const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(url.searchParams.get('activityGame'))
+    const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty', 'skull_bidding'].includes(url.searchParams.get('activityGame'))
       ? url.searchParams.get('activityGame')
       : 'all';
     const data = await getDashboardActivityTopPlayers(activityPeriod, activityGame);
@@ -2117,7 +2126,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const activityPeriod = ['today', 'week', 'month'].includes(url.searchParams.get('activity'))
       ? url.searchParams.get('activity')
       : 'week';
-    const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(url.searchParams.get('activityGame'))
+    const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty', 'skull_bidding'].includes(url.searchParams.get('activityGame'))
       ? url.searchParams.get('activityGame')
       : 'all';
     const [stats, attStats] = await Promise.all([
@@ -2148,7 +2157,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const skByDay = {};
     const llByDay = {};
     const mightyByDay = {};
-    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; llByDay[d] = 0; mightyByDay[d] = 0; }
+    const skbByDay = {};
+    for (const d of last7) { gamesByDay[d] = 0; rankedByDay[d] = 0; signupsByDay[d] = 0; tichuByDay[d] = 0; skByDay[d] = 0; llByDay[d] = 0; mightyByDay[d] = 0; skbByDay[d] = 0; }
     for (const r of stats.dailyGames) {
       const d = kstDateKey(r.day);
       gamesByDay[d] = parseInt(r.cnt) || 0;
@@ -2157,6 +2167,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       skByDay[d] = parseInt(r.sk_cnt) || 0;
       llByDay[d] = parseInt(r.ll_cnt) || 0;
       mightyByDay[d] = parseInt(r.mighty_cnt) || 0;
+      skbByDay[d] = parseInt(r.skb_cnt) || 0;
     }
     for (const r of stats.dailySignups) {
       const d = kstDateKey(r.day);
@@ -2168,6 +2179,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const chartSK = last7.map(d => skByDay[d]);
     const chartLL = last7.map(d => llByDay[d]);
     const chartMighty = last7.map(d => mightyByDay[d]);
+    const chartSkullBidding = last7.map(d => skbByDay[d]);
     const chartRanked = last7.map(d => rankedByDay[d]);
     const chartSignups = last7.map(d => signupsByDay[d]);
     const adRewardsByDay = {};
@@ -2351,6 +2363,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'sk', label: '스컬킹', color: '#21455f', vals: chartSK },
       { key: 'll', label: '러브레터', color: '#d9527e', vals: chartLL },
       { key: 'mighty', label: '마이티', color: '#7a6bd0', vals: chartMighty },
+      { key: 'skb', label: '스컬', color: '#4A3C36', vals: chartSkullBidding },
     ];
     const spark = (labels, columns, max) => `<div class="spark">
       ${columns.map((col, i) => `<div class="col${i === columns.length - 1 ? ' today' : ''}">
@@ -2620,6 +2633,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { key: 'skull', label: '스컬킹', value: Number(summary.skullGames || 0) },
       { key: 'love', label: '러브레터', value: Number(summary.llGames || 0) },
       { key: 'mighty', label: '마이티', value: Number(summary.mightyGames || 0) },
+      { key: 'skb', label: '스컬', value: Number(summary.skbGames || 0) },
     ].sort((a, b) => b.value - a.value);
     const dominantGame = topGameEntries[0];
     const peakGameRow = [...gameSeries].sort((a, b) => Number(b.total_cnt || 0) - Number(a.total_cnt || 0))[0];
@@ -2770,7 +2784,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const gameTable = gameSeries.length > 0
       ? `<div class="table-wrap"><table>
-          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>마이티</th><th>랭크전</th></tr>
+          <tr><th>${bucket === 'hour' ? '시간대' : '날짜'}</th><th>전체</th><th>티추</th><th>스컬킹</th><th>러브레터</th><th>마이티</th><th>스컬</th><th>랭크전</th></tr>
           ${gameSeries.map(row => `<tr>
             <td style="white-space:nowrap">${formatBucket(row.bucket_time, bucket)}</td>
             ${barCell(row.total_cnt, maxOf(gameSeries, 'total_cnt'))}
@@ -2778,6 +2792,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <td>${row.skull_cnt}</td>
             <td>${row.ll_cnt}</td>
             <td>${row.mighty_cnt}</td>
+            <td>${row.skb_cnt}</td>
             <td>${row.ranked_cnt}</td>
           </tr>`).join('')}
         </table></div>`
@@ -2858,6 +2873,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const gameChartSK = gameSeries.map(r => parseInt(r.skull_cnt) || 0);
     const gameChartLL = gameSeries.map(r => parseInt(r.ll_cnt) || 0);
     const gameChartMighty = gameSeries.map(r => parseInt(r.mighty_cnt) || 0);
+    const gameChartSkullBidding = gameSeries.map(r => parseInt(r.skb_cnt) || 0);
     const gameChartRanked = gameSeries.map(r => parseInt(r.ranked_cnt) || 0);
     const gameChartTotal = gameSeries.map(r => parseInt(r.total_cnt) || 0);
     const gameBucketTimes = gameSeries.map(r => r.bucket_time);
@@ -3331,6 +3347,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                 borderSkipped: false,
               },
               {
+                label: '스컬',
+                data: ${JSON.stringify(gameChartSkullBidding)},
+                backgroundColor: 'rgba(74,60,54,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
                 label: '랭크전',
                 data: ${JSON.stringify(gameChartRanked)},
                 type: 'line',
@@ -3799,6 +3822,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         const parsed = parseInt(gameType.split('_').pop(), 10);
         gameType = 'love_letter';
         maxPlayers = parsed;
+      } else if (gameType.startsWith('skull_bidding_')) {
+        const parsed = parseInt(gameType.split('_').pop(), 10);
+        gameType = 'skull_bidding';
+        maxPlayers = parsed;
       }
       const result = fillerRooms.create({
         nickname: body.nickname || '',
@@ -3828,6 +3855,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       skull_king: '스컬킹',
       love_letter: '러브레터',
       mighty: '마이티',
+      skull_bidding: '스컬',
     };
     const SPEED_LABEL = { fast: '빠름', normal: '보통', slow: '느림' };
 
@@ -3905,6 +3933,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="love_letter">러브레터 (4인)</option>
               <option value="mighty">마이티 (5인)</option>
               <option value="mighty_6">마이티 (6인)</option>
+              <option value="skull_bidding_3">스컬 (3인)</option>
+              <option value="skull_bidding_4">스컬 (4인)</option>
+              <option value="skull_bidding_5">스컬 (5인)</option>
+              <option value="skull_bidding">스컬 (6인)</option>
             </select>
           </label>
           <label style="display:flex;flex-direction:column;gap:4px">

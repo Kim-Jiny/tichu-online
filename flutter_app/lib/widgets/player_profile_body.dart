@@ -166,7 +166,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               (totalGames as int) +
               (skGames as int) +
               ((profile['mightyTotalGames'] ?? 0) as int) +
-              (llGames as int),
+              (llGames as int) +
+              ((profile['skbTotalGames'] ?? 0) as int),
           reportCount: reportCount as int,
           leaveCount: leaveCount as int,
         ),
@@ -282,6 +283,20 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                           onTap: () {
                             Navigator.pop(bCtx);
                             onTabChanged('love_letter');
+                          },
+                        ),
+                        ListTile(
+                          leading: gameTypeSymbol('skull_bidding', size: 24),
+                          title: Text(l10n.lobbySkullBidding),
+                          trailing: selectedTab == 'skull_bidding'
+                              ? Icon(
+                                  Icons.check,
+                                  color: gameTypeColor('skull_bidding'),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.pop(bCtx);
+                            onTabChanged('skull_bidding');
                           },
                         ),
                         const SizedBox(height: 8),
@@ -443,6 +458,29 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               ),
             ],
           ),
+        ] else if (selectedTab == 'skull_bidding') ...[
+          _buildProfileSectionCard(
+            title: l10n.lobbySkullBiddingRecord,
+            accent: _cardAccent('skull_bidding'),
+            background: _cardTint('skull_bidding'),
+            icon: Icons.casino,
+            iconColor: gameTypeColor('skull_bidding'),
+            mainText: '',
+            chips: [
+              _buildStatChip(
+                l10n.lobbyStatRecord,
+                l10n.lobbyRecordFormat(
+                  (profile['skbTotalGames'] ?? 0) as int,
+                  (profile['skbWins'] ?? 0) as int,
+                  (profile['skbLosses'] ?? 0) as int,
+                ),
+              ),
+              _buildStatChip(
+                l10n.lobbyStatWinRate,
+                '${profile['skbWinRate'] ?? 0}%',
+              ),
+            ],
+          ),
         ] else ...[
           _buildProfileSectionCard(
             title: l10n.lobbyLoveLetterRecord,
@@ -501,6 +539,13 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         games: n('llTotalGames'),
         wins: n('llWins'),
         losses: n('llLosses'),
+      ),
+      _GameTally(
+        key: 'skull_bidding',
+        label: l10n.lobbySkullBidding,
+        games: n('skbTotalGames'),
+        wins: n('skbWins'),
+        losses: n('skbLosses'),
       ),
     ];
     final total = _GameTally(
@@ -1045,6 +1090,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final gameType = match['gameType']?.toString() ?? 'tichu';
     final isSK = gameType == 'skull_king';
     final isLL = gameType == 'love_letter';
+    final isSkullBidding = gameType == 'skull_bidding';
     final l10n = L10n.of(context);
 
     final outcome = _outcomeOf(match, profileNickname);
@@ -1077,7 +1123,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         // A walk-out has no sides: it is simply who was at the table.
         mine: const {},
       );
-    } else if (isMighty || isSK || isLL) {
+    } else if (isMighty || isSK || isLL || isSkullBidding) {
       final players = match['players'] as List<dynamic>? ?? [];
       final myRank = match['myRank'] ?? '-';
       final myScore = match['myScore'] ?? 0;
@@ -1152,7 +1198,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    if (!isLL)
+                    if (!isLL && !isSkullBidding)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 5,

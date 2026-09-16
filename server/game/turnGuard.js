@@ -50,6 +50,12 @@ function playerStillNeedsToAct(gameType, game, playerId) {
     return false;
   }
 
+  if (gameType === 'skull_bidding') {
+    // currentPlayer stays the challenger through a pending discard too, so
+    // one check covers placing/bidding/revealing — see startTurnTimer.
+    return ['placing', 'bidding', 'revealing'].includes(state) && game.currentPlayer === playerId;
+  }
+
   // Tichu: the turn can be owed by someone other than currentPlayer.
   if (state !== 'playing') return false;
   let target = game.currentPlayer;

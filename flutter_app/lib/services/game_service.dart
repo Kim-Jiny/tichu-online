@@ -1749,6 +1749,10 @@ class GameService extends ChangeNotifier {
             // Skull game state
             currentGameType = 'skull_bidding';
             final nextSkullBidding = SkullBiddingGameStateData.fromJson(state);
+            _handleSkullBiddingSfxTransitions(
+              _prevSkullBiddingGameState,
+              nextSkullBidding,
+            );
             _prevSkullBiddingGameState = nextSkullBidding;
             skullBiddingGameState = nextSkullBidding;
             gameState = null;
@@ -3264,6 +3268,43 @@ class GameService extends ChangeNotifier {
     }
   }
 
+  void _handleSkullBiddingSfxTransitions(
+    SkullBiddingGameStateData? prev,
+    SkullBiddingGameStateData next,
+  ) {
+    if (prev == null) {
+      if (next.isMyTurn) {
+        _sfx.play('my_turn');
+      }
+      return;
+    }
+
+    // A disc was placed (stacks grew) or flipped (reveal log grew).
+    final prevStackTotal = prev.players.fold<int>(0, (s, p) => s + p.stackCount);
+    final nextStackTotal = next.players.fold<int>(0, (s, p) => s + p.stackCount);
+    if (nextStackTotal > prevStackTotal ||
+        next.revealLog.length > prev.revealLog.length) {
+      _sfx.play('card');
+    }
+
+    // My turn
+    if (!prev.isMyTurn && next.isMyTurn) {
+      _sfx.play('my_turn');
+    }
+
+    // Phase transitions
+    if (prev.phase != next.phase) {
+      if (next.phase == 'round_end') {
+        _sfx.play('round_end');
+      } else if (next.phase == 'game_end') {
+        final self = next.players.where((p) => p.position == 'self');
+        if (self.isNotEmpty) {
+          _sfx.play(next.gameWinner == self.first.id ? 'victory' : 'defeat');
+        }
+      }
+    }
+  }
+
   Future<void> _loadSfxPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -3867,6 +3908,9 @@ class GameService extends ChangeNotifier {
       msg['maxPlayers'] = maxPlayers;
     } else if (gameType == 'mighty') {
       msg['gameType'] = 'mighty';
+      msg['maxPlayers'] = maxPlayers;
+    } else if (gameType == 'skull_bidding') {
+      msg['gameType'] = 'skull_bidding';
       msg['maxPlayers'] = maxPlayers;
     }
     _network.send(msg);

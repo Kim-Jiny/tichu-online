@@ -877,6 +877,9 @@ class L10nDe extends L10n {
   String get lobbyLoveLetterRecord => 'Love Letter Statistik';
 
   @override
+  String get lobbySkullBiddingRecord => 'Skull-Statistik';
+
+  @override
   String get lobbyStatRecord => 'Bilanz';
 
   @override
@@ -2580,6 +2583,9 @@ class L10nDe extends L10n {
 
   @override
   String get rulesTabMighty => 'Mighty';
+
+  @override
+  String get rulesTabSkullBidding => 'Skull';
 
   @override
   String get rulesMtGoalTitle => 'Spielziel';
@@ -5139,4 +5145,216 @@ class L10nDe extends L10n {
   String lobbySpectatorMore(int count) {
     return '+$count weitere';
   }
+
+  @override
+  String get lobbySkullBidding => 'Skull';
+
+  @override
+  String get lobbySkullBiddingBadge => 'Skull';
+
+  @override
+  String lobbySkullBiddingPlayers(int count) {
+    return 'Skull · $count Sp.';
+  }
+
+  @override
+  String get skullBiddingPhasePlacing => 'Platzieren';
+
+  @override
+  String get skullBiddingPhaseBidding => 'Bieten';
+
+  @override
+  String get skullBiddingPhaseRevealing => 'Aufdecken';
+
+  @override
+  String get skullBiddingPhaseRoundEnd => 'Rundenende';
+
+  @override
+  String get skullBiddingPhaseGameEnd => 'Spielende';
+
+  @override
+  String get skullBiddingRound => 'Runde';
+
+  @override
+  String get skullBiddingTargetSuccesses => 'Ziel-Erfolge';
+
+  @override
+  String get skullBiddingTableTotal => 'Scheiben am Tisch';
+
+  @override
+  String get skullBiddingHighestBid => 'Höchstes Gebot';
+
+  @override
+  String get skullBiddingChallenger => 'Herausforderer';
+
+  @override
+  String get skullBiddingEliminated => 'Ausgeschieden';
+
+  @override
+  String get skullBiddingRoundSuccess => 'Erfolg!';
+
+  @override
+  String get skullBiddingRoundFail => 'Fehlgeschlagen';
+
+  @override
+  String get skullBiddingPoolRemaining => 'Verbleibende Scheiben';
+
+  @override
+  String get skullBiddingNextRoundAuto => 'Weiter zur nächsten Runde...';
+
+  @override
+  String get skullBiddingWins => 'gewinnt';
+
+  @override
+  String skullBiddingWaitingForDiscard(String name) {
+    return '$name wählt eine Scheibe zum Ablegen';
+  }
+
+  @override
+  String get skullBiddingChooseDiscard =>
+      'Wähle eine Scheibe zum dauerhaften Ablegen';
+
+  @override
+  String skullBiddingWaitingForTurn(String name) {
+    return 'Warte auf $name';
+  }
+
+  @override
+  String get skullBiddingYourTurnPlace =>
+      'Lege eine Scheibe, oder eröffne die Bietrunde, falls du schon eine gelegt hast';
+
+  @override
+  String get skullBiddingMyDiscs => 'Deine Scheiben — was spielst du?';
+
+  @override
+  String get skullBiddingMyStackLabel => 'Deine Reihenfolge';
+
+  @override
+  String get skullBiddingOpenBid => 'Bietrunde eröffnen';
+
+  @override
+  String get skullBiddingOpenBidTitle => 'Wie viele rufst du?';
+
+  @override
+  String get skullBiddingPass => 'Passen';
+
+  @override
+  String get skullBiddingChooseTarget =>
+      'Tippe auf einen gegnerischen Platz, um dessen Scheibe aufzudecken';
+
+  @override
+  String get skullBiddingSpectatorHint =>
+      'Tippe auf einen Platz, um die Scheiben sehen zu wollen';
+
+  @override
+  String get skullBiddingSpectatorHandPending => 'Anfrage ausstehend';
+
+  @override
+  String get skullBiddingRulesTitle => 'Skull-Regeln';
+
+  @override
+  String get skullBiddingRulesIntro =>
+      'Ein Spiel aus Bluff und Nervenkitzel — nur du weißt, was unter deinen eigenen Scheiben liegt.';
+
+  @override
+  String get skullBiddingRuleGoalTitle => 'Ziel';
+
+  @override
+  String get skullBiddingRuleGoalBody =>
+      'Gewinne, indem du 2 Runden erfolgreich abschließt! Wer alle Scheiben am Tisch bietet und Erfolg hat, gewinnt sofort.';
+
+  @override
+  String get skullBiddingRuleSetupTitle => 'Deine Scheiben';
+
+  @override
+  String get skullBiddingRuleSetupBody =>
+      'Jeder beginnt mit 3 Rosen-Scheiben und 1 Totenkopf-Scheibe. Diese bleiben dir für das gesamte Spiel.';
+
+  @override
+  String get skullBiddingRulePlaceTitle => '① Legen';
+
+  @override
+  String get skullBiddingRulePlaceBody =>
+      'Lege in deinem Zug eine Scheibe verdeckt auf deinen eigenen Stapel. Nur du weißt, welche du gelegt hast.';
+
+  @override
+  String get skullBiddingRuleBidTitle => '② Bieten';
+
+  @override
+  String get skullBiddingRuleBidBody =>
+      'Sobald du mindestens eine Scheibe gelegt hast, kannst du jederzeit die Bietrunde eröffnen — und erklären, wie viele Scheiben in dieser Runde aufgedeckt werden. Die anderen bieten höher oder passen; wer als Letzte(r) übrig bleibt, wird Herausforderer.';
+
+  @override
+  String get skullBiddingRuleRevealTitle => '③ Aufdecken';
+
+  @override
+  String get skullBiddingRuleRevealBody =>
+      'Der Herausforderer deckt so viele Scheiben auf, beginnend mit dem eigenen Stapel. Ist dieser aufgebraucht, wählt er Stapel der Gegner zum Weiterdecken — auch der Herausforderer weiß nicht, was dort liegt.';
+
+  @override
+  String get skullBiddingRuleSkullTitle => 'Wenn ein Totenkopf erscheint';
+
+  @override
+  String get skullBiddingRuleSkullBody =>
+      'Schon ein einziger Totenkopf beendet die Herausforderung sofort. Der Herausforderer verliert dauerhaft eine eigene Scheibe (seine Wahl, Rose oder Totenkopf) — verliert er beide, scheidet er aus.';
+
+  @override
+  String get skullBiddingRuleSuccessTitle => 'Bei Erfolg';
+
+  @override
+  String get skullBiddingRuleSuccessBody =>
+      'Nur Rosen, kein Totenkopf — Erfolg! Das bringt einen Punkt. Der Herausforderer beginnt die nächste Runde.';
+
+  @override
+  String get skullBiddingRuleWinTitle => 'Sieg';
+
+  @override
+  String get skullBiddingRuleWinBody =>
+      'Gewinne mit 2 Erfolgen, oder sofort, indem du alle Scheiben am Tisch bietest und triffst. Spieler, die alle Scheiben verlieren, scheiden aus; der letzte Verbleibende gewinnt automatisch.';
+
+  @override
+  String get skullBiddingRoseLabel => 'Rose';
+
+  @override
+  String get skullBiddingRoseSub =>
+      'Sichere Scheibe. Die Herausforderung geht weiter, auch wenn diese aufgedeckt wird.';
+
+  @override
+  String get skullBiddingSkullLabel => 'Totenkopf';
+
+  @override
+  String get skullBiddingSkullSub =>
+      'Beendet die Herausforderung sofort. Nur 1 pro Spieler.';
+
+  @override
+  String get rulesSkbExampleTitle => 'Eine Runde, Schritt für Schritt';
+
+  @override
+  String get rulesSkbExample1Title => 'Beispiel 1 · Erfolgreiches Gebot';
+
+  @override
+  String get rulesSkbExample1Setup =>
+      '4-Spieler-Partie, 12 Scheiben auf dem Tisch. Dan gewinnt die Auktion bei \"5\" und wird Herausforderer.';
+
+  @override
+  String get rulesSkbExample1Calc =>
+      'Deckt zuerst den eigenen 3er-Stapel auf — alles Rosen. Noch 2 fehlen, also wählt er 2 weitere von gegnerischen Stapeln — auch alles Rosen.';
+
+  @override
+  String get rulesSkbExample1Result => 'Erfolg +1 Punkt';
+
+  @override
+  String get rulesSkbExample2Title => 'Beispiel 2 · Ein Totenkopf erscheint';
+
+  @override
+  String get rulesSkbExample2Setup =>
+      'Gleiche Runde, anderes Blatt. Dan bietet diesmal \"6\". Die eigenen 3 Scheiben sind alle Rosen, aber 3 weitere werden gebraucht.';
+
+  @override
+  String get rulesSkbExample2Calc =>
+      'Die erste Scheibe vom gegnerischen Stapel ist ein Totenkopf! Die Herausforderung endet sofort.';
+
+  @override
+  String get rulesSkbExample2Result =>
+      'Fehlschlag — verliert dauerhaft eine Scheibe';
 }

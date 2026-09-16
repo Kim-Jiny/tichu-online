@@ -1689,6 +1689,12 @@ abstract class L10n {
   /// **'Love Letter Record'**
   String get lobbyLoveLetterRecord;
 
+  /// No description provided for @lobbySkullBiddingRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull Record'**
+  String get lobbySkullBiddingRecord;
+
   /// No description provided for @lobbyStatRecord.
   ///
   /// In en, this message translates to:
@@ -4706,6 +4712,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Mighty'**
   String get rulesTabMighty;
+
+  /// No description provided for @rulesTabSkullBidding.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull'**
+  String get rulesTabSkullBidding;
 
   /// No description provided for @rulesMtGoalTitle.
   ///
@@ -9020,6 +9032,378 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'+{count} more'**
   String lobbySpectatorMore(int count);
+
+  /// No description provided for @lobbySkullBidding.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull'**
+  String get lobbySkullBidding;
+
+  /// No description provided for @lobbySkullBiddingBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull'**
+  String get lobbySkullBiddingBadge;
+
+  /// No description provided for @lobbySkullBiddingPlayers.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull · {count}p'**
+  String lobbySkullBiddingPlayers(int count);
+
+  /// No description provided for @skullBiddingPhasePlacing.
+  ///
+  /// In en, this message translates to:
+  /// **'Placing'**
+  String get skullBiddingPhasePlacing;
+
+  /// No description provided for @skullBiddingPhaseBidding.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidding'**
+  String get skullBiddingPhaseBidding;
+
+  /// No description provided for @skullBiddingPhaseRevealing.
+  ///
+  /// In en, this message translates to:
+  /// **'Revealing'**
+  String get skullBiddingPhaseRevealing;
+
+  /// No description provided for @skullBiddingPhaseRoundEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Round End'**
+  String get skullBiddingPhaseRoundEnd;
+
+  /// No description provided for @skullBiddingPhaseGameEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Game End'**
+  String get skullBiddingPhaseGameEnd;
+
+  /// No description provided for @skullBiddingRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Round'**
+  String get skullBiddingRound;
+
+  /// No description provided for @skullBiddingTargetSuccesses.
+  ///
+  /// In en, this message translates to:
+  /// **'Target wins'**
+  String get skullBiddingTargetSuccesses;
+
+  /// No description provided for @skullBiddingTableTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Table total'**
+  String get skullBiddingTableTotal;
+
+  /// No description provided for @skullBiddingHighestBid.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest bid'**
+  String get skullBiddingHighestBid;
+
+  /// No description provided for @skullBiddingChallenger.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenger'**
+  String get skullBiddingChallenger;
+
+  /// No description provided for @skullBiddingEliminated.
+  ///
+  /// In en, this message translates to:
+  /// **'Eliminated'**
+  String get skullBiddingEliminated;
+
+  /// No description provided for @skullBiddingRoundSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Success!'**
+  String get skullBiddingRoundSuccess;
+
+  /// No description provided for @skullBiddingRoundFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get skullBiddingRoundFail;
+
+  /// No description provided for @skullBiddingPoolRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Discs left'**
+  String get skullBiddingPoolRemaining;
+
+  /// No description provided for @skullBiddingNextRoundAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving to the next round shortly'**
+  String get skullBiddingNextRoundAuto;
+
+  /// No description provided for @skullBiddingWins.
+  ///
+  /// In en, this message translates to:
+  /// **'wins'**
+  String get skullBiddingWins;
+
+  /// No description provided for @skullBiddingWaitingForDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is choosing a disc to discard'**
+  String skullBiddingWaitingForDiscard(String name);
+
+  /// No description provided for @skullBiddingChooseDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a disc to discard permanently'**
+  String get skullBiddingChooseDiscard;
+
+  /// No description provided for @skullBiddingWaitingForTurn.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {name}'**
+  String skullBiddingWaitingForTurn(String name);
+
+  /// No description provided for @skullBiddingYourTurnPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Place a disc, or open the bidding if you\'ve already placed one'**
+  String get skullBiddingYourTurnPlace;
+
+  /// No description provided for @skullBiddingMyDiscs.
+  ///
+  /// In en, this message translates to:
+  /// **'Your discs — what will you play?'**
+  String get skullBiddingMyDiscs;
+
+  /// No description provided for @skullBiddingMyStackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your stack, in order'**
+  String get skullBiddingMyStackLabel;
+
+  /// No description provided for @skullBiddingOpenBid.
+  ///
+  /// In en, this message translates to:
+  /// **'Open bidding'**
+  String get skullBiddingOpenBid;
+
+  /// No description provided for @skullBiddingOpenBidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How many will you call?'**
+  String get skullBiddingOpenBidTitle;
+
+  /// No description provided for @skullBiddingPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass'**
+  String get skullBiddingPass;
+
+  /// No description provided for @skullBiddingChooseTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an opponent\'s seat to flip their disc'**
+  String get skullBiddingChooseTarget;
+
+  /// No description provided for @skullBiddingSpectatorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a seat to request a look at their discs'**
+  String get skullBiddingSpectatorHint;
+
+  /// No description provided for @skullBiddingSpectatorHandPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Request pending'**
+  String get skullBiddingSpectatorHandPending;
+
+  /// No description provided for @skullBiddingRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull Rules'**
+  String get skullBiddingRulesTitle;
+
+  /// No description provided for @skullBiddingRulesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'A game of bluffing and nerve — only you know what\'s under your own discs.'**
+  String get skullBiddingRulesIntro;
+
+  /// No description provided for @skullBiddingRuleGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get skullBiddingRuleGoalTitle;
+
+  /// No description provided for @skullBiddingRuleGoalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed at 2 rounds to win! Betting the entire table\'s discs and succeeding wins instantly.'**
+  String get skullBiddingRuleGoalBody;
+
+  /// No description provided for @skullBiddingRuleSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your discs'**
+  String get skullBiddingRuleSetupTitle;
+
+  /// No description provided for @skullBiddingRuleSetupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone starts with 3 rose discs and 1 skull disc. These stay yours for the whole game.'**
+  String get skullBiddingRuleSetupBody;
+
+  /// No description provided for @skullBiddingRulePlaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'① Place'**
+  String get skullBiddingRulePlaceTitle;
+
+  /// No description provided for @skullBiddingRulePlaceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On your turn, place one disc face-down on your own stack. Only you know which one you placed.'**
+  String get skullBiddingRulePlaceBody;
+
+  /// No description provided for @skullBiddingRuleBidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'② Bid'**
+  String get skullBiddingRuleBidTitle;
+
+  /// No description provided for @skullBiddingRuleBidBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once you\'ve placed at least one disc, you can open the bidding at any time — declaring how many discs will be flipped this round. Others raise or pass, and the last one standing becomes the challenger.'**
+  String get skullBiddingRuleBidBody;
+
+  /// No description provided for @skullBiddingRuleRevealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'③ Reveal'**
+  String get skullBiddingRuleRevealTitle;
+
+  /// No description provided for @skullBiddingRuleRevealBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The challenger flips that many discs, starting with their own stack. Once their own is exhausted, they pick opponents\' stacks to keep flipping — not even the challenger knows what\'s under those.'**
+  String get skullBiddingRuleRevealBody;
+
+  /// No description provided for @skullBiddingRuleSkullTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'If a skull turns up'**
+  String get skullBiddingRuleSkullTitle;
+
+  /// No description provided for @skullBiddingRuleSkullBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Even one skull ends the challenge immediately. The challenger permanently discards one of their own discs (their choice, rose or skull) — losing both eliminates them.'**
+  String get skullBiddingRuleSkullBody;
+
+  /// No description provided for @skullBiddingRuleSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On success'**
+  String get skullBiddingRuleSuccessTitle;
+
+  /// No description provided for @skullBiddingRuleSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All roses, no skull — success! Scores a point. The challenger starts the next round.'**
+  String get skullBiddingRuleSuccessBody;
+
+  /// No description provided for @skullBiddingRuleWinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Winning'**
+  String get skullBiddingRuleWinTitle;
+
+  /// No description provided for @skullBiddingRuleWinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Win with 2 successes, or instantly by betting and succeeding on every disc at the table. Players who lose all their discs are eliminated; the last one standing wins automatically.'**
+  String get skullBiddingRuleWinBody;
+
+  /// No description provided for @skullBiddingRoseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rose'**
+  String get skullBiddingRoseLabel;
+
+  /// No description provided for @skullBiddingRoseSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Safe disc. The challenge continues even if this one turns up.'**
+  String get skullBiddingRoseSub;
+
+  /// No description provided for @skullBiddingSkullLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull'**
+  String get skullBiddingSkullLabel;
+
+  /// No description provided for @skullBiddingSkullSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends the challenge the instant it\'s flipped. Only 1 per player.'**
+  String get skullBiddingSkullSub;
+
+  /// No description provided for @rulesSkbExampleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A round, worked through'**
+  String get rulesSkbExampleTitle;
+
+  /// No description provided for @rulesSkbExample1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Example 1 · A successful bid'**
+  String get rulesSkbExample1Title;
+
+  /// No description provided for @rulesSkbExample1Setup.
+  ///
+  /// In en, this message translates to:
+  /// **'4-player game, 12 discs on the table. Dan wins the auction at \"5\" and becomes the challenger.'**
+  String get rulesSkbExample1Setup;
+
+  /// No description provided for @rulesSkbExample1Calc.
+  ///
+  /// In en, this message translates to:
+  /// **'Flips their own 3-disc stack first — all roses. Still 2 short, so they pick 2 more from opponents\' stacks — also all roses.'**
+  String get rulesSkbExample1Calc;
+
+  /// No description provided for @rulesSkbExample1Result.
+  ///
+  /// In en, this message translates to:
+  /// **'Success +1 point'**
+  String get rulesSkbExample1Result;
+
+  /// No description provided for @rulesSkbExample2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Example 2 · A skull turns up'**
+  String get rulesSkbExample2Title;
+
+  /// No description provided for @rulesSkbExample2Setup.
+  ///
+  /// In en, this message translates to:
+  /// **'Same round, a different hand. Dan bids \"6\" this time. Their own 3 discs are all roses, but 3 more are needed.'**
+  String get rulesSkbExample2Setup;
+
+  /// No description provided for @rulesSkbExample2Calc.
+  ///
+  /// In en, this message translates to:
+  /// **'The first disc flipped from an opponent\'s stack is a skull! The challenge ends immediately.'**
+  String get rulesSkbExample2Calc;
+
+  /// No description provided for @rulesSkbExample2Result.
+  ///
+  /// In en, this message translates to:
+  /// **'Fail — permanently discards one disc'**
+  String get rulesSkbExample2Result;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

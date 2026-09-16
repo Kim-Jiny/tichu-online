@@ -867,6 +867,9 @@ class L10nEn extends L10n {
   String get lobbyLoveLetterRecord => 'Love Letter Record';
 
   @override
+  String get lobbySkullBiddingRecord => 'Skull Record';
+
+  @override
   String get lobbyStatRecord => 'Record';
 
   @override
@@ -2565,6 +2568,9 @@ class L10nEn extends L10n {
 
   @override
   String get rulesTabMighty => 'Mighty';
+
+  @override
+  String get rulesTabSkullBidding => 'Skull';
 
   @override
   String get rulesMtGoalTitle => 'Game Objective';
@@ -5104,4 +5110,215 @@ class L10nEn extends L10n {
   String lobbySpectatorMore(int count) {
     return '+$count more';
   }
+
+  @override
+  String get lobbySkullBidding => 'Skull';
+
+  @override
+  String get lobbySkullBiddingBadge => 'Skull';
+
+  @override
+  String lobbySkullBiddingPlayers(int count) {
+    return 'Skull · ${count}p';
+  }
+
+  @override
+  String get skullBiddingPhasePlacing => 'Placing';
+
+  @override
+  String get skullBiddingPhaseBidding => 'Bidding';
+
+  @override
+  String get skullBiddingPhaseRevealing => 'Revealing';
+
+  @override
+  String get skullBiddingPhaseRoundEnd => 'Round End';
+
+  @override
+  String get skullBiddingPhaseGameEnd => 'Game End';
+
+  @override
+  String get skullBiddingRound => 'Round';
+
+  @override
+  String get skullBiddingTargetSuccesses => 'Target wins';
+
+  @override
+  String get skullBiddingTableTotal => 'Table total';
+
+  @override
+  String get skullBiddingHighestBid => 'Highest bid';
+
+  @override
+  String get skullBiddingChallenger => 'Challenger';
+
+  @override
+  String get skullBiddingEliminated => 'Eliminated';
+
+  @override
+  String get skullBiddingRoundSuccess => 'Success!';
+
+  @override
+  String get skullBiddingRoundFail => 'Failed';
+
+  @override
+  String get skullBiddingPoolRemaining => 'Discs left';
+
+  @override
+  String get skullBiddingNextRoundAuto => 'Moving to the next round shortly';
+
+  @override
+  String get skullBiddingWins => 'wins';
+
+  @override
+  String skullBiddingWaitingForDiscard(String name) {
+    return '$name is choosing a disc to discard';
+  }
+
+  @override
+  String get skullBiddingChooseDiscard =>
+      'Choose a disc to discard permanently';
+
+  @override
+  String skullBiddingWaitingForTurn(String name) {
+    return 'Waiting for $name';
+  }
+
+  @override
+  String get skullBiddingYourTurnPlace =>
+      'Place a disc, or open the bidding if you\'ve already placed one';
+
+  @override
+  String get skullBiddingMyDiscs => 'Your discs — what will you play?';
+
+  @override
+  String get skullBiddingMyStackLabel => 'Your stack, in order';
+
+  @override
+  String get skullBiddingOpenBid => 'Open bidding';
+
+  @override
+  String get skullBiddingOpenBidTitle => 'How many will you call?';
+
+  @override
+  String get skullBiddingPass => 'Pass';
+
+  @override
+  String get skullBiddingChooseTarget =>
+      'Tap an opponent\'s seat to flip their disc';
+
+  @override
+  String get skullBiddingSpectatorHint =>
+      'Tap a seat to request a look at their discs';
+
+  @override
+  String get skullBiddingSpectatorHandPending => 'Request pending';
+
+  @override
+  String get skullBiddingRulesTitle => 'Skull Rules';
+
+  @override
+  String get skullBiddingRulesIntro =>
+      'A game of bluffing and nerve — only you know what\'s under your own discs.';
+
+  @override
+  String get skullBiddingRuleGoalTitle => 'Goal';
+
+  @override
+  String get skullBiddingRuleGoalBody =>
+      'Succeed at 2 rounds to win! Betting the entire table\'s discs and succeeding wins instantly.';
+
+  @override
+  String get skullBiddingRuleSetupTitle => 'Your discs';
+
+  @override
+  String get skullBiddingRuleSetupBody =>
+      'Everyone starts with 3 rose discs and 1 skull disc. These stay yours for the whole game.';
+
+  @override
+  String get skullBiddingRulePlaceTitle => '① Place';
+
+  @override
+  String get skullBiddingRulePlaceBody =>
+      'On your turn, place one disc face-down on your own stack. Only you know which one you placed.';
+
+  @override
+  String get skullBiddingRuleBidTitle => '② Bid';
+
+  @override
+  String get skullBiddingRuleBidBody =>
+      'Once you\'ve placed at least one disc, you can open the bidding at any time — declaring how many discs will be flipped this round. Others raise or pass, and the last one standing becomes the challenger.';
+
+  @override
+  String get skullBiddingRuleRevealTitle => '③ Reveal';
+
+  @override
+  String get skullBiddingRuleRevealBody =>
+      'The challenger flips that many discs, starting with their own stack. Once their own is exhausted, they pick opponents\' stacks to keep flipping — not even the challenger knows what\'s under those.';
+
+  @override
+  String get skullBiddingRuleSkullTitle => 'If a skull turns up';
+
+  @override
+  String get skullBiddingRuleSkullBody =>
+      'Even one skull ends the challenge immediately. The challenger permanently discards one of their own discs (their choice, rose or skull) — losing both eliminates them.';
+
+  @override
+  String get skullBiddingRuleSuccessTitle => 'On success';
+
+  @override
+  String get skullBiddingRuleSuccessBody =>
+      'All roses, no skull — success! Scores a point. The challenger starts the next round.';
+
+  @override
+  String get skullBiddingRuleWinTitle => 'Winning';
+
+  @override
+  String get skullBiddingRuleWinBody =>
+      'Win with 2 successes, or instantly by betting and succeeding on every disc at the table. Players who lose all their discs are eliminated; the last one standing wins automatically.';
+
+  @override
+  String get skullBiddingRoseLabel => 'Rose';
+
+  @override
+  String get skullBiddingRoseSub =>
+      'Safe disc. The challenge continues even if this one turns up.';
+
+  @override
+  String get skullBiddingSkullLabel => 'Skull';
+
+  @override
+  String get skullBiddingSkullSub =>
+      'Ends the challenge the instant it\'s flipped. Only 1 per player.';
+
+  @override
+  String get rulesSkbExampleTitle => 'A round, worked through';
+
+  @override
+  String get rulesSkbExample1Title => 'Example 1 · A successful bid';
+
+  @override
+  String get rulesSkbExample1Setup =>
+      '4-player game, 12 discs on the table. Dan wins the auction at \"5\" and becomes the challenger.';
+
+  @override
+  String get rulesSkbExample1Calc =>
+      'Flips their own 3-disc stack first — all roses. Still 2 short, so they pick 2 more from opponents\' stacks — also all roses.';
+
+  @override
+  String get rulesSkbExample1Result => 'Success +1 point';
+
+  @override
+  String get rulesSkbExample2Title => 'Example 2 · A skull turns up';
+
+  @override
+  String get rulesSkbExample2Setup =>
+      'Same round, a different hand. Dan bids \"6\" this time. Their own 3 discs are all roses, but 3 more are needed.';
+
+  @override
+  String get rulesSkbExample2Calc =>
+      'The first disc flipped from an opponent\'s stack is a skull! The challenge ends immediately.';
+
+  @override
+  String get rulesSkbExample2Result => 'Fail — permanently discards one disc';
 }

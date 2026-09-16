@@ -2902,6 +2902,7 @@ async function getUserProfile(nickname, locale = 'ko') {
               u.sk_total_games, u.sk_wins, u.sk_losses, u.sk_rating,
               u.sk_season_rating, u.sk_season_games, u.sk_season_wins, u.sk_season_losses,
               u.ll_total_games, u.ll_wins, u.ll_losses,
+              u.skb_total_games, u.skb_wins, u.skb_losses,
               u.mighty_total_games, u.mighty_wins, u.mighty_losses, u.mighty_rating,
               u.mighty_season_rating, u.mighty_season_games, u.mighty_season_wins, u.mighty_season_losses,
               u.card_view_pref,
@@ -3000,6 +3001,9 @@ async function getUserProfile(nickname, locale = 'ko') {
     const llWinRate = user.ll_total_games > 0
       ? Math.round((user.ll_wins / user.ll_total_games) * 100)
       : 0;
+    const skbWinRate = user.skb_total_games > 0
+      ? Math.round((user.skb_wins / user.skb_total_games) * 100)
+      : 0;
     const mightyWinRate = user.mighty_total_games > 0
       ? Math.round((user.mighty_wins / user.mighty_total_games) * 100)
       : 0;
@@ -3050,6 +3054,10 @@ async function getUserProfile(nickname, locale = 'ko') {
       llWins: user.ll_wins,
       llLosses: user.ll_losses,
       llWinRate,
+      skbTotalGames: user.skb_total_games,
+      skbWins: user.skb_wins,
+      skbLosses: user.skb_losses,
+      skbWinRate,
       mightyTotalGames: user.mighty_total_games,
       mightyWins: user.mighty_wins,
       mightyLosses: user.mighty_losses,
@@ -3529,6 +3537,42 @@ async function getRecentMatches(nickname, limit = 5, opts = null) {
       });
     }
 
+    // Skull matches
+    const skbResult = !wants('skull_bidding')
+      ? { rows: [] }
+      : await client.query(
+      `SELECT h.*, p.score as my_score, p.rank as my_rank, p.is_winner as my_winner
+       FROM tc_skull_bidding_match_history h
+       JOIN tc_skull_bidding_match_players p ON p.match_id = h.id AND p.nickname = $1
+       WHERE h.created_at >= $3
+       ORDER BY h.created_at DESC
+       LIMIT $2`,
+      [nickname, need, since]
+    );
+    const skbPlayers = await fetchPlayersByMatch(
+      'tc_skull_bidding_match_players', skbResult.rows.map(r => r.id));
+    const skbMatches = [];
+    for (const row of skbResult.rows) {
+      const deserterNickname = row.deserter_nickname || null;
+      const isDesertionLoss = deserterNickname === nickname;
+      const isDraw = deserterNickname != null && deserterNickname !== nickname;
+      skbMatches.push({
+        id: row.id,
+        gameType: 'skull_bidding',
+        won: isDraw ? false : row.my_winner,
+        isDraw,
+        isDesertionLoss,
+        deserterNickname,
+        myScore: row.my_score,
+        myRank: row.my_rank,
+        playerCount: row.player_count,
+        isRanked: row.is_ranked,
+        endReason: row.end_reason || 'normal',
+        players: skbPlayers.get(row.id) || [],
+        createdAt: row.created_at,
+      });
+    }
+
     // Merge and sort by date. Whether a global slice follows depends on the
     // caller — see the header: the popup's first load must not be sliced, a
     // page of one tab's history must.
@@ -3577,7 +3621,7 @@ async function getRecentMatches(nickname, limit = 5, opts = null) {
     }));
 
     const all = [
-      ...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches, ...midLeaves,
+      ...tichuMatches, ...skMatches, ...llMatches, ...mightyMatches, ...skbMatches, ...midLeaves,
     ];
     all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (!paged) return all;
@@ -3585,7 +3629,7 @@ async function getRecentMatches(nickname, limit = 5, opts = null) {
     // exactly at the page boundary it may still be a source that filled its
     // own LIMIT and has more behind it.
     const sourceFilled = [
-      tichuResult, skResult, llResult, mightyResult, midLeaveResult,
+      tichuResult, skResult, llResult, mightyResult, skbResult, midLeaveResult,
     ].some((r) => r.rows.length >= need);
     // Ends at `need`, not at offset+limit: those differ only on the page that
     // runs into MATCH_HISTORY_MAX_DEPTH, and there the cap has to win or the
@@ -7745,7 +7789,7 @@ async function getUserDetail(nickname) {
 function normalizeDashboardActivityFilters(activityPeriod = 'week', activityGame = 'all') {
   return {
     period: ['today', 'week', 'month'].includes(activityPeriod) ? activityPeriod : 'week',
-    game: ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(activityGame) ? activityGame : 'all',
+    game: ['all', 'tichu', 'skull_king', 'love_letter', 'mighty', 'skull_bidding'].includes(activityGame) ? activityGame : 'all',
   };
 }
 
@@ -7770,7 +7814,9 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         ? 'p.sk_games'
         : safeActivityGame === 'love_letter'
           ? 'p.ll_games'
-          : 'p.mighty_games';
+          : safeActivityGame === 'skull_bidding'
+            ? 'p.skb_games'
+            : 'p.mighty_games';
 
   return client.query(`
     WITH activity AS (
@@ -7806,6 +7852,14 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
           AND p.nickname IS NOT NULL
           AND p.nickname <> ''
           AND p.is_bot IS NOT TRUE
+        UNION ALL
+        SELECT p.nickname, 'skull_bidding'::text AS game_type
+        FROM tc_skull_bidding_match_history h
+        JOIN tc_skull_bidding_match_players p ON p.match_id = h.id
+        WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND p.nickname IS NOT NULL
+          AND p.nickname <> ''
+          AND p.is_bot IS NOT TRUE
       ) raw_activity
       GROUP BY nickname, game_type
     ),
@@ -7816,7 +7870,8 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         COALESCE(SUM(games) FILTER (WHERE game_type = 'tichu'), 0)::int AS tichu_games,
         COALESCE(SUM(games) FILTER (WHERE game_type = 'skull_king'), 0)::int AS sk_games,
         COALESCE(SUM(games) FILTER (WHERE game_type = 'love_letter'), 0)::int AS ll_games,
-        COALESCE(SUM(games) FILTER (WHERE game_type = 'mighty'), 0)::int AS mighty_games
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'mighty'), 0)::int AS mighty_games,
+        COALESCE(SUM(games) FILTER (WHERE game_type = 'skull_bidding'), 0)::int AS skb_games
       FROM activity
       GROUP BY nickname
     )
@@ -7827,17 +7882,19 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
       u.sk_total_games,
       u.ll_total_games,
       u.mighty_total_games,
+      u.skb_total_games,
       u.level,
       COALESCE(p.activity_games, 0) AS activity_games,
       COALESCE(p.tichu_games, 0) AS tichu_games,
       COALESCE(p.sk_games, 0) AS sk_games,
       COALESCE(p.ll_games, 0) AS ll_games,
-      COALESCE(p.mighty_games, 0) AS mighty_games
+      COALESCE(p.mighty_games, 0) AS mighty_games,
+      COALESCE(p.skb_games, 0) AS skb_games
     FROM pivot p
     JOIN tc_users u ON u.nickname = p.nickname
     WHERE u.is_deleted IS NOT TRUE
       AND ${activityRankExpr} > 0
-    ORDER BY ${activityRankExpr} DESC, p.activity_games DESC, p.tichu_games DESC NULLS LAST, p.sk_games DESC NULLS LAST, p.ll_games DESC NULLS LAST, p.mighty_games DESC NULLS LAST, u.nickname ASC
+    ORDER BY ${activityRankExpr} DESC, p.activity_games DESC, p.tichu_games DESC NULLS LAST, p.sk_games DESC NULLS LAST, p.ll_games DESC NULLS LAST, p.mighty_games DESC NULLS LAST, p.skb_games DESC NULLS LAST, u.nickname ASC
     LIMIT 10
   `);
 }
@@ -7898,6 +7955,14 @@ async function getTodayMatches(options = {}) {
         h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
        FROM tc_mighty_match_history h
        WHERE DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') = ${kstTodayExpr} ${rankedFilter.replace(/is_ranked/g, 'h.is_ranked')})
+      UNION ALL
+      (SELECT h.id, 'skull_bidding'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank)
+         FROM tc_skull_bidding_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_skull_bidding_match_history h
+       WHERE DATE((h.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') = ${kstTodayExpr} ${rankedFilter.replace(/is_ranked/g, 'h.is_ranked')})
       ORDER BY created_at DESC LIMIT ${limit}
     `);
     return { rows: result.rows };
@@ -7956,7 +8021,8 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
         (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as tichu,
         (SELECT COUNT(*) FROM tc_sk_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as sk,
         (SELECT COUNT(*) FROM tc_ll_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as ll,
-        (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as mighty
+        (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as mighty,
+        (SELECT COUNT(*) FROM tc_skull_bidding_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr}) as skb
     `);
     const recentMatches = await client.query(`
       (SELECT id, 'tichu'::text as game_type, winner_team, team_a_score, team_b_score,
@@ -7980,6 +8046,12 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
         h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
         h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
        FROM tc_mighty_match_history h ORDER BY h.created_at DESC LIMIT 10)
+      UNION ALL
+      (SELECT h.id, 'skull_bidding'::text as game_type, NULL as winner_team, NULL::int as team_a_score, NULL::int as team_b_score,
+        (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_skull_bidding_match_players p WHERE p.match_id = h.id) as player_a1,
+        h.player_count::text as player_a2, NULL as player_b1, NULL as player_b2,
+        h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+       FROM tc_skull_bidding_match_history h ORDER BY h.created_at DESC LIMIT 10)
       ORDER BY created_at DESC LIMIT 10
     `);
 
@@ -7998,40 +8070,49 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
 
     // Total matches + ranked matches (tichu + skull king)
     const totalMatches = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) + (SELECT COUNT(*) FROM tc_mighty_match_history) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history) + (SELECT COUNT(*) FROM tc_sk_match_history) + (SELECT COUNT(*) FROM tc_ll_match_history) + (SELECT COUNT(*) FROM tc_mighty_match_history) + (SELECT COUNT(*) FROM tc_skull_bidding_match_history) as count`
     );
+    // love_letter/skull_bidding force is_ranked=false client-side, so their
+    // terms here always contribute 0 — kept for symmetry with the other sums.
     const rankedMatchesToday = await client.query(
-      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) as count`
+      `SELECT (SELECT COUNT(*) FROM tc_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_sk_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_ll_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_mighty_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) + (SELECT COUNT(*) FROM tc_skull_bidding_match_history WHERE ${kstCreatedDate()} = ${kstTodayExpr} AND is_ranked = true) as count`
     );
 
     // Games per day (last 7 days) - tichu + skull king combined
     const dailyGames = await client.query(`
-      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt, SUM(mighty_cnt) as mighty_cnt FROM (
+      SELECT day, SUM(cnt) as cnt, SUM(ranked_cnt) as ranked_cnt, SUM(tichu_cnt) as tichu_cnt, SUM(sk_cnt) as sk_cnt, SUM(ll_cnt) as ll_cnt, SUM(mighty_cnt) as mighty_cnt, SUM(skb_cnt) as skb_cnt FROM (
         SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
+               COUNT(*) as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt, 0::bigint as skb_cnt
         FROM tc_match_history
         WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
         GROUP BY ${kstCreatedDate()}
         UNION ALL
         SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt
+               0::bigint as tichu_cnt, COUNT(*) as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt, 0::bigint as skb_cnt
         FROM tc_sk_match_history
         WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
         GROUP BY ${kstCreatedDate()}
         UNION ALL
         SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt, 0::bigint as mighty_cnt
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, COUNT(*) as ll_cnt, 0::bigint as mighty_cnt, 0::bigint as skb_cnt
         FROM tc_ll_match_history
         WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
         GROUP BY ${kstCreatedDate()}
         UNION ALL
         SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
                SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
-               0::bigint as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, COUNT(*) as mighty_cnt
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, COUNT(*) as mighty_cnt, 0::bigint as skb_cnt
         FROM tc_mighty_match_history
+        WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
+        GROUP BY ${kstCreatedDate()}
+        UNION ALL
+        SELECT ${kstCreatedDate()} as day, COUNT(*) as cnt,
+               SUM(CASE WHEN is_ranked THEN 1 ELSE 0 END) as ranked_cnt,
+               0::bigint as tichu_cnt, 0::bigint as sk_cnt, 0::bigint as ll_cnt, 0::bigint as mighty_cnt, COUNT(*) as skb_cnt
+        FROM tc_skull_bidding_match_history
         WHERE ${kstCreatedDate()} >= ${kstTodayExpr} - INTERVAL '6 days'
         GROUP BY ${kstCreatedDate()}
       ) combined GROUP BY day ORDER BY day
@@ -8139,11 +8220,12 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
       pendingReports: parseInt(pendingReports.rows[0].count),
       totalInquiries: parseInt(totalInquiries.rows[0].count),
       totalReports: parseInt(totalReports.rows[0].count),
-      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll) + parseInt(todayGames.rows[0].mighty),
+      todayGames: parseInt(todayGames.rows[0].tichu) + parseInt(todayGames.rows[0].sk) + parseInt(todayGames.rows[0].ll) + parseInt(todayGames.rows[0].mighty) + parseInt(todayGames.rows[0].skb),
       todayTichuGames: parseInt(todayGames.rows[0].tichu),
       todaySKGames: parseInt(todayGames.rows[0].sk),
       todayLLGames: parseInt(todayGames.rows[0].ll),
       todayMightyGames: parseInt(todayGames.rows[0].mighty),
+      todaySkullBiddingGames: parseInt(todayGames.rows[0].skb),
       recentMatches: recentMatches.rows,
       newUsersToday: parseInt(newUsersToday.rows[0].count),
       activeUsers24h: parseInt(activeUsers24h.rows[0].count),
@@ -8165,7 +8247,7 @@ async function getDashboardStats(activityPeriod = 'week', activityGame = 'all') 
   } catch (err) {
     console.error('Get dashboard stats error:', err);
     return {
-      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, totalInquiries: 0, totalReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0,
+      totalUsers: 0, pendingInquiries: 0, pendingReports: 0, totalInquiries: 0, totalReports: 0, todayGames: 0, todayTichuGames: 0, todaySKGames: 0, todayLLGames: 0, todayMightyGames: 0, todaySkullBiddingGames: 0,
       recentMatches: [], newUsersToday: 0, activeUsers24h: 0, activeUsers7d: 0,
       totalMatches: 0, rankedMatchesToday: 0, dailyGames: [], dailySignups: [],
       topPlayers: [], topPlayersPeriod: 'week', topPlayersGame: 'all', goldStats: {}, shopStats: {}, leaveStats: {}, reportStats30d: {},
@@ -8188,7 +8270,8 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
          (SELECT COUNT(*) FROM tc_match_history) +
          (SELECT COUNT(*) FROM tc_sk_match_history) +
          (SELECT COUNT(*) FROM tc_ll_match_history) +
-         (SELECT COUNT(*) FROM tc_mighty_match_history) AS total`
+         (SELECT COUNT(*) FROM tc_mighty_match_history) +
+         (SELECT COUNT(*) FROM tc_skull_bidding_match_history) AS total`
     );
 
     const result = await client.query(
@@ -8215,6 +8298,12 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
                h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
                h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
         FROM tc_mighty_match_history h
+        UNION ALL
+        SELECT h.id, 'skull_bidding'::text AS game_type, NULL AS winner_team, NULL::int AS team_a_score, NULL::int AS team_b_score,
+               (SELECT string_agg(p.nickname || '(' || p.score || '점)', ', ' ORDER BY p.rank) FROM tc_skull_bidding_match_players p WHERE p.match_id = h.id) AS player_a1,
+               h.player_count::text AS player_a2, NULL AS player_b1, NULL AS player_b2,
+               h.is_ranked, h.end_reason, h.deserter_nickname, h.created_at
+        FROM tc_skull_bidding_match_history h
       ) matches
       ORDER BY created_at DESC
       LIMIT $1 OFFSET $2`,
@@ -8320,6 +8409,24 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
           )
         GROUP BY 1
       ),
+      skb AS (
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
+               COUNT(DISTINCT h.id) AS total_cnt,
+               COUNT(DISTINCT h.id) FILTER (WHERE h.is_ranked = TRUE) AS ranked_cnt
+        FROM tc_skull_bidding_match_history h
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND (
+            $3 = '' OR EXISTS (
+              SELECT 1
+              FROM tc_skull_bidding_match_players p
+              JOIN tc_users u ON u.nickname = p.nickname
+              WHERE p.match_id = h.id
+                AND p.is_bot = FALSE
+                AND LOWER(u.device_platform) = $3
+            )
+          )
+        GROUP BY 1
+      ),
       buckets AS (
         SELECT bucket_time FROM tichu
         UNION
@@ -8328,19 +8435,23 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         SELECT bucket_time FROM love
         UNION
         SELECT bucket_time FROM mighty
+        UNION
+        SELECT bucket_time FROM skb
       )
       SELECT b.bucket_time,
              COALESCE(tichu.total_cnt, 0) AS tichu_cnt,
              COALESCE(skull.total_cnt, 0) AS skull_cnt,
              COALESCE(love.total_cnt, 0) AS ll_cnt,
              COALESCE(mighty.total_cnt, 0) AS mighty_cnt,
-             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) + COALESCE(love.total_cnt, 0) + COALESCE(mighty.total_cnt, 0) AS total_cnt,
-             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) + COALESCE(love.ranked_cnt, 0) + COALESCE(mighty.ranked_cnt, 0) AS ranked_cnt
+             COALESCE(skb.total_cnt, 0) AS skb_cnt,
+             COALESCE(tichu.total_cnt, 0) + COALESCE(skull.total_cnt, 0) + COALESCE(love.total_cnt, 0) + COALESCE(mighty.total_cnt, 0) + COALESCE(skb.total_cnt, 0) AS total_cnt,
+             COALESCE(tichu.ranked_cnt, 0) + COALESCE(skull.ranked_cnt, 0) + COALESCE(love.ranked_cnt, 0) + COALESCE(mighty.ranked_cnt, 0) + COALESCE(skb.ranked_cnt, 0) AS ranked_cnt
       FROM buckets b
       LEFT JOIN tichu ON tichu.bucket_time = b.bucket_time
       LEFT JOIN skull ON skull.bucket_time = b.bucket_time
       LEFT JOIN love ON love.bucket_time = b.bucket_time
       LEFT JOIN mighty ON mighty.bucket_time = b.bucket_time
+      LEFT JOIN skb ON skb.bucket_time = b.bucket_time
       ORDER BY b.bucket_time ASC
     `, [from, to, platform]);
 
@@ -8418,6 +8529,24 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
                END AS gold_delta
         FROM tc_mighty_match_history h
         JOIN tc_mighty_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
+        SELECT ${kstBucketExpr('h.created_at')} AS bucket_time,
+               CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_skull_bidding_match_history h
+        JOIN tc_skull_bidding_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
           AND EXISTS (
@@ -8576,6 +8705,21 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
         ) AS mighty_games,
         (
           SELECT COUNT(*)
+          FROM tc_skull_bidding_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_skull_bidding_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) AS skb_games,
+        (
+          SELECT COUNT(*)
           FROM tc_match_history mh
           WHERE mh.created_at >= $1 AND mh.created_at < $2
             AND mh.is_ranked = TRUE
@@ -8628,6 +8772,22 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
               $3 = '' OR EXISTS (
                 SELECT 1
                 FROM tc_mighty_match_players p
+                JOIN tc_users u ON u.nickname = p.nickname
+                WHERE p.match_id = h.id
+                  AND p.is_bot = FALSE
+                  AND LOWER(u.device_platform) = $3
+              )
+            )
+        ) +
+        (
+          SELECT COUNT(*)
+          FROM tc_skull_bidding_match_history h
+          WHERE h.created_at >= $1 AND h.created_at < $2
+            AND h.is_ranked = TRUE
+            AND (
+              $3 = '' OR EXISTS (
+                SELECT 1
+                FROM tc_skull_bidding_match_players p
                 JOIN tc_users u ON u.nickname = p.nickname
                 WHERE p.match_id = h.id
                   AND p.is_bot = FALSE
@@ -8721,6 +8881,23 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
                END AS gold_delta
         FROM tc_mighty_match_history h
         JOIN tc_mighty_match_players p ON p.match_id = h.id
+        WHERE h.created_at >= $1 AND h.created_at < $2
+          AND p.is_bot = FALSE
+          AND EXISTS (
+            SELECT 1 FROM tc_users u
+            WHERE u.nickname = p.nickname
+              AND ($3 = '' OR LOWER(u.device_platform) = $3)
+          )
+
+        UNION ALL
+
+        SELECT CASE
+                 WHEN h.end_reason IN ('leave', 'timeout') AND h.deserter_nickname = p.nickname THEN 0
+                 WHEN p.is_winner THEN CASE WHEN h.is_ranked THEN 20 ELSE 10 END
+                 ELSE CASE WHEN h.is_ranked THEN 6 ELSE 3 END
+               END AS gold_delta
+        FROM tc_skull_bidding_match_history h
+        JOIN tc_skull_bidding_match_players p ON p.match_id = h.id
         WHERE h.created_at >= $1 AND h.created_at < $2
           AND p.is_bot = FALSE
           AND EXISTS (
@@ -8878,11 +9055,12 @@ async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options =
       iapSeries,
       success: true,
       summary: {
-        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10) + parseInt(summaryRow.mighty_games || 0, 10)),
+        totalGames: (parseInt(summaryRow.tichu_games || 0, 10) + parseInt(summaryRow.skull_games || 0, 10) + parseInt(summaryRow.ll_games || 0, 10) + parseInt(summaryRow.mighty_games || 0, 10) + parseInt(summaryRow.skb_games || 0, 10)),
         tichuGames: parseInt(summaryRow.tichu_games || 0, 10),
         skullGames: parseInt(summaryRow.skull_games || 0, 10),
         llGames: parseInt(summaryRow.ll_games || 0, 10),
         mightyGames: parseInt(summaryRow.mighty_games || 0, 10),
+        skbGames: parseInt(summaryRow.skb_games || 0, 10),
         rankedGames: parseInt(summaryRow.ranked_games || 0, 10),
         totalSignups: parseInt(signupRow.total_signups || 0, 10),
         iosSignups: parseInt(signupRow.ios_signups || 0, 10),

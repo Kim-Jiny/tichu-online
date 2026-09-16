@@ -841,6 +841,9 @@ class L10nKo extends L10n {
   String get lobbyLoveLetterRecord => '러브레터 전적';
 
   @override
+  String get lobbySkullBiddingRecord => '스컬 전적';
+
+  @override
   String get lobbyStatRecord => '전적';
 
   @override
@@ -2502,6 +2505,9 @@ class L10nKo extends L10n {
 
   @override
   String get rulesTabMighty => '마이티';
+
+  @override
+  String get rulesTabSkullBidding => '스컬';
 
   @override
   String get rulesMtGoalTitle => '게임 목표';
@@ -4986,4 +4992,208 @@ class L10nKo extends L10n {
   String lobbySpectatorMore(int count) {
     return '외 $count명';
   }
+
+  @override
+  String get lobbySkullBidding => '스컬';
+
+  @override
+  String get lobbySkullBiddingBadge => '스컬';
+
+  @override
+  String lobbySkullBiddingPlayers(int count) {
+    return '스컬 · $count인';
+  }
+
+  @override
+  String get skullBiddingPhasePlacing => '배치 중';
+
+  @override
+  String get skullBiddingPhaseBidding => '입찰 중';
+
+  @override
+  String get skullBiddingPhaseRevealing => '공개 중';
+
+  @override
+  String get skullBiddingPhaseRoundEnd => '라운드 종료';
+
+  @override
+  String get skullBiddingPhaseGameEnd => '게임 종료';
+
+  @override
+  String get skullBiddingRound => '라운드';
+
+  @override
+  String get skullBiddingTargetSuccesses => '목표 성공';
+
+  @override
+  String get skullBiddingTableTotal => '테이블 전체';
+
+  @override
+  String get skullBiddingHighestBid => '최고 입찰';
+
+  @override
+  String get skullBiddingChallenger => '도전자';
+
+  @override
+  String get skullBiddingEliminated => '탈락';
+
+  @override
+  String get skullBiddingRoundSuccess => '성공!';
+
+  @override
+  String get skullBiddingRoundFail => '실패';
+
+  @override
+  String get skullBiddingPoolRemaining => '남은 코스터';
+
+  @override
+  String get skullBiddingNextRoundAuto => '곧 다음 라운드로 넘어갑니다';
+
+  @override
+  String get skullBiddingWins => '승리';
+
+  @override
+  String skullBiddingWaitingForDiscard(String name) {
+    return '$name님이 버릴 코스터를 고르고 있습니다';
+  }
+
+  @override
+  String get skullBiddingChooseDiscard => '영구히 버릴 코스터를 고르세요';
+
+  @override
+  String skullBiddingWaitingForTurn(String name) {
+    return '$name님의 차례입니다';
+  }
+
+  @override
+  String get skullBiddingYourTurnPlace => '코스터를 하나 놓거나, 이미 놓았다면 입찰을 시작하세요';
+
+  @override
+  String get skullBiddingMyDiscs => '내 코스터 — 뭘 낼까요?';
+
+  @override
+  String get skullBiddingMyStackLabel => '내가 놓은 순서';
+
+  @override
+  String get skullBiddingOpenBid => '입찰 시작';
+
+  @override
+  String get skullBiddingOpenBidTitle => '몇 장을 맞힐까요?';
+
+  @override
+  String get skullBiddingPass => '패스';
+
+  @override
+  String get skullBiddingChooseTarget => '상대 좌석을 눌러 뒤집을 사람을 고르세요';
+
+  @override
+  String get skullBiddingSpectatorHint => '좌석을 눌러 패 보기를 요청하세요';
+
+  @override
+  String get skullBiddingSpectatorHandPending => '요청 대기 중';
+
+  @override
+  String get skullBiddingRulesTitle => '스컬 규칙';
+
+  @override
+  String get skullBiddingRulesIntro =>
+      '허세와 눈치싸움의 게임 — 자기 코스터 뒤에 뭐가 있는지는 본인만 압니다.';
+
+  @override
+  String get skullBiddingRuleGoalTitle => '목표';
+
+  @override
+  String get skullBiddingRuleGoalBody =>
+      '라운드를 2번 성공시키면 승리! 테이블에 놓인 코스터를 전부 걸고 성공하면 그 자리에서 즉시 승리합니다.';
+
+  @override
+  String get skullBiddingRuleSetupTitle => '코스터';
+
+  @override
+  String get skullBiddingRuleSetupBody =>
+      '모두 장미 코스터 3장과 해골 코스터 1장을 갖고 시작합니다. 이 코스터들은 게임이 끝날 때까지 본인 소유입니다.';
+
+  @override
+  String get skullBiddingRulePlaceTitle => '① 배치';
+
+  @override
+  String get skullBiddingRulePlaceBody =>
+      '자기 차례에 코스터 하나를 골라 뒤집어(뭔지 안 보이게) 자기 스택 위에 쌓습니다. 무엇을 놓았는지는 본인만 압니다.';
+
+  @override
+  String get skullBiddingRuleBidTitle => '② 입찰';
+
+  @override
+  String get skullBiddingRuleBidBody =>
+      '코스터를 1장 이상 놓았다면 언제든 입찰을 시작할 수 있습니다. \"이번 라운드에 총 N장을 성공시키겠다\"고 선언하면, 다른 사람들이 더 높은 수를 부르거나 패스합니다. 마지막까지 남은 사람이 도전자가 됩니다.';
+
+  @override
+  String get skullBiddingRuleRevealTitle => '③ 공개';
+
+  @override
+  String get skullBiddingRuleRevealBody =>
+      '도전자는 자기 스택부터 부른 수만큼 코스터를 뒤집습니다. 자기 것을 다 뒤집었는데도 모자라면 다른 사람 스택에서 하나씩 골라 이어서 뒤집습니다 — 상대 것도 뭐가 나올지는 도전자도 모릅니다.';
+
+  @override
+  String get skullBiddingRuleSkullTitle => '해골이 나오면';
+
+  @override
+  String get skullBiddingRuleSkullBody =>
+      '뒤집은 코스터 중 해골이 하나라도 있으면 그 즉시 도전 실패. 도전자는 자기 코스터 중 하나를 영구히 버려야 하고(장미든 해골이든 선택), 코스터가 0장이 되면 탈락합니다.';
+
+  @override
+  String get skullBiddingRuleSuccessTitle => '성공하면';
+
+  @override
+  String get skullBiddingRuleSuccessBody =>
+      '부른 수만큼 전부 장미가 나오면 성공! 1점을 얻습니다. 다음 라운드는 이번 도전자가 시작합니다.';
+
+  @override
+  String get skullBiddingRuleWinTitle => '승리 조건';
+
+  @override
+  String get skullBiddingRuleWinBody =>
+      '2번 성공시키거나, 테이블 코스터를 전부 걸고 성공하면 즉시 승리합니다. 코스터를 모두 잃은 플레이어는 탈락하며, 한 명만 남아도 자동으로 승리합니다.';
+
+  @override
+  String get skullBiddingRoseLabel => '장미';
+
+  @override
+  String get skullBiddingRoseSub => '안전한 코스터. 뒤집혀도 도전은 계속됩니다.';
+
+  @override
+  String get skullBiddingSkullLabel => '해골';
+
+  @override
+  String get skullBiddingSkullSub => '뒤집히는 순간 도전 실패. 인당 딱 1장뿐입니다.';
+
+  @override
+  String get rulesSkbExampleTitle => '예시로 보는 한 라운드';
+
+  @override
+  String get rulesSkbExample1Title => '예시 1 · 입찰 성공';
+
+  @override
+  String get rulesSkbExample1Setup =>
+      '4인 게임, 테이블에 총 12장이 쌓인 상태. 도현이 \"5장\"으로 최고 입찰을 받아 도전자가 됨.';
+
+  @override
+  String get rulesSkbExample1Calc =>
+      '자기 스택 3장을 먼저 뒤집어 전부 장미 — 2장 모자라 상대 스택에서 2장을 더 골라 뒤집었는데 그것도 전부 장미.';
+
+  @override
+  String get rulesSkbExample1Result => '성공 +1점';
+
+  @override
+  String get rulesSkbExample2Title => '예시 2 · 해골 등장';
+
+  @override
+  String get rulesSkbExample2Setup =>
+      '같은 라운드, 다른 판. 도현이 이번엔 \"6장\"을 부름. 자기 스택 3장은 다 장미로 넘겼지만 3장이 더 필요.';
+
+  @override
+  String get rulesSkbExample2Calc => '상대 스택에서 뒤집은 첫 코스터가 해골! 그 즉시 도전이 끝남.';
+
+  @override
+  String get rulesSkbExample2Result => '실패 — 코스터 1개 영구 폐기';
 }

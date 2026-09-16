@@ -8,6 +8,14 @@ class SkullBiddingPlayer {
   final int successCount;
   final bool eliminated;
 
+  // Spectator-only (getStateForSpectator): a viewer with an approved
+  // card-view request gets this player's actual remaining hand for the
+  // round; everyone else gets null/false. Absent entirely from
+  // getStateForPlayer, so these stay null there too.
+  final int? handRoses;
+  final bool? handHasSkull;
+  final bool canViewHand;
+
   // Spliced in server-side (decorateSeats) — the engine itself never knew
   // these, same as every other game's player model here.
   final bool connected;
@@ -24,6 +32,9 @@ class SkullBiddingPlayer {
     this.stackCount = 0,
     this.successCount = 0,
     this.eliminated = false,
+    this.handRoses,
+    this.handHasSkull,
+    this.canViewHand = false,
     this.connected = true,
     this.timeoutCount = 0,
     this.photoUrl,
@@ -31,6 +42,7 @@ class SkullBiddingPlayer {
   });
 
   factory SkullBiddingPlayer.fromJson(Map<String, dynamic> json) {
+    final hand = json['hand'] as Map<String, dynamic>?;
     return SkullBiddingPlayer(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -40,6 +52,9 @@ class SkullBiddingPlayer {
       stackCount: json['stackCount'] ?? 0,
       successCount: json['successCount'] ?? 0,
       eliminated: json['eliminated'] == true,
+      handRoses: hand?['roses'] as int?,
+      handHasSkull: hand?['hasSkull'] as bool?,
+      canViewHand: json['canViewHand'] == true,
       connected: json['connected'] != false,
       timeoutCount: json['timeoutCount'] ?? 0,
       photoUrl: json['photoUrl'] as String?,
@@ -97,8 +112,21 @@ class SkullBiddingGameStateData {
   final List<SkullBiddingPlayer> players;
 
   /// Only ever populated with the viewer's own hand — {roses, hasSkull}.
+  /// This round's remaining discs (shrinks as they're placed).
   final int myRoses;
   final bool myHasSkull;
+
+  /// The viewer's own permanent pool — {roses, hasSkull}. Diverges from
+  /// myHand/myHasSkull once they've placed anything this round; a
+  /// discard-phase choice must be gated on this, not the hand.
+  final int myPoolRoses;
+  final bool myPoolHasSkull;
+
+  /// What the viewer has placed on their own stack this round, oldest first
+  /// — 'rose' | 'skull'. Not secret from them, just never rendered back
+  /// otherwise (there's no physical pile in front of them to glance at).
+  /// The last entry is the top disc — what a challenge flips off first.
+  final List<String> myStack;
 
   final String? currentPlayer;
   final bool isMyTurn;
@@ -127,6 +155,9 @@ class SkullBiddingGameStateData {
     this.players = const [],
     this.myRoses = 0,
     this.myHasSkull = false,
+    this.myPoolRoses = 0,
+    this.myPoolHasSkull = false,
+    this.myStack = const [],
     this.currentPlayer,
     this.isMyTurn = false,
     this.highestBid = 0,
@@ -152,6 +183,7 @@ class SkullBiddingGameStateData {
         : <SkullBiddingPlayer>[];
 
     final hand = json['myHand'] as Map<String, dynamic>?;
+    final pool = json['myPool'] as Map<String, dynamic>?;
 
     final revealLog = json['revealLog'] != null
         ? (json['revealLog'] as List)
@@ -173,6 +205,9 @@ class SkullBiddingGameStateData {
       players: players,
       myRoses: hand?['roses'] ?? 0,
       myHasSkull: hand?['hasSkull'] == true,
+      myPoolRoses: pool?['roses'] ?? 0,
+      myPoolHasSkull: pool?['hasSkull'] == true,
+      myStack: List<String>.from(json['myStack'] ?? const []),
       currentPlayer: json['currentPlayer'] as String?,
       isMyTurn: json['isMyTurn'] == true,
       highestBid: json['highestBid'] ?? 0,

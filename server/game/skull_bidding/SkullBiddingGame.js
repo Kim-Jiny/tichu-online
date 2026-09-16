@@ -422,8 +422,18 @@ class SkullBiddingGame {
       phase: this.state,
       round: this.round,
       players,
-      // Only the viewer's own hand carries disc identity.
+      // Only the viewer's own hand/pool carry disc identity. myHand is this
+      // round's remaining discs (shrinks as they're placed); myPool is the
+      // permanent inventory a failed challenge discards from — the two
+      // diverge the moment this player has placed anything this round, so a
+      // discard-phase UI needs myPool, not myHand.
       myHand: { ...(this.hand[playerId] || { roses: 0, hasSkull: false }) },
+      myPool: { ...(this.pool[playerId] || { roses: 0, hasSkull: false }) },
+      // Not secret from the player who placed them — just never rendered
+      // back, unlike a physical stack sitting in front of you. Placement
+      // order, oldest first; the last entry is the top disc (what a
+      // challenge flips off first).
+      myStack: [...(this.stack[playerId] || [])],
       currentPlayer: this.currentPlayer,
       isMyTurn: this.currentPlayer === playerId,
       highestBid: this.highestBid,

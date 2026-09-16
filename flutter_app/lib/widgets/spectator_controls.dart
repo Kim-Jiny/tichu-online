@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/ll_game_state.dart';
+import '../models/skull_bidding_game_state.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import 'mid_game_join.dart';
@@ -759,6 +760,193 @@ void showLLScoreHistoryDialog(
                                 ),
                               ),
                             ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: Text(l10n.gameClose),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Skull round history: current success counts + round-by-round challenges
+/// (who bid what against the table total, and whether it landed).
+void showSkullRoundHistoryDialog(
+  BuildContext context, {
+  required List<SkullBiddingRoundHistoryEntry> roundHistory,
+  required List<SkullBiddingPlayer> players,
+  required int targetSuccesses,
+}) {
+  const accent = Color(0xFF6A4A42);
+  final l10n = L10n.of(context);
+  final sorted = [...players]..sort((a, b) => b.successCount.compareTo(a.successCount));
+  final topSuccesses = sorted.isNotEmpty ? sorted.first.successCount : 0;
+  String nameFor(String? id) {
+    if (id == null) return '-';
+    for (final p in players) {
+      if (p.id == id) return p.name;
+    }
+    return id;
+  }
+
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340, maxHeight: 540),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.history, size: 20, color: _kTextPrimary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.gameScoreHistory,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _kTextPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.emoji_events, size: 14, color: accent),
+                  const SizedBox(width: 3),
+                  Text(
+                    '$targetSuccesses',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Current success-count standings.
+              ...sorted.map((p) {
+                final isLeader = topSuccesses > 0 && p.successCount == topSuccesses;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: p.eliminated ? _kTextSubtle : _kTextPrimary,
+                            decoration: p.eliminated ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.emoji_events,
+                        size: 14,
+                        color: isLeader ? accent : _kTextSubtle,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${p.successCount}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isLeader ? accent : _kTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 4),
+              const Divider(height: 12, thickness: 1, color: Color(0xFFEDE5E0)),
+              if (roundHistory.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    l10n.gameNoCompletedRounds,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13, color: _kTextSubtle),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: roundHistory.length,
+                    separatorBuilder: (_, _) => const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2EAE5),
+                    ),
+                    itemBuilder: (_, i) {
+                      final r = roundHistory[i];
+                      final success = r.result == 'success';
+                      return Container(
+                        color: i.isOdd ? const Color(0xFFF6F1EE) : null,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 34,
+                              child: Text(
+                                'R${r.round}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _kTextSubtle,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              success ? Icons.check_circle : Icons.dangerous,
+                              size: 14,
+                              color: success ? const Color(0xFF4CAF50) : const Color(0xFFC1553F),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                nameFor(r.challengerId),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kTextPrimary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${r.bid}/${r.tableTotal}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _kTextSubtle,
+                              ),
+                            ),
                           ],
                         ),
                       );

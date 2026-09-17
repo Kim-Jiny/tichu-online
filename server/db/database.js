@@ -3925,9 +3925,93 @@ async function getFcmTokenStats() {
  * who already owns the theme outright and then gets handed a one-day trial of
  * it keeps the theme: the trial is a no-op, not a downgrade.
  */
+/**
+ * Feature effects whose tiers (7d/30d/...) are one capability, not separate
+ * holdings — buying, or being handed, any tier extends the same expiry
+ * instead of stacking a second, independently-expiring row. Shared by
+ * buyItem and grantItemToUser so a shop purchase and a mail/coupon/campaign
+ * grant of the same feature always merge into the one entry.
+ */
+const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick', 'profile_private', 'custom_title']);
+
+/**
+ * Drop a shop item's baked-in tier suffix ("...(7일)" / "(30d)" / …) from its
+ * display name. The tiers are one capability whose grants merge, so anywhere
+ * a duration is shown alongside the name separately (mail's admin-chosen
+ * reward_days, the inventory row for a merged feature) the raw catalogue
+ * name would show its own tier days too — contradicting a different day
+ * count shown right next to it.
+ */
+function stripTierSuffix(name) {
+  return (name || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
 async function grantItemToUser(client, nickname, item, days, source) {
   const n = parseInt(days, 10);
   const timed = Number.isFinite(n) && n > 0;
+
+  // profile_photo does not live in tc_user_items — the upload gate reads it
+  // off tc_users, so a mail/coupon/campaign grant has to land there too, the
+  // same way buyItem does, or the entitlement sits in the inventory row
+  // looking granted while the actual gate never sees it.
+  if (item.effect_type === 'profile_photo') {
+    const grantDays = timed ? n : null;
+    if (grantDays == null) {
+      await client.query(
+        `UPDATE tc_users SET profile_photo_status = 'active', profile_photo_expires_at = NULL
+          WHERE nickname = $1`,
+        [nickname],
+      );
+      return { itemKey: item.item_key, expiresAt: null };
+    }
+    const r = await client.query(
+      `UPDATE tc_users
+        SET profile_photo_status = 'active',
+            profile_photo_expires_at = CASE
+              WHEN profile_photo_expires_at IS NULL OR profile_photo_expires_at < (NOW() AT TIME ZONE 'UTC')
+                THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
+              ELSE profile_photo_expires_at + ($2 || ' days')::interval
+            END
+        WHERE nickname = $1
+        RETURNING profile_photo_expires_at`,
+      [nickname, grantDays],
+    );
+    return { itemKey: item.item_key, expiresAt: r.rows[0]?.profile_photo_expires_at ?? null };
+  }
+
+  // Same idea for the other multi-tier features: any active tier of the same
+  // effect_type absorbs the grant instead of the exact item_key sent.
+  if (timed && FEATURE_EFFECTS.has(item.effect_type)) {
+    const existing = await client.query(
+      `SELECT ui.item_key FROM tc_user_items ui
+       JOIN tc_shop_items si ON si.item_key = ui.item_key
+       WHERE ui.nickname = $1 AND si.effect_type = $2
+         AND (ui.expires_at IS NULL OR ui.expires_at >= (NOW() AT TIME ZONE 'UTC'))
+       ORDER BY ui.expires_at DESC NULLS LAST LIMIT 1`,
+      [nickname, item.effect_type],
+    );
+    if (existing.rows.length > 0) {
+      const r = await client.query(
+        `UPDATE tc_user_items
+         SET expires_at = CASE
+           WHEN expires_at IS NULL OR expires_at < (NOW() AT TIME ZONE 'UTC')
+             THEN (NOW() AT TIME ZONE 'UTC') + ($2 || ' days')::interval
+           ELSE expires_at + ($2 || ' days')::interval END
+         WHERE nickname = $1 AND item_key = $3
+         RETURNING expires_at`,
+        [nickname, n, existing.rows[0].item_key],
+      );
+      return { itemKey: existing.rows[0].item_key, expiresAt: r.rows[0].expires_at, extended: true };
+    }
+    const r = await client.query(
+      `INSERT INTO tc_user_items (nickname, item_key, expires_at, is_active, source)
+       VALUES ($1, $2, (NOW() AT TIME ZONE 'UTC') + ($3 || ' days')::interval, FALSE, $4)
+       RETURNING expires_at`,
+      [nickname, item.item_key, n, source],
+    );
+    return { itemKey: item.item_key, expiresAt: r.rows[0].expires_at };
+  }
+
   if (timed) {
     // Already held forever? Nothing a trial can add.
     const forever = await client.query(
@@ -4395,6 +4479,14 @@ async function getMailbox(nickname, limit = 50) {
         LIMIT $2`,
       [nickname, Math.max(1, Math.min(parseInt(limit, 10) || 50, 200)), MAIL_RETENTION_DAYS],
     );
+    // The letter shows its own reward_days (the sender's chosen duration), so
+    // the item name must not carry its catalogue tier's days too — "프로필
+    // 사진(7일)" next to a 3-day reward_days would contradict itself.
+    for (const row of res.rows) {
+      if (row.item_name_ko) row.item_name_ko = stripTierSuffix(row.item_name_ko);
+      if (row.item_name_en) row.item_name_en = stripTierSuffix(row.item_name_en);
+      if (row.item_name_de) row.item_name_de = stripTierSuffix(row.item_name_de);
+    }
     return { success: true, mail: res.rows, retentionDays: MAIL_RETENTION_DAYS };
   } catch (err) {
     console.error('getMailbox error:', err);
@@ -4521,7 +4613,7 @@ async function claimMail(nickname, mailId) {
       reward = { type: 'gold', gold: mail.reward_gold, newGold: updated.rows[0].gold };
     } else if (mail.reward_item_key) {
       const item = (await client.query(
-        `SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1`,
+        `SELECT item_key, category, is_permanent, duration_days, effect_type FROM tc_shop_items WHERE item_key = $1`,
         [mail.reward_item_key])).rows[0];
       if (!item) {
         await client.query('ROLLBACK');
@@ -4669,6 +4761,11 @@ async function listMail({ page = 1, limit = 25 } = {}) {
          LEFT JOIN tc_shop_items si ON si.item_key = m.reward_item_key
         ORDER BY m.created_at DESC LIMIT $1 OFFSET $2`,
       [lim, off]);
+    // Backstage shows this name next to its own reward_days column — a
+    // catalogue tier suffix baked into the name would contradict that.
+    for (const row of rows.rows) {
+      if (row.item_name_ko) row.item_name_ko = stripTierSuffix(row.item_name_ko);
+    }
     return { success: true, rows: rows.rows, total, page: Math.max(1, parseInt(page, 10) || 1), limit: lim };
   } catch (err) {
     console.error('listMail error:', err);
@@ -4783,7 +4880,7 @@ async function claimPushCampaign(nickname, campaignId) {
       reward = { type: 'gold', gold: camp.reward_gold, newGold: updated.rows[0].gold };
     } else if (camp.reward_item_key) {
       const item = (await client.query(
-        `SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items
+        `SELECT item_key, category, is_permanent, duration_days, effect_type FROM tc_shop_items
          WHERE item_key = $1`, [camp.reward_item_key])).rows[0];
       if (!item) {
         await client.query('ROLLBACK');
@@ -5643,13 +5740,12 @@ async function getUserItems(nickname) {
       );
       const t = tier.rows[0];
       if (t) {
-        const baseName = (n) => (n || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
         items.unshift({
           ...t,
-          name_ko: baseName(t.name_ko),
-          name: baseName(t.name_ko),
-          name_en: baseName(t.name_en),
-          name_de: baseName(t.name_de),
+          name_ko: stripTierSuffix(t.name_ko),
+          name: stripTierSuffix(t.name_ko),
+          name_en: stripTierSuffix(t.name_en),
+          name_de: stripTierSuffix(t.name_de),
           acquired_at: null,
           expires_at: row.profile_photo_expires_at,
           is_active: !!row.profile_photo_key,
@@ -5737,7 +5833,6 @@ async function buyItem(nickname, itemKey) {
       return { success: true, profilePhoto: true };
     }
     // Gameplay counters/viewers: extend any active tier of the same feature.
-    const FEATURE_EFFECTS = new Set(['top_card_counter', 'mighty_trump_counter', 'mighty_prev_trick', 'profile_private', 'custom_title']);
     if (FEATURE_EFFECTS.has(item.effect_type)) {
       const days = item.duration_days || 30;
       const existing = await client.query(
@@ -9617,7 +9712,7 @@ async function redeemCoupon(nickname, rawCode) {
       reward = { type: 'gold', gold: amount, newGold: updated.rows[0].gold };
     } else {
       const itemRes = await client.query(
-        'SELECT item_key, category, is_permanent, duration_days FROM tc_shop_items WHERE item_key = $1',
+        'SELECT item_key, category, is_permanent, duration_days, effect_type FROM tc_shop_items WHERE item_key = $1',
         [coupon.reward_item_key],
       );
       const item = itemRes.rows[0];

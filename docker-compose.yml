@@ -28,8 +28,13 @@ x-server-common: &server-common
   #  - cpu_shares 4096 (4x default) makes tichu win CPU over the side projects
   #    when the box is contended.
   #  - cpus/mem_limit are runaway ceilings, generous because tichu is priority.
+  #  - cpus 3.8 (was 3.5): 3.5 was self-throttling — cgroup cpu.stat showed
+  #    148 CFS throttle events / ~6.9s cumulative over 24 days even though the
+  #    host itself sits ~92% idle (other side projects barely use CPU). The
+  #    hard cap was hit by tichu's own bursts (bot workers + main thread),
+  #    not by contention from neighbors, so raising it is low-risk here.
   cpu_shares: 4096
-  cpus: 3.5
+  cpus: 3.8
   mem_limit: 2g
   # SIGTERM grace window. Rooms on the outgoing slot migrate via
   # /internal/adopt-rooms at the next round boundary, so this only has to

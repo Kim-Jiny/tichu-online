@@ -6133,8 +6133,13 @@ async function useItem(nickname, itemKey) {
         [nickname]
       );
     } else if (effectType === 'stats_reset') {
+      // Description promises "전체 전적 초기화" (all games) — was only
+      // touching the tichu columns, so sk/mighty/ll players got nothing.
       await client.query(
-        `UPDATE tc_users SET total_games = 0, wins = 0, losses = 0
+        `UPDATE tc_users SET total_games = 0, wins = 0, losses = 0,
+           sk_total_games = 0, sk_wins = 0, sk_losses = 0,
+           mighty_total_games = 0, mighty_wins = 0, mighty_losses = 0,
+           ll_total_games = 0, ll_wins = 0, ll_losses = 0
          WHERE nickname = $1`,
         [nickname]
       );

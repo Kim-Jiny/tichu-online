@@ -4776,6 +4776,16 @@ class L10nKo extends L10n {
   }
 
   @override
+  String couponRewardItemNamed(String name) {
+    return '$name 받았습니다';
+  }
+
+  @override
+  String couponRewardItemNamedDays(String name, int days) {
+    return '$name · $days일간 사용 가능';
+  }
+
+  @override
   String get couponInNotice => '쿠폰 있음';
 
   @override

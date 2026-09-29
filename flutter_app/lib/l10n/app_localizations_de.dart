@@ -4925,6 +4925,16 @@ class L10nDe extends L10n {
   }
 
   @override
+  String couponRewardItemNamed(String name) {
+    return '„$name“ erhalten';
+  }
+
+  @override
+  String couponRewardItemNamedDays(String name, int days) {
+    return '„$name“ · $days Tage nutzbar';
+  }
+
+  @override
   String get couponInNotice => 'Mit Gutschein';
 
   @override

@@ -8649,6 +8649,18 @@ abstract class L10n {
   /// **'Item added for {days} days'**
   String couponRewardItemDays(int days);
 
+  /// No description provided for @couponRewardItemNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {name}'**
+  String couponRewardItemNamed(String name);
+
+  /// No description provided for @couponRewardItemNamedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {name} · usable for {days} days'**
+  String couponRewardItemNamedDays(String name, int days);
+
   /// No description provided for @couponInNotice.
   ///
   /// In en, this message translates to:

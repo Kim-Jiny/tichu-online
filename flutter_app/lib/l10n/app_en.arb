@@ -2807,6 +2807,25 @@
       }
     }
   },
+  "couponRewardItemNamed": "Received {name}",
+  "@couponRewardItemNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "couponRewardItemNamedDays": "Received {name} · usable for {days} days",
+  "@couponRewardItemNamedDays": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "couponInNotice": "Coupon included",
   "couponCopied": "Code copied",
   "marketingConsentTitle": "Get event news?",

@@ -4890,6 +4890,16 @@ class L10nEn extends L10n {
   }
 
   @override
+  String couponRewardItemNamed(String name) {
+    return 'Received $name';
+  }
+
+  @override
+  String couponRewardItemNamedDays(String name, int days) {
+    return 'Received $name · usable for $days days';
+  }
+
+  @override
   String get couponInNotice => 'Coupon included';
 
   @override

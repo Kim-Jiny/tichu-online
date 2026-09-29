@@ -76,15 +76,30 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
     super.dispose();
   }
 
-  String _rewardLine(L10n l10n, CouponOutcome out) {
+  String _rewardLine(BuildContext context, L10n l10n, CouponOutcome out) {
     if (out.rewardType == 'gold') {
       return l10n.couponRewardGold(out.rewardGold ?? 0);
     }
     final days = out.rewardDays;
+    // Same locale-fallback rule the shop uses for item names: this language,
+    // else Korean.
+    final locale = Localizations.localeOf(context).languageCode;
+    final name = switch (locale) {
+      'en' => out.rewardItemNameEn,
+      'de' => out.rewardItemNameDe,
+      _ => out.rewardItemNameKo,
+    };
+    // Older servers (or a reward shape we didn't expect) leave the name
+    // blank — fall back to the old unnamed copy rather than showing "".
+    if (name == null || name.isEmpty) {
+      return days == null || days <= 0
+          ? l10n.couponRewardItem
+          : l10n.couponRewardItemDays(days);
+    }
     // A permanent item has no expiry, and "for 0 days" would be a lie.
     return days == null || days <= 0
-        ? l10n.couponRewardItem
-        : l10n.couponRewardItemDays(days);
+        ? l10n.couponRewardItemNamed(name)
+        : l10n.couponRewardItemNamedDays(name, days);
   }
 
   Future<void> _submit() async {
@@ -101,7 +116,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
     setState(() {
       _busy = false;
       if (out.success) {
-        _success = _rewardLine(l10n, out);
+        _success = _rewardLine(context, l10n, out);
       } else {
         // A silent timeout has no server message of its own.
         _error = out.message ?? l10n.commonError;

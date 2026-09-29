@@ -2685,6 +2685,9 @@ class GameService extends ChangeNotifier {
             rewardType: (data['reward'] as Map?)?['type'] as String?,
             rewardGold: (data['reward'] as Map?)?['gold'] as int?,
             rewardDays: _daysUntil((data['reward'] as Map?)?['expiresAt']),
+            rewardItemNameKo: (data['reward'] as Map?)?['itemNameKo'] as String?,
+            rewardItemNameEn: (data['reward'] as Map?)?['itemNameEn'] as String?,
+            rewardItemNameDe: (data['reward'] as Map?)?['itemNameDe'] as String?,
           ),
         );
         _couponCompleter = null;
@@ -5115,6 +5118,9 @@ class CouponOutcome {
   final String? rewardType;
   final int? rewardGold;
   final int? rewardDays;
+  final String? rewardItemNameKo;
+  final String? rewardItemNameEn;
+  final String? rewardItemNameDe;
 
   const CouponOutcome({
     required this.success,
@@ -5122,5 +5128,8 @@ class CouponOutcome {
     this.rewardType,
     this.rewardGold,
     this.rewardDays,
+    this.rewardItemNameKo,
+    this.rewardItemNameEn,
+    this.rewardItemNameDe,
   });
 }

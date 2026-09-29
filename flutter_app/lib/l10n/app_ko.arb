@@ -1708,6 +1708,8 @@
   "couponRewardGold": "골드 {amount} 받았습니다",
   "couponRewardItem": "아이템이 보관함에 들어왔습니다",
   "couponRewardItemDays": "아이템을 {days}일간 사용할 수 있습니다",
+  "couponRewardItemNamed": "{name} 받았습니다",
+  "couponRewardItemNamedDays": "{name} · {days}일간 사용 가능",
   "couponInNotice": "쿠폰 있음",
   "couponCopied": "코드를 복사했습니다",
   "marketingConsentTitle": "이벤트 소식 받을까요?",

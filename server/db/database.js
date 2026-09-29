@@ -9717,7 +9717,9 @@ async function redeemCoupon(nickname, rawCode) {
       reward = { type: 'gold', gold: amount, newGold: updated.rows[0].gold };
     } else {
       const itemRes = await client.query(
-        'SELECT item_key, category, is_permanent, duration_days, effect_type FROM tc_shop_items WHERE item_key = $1',
+        `SELECT item_key, category, is_permanent, duration_days, effect_type,
+                name_ko, name_en, name_de
+           FROM tc_shop_items WHERE item_key = $1`,
         [coupon.reward_item_key],
       );
       const item = itemRes.rows[0];
@@ -9738,6 +9740,14 @@ async function redeemCoupon(nickname, rawCode) {
       reward = {
         type: 'item',
         itemKey: granted.itemKey,
+        // Redeeming used to say "받았습니다" with no name — the player had to
+        // go open the inventory to find out what it actually was. The tier
+        // suffix ("(7일)") is dropped the same way mail does it: `days` above
+        // (the coupon's own reward_days, if set) is shown right next to this
+        // name, so a baked-in catalogue duration would contradict it.
+        itemNameKo: stripTierSuffix(item.name_ko),
+        itemNameEn: stripTierSuffix(item.name_en),
+        itemNameDe: stripTierSuffix(item.name_de),
         expiresAt: granted.expiresAt
           ? new Date(granted.expiresAt).toISOString()
           : null,

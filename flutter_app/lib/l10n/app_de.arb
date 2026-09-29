@@ -1708,6 +1708,8 @@
   "couponRewardGold": "{amount} Gold erhalten",
   "couponRewardItem": "Gegenstand liegt in deinem Inventar",
   "couponRewardItemDays": "Gegenstand für {days} Tage erhalten",
+  "couponRewardItemNamed": "„{name}“ erhalten",
+  "couponRewardItemNamedDays": "„{name}“ · {days} Tage nutzbar",
   "couponInNotice": "Mit Gutschein",
   "couponCopied": "Code kopiert",
   "marketingConsentTitle": "Event-News erhalten?",

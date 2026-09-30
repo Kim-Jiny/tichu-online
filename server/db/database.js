@@ -4515,12 +4515,14 @@ async function getUnreadMailCount(nickname) {
         WHERE r.nickname = $1 AND r.deleted_at IS NULL
           AND r.created_at >= u.created_at
           AND r.created_at >= (NOW() AT TIME ZONE 'UTC') - ($2 || ' days')::interval
+          -- A deadline that has passed ends the letter's business entirely,
+          -- even one never opened — matches mailNeedsAttention on the client
+          -- (mail_status.dart), which the list badge and dot both read.
+          AND (m.expires_at IS NULL OR m.expires_at >= (NOW() AT TIME ZONE 'UTC'))
           AND (
             r.read_at IS NULL
             OR (r.claimed_at IS NULL
-                AND (m.reward_gold > 0 OR m.reward_item_key IS NOT NULL)
-                AND (m.expires_at IS NULL
-                     OR m.expires_at >= (NOW() AT TIME ZONE 'UTC')))
+                AND (m.reward_gold > 0 OR m.reward_item_key IS NOT NULL))
           )`,
       [nickname, MAIL_RETENTION_DAYS]);
     return r.rows[0].n;

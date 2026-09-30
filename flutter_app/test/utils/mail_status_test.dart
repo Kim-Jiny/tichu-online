@@ -75,6 +75,26 @@ void main() {
     );
   });
 
+  test('never opened, but the deadline already passed — still no badge', () {
+    // The unread branch used to skip the deadline check entirely, so a
+    // letter nobody ever opened kept nagging forever even after it died.
+    expect(
+      mailNeedsAttention(
+        letter(readAt: null, gold: 500, expiresAt: '2026-08-10 00:00:00'),
+        now: now,
+      ),
+      isFalse,
+    );
+    expect(
+      mailNeedsAttention(
+        letter(readAt: null, expiresAt: '2026-08-10 00:00:00'),
+        now: now,
+      ),
+      isFalse,
+      reason: 'no reward at all, still should not nag once expired',
+    );
+  });
+
   test('the deadline is read as UTC, not as the device\'s local time', () {
     // 03:00 UTC on the 14th. A device nine hours ahead reading it as local
     // would place it in the past and drop the badge early.

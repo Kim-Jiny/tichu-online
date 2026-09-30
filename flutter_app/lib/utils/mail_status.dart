@@ -5,8 +5,9 @@
 /// clears on open lets someone read the letter, mean to claim later, and never
 /// be reminded again, which is exactly how a reward goes unclaimed.
 ///
-/// A reward whose deadline has passed stops counting: nothing is left to
-/// collect, and a badge for it would only nag about something already lost.
+/// A letter whose own deadline has passed stops counting entirely — even one
+/// that was never opened. Nothing is left to read for or collect once it is
+/// dead, and a badge for it would only nag about something already lost.
 ///
 /// Shared so the list highlight, the mailbox badge and the lobby badge cannot
 /// drift apart — three places asking the same question have to get the same
@@ -16,14 +17,19 @@ library;
 import 'server_time.dart';
 
 bool mailNeedsAttention(Map<String, dynamic> mail, {DateTime? now}) {
+  // A deadline that has passed ends the letter's business entirely — nothing
+  // is left to read for or claim, so even one that was never opened stops
+  // asking for attention. Checked first: it overrides both branches below.
+  final expiresAt = parseServerUtc(mail['expires_at']);
+  if (expiresAt != null && !expiresAt.isAfter(now ?? DateTime.now())) {
+    return false;
+  }
   if (mail['read_at'] == null) return true;
   final gold = (mail['reward_gold'] as num?)?.toInt() ?? 0;
   final itemKey = (mail['reward_item_key'] ?? '').toString();
   final hasReward = gold > 0 || itemKey.isNotEmpty;
   if (!hasReward || mail['claimed_at'] != null) return false;
-  final expiresAt = parseServerUtc(mail['expires_at']);
-  if (expiresAt == null) return true;
-  return expiresAt.isAfter(now ?? DateTime.now());
+  return true;
 }
 
 /// 우편함 배지에 찍을 수.

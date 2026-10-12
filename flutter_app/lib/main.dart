@@ -22,6 +22,7 @@ import 'app_navigation.dart';
 import 'firebase_options.dart';
 import 'config/social_config.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/korean_josa.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/invite_link_service.dart';
@@ -467,7 +468,12 @@ class TichuApp extends StatelessWidget {
           navigatorKey: appNavigatorKey,
           title: 'Tichu Online',
           debugShowCheckedModeBanner: false,
-          localizationsDelegates: L10n.localizationsDelegates,
+          // The Korean delegate goes first so it wins for L10n: it settles
+          // 이(가)/을(를) by the nickname's final consonant.
+          localizationsDelegates: const [
+            L10nJosaDelegate(),
+            ...L10n.localizationsDelegates,
+          ],
           supportedLocales: L10n.supportedLocales,
           locale: localeService.userSelectedLocale,
           localeResolutionCallback: (deviceLocale, supportedLocales) {

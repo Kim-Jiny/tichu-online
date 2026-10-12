@@ -1695,7 +1695,7 @@ class L10nKo extends L10n {
 
   @override
   String gameDogPlayedBy(String name) {
-    return '$name가 개를 냈어';
+    return '$name이(가) 개를 냈어';
   }
 
   @override
@@ -1939,7 +1939,7 @@ class L10nKo extends L10n {
 
   @override
   String spectatorPlayedCards(String name) {
-    return '$name가 낸 패';
+    return '$name이(가) 낸 패';
   }
 
   @override

@@ -1,5 +1,6 @@
 import '../l10n/app_localizations.dart';
 import '../models/tichu_fx_detector.dart';
+import '../services/sfx_service.dart';
 import 'tichu_effects.dart';
 
 /// 판정된 사건([TichuFxSignal])을 화면에 띄울 배너 문구로 바꾼다.
@@ -86,4 +87,15 @@ List<TichuFxEvent> buildTichuFxEvents(
   int weight(TichuFxKind k) => k == TichuFxKind.finished ? 1 : 0;
   events.sort((a, b) => weight(a.kind).compareTo(weight(b.kind)));
   return events;
+}
+
+/// 티츄 성공·실패 연출에 맞는 효과음. 한 번에 여러 건이 와도 소리는 한 번만:
+/// 성공이 있으면 승리음, 아니면 실패음.
+void playTichuFxSounds(List<TichuFxSignal> signals) {
+  final kinds = signals.map((s) => s.kind);
+  if (kinds.contains(TichuFxKind.tichuSuccess)) {
+    SfxService().play('tichu_success');
+  } else if (kinds.contains(TichuFxKind.tichuFail)) {
+    SfxService().play('tichu_fail');
+  }
 }

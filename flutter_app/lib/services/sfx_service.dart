@@ -22,6 +22,9 @@ class SfxService {
     'victory': 'sfx/victory.wav',
     'defeat': 'sfx/defeat.wav',
     'chat': 'sfx/chat.wav',
+    // 스몰·라지 티츄 성공 / 실패 (티츄 연출과 함께)
+    'tichu_success': 'sfx/tichu_success.wav',
+    'tichu_fail': 'sfx/tichu_fail.wav',
   };
 
   // One persistent player per SFX key. Each player is preloaded once with

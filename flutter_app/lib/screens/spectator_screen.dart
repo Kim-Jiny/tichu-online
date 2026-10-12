@@ -220,6 +220,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final fx = spectatorFxPlayers(players);
     final signals = _fxDetector.update(fx.players, fx.teamOf);
     if (signals.isEmpty) return;
+    playTichuFxSounds(signals);
     final events = buildTichuFxEvents(
       signals,
       L10n.of(context),

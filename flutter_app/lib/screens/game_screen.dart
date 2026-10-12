@@ -118,6 +118,7 @@ class _GameScreenState extends State<GameScreen> {
       (p) => _teamForPosition(state, p.position),
     );
     if (signals.isEmpty) return;
+    playTichuFxSounds(signals);
     final events = buildTichuFxEvents(
       signals,
       L10n.of(context),

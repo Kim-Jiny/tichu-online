@@ -70,6 +70,8 @@ List<TichuFxEvent> buildTichuFxEvents(
           ),
         );
       case TichuFxKind.finished:
+        // 4등은 남은 한 명일 뿐이라 띄우지 않는다.
+        if (s.rank >= 4) continue;
         events.add(
           TichuFxEvent(
             id: id,

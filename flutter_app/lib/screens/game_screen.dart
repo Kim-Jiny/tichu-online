@@ -3751,6 +3751,8 @@ class _GameScreenState extends State<GameScreen> {
 
   /// 패를 다 턴 사람 옆에 붙는 순위. 1~3등은 금·은·동으로 구분한다.
   Widget _finishBadge(int rank) {
+    // 꼴찌(4등)는 3명이 털면 저절로 정해져서 알릴 거리가 아니다.
+    if (rank >= 4) return const SizedBox.shrink();
     final (Color bg, Color border, Color fg) = switch (rank) {
       1 => (
         const Color(0xFFFFD54F),

@@ -133,7 +133,7 @@ class TichuFxLayer extends StatelessWidget {
                 // 키가 Align 에 있어야 앞 배너가 빠져도 뒤 배너 상태(진행 중인
                 // 애니메이션)가 새로 시작되지 않는다.
                 key: ValueKey(events[i].id),
-                alignment: Alignment(0, -0.3 + i * 0.28),
+                alignment: Alignment(0, -0.2 + i * 0.24),
                 child: _FxBanner(
                   event: events[i],
                   onDone: _doneFor(events[i].id),
@@ -203,13 +203,11 @@ class _FxBannerState extends State<_FxBanner>
               // 좁은 폰에서 340 이 화면보다 크면 잘리니 폭에 맞춰 줄인다.
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: SizedBox(
-                  width: 340,
-                  height: 150,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [_buildPlate(style)],
-                  ),
+                // 높이는 내용에 맡기고 폭만 제한한다. 고정 높이였을 때는
+                // 번짐 배경 여백이 붙자 넘쳤다.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 340),
+                  child: _buildPlate(style),
                 ),
               ),
             ),
@@ -222,7 +220,7 @@ class _FxBannerState extends State<_FxBanner>
   /// 배경 없이 글자만. 테두리 + 빛 번짐으로 어떤 판 색 위에서도 읽힌다.
   Widget _buildPlate(_FxStyle style) {
     final small = widget.event.kind == TichuFxKind.finished;
-    final size = style.titleSize * (small ? 1.5 : 1.25);
+    final size = style.titleSize * (small ? 1.2 : 1.0);
     final fill = style.colors.first;
     final edge = style.colors.last;
 
@@ -239,27 +237,27 @@ class _FxBannerState extends State<_FxBanner>
         foreground: stroke
             ? (Paint()
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = size * 0.16
+                ..strokeWidth = size * 0.26
                 ..strokeJoin = StrokeJoin.round
-                ..color = edge)
+                ..color = const Color(0xFF1B1030))
             : null,
         shadows: stroke
             ? [
                 Shadow(
-                  color: style.glow.withValues(alpha: 0.9),
-                  blurRadius: 18,
+                  color: style.glow.withValues(alpha: 0.8),
+                  blurRadius: 16,
                 ),
                 const Shadow(
-                  color: Color(0x99000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
+                  color: Color(0xCC000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
                 ),
               ]
             : null,
       ),
     );
 
-    return Column(
+    final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
@@ -290,7 +288,7 @@ class _FxBannerState extends State<_FxBanner>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 17,
               fontWeight: FontWeight.w900,
               color: Colors.white,
               shadows: [
@@ -305,6 +303,23 @@ class _FxBannerState extends State<_FxBanner>
           ),
         ],
       ],
+    );
+
+    // 상자는 아니고, 글자 뒤만 은은하게 어둡게 깔아 밝은 판 위에서도 읽히게 한다.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          colors: [
+            Colors.black.withValues(alpha: 0.5),
+            Colors.black.withValues(alpha: 0),
+          ],
+          stops: const [0.35, 1],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 26),
+        child: content,
+      ),
     );
   }
 }

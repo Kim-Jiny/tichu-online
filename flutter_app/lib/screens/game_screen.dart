@@ -2700,7 +2700,9 @@ class _GameScreenState extends State<GameScreen> {
       case 'triple':
         return l10n.trickTriple(_rankFromCardId(cards[0]));
       case 'full_house':
-        return l10n.trickFullHouse(_rankFromCardId(cards[0]));
+        // cards[0] is a pair card (the server lays out pair → triple), and a
+        // full house ranks by its triple — 22288 read "8 full house".
+        return l10n.trickFullHouse(_rankLabelFromValue(play.comboValue));
       case 'straight':
         return l10n.trickStraight(
           _rankLabelFromValue(play.comboValue),

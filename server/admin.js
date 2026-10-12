@@ -2120,9 +2120,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const activityGame = ['all', 'tichu', 'skull_king', 'love_letter', 'mighty'].includes(url.searchParams.get('activityGame'))
       ? url.searchParams.get('activityGame')
       : 'all';
-    const [stats, attStats] = await Promise.all([
+    const [stats, attStats, pendingDeposits] = await Promise.all([
       getDashboardStats(activityPeriod, activityGame),
       getAttendanceDashboardStats(),
+      countPendingBankDepositsAll(),
     ]);
     // Get live data from lobby/wss
     const connectedUsers = wss ? wss.clients.size : 0;
@@ -2336,6 +2337,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const todos = [
       { n: stats.pendingReports, t: '미처리 신고', href: '/tc-backstage/reports' },
       { n: stats.pendingInquiries, t: '미처리 문의', href: '/tc-backstage/inquiries' },
+      { n: pendingDeposits, t: '입금 확인 대기', href: '/tc-backstage/deposits' },
       { n: stats.todayRefundCount || 0, t: '오늘 환불', href: '/tc-backstage/refunds' },
     ].filter((t) => t.n > 0);
     const todoHtml = todos.length === 0
@@ -2515,7 +2517,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         })();
       </script>
     `;
-    return html(res, layout('대시보드', content, 'home'));
+    return html(res, layout('대시보드', content, 'home', pendingDeposits));
   }
 
   if (pathname === '/tc-backstage/matches' && method === 'GET') {

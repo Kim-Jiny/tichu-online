@@ -4911,7 +4911,9 @@ class L10nDe extends L10n {
   }
 
   @override
-  String get trickBombFour => 'Bombe (4)';
+  String trickBombFour(String rank) {
+    return 'Vierling $rank';
+  }
 
   @override
   String get trickBombStraightFlush => 'SF-Bombe';

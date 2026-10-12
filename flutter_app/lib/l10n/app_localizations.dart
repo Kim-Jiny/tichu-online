@@ -8634,8 +8634,8 @@ abstract class L10n {
   /// No description provided for @trickBombFour.
   ///
   /// In en, this message translates to:
-  /// **'Bomb (4)'**
-  String get trickBombFour;
+  /// **'Four {rank}s bomb'**
+  String trickBombFour(String rank);
 
   /// No description provided for @trickBombStraightFlush.
   ///

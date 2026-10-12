@@ -37,7 +37,7 @@ void main() {
           l10n.trickCardPhoenix,
           l10n.trickCardMahjong,
           l10n.trickCardDog,
-          l10n.trickBombFour,
+          l10n.trickBombFour('6'),
           l10n.trickBombStraightFlush,
         ]) {
           expect(s.trim(), isNotEmpty);
@@ -58,7 +58,7 @@ void main() {
         l10n.trickCardPhoenix,
         l10n.trickCardMahjong,
         l10n.trickCardDog,
-        l10n.trickBombFour,
+        l10n.trickBombFour('6'),
         l10n.trickBombStraightFlush,
         l10n.trickPair('A'),
         l10n.trickStraight('J', 5),

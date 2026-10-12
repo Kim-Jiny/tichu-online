@@ -1705,7 +1705,7 @@
   "trickFullHouse": "{rank} Full House",
   "trickStraight": "{rank}-Straße ({count})",
   "trickSteps": "{rank}-Treppe ({count})",
-  "trickBombFour": "Bombe (4)",
+  "trickBombFour": "Vierling {rank}",
   "trickBombStraightFlush": "SF-Bombe",
   "trickCallSuffix": "Ansage {rank}",
   "shopSaleWindow": "Verkauf {window}",

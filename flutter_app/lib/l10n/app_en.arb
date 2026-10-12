@@ -2793,7 +2793,14 @@
       }
     }
   },
-  "trickBombFour": "Bomb (4)",
+  "trickBombFour": "Four {rank}s bomb",
+  "@trickBombFour": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      }
+    }
+  },
   "trickBombStraightFlush": "SF bomb",
   "trickCallSuffix": "call {rank}",
   "@trickCallSuffix": {

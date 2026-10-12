@@ -4876,7 +4876,9 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get trickBombFour => 'Bomb (4)';
+  String trickBombFour(String rank) {
+    return 'Four ${rank}s bomb';
+  }
 
   @override
   String get trickBombStraightFlush => 'SF bomb';

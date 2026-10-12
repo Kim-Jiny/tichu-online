@@ -4763,7 +4763,9 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get trickBombFour => '폭탄(4)';
+  String trickBombFour(String rank) {
+    return '$rank 포카드';
+  }
 
   @override
   String get trickBombStraightFlush => '스플 폭탄';

@@ -45,7 +45,6 @@ class _FxStyle {
     required this.glow,
     required this.duration,
     required this.titleSize,
-    required this.burst,
     this.icon,
   });
 
@@ -53,7 +52,6 @@ class _FxStyle {
   final Color glow;
   final Duration duration;
   final double titleSize;
-  final bool burst;
   final IconData? icon;
 }
 
@@ -65,7 +63,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFF4BA3FF),
         duration: Duration(milliseconds: 1700),
         titleSize: 34,
-        burst: true,
         icon: Icons.bolt,
       );
     case TichuFxKind.declareLarge:
@@ -74,7 +71,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFFFF6B6B),
         duration: Duration(milliseconds: 2000),
         titleSize: 38,
-        burst: true,
         icon: Icons.local_fire_department,
       );
     case TichuFxKind.tichuSuccess:
@@ -83,7 +79,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFFFFD54F),
         duration: Duration(milliseconds: 2400),
         titleSize: 36,
-        burst: true,
         icon: Icons.emoji_events,
       );
     case TichuFxKind.tichuFail:
@@ -92,7 +87,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFF757575),
         duration: Duration(milliseconds: 1800),
         titleSize: 28,
-        burst: false,
         icon: Icons.heart_broken,
       );
     case TichuFxKind.oneTwo:
@@ -101,7 +95,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFFFFCA28),
         duration: Duration(milliseconds: 2800),
         titleSize: 40,
-        burst: true,
         icon: Icons.military_tech,
       );
     case TichuFxKind.finished:
@@ -110,7 +103,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         glow: Color(0xFFFFB74D),
         duration: Duration(milliseconds: 1500),
         titleSize: 20,
-        burst: false,
       );
   }
 }
@@ -209,19 +201,7 @@ class _FxBannerState extends State<_FxBanner>
                   height: 150,
                   child: Stack(
                     alignment: Alignment.center,
-                    children: [
-                      if (style.burst)
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: _BurstPainter(
-                              progress: t,
-                              color: style.glow,
-                              seed: widget.event.id,
-                            ),
-                          ),
-                        ),
-                      _buildPlate(style),
-                    ],
+                    children: [_buildPlate(style)],
                   ),
                 ),
               ),
@@ -232,141 +212,92 @@ class _FxBannerState extends State<_FxBanner>
     );
   }
 
+  /// 배경 없이 글자만. 테두리 + 빛 번짐으로 어떤 판 색 위에서도 읽힌다.
   Widget _buildPlate(_FxStyle style) {
-    final dark = style.colors.first.computeLuminance() < 0.6;
-    final fg = dark ? Colors.white : const Color(0xFF5A4038);
     final small = widget.event.kind == TichuFxKind.finished;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: small ? 16 : 24,
-        vertical: small ? 8 : 12,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: style.colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(small ? 18 : 22),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.85),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: style.glow.withValues(alpha: 0.65),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (style.icon != null) ...[
-                Icon(style.icon, color: fg, size: style.titleSize * 0.95),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Text(
-                  widget.event.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: style.titleSize,
-                    fontWeight: FontWeight.w900,
-                    color: fg,
-                    height: 1.1,
-                    shadows: dark
-                        ? const [
-                            Shadow(
-                              color: Color(0x66000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
+    final size = style.titleSize * (small ? 1.5 : 1.25);
+    final fill = style.colors.first;
+    final edge = style.colors.last;
+
+    Widget title({required bool stroke}) => Text(
+      widget.event.title,
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: size,
+        fontWeight: FontWeight.w900,
+        height: 1.1,
+        color: stroke ? null : fill,
+        foreground: stroke
+            ? (Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = size * 0.16
+                ..strokeJoin = StrokeJoin.round
+                ..color = edge)
+            : null,
+        shadows: stroke
+            ? [
+                Shadow(
+                  color: style.glow.withValues(alpha: 0.9),
+                  blurRadius: 18,
                 ),
+                const Shadow(
+                  color: Color(0x99000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (style.icon != null) ...[
+              Icon(
+                style.icon,
+                color: fill,
+                size: size * 0.95,
+                shadows: [Shadow(color: edge, blurRadius: 10)],
               ),
+              const SizedBox(width: 8),
             ],
-          ),
-          if (widget.event.subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              widget.event.subtitle!,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: small ? 15 : 18,
-                fontWeight: FontWeight.w800,
-                color: fg.withValues(alpha: 0.92),
+            Flexible(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [title(stroke: true), title(stroke: false)],
               ),
             ),
           ],
+        ),
+        if (widget.event.subtitle != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            widget.event.subtitle!,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              shadows: [
+                Shadow(color: edge, blurRadius: 8),
+                const Shadow(
+                  color: Color(0xCC000000),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
-}
-
-/// 판 뒤에서 퍼져 나가는 광선과 반짝이.
-class _BurstPainter extends CustomPainter {
-  _BurstPainter({
-    required this.progress,
-    required this.color,
-    required this.seed,
-  });
-
-  final double progress;
-  final Color color;
-  final int seed;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    // 앞 60% 동안 퍼지고 그다음엔 옅어진다.
-    final spread = Curves.easeOutCubic.transform(
-      (progress / 0.6).clamp(0.0, 1.0),
-    );
-    final fade = 1 - ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
-    if (fade <= 0) return;
-
-    final rays = Paint()
-      ..color = color.withValues(alpha: 0.5 * fade)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    const count = 16;
-    for (var i = 0; i < count; i++) {
-      final a = i / count * math.pi * 2 + progress * 0.4;
-      final inner = 70 + 10 * spread;
-      final outer = inner + 18 + 46 * spread * (i.isEven ? 1 : 0.6);
-      canvas.drawLine(
-        center + Offset(math.cos(a), math.sin(a)) * inner,
-        center + Offset(math.cos(a), math.sin(a)) * outer,
-        rays,
-      );
-    }
-
-    final rnd = math.Random(seed);
-    final dots = Paint()..color = Colors.white.withValues(alpha: 0.9 * fade);
-    for (var i = 0; i < 14; i++) {
-      final a = rnd.nextDouble() * math.pi * 2;
-      final dist = 60 + rnd.nextDouble() * 70 * spread;
-      final r = (1.5 + rnd.nextDouble() * 2.5) * (1 - progress * 0.5);
-      canvas.drawCircle(
-        center + Offset(math.cos(a), math.sin(a)) * dist,
-        r,
-        dots,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BurstPainter old) => old.progress != progress;
 }

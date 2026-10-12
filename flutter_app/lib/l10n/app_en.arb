@@ -1068,11 +1068,14 @@
   "gameFxSmallTichuFail": "Small Tichu failed",
   "gameFxLargeTichuFail": "Large Tichu failed",
   "gameFxOneTwo": "One-Two finish!",
-  "gameFxFinished": "{name} is out!",
+  "gameFxFinished": "{name} finished #{rank}!",
   "@gameFxFinished": {
     "placeholders": {
       "name": {
         "type": "String"
+      },
+      "rank": {
+        "type": "int"
       }
     }
   },

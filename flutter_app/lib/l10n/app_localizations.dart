@@ -3516,8 +3516,8 @@ abstract class L10n {
   /// No description provided for @gameFxFinished.
   ///
   /// In en, this message translates to:
-  /// **'{name} is out!'**
-  String gameFxFinished(String name);
+  /// **'{name} finished #{rank}!'**
+  String gameFxFinished(String name, int rank);
 
   /// No description provided for @gameFinishRank.
   ///

@@ -571,7 +571,7 @@
   "gameFxSmallTichuFail": "스몰 티츄 실패",
   "gameFxLargeTichuFail": "라지 티츄 실패",
   "gameFxOneTwo": "원투 피니시!",
-  "gameFxFinished": "{name}님 패 털기 완료!",
+  "gameFxFinished": "{name} {rank}등!",
   "gameFinishRank": "{rank}등",
   "gameNotAfk": "잠수 아님",
   "spectatorRecovering": "관전 복구 중...",

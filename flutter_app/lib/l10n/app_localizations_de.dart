@@ -1903,8 +1903,8 @@ class L10nDe extends L10n {
   String get gameFxOneTwo => 'Doppelsieg!';
 
   @override
-  String gameFxFinished(String name) {
-    return '$name ist fertig!';
+  String gameFxFinished(String name, int rank) {
+    return '$name: Platz $rank!';
   }
 
   @override

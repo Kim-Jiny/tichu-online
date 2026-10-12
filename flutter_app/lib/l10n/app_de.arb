@@ -581,7 +581,7 @@
   "gameFxSmallTichuFail": "Small Tichu gescheitert",
   "gameFxLargeTichuFail": "Large Tichu gescheitert",
   "gameFxOneTwo": "Doppelsieg!",
-  "gameFxFinished": "{name} ist fertig!",
+  "gameFxFinished": "{name}: Platz {rank}!",
   "gameFinishRank": "Platz {rank}",
   "gameNotAfk": "Nicht AFK",
   "spectatorRecovering": "Zuschaueransicht wird wiederhergestellt...",

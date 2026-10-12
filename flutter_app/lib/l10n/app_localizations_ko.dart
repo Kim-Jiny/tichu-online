@@ -1858,8 +1858,8 @@ class L10nKo extends L10n {
   String get gameFxOneTwo => '원투 피니시!';
 
   @override
-  String gameFxFinished(String name) {
-    return '$name님 패 털기 완료!';
+  String gameFxFinished(String name, int rank) {
+    return '$name $rank등!';
   }
 
   @override

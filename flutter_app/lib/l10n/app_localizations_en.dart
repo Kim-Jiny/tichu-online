@@ -1894,8 +1894,8 @@ class L10nEn extends L10n {
   String get gameFxOneTwo => 'One-Two finish!';
 
   @override
-  String gameFxFinished(String name) {
-    return '$name is out!';
+  String gameFxFinished(String name, int rank) {
+    return '$name finished #$rank!';
   }
 
   @override

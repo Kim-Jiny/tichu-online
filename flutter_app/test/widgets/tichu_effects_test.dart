@@ -30,8 +30,9 @@ void main() {
 
     // 팝 애니메이션 중간 — 글자가 보이고 예외가 없어야 한다.
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('제목 oneTwo'), findsOneWidget);
-    expect(find.text('제목 tichuFail'), findsOneWidget);
+    // 테두리 글자와 채움 글자 두 겹으로 그린다.
+    expect(find.text('제목 oneTwo'), findsWidgets);
+    expect(find.text('제목 tichuFail'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // 가장 긴 연출(2.8s)보다 뒤 — 전부 끝났다고 알려야 한다.

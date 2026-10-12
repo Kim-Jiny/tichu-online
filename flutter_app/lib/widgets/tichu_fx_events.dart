@@ -74,8 +74,7 @@ List<TichuFxEvent> buildTichuFxEvents(
           TichuFxEvent(
             id: id,
             kind: s.kind,
-            title: l10n.gameFxFinished(s.name),
-            subtitle: l10n.gameFinishRank(s.rank),
+            title: l10n.gameFxFinished(s.name, s.rank),
           ),
         );
     }

@@ -254,6 +254,8 @@ class GameService extends ChangeNotifier {
   Map<String, dynamic>? bankDepositInfo;
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
+  /// 목록을 한 번이라도 받았는지. 빈 목록과 "아직 못 받음"을 가른다(새 아이템 표시용).
+  bool inventoryLoadedOnce = false;
 
   /// Server-driven visual cache for banners/titles/themes. Populated once
   /// per login via `requestVisualCatalog()`. Lookup by itemKey → ShopVisual
@@ -2575,6 +2577,7 @@ class GameService extends ChangeNotifier {
           inventoryItems = list
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
+          inventoryLoadedOnce = true;
           inventoryError = null;
         } else {
           inventoryError =
@@ -3295,6 +3298,7 @@ class GameService extends ChangeNotifier {
     _chatPhotos.clear();
     goldHistory = [];
     inventoryItems = [];
+    inventoryLoadedOnce = false;
     inventoryLoading = false;
     shopItems = [];
     shopLoading = false;

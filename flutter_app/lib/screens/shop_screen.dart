@@ -7,6 +7,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
+import '../services/inventory_new_tracker.dart';
 import '../utils/gold_format.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/playing_card.dart';
@@ -51,6 +52,10 @@ class _ShopScreenState extends State<ShopScreen> {
   final ValueNotifier<bool> _attendanceAdReady = ValueNotifier(false);
   bool _attendanceAdLoadInFlight = false;
   TabController? _inventoryTabs;
+  // 상점/인벤토리 최상위 탭. 인벤토리를 보고 있을 때만 "본 것" 처리를 한다.
+  TabController? _shopTabs;
+  // 인벤토리에서 아직 안 본 새 아이템 표시.
+  InventoryNewTracker? _newTracker;
 
   String _getLocalizedItemName(Map<String, dynamic> item) {
     final locale = Localizations.localeOf(context).languageCode;
@@ -124,12 +129,51 @@ class _ShopScreenState extends State<ShopScreen> {
       game.requestWallet();
       game.requestShopItems();
       game.requestInventory();
+      _loadNewTracker(game.playerName);
       // Pull own profile so the banner preview can show the real level badge
       // (falls back to Lv.1 when not yet cached).
       if (game.playerName.isNotEmpty) {
         game.requestProfile(game.playerName);
       }
     });
+  }
+
+  Future<void> _loadNewTracker(String nickname) async {
+    if (nickname.isEmpty) return;
+    final tracker = await InventoryNewTracker.load(nickname);
+    if (!mounted) return;
+    setState(() => _newTracker = tracker);
+  }
+
+  /// 인벤토리 6칸에 들어갈 아이템. 탭 화면과 새것 표시가 같은 분류를 쓴다.
+  List<List<Map<String, dynamic>>> _inventoryTabLists(
+    List<Map<String, dynamic>> items,
+  ) => [
+    _filterInventory(items, 'banner'),
+    _titleInventoryItems(items),
+    _filterInventory(items, 'theme'),
+    _filterInventory(items, 'utility'),
+    _profileTabItems(_filterInventory(items, 'feature')),
+    _filterInventory(items, 'season'),
+  ];
+
+  /// 새 아이템 표시를 맞춘다: 목록을 정리하고, 지금 보고 있는 칸은 본 것으로 친다.
+  void _syncInventoryNew(GameService game) {
+    final t = _newTracker;
+    if (t == null ||
+        !game.inventoryLoadedOnce ||
+        game.inventoryLoading ||
+        game.inventoryError != null) {
+      return;
+    }
+    var changed = t.sync(game.inventoryItems);
+    final onInventory = _shopTabs?.index == 1;
+    if (onInventory) {
+      final lists = _inventoryTabLists(game.inventoryItems);
+      final idx = _inventoryTabController.value;
+      if (idx < lists.length && t.markSeen(lists[idx])) changed = true;
+    }
+    if (changed && mounted) setState(() {});
   }
 
   Future<void> _loadAdCount() async {
@@ -202,6 +246,7 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   void dispose() {
     _inventoryTabs?.removeListener(_handleInventoryTabChanged);
+    _shopTabs?.removeListener(_handleShopTabChanged);
     _rewardedAd?.dispose();
     _attendanceAd?.dispose();
     _attendanceAdReady.dispose();
@@ -248,6 +293,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     _maybeShowNicknameChangeResult(context, game);
                     _maybeShowCustomTitleResult(context, game);
                     _maybeShowAdRewardResult(context, game);
+                    _syncInventoryNew(game);
                   });
                   // Header and wallet are one flat bar, the two reward actions
                   // are one short strip, and everything below is a single sheet.
@@ -274,6 +320,13 @@ class _ShopScreenState extends State<ShopScreen> {
     final tabController = _inventoryTabs;
     if (tabController == null || tabController.indexIsChanging) return;
     _inventoryTabController.value = tabController.index;
+    _syncInventoryNew(context.read<GameService>());
+  }
+
+  void _handleShopTabChanged() {
+    final c = _shopTabs;
+    if (c == null || c.indexIsChanging) return;
+    _syncInventoryNew(context.read<GameService>());
   }
 
   /// Header, wallet and the gold-charge action in one flat row.
@@ -545,15 +598,25 @@ class _ShopScreenState extends State<ShopScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          _buildTabs(),
-          Expanded(
-            child: TabBarView(
-              children: [_buildShopTab(game), _buildInventoryTab(game)],
-            ),
-          ),
-        ],
+      child: Builder(
+        builder: (sheetCtx) {
+          final outer = DefaultTabController.of(sheetCtx);
+          if (!identical(_shopTabs, outer)) {
+            _shopTabs?.removeListener(_handleShopTabChanged);
+            _shopTabs = outer;
+            _shopTabs?.addListener(_handleShopTabChanged);
+          }
+          return Column(
+            children: [
+              _buildTabs(game),
+              Expanded(
+                child: TabBarView(
+                  children: [_buildShopTab(game), _buildInventoryTab(game)],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1014,7 +1077,22 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildTabs() {
+  /// 안 본 새 아이템이 있다는 빨간 점.
+  Widget _newDot() => Container(
+    width: 8,
+    height: 8,
+    decoration: const BoxDecoration(
+      color: Color(0xFFE53935),
+      shape: BoxShape.circle,
+    ),
+  );
+
+  Widget _buildTabs(GameService game) {
+    final t = _newTracker;
+    final inventoryHasNew =
+        t != null &&
+        game.inventoryLoadedOnce &&
+        t.anyNew(game.inventoryItems);
     return DecoratedBox(
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFEFE7E3))),
@@ -1036,7 +1114,19 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
         tabs: [
           Tab(height: 42, text: L10n.of(context).shopTabShop),
-          Tab(height: 42, text: L10n.of(context).shopTabInventory),
+          Tab(
+            height: 42,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(L10n.of(context).shopTabInventory),
+                if (inventoryHasNew) ...[
+                  const SizedBox(width: 5),
+                  _newDot(),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1824,30 +1914,14 @@ class _ShopScreenState extends State<ShopScreen> {
                 L10n.of(context).shopCategoryUtil,
                 L10n.of(context).shopCategoryProfile,
                 L10n.of(context).shopCategorySeason,
-              ]),
+              ], badges: _inventoryBadges(game)),
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'banner'),
-                    ),
-                    _buildInventoryList(
-                      _titleInventoryItems(game.inventoryItems),
-                    ),
-                    _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'theme'),
-                    ),
-                    _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'utility'),
-                    ),
-                    _buildInventoryList(
-                      _profileTabItems(
-                        _filterInventory(game.inventoryItems, 'feature'),
-                      ),
-                    ),
-                    _buildInventoryList(
-                      _filterInventory(game.inventoryItems, 'season'),
-                    ),
+                    for (final tabItems in _inventoryTabLists(
+                      game.inventoryItems,
+                    ))
+                      _buildInventoryList(tabItems),
                   ],
                 ),
               ),
@@ -1856,6 +1930,16 @@ class _ShopScreenState extends State<ShopScreen> {
         },
       ),
     );
+  }
+
+  /// 칸마다 안 본 새 아이템이 있는지. 지금 보고 있는 칸은 곧 지워지니 그대로 둔다.
+  List<bool> _inventoryBadges(GameService game) {
+    final t = _newTracker;
+    final lists = _inventoryTabLists(game.inventoryItems);
+    if (t == null || !game.inventoryLoadedOnce) {
+      return List.filled(lists.length, false);
+    }
+    return [for (final l in lists) t.anyNew(l)];
   }
 
   Widget _buildInventoryList(List<Map<String, dynamic>> items) {
@@ -4279,7 +4363,7 @@ class _ShopScreenState extends State<ShopScreen> {
   /// Category selector as pill chips — the same language the lobby's game
   /// filters use. A second boxed TabBar under the first one made the top of the
   /// screen read as three separate headers.
-  Widget _buildCategoryTabs(List<String> labels) {
+  Widget _buildCategoryTabs(List<String> labels, {List<bool>? badges}) {
     // Builder, not this.context: the category controller is the inner
     // DefaultTabController, and the State's own context sits above it — looking
     // up from there finds the 상점/인벤토리 controller instead.
@@ -4299,6 +4383,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     _buildCategoryChip(
                       labels[i],
                       selected: controller.index == i,
+                      badge: badges != null && badges[i],
                       onTap: () => controller.animateTo(i),
                     ),
                   ],
@@ -4315,6 +4400,7 @@ class _ShopScreenState extends State<ShopScreen> {
     String label, {
     required bool selected,
     required VoidCallback onTap,
+    bool badge = false,
   }) {
     return Material(
       color: selected ? const Color(0xFF7E57C2) : const Color(0xFFF3EFF9),
@@ -4324,13 +4410,19 @@ class _ShopScreenState extends State<ShopScreen> {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : const Color(0xFF7A6E82),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : const Color(0xFF7A6E82),
+                ),
+              ),
+              if (badge) ...[const SizedBox(width: 5), _newDot()],
+            ],
           ),
         ),
       ),

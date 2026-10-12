@@ -1789,7 +1789,11 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'cards_played':
-        _sfx.play('card');
+        // 내 차례에 낸 폭탄은 bomb_played 가 아니라 cards_played 로 온다.
+        // combo 가 문자열일 때도, {type: ..} 객체일 때도 있다.
+        final comboField = data['combo'];
+        final comboType = comboField is Map ? comboField['type'] : comboField;
+        _sfx.play(comboType.toString().startsWith('bomb_') ? 'bomb' : 'card');
         final cards =
             (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
         if (cards.contains('special_dragon')) _sfx.play('dragon');
@@ -1803,7 +1807,7 @@ class GameService extends ChangeNotifier {
         }
         break;
       case 'bomb_played':
-        _sfx.play('card');
+        _sfx.play('bomb');
         if (dogPlayActive) {
           _dogClearTimer?.cancel();
           dogPlayActive = false;

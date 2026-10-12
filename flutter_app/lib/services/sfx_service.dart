@@ -22,6 +22,7 @@ class SfxService {
     'victory': 'sfx/victory.wav',
     'defeat': 'sfx/defeat.wav',
     'chat': 'sfx/chat.wav',
+    'bomb': 'sfx/bomb.wav',
     // 스몰·라지 티츄 성공 / 실패 (티츄 연출과 함께)
     'tichu_success': 'sfx/tichu_success.wav',
     'tichu_fail': 'sfx/tichu_fail.wav',
@@ -65,18 +66,20 @@ class SfxService {
     // Preload all players in parallel — each is independent, and serial
     // awaits would stack up to several hundred ms before the very first
     // SFX could play.
-    await Future.wait(_assetMap.entries.map((entry) async {
-      final p = AudioPlayer();
-      try {
-        await p.setPlayerMode(PlayerMode.lowLatency);
-        await p.setReleaseMode(ReleaseMode.stop);
-        await p.setVolume(_volume);
-        await p.setSource(AssetSource(entry.value));
-        _players[entry.key] = p;
-      } catch (_) {
-        // key stays absent — play() will silently no-op for it
-      }
-    }));
+    await Future.wait(
+      _assetMap.entries.map((entry) async {
+        final p = AudioPlayer();
+        try {
+          await p.setPlayerMode(PlayerMode.lowLatency);
+          await p.setReleaseMode(ReleaseMode.stop);
+          await p.setVolume(_volume);
+          await p.setSource(AssetSource(entry.value));
+          _players[entry.key] = p;
+        } catch (_) {
+          // key stays absent — play() will silently no-op for it
+        }
+      }),
+    );
   }
 
   Future<void> setVolume(double value) async {

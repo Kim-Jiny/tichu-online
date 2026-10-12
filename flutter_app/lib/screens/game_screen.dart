@@ -16,6 +16,7 @@ import '../models/game_state.dart';
 import '../models/player.dart';
 import '../models/tichu_fx_detector.dart';
 import '../widgets/tichu_effects.dart';
+import '../widgets/tichu_fx_events.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
@@ -117,80 +118,11 @@ class _GameScreenState extends State<GameScreen> {
       (p) => _teamForPosition(state, p.position),
     );
     if (signals.isEmpty) return;
-    final l10n = L10n.of(context);
-
-    String score(TichuFxSignal s, {required bool plus}) {
-      final n = s.large ? 200 : 100;
-      return '${s.name}  ${plus ? '+' : '\u2212'}$n';
-    }
-
-    final events = <TichuFxEvent>[];
-    for (final s in signals) {
-      final id = ++_fxSeq;
-      switch (s.kind) {
-        case TichuFxKind.declareSmall:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: l10n.gameFxSmallTichu,
-              subtitle: s.name,
-            ),
-          );
-        case TichuFxKind.declareLarge:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: l10n.gameFxLargeTichu,
-              subtitle: s.name,
-            ),
-          );
-        case TichuFxKind.tichuSuccess:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: s.large
-                  ? l10n.gameFxLargeTichuSuccess
-                  : l10n.gameFxSmallTichuSuccess,
-              subtitle: score(s, plus: true),
-            ),
-          );
-        case TichuFxKind.tichuFail:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: s.large
-                  ? l10n.gameFxLargeTichuFail
-                  : l10n.gameFxSmallTichuFail,
-              subtitle: score(s, plus: false),
-            ),
-          );
-        case TichuFxKind.oneTwo:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: l10n.gameFxOneTwo,
-              subtitle: '+200',
-            ),
-          );
-        case TichuFxKind.finished:
-          events.add(
-            TichuFxEvent(
-              id: id,
-              kind: s.kind,
-              title: l10n.gameFxFinished(s.name),
-              subtitle: l10n.gameFinishRank(s.rank),
-            ),
-          );
-      }
-    }
-    // 큰 사건이 위로, "N등으로 털었다" 는 아래로.
-    int weight(TichuFxKind k) => k == TichuFxKind.finished ? 1 : 0;
-    events.sort((a, b) => weight(a.kind).compareTo(weight(b.kind)));
+    final events = buildTichuFxEvents(
+      signals,
+      L10n.of(context),
+      () => ++_fxSeq,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

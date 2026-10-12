@@ -109,4 +109,62 @@ void main() {
     d.reset();
     expect(d.update(table(self: 1), teamOf), isEmpty);
   });
+
+  group('spectatorFxPlayers', () {
+    // 서버 getStateForSpectator 와 같은 모양: position 이 숫자다.
+    Map<String, dynamic> raw(
+      String id,
+      String team, {
+      bool small = false,
+      int finish = 0,
+    }) => {
+      'id': id,
+      'name': id,
+      'position': 0,
+      'cards': <String>[],
+      'hasSmallTichu': small,
+      'hasLargeTichu': false,
+      'finishPosition': finish,
+      'team': team,
+    };
+
+    test('숫자 position 이어도 변환되고 팀을 찾는다', () {
+      final fx = spectatorFxPlayers([raw('a', 'A'), raw('b', 'B')]);
+      expect(fx.players.length, 2);
+      expect(fx.teamOf(fx.players[0]), 'A');
+      expect(fx.teamOf(fx.players[1]), 'B');
+    });
+
+    test('관전 상태로도 원투와 티츄 성공을 잡는다', () {
+      final d = TichuFxDetector();
+      final before = spectatorFxPlayers([
+        raw('a', 'A', small: true),
+        raw('b', 'B'),
+        raw('c', 'A'),
+        raw('d', 'B'),
+      ]);
+      d.update(before.players, before.teamOf);
+
+      final first = spectatorFxPlayers([
+        raw('a', 'A', small: true, finish: 1),
+        raw('b', 'B'),
+        raw('c', 'A'),
+        raw('d', 'B'),
+      ]);
+      expect(kinds(d.update(first.players, first.teamOf)), [
+        TichuFxKind.finished,
+        TichuFxKind.tichuSuccess,
+      ]);
+
+      final second = spectatorFxPlayers([
+        raw('a', 'A', small: true, finish: 1),
+        raw('b', 'B'),
+        raw('c', 'A', finish: 2),
+        raw('d', 'B'),
+      ]);
+      expect(kinds(d.update(second.players, second.teamOf)), [
+        TichuFxKind.oneTwo,
+      ]);
+    });
+  });
 }

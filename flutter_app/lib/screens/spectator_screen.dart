@@ -19,6 +19,9 @@ import '../widgets/player_profile_dialog.dart';
 import '../widgets/seat_chat_bubble.dart';
 import '../widgets/mid_game_join.dart';
 import '../widgets/spectator_controls.dart';
+import '../widgets/tichu_effects.dart';
+import '../widgets/tichu_fx_events.dart';
+import '../models/tichu_fx_detector.dart';
 
 class SpectatorScreen extends StatefulWidget {
   const SpectatorScreen({super.key});
@@ -37,6 +40,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   // SK 관전 화면과 동일한 모델. 승인 전이면 요청 스피너, 승인 후엔 실제 손패.
   String? _viewingPlayerId;
   Timer? _cardViewRequestTimer;
+
+  // 플레이 화면과 같은 티츄 연출. 관전은 시점이 없어서 팀은 서버가 준 'team' 으로 본다.
+  final TichuFxDetector _fxDetector = TichuFxDetector();
+  final List<TichuFxEvent> _fx = [];
+  int _fxSeq = 0;
 
   Widget _buildRecoveryLoading({required String title, String? subtitle}) {
     return Center(
@@ -206,6 +214,28 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
+  /// 상태가 바뀐 순간을 연출로 바꾼다. build 안에서 불리므로 setState 는 다음
+  /// 프레임으로 미룬다.
+  void _collectFx(List players) {
+    final fx = spectatorFxPlayers(players);
+    final signals = _fxDetector.update(fx.players, fx.teamOf);
+    if (signals.isEmpty) return;
+    final events = buildTichuFxEvents(
+      signals,
+      L10n.of(context),
+      () => ++_fxSeq,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _fx.addAll(events);
+        while (_fx.length > 4) {
+          _fx.removeAt(0);
+        }
+      });
+    });
+  }
+
   Widget _buildSpectatorView(
     BuildContext context,
     GameService game,
@@ -214,6 +244,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   ) {
     _seatChat.consume(game);
     final players = (state['players'] as List?) ?? [];
+    _collectFx(players);
     final currentTrick = (state['currentTrick'] as List?) ?? [];
     final phase = state['phase'] ?? '';
     final totalScores = state['totalScores'] as Map<String, dynamic>? ?? {};
@@ -285,6 +316,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // Bug #10: Game end overlay for spectators
         if (phase == 'game_end')
           _buildGameEndOverlay(game, totalScores, players),
+
+        // 티츄·패 털기·원투 연출. 터치는 통과시킨다.
+        Positioned.fill(
+          child: TichuFxLayer(
+            events: _fx,
+            onDone: (id) {
+              if (mounted) setState(() => _fx.removeWhere((e) => e.id == id));
+            },
+          ),
+        ),
       ],
     );
   }

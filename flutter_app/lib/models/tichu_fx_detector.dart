@@ -105,3 +105,29 @@ class TichuFxDetector {
     return out;
   }
 }
+
+/// 관전 화면이 받는 players(JSON) 를 판정에 쓸 수 있게 옮긴다.
+///
+/// 관전 상태는 position 이 숫자라 Player.fromJson 을 쓸 수 없다 — 판정에
+/// 필요한 필드만 읽는다. 팀은 서버가 준 'team' 을 id 로 찾아 쓴다.
+({List<Player> players, String Function(Player) teamOf}) spectatorFxPlayers(
+  List raw,
+) {
+  final teamById = <String, String>{};
+  final list = <Player>[];
+  for (final r in raw) {
+    if (r is! Map) continue;
+    final id = (r['id'] ?? '').toString();
+    teamById[id] = (r['team'] ?? '').toString();
+    list.add(
+      Player(
+        id: id,
+        name: (r['name'] ?? '').toString(),
+        hasSmallTichu: r['hasSmallTichu'] == true,
+        hasLargeTichu: r['hasLargeTichu'] == true,
+        finishPosition: (r['finishPosition'] as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
+  return (players: list, teamOf: (p) => teamById[p.id] ?? '');
+}

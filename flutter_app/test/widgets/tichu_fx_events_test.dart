@@ -5,7 +5,7 @@ import 'package:tichu_online/widgets/tichu_effects.dart';
 import 'package:tichu_online/widgets/tichu_fx_events.dart';
 
 void main() {
-  test('1~3등만 띄우고 4등은 띄우지 않는다', () {
+  test('1등만 띄우고 2~4등은 띄우지 않는다', () {
     var seq = 0;
     final events = buildTichuFxEvents(
       [
@@ -15,8 +15,7 @@ void main() {
       L10nKo(),
       () => ++seq,
     );
-    expect(events.length, 3);
-    expect(events.map((e) => e.title), everyElement(isNot(contains('4등'))));
+    expect(events.length, 1);
     expect(events.first.title, '홍길동 1등!');
   });
 }

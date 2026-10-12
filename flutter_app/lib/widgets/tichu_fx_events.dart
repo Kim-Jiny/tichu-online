@@ -70,8 +70,9 @@ List<TichuFxEvent> buildTichuFxEvents(
           ),
         );
       case TichuFxKind.finished:
-        // 4등은 남은 한 명일 뿐이라 띄우지 않는다.
-        if (s.rank >= 4) continue;
+        // 1등만 크게 알린다. 2·3등은 좌석 옆 배지로 충분하고, 4등은 남은
+        // 한 명일 뿐이다.
+        if (s.rank != 1) continue;
         events.add(
           TichuFxEvent(
             id: id,

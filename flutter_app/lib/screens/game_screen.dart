@@ -14,6 +14,8 @@ import '../widgets/player_profile_dialog.dart';
 import '../services/session_service.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
+import '../models/tichu_fx_detector.dart';
+import '../widgets/tichu_effects.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
@@ -83,6 +85,12 @@ class _GameScreenState extends State<GameScreen> {
   int _lastTickSoundSecond = 999;
   bool _birdCallDialogOpen = false;
   bool _roundEndReady = false; // delay before showing round end dialog
+
+  // 티츄 선언·패 털기·원투 연출. 상태가 바뀌는 순간을 detector 가 잡아 주고,
+  // 여기엔 지금 화면에 떠 있는 것만 남는다.
+  final TichuFxDetector _fxDetector = TichuFxDetector();
+  final List<TichuFxEvent> _fx = [];
+  int _fxSeq = 0;
   bool _waitingForRoomRecovery = false;
   GameService? _gameService;
   bool _profileRequested = false; // C8: Prevent requestProfile loop
@@ -101,10 +109,107 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  /// 상태가 바뀐 순간을 연출로 바꾼다. build 안에서 불리므로 setState 는 다음
+  /// 프레임으로 미룬다.
+  void _collectFx(GameStateData state) {
+    final signals = _fxDetector.update(
+      state.players,
+      (p) => _teamForPosition(state, p.position),
+    );
+    if (signals.isEmpty) return;
+    final l10n = L10n.of(context);
+
+    String score(TichuFxSignal s, {required bool plus}) {
+      final n = s.large ? 200 : 100;
+      return '${s.name}  ${plus ? '+' : '\u2212'}$n';
+    }
+
+    final events = <TichuFxEvent>[];
+    for (final s in signals) {
+      final id = ++_fxSeq;
+      switch (s.kind) {
+        case TichuFxKind.declareSmall:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: l10n.gameFxSmallTichu,
+              subtitle: s.name,
+            ),
+          );
+        case TichuFxKind.declareLarge:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: l10n.gameFxLargeTichu,
+              subtitle: s.name,
+            ),
+          );
+        case TichuFxKind.tichuSuccess:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: s.large
+                  ? l10n.gameFxLargeTichuSuccess
+                  : l10n.gameFxSmallTichuSuccess,
+              subtitle: score(s, plus: true),
+            ),
+          );
+        case TichuFxKind.tichuFail:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: s.large
+                  ? l10n.gameFxLargeTichuFail
+                  : l10n.gameFxSmallTichuFail,
+              subtitle: score(s, plus: false),
+            ),
+          );
+        case TichuFxKind.oneTwo:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: l10n.gameFxOneTwo,
+              subtitle: '+200',
+            ),
+          );
+        case TichuFxKind.finished:
+          events.add(
+            TichuFxEvent(
+              id: id,
+              kind: s.kind,
+              title: l10n.gameFxFinished(s.name),
+              subtitle: l10n.gameFinishRank(s.rank),
+            ),
+          );
+      }
+    }
+    // 큰 사건이 위로, "N등으로 털었다" 는 아래로.
+    int weight(TichuFxKind k) => k == TichuFxKind.finished ? 1 : 0;
+    events.sort((a, b) => weight(a.kind).compareTo(weight(b.kind)));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _fx.addAll(events);
+        // 한꺼번에 쌓여도 화면을 가리지 않게 최근 4개만 남긴다.
+        while (_fx.length > 4) {
+          _fx.removeAt(0);
+        }
+      });
+    });
+  }
+
   Future<void> _recoverRoomState() async {
     if (_waitingForRoomRecovery) return;
     _waitingForRoomRecovery = true;
     // Clear stale UI state from previous connection
+    _fxDetector.reset();
+    _fx.clear();
     _selectedCards.clear();
     _exchangeAssignments.clear();
     _exchangeGiven.clear();
@@ -531,6 +636,7 @@ class _GameScreenState extends State<GameScreen> {
                     _roundEndReady = false;
                   }
                   _prevPhase = state.phase;
+                  _collectFx(state);
 
                   return Stack(
                     children: [
@@ -587,6 +693,21 @@ class _GameScreenState extends State<GameScreen> {
 
                       // Chat panel
                       if (_chatOpen) _buildChatPanel(game),
+
+                      // Tichu / finish / one-two effects stay above everything
+                      // and let touches through.
+                      Positioned.fill(
+                        child: TichuFxLayer(
+                          events: _fx,
+                          onDone: (id) {
+                            if (mounted) {
+                              setState(
+                                () => _fx.removeWhere((e) => e.id == id),
+                              );
+                            }
+                          },
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -1575,10 +1696,19 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                     SizedBox(height: 3 * _s),
-                    if (badge != null)
+                    if (badge != null || (p?.finishPosition ?? 0) > 0)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
-                        child: badge,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ?badge,
+                            if (badge != null && (p?.finishPosition ?? 0) > 0)
+                              SizedBox(width: 4 * _s),
+                            if ((p?.finishPosition ?? 0) > 0)
+                              _finishBadge(p!.finishPosition),
+                          ],
+                        ),
                       ),
                     // 이름+팀+연결상태를 SK 톤 pill 로. 현재 턴이면 노란 배경.
                     AnimatedContainer(
@@ -2437,6 +2567,10 @@ class _GameScreenState extends State<GameScreen> {
               if (_tichuBadgeForSelf(state) != null) ...[
                 SizedBox(width: 8 * _s),
                 _tichuBadgeForSelf(state)!,
+              ],
+              if (_selfFinishPosition(state) > 0) ...[
+                SizedBox(width: 8 * _s),
+                _finishBadge(_selfFinishPosition(state)),
               ],
               if (game.myTimeoutCount > 0) ...[
                 SizedBox(width: 8 * _s),
@@ -3671,6 +3805,43 @@ class _GameScreenState extends State<GameScreen> {
       );
     }
     return null;
+  }
+
+  int _selfFinishPosition(GameStateData state) {
+    final me = _firstWhereOrNull(state.players, (p) => p.position == 'self');
+    return me?.finishPosition ?? 0;
+  }
+
+  /// 패를 다 턴 사람 옆에 붙는 순위. 1~3등은 금·은·동으로 구분한다.
+  Widget _finishBadge(int rank) {
+    final (Color bg, Color border, Color fg) = switch (rank) {
+      1 => (
+        const Color(0xFFFFD54F),
+        const Color(0xFFF9A825),
+        const Color(0xFF5A4038),
+      ),
+      2 => (
+        const Color(0xFFE0E0E0),
+        const Color(0xFF9E9E9E),
+        const Color(0xFF424242),
+      ),
+      3 => (const Color(0xFFD7A57A), const Color(0xFF8D6E63), Colors.white),
+      _ => (const Color(0xFFBDBDBD), const Color(0xFF757575), Colors.white),
+    };
+    // 처음 나타날 때만 통통 튀어나온다. 같은 값으로 다시 그려질 땐 가만히 있다.
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.elasticOut,
+      builder: (context, v, child) =>
+          Transform.scale(scale: v.clamp(0.0, 1.4), child: child),
+      child: _tichuBadge(
+        label: L10n.of(context).gameFinishRank(rank),
+        bg: bg,
+        fg: fg,
+        border: border,
+      ),
+    );
   }
 
   Widget? _tichuBadgeForSelf(GameStateData state) {

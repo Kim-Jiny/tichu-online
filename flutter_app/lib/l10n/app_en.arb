@@ -1061,6 +1061,29 @@
   "gameReceivedCards": "Received Cards",
   "gameBadgeLarge": "Large",
   "gameBadgeSmall": "Small",
+  "gameFxSmallTichu": "Small Tichu!",
+  "gameFxLargeTichu": "Large Tichu!",
+  "gameFxSmallTichuSuccess": "Small Tichu success!",
+  "gameFxLargeTichuSuccess": "Large Tichu success!",
+  "gameFxSmallTichuFail": "Small Tichu failed",
+  "gameFxLargeTichuFail": "Large Tichu failed",
+  "gameFxOneTwo": "One-Two finish!",
+  "gameFxFinished": "{name} is out!",
+  "@gameFxFinished": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gameFinishRank": "#{rank}",
+  "@gameFinishRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
   "gameNotAfk": "Not AFK",
   "spectatorRecovering": "Recovering spectator view...",
   "spectatorTransitioning": "Transitioning spectator view...",

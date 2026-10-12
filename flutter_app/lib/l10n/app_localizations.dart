@@ -3471,6 +3471,60 @@ abstract class L10n {
   /// **'Small'**
   String get gameBadgeSmall;
 
+  /// No description provided for @gameFxSmallTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Small Tichu!'**
+  String get gameFxSmallTichu;
+
+  /// No description provided for @gameFxLargeTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Large Tichu!'**
+  String get gameFxLargeTichu;
+
+  /// No description provided for @gameFxSmallTichuSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Small Tichu success!'**
+  String get gameFxSmallTichuSuccess;
+
+  /// No description provided for @gameFxLargeTichuSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Large Tichu success!'**
+  String get gameFxLargeTichuSuccess;
+
+  /// No description provided for @gameFxSmallTichuFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Small Tichu failed'**
+  String get gameFxSmallTichuFail;
+
+  /// No description provided for @gameFxLargeTichuFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Large Tichu failed'**
+  String get gameFxLargeTichuFail;
+
+  /// No description provided for @gameFxOneTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'One-Two finish!'**
+  String get gameFxOneTwo;
+
+  /// No description provided for @gameFxFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is out!'**
+  String gameFxFinished(String name);
+
+  /// No description provided for @gameFinishRank.
+  ///
+  /// In en, this message translates to:
+  /// **'#{rank}'**
+  String gameFinishRank(int rank);
+
   /// No description provided for @gameNotAfk.
   ///
   /// In en, this message translates to:

@@ -1837,6 +1837,37 @@ class L10nKo extends L10n {
   String get gameBadgeSmall => '스몰';
 
   @override
+  String get gameFxSmallTichu => '스몰 티츄!';
+
+  @override
+  String get gameFxLargeTichu => '라지 티츄!';
+
+  @override
+  String get gameFxSmallTichuSuccess => '스몰 티츄 성공!';
+
+  @override
+  String get gameFxLargeTichuSuccess => '라지 티츄 성공!';
+
+  @override
+  String get gameFxSmallTichuFail => '스몰 티츄 실패';
+
+  @override
+  String get gameFxLargeTichuFail => '라지 티츄 실패';
+
+  @override
+  String get gameFxOneTwo => '원투 피니시!';
+
+  @override
+  String gameFxFinished(String name) {
+    return '$name님 패 털기 완료!';
+  }
+
+  @override
+  String gameFinishRank(int rank) {
+    return '$rank등';
+  }
+
+  @override
   String get gameNotAfk => '잠수 아님';
 
   @override

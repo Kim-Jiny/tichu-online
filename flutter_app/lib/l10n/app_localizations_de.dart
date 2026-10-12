@@ -1882,6 +1882,37 @@ class L10nDe extends L10n {
   String get gameBadgeSmall => 'Small';
 
   @override
+  String get gameFxSmallTichu => 'Small Tichu!';
+
+  @override
+  String get gameFxLargeTichu => 'Large Tichu!';
+
+  @override
+  String get gameFxSmallTichuSuccess => 'Small Tichu geschafft!';
+
+  @override
+  String get gameFxLargeTichuSuccess => 'Large Tichu geschafft!';
+
+  @override
+  String get gameFxSmallTichuFail => 'Small Tichu gescheitert';
+
+  @override
+  String get gameFxLargeTichuFail => 'Large Tichu gescheitert';
+
+  @override
+  String get gameFxOneTwo => 'Doppelsieg!';
+
+  @override
+  String gameFxFinished(String name) {
+    return '$name ist fertig!';
+  }
+
+  @override
+  String gameFinishRank(int rank) {
+    return 'Platz $rank';
+  }
+
+  @override
   String get gameNotAfk => 'Nicht AFK';
 
   @override

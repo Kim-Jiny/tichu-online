@@ -1706,7 +1706,7 @@
   "trickStraight": "{rank}-Straße ({count})",
   "trickSteps": "{rank}-Treppe ({count})",
   "trickBombFour": "Vierling {rank}",
-  "trickBombStraightFlush": "SF-Bombe",
+  "trickBombStraightFlush": "SF-Bombe {rank} ({count})",
   "trickCallSuffix": "Ansage {rank}",
   "shopSaleWindow": "Verkauf {window}",
   "couponSectionTitle": "Gutschein",

@@ -4881,7 +4881,9 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get trickBombStraightFlush => 'SF bomb';
+  String trickBombStraightFlush(String rank, int count) {
+    return '$rank SF bomb ($count)';
+  }
 
   @override
   String trickCallSuffix(String rank) {

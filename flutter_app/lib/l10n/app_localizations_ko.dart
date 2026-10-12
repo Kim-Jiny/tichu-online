@@ -4764,11 +4764,13 @@ class L10nKo extends L10n {
 
   @override
   String trickBombFour(String rank) {
-    return '$rank 포카드';
+    return '$rank 포카드 폭탄';
   }
 
   @override
-  String get trickBombStraightFlush => '스플 폭탄';
+  String trickBombStraightFlush(String rank, int count) {
+    return '$rank 스티플 폭탄($count장)';
+  }
 
   @override
   String trickCallSuffix(String rank) {

@@ -2801,7 +2801,17 @@
       }
     }
   },
-  "trickBombStraightFlush": "SF bomb",
+  "trickBombStraightFlush": "{rank} SF bomb ({count})",
+  "@trickBombStraightFlush": {
+    "placeholders": {
+      "rank": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "trickCallSuffix": "call {rank}",
   "@trickCallSuffix": {
     "placeholders": {

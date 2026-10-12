@@ -8640,8 +8640,8 @@ abstract class L10n {
   /// No description provided for @trickBombStraightFlush.
   ///
   /// In en, this message translates to:
-  /// **'SF bomb'**
-  String get trickBombStraightFlush;
+  /// **'{rank} SF bomb ({count})'**
+  String trickBombStraightFlush(String rank, int count);
 
   /// No description provided for @trickCallSuffix.
   ///

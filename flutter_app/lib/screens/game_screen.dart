@@ -2784,7 +2784,10 @@ class _GameScreenState extends State<GameScreen> {
       case 'bomb_four':
         return l10n.trickBombFour(_rankFromCardId(cards[0]));
       case 'bomb_straight_flush':
-        return l10n.trickBombStraightFlush;
+        return l10n.trickBombStraightFlush(
+          _rankLabelFromValue(play.comboValue),
+          cards.length,
+        );
       default:
         return l10n.gameCardCount(cards.length);
     }

@@ -11,6 +11,7 @@ import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/choice_pill.dart';
+import '../widgets/notice_body.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/profile_avatar.dart';
 import '../services/auth_service.dart';
@@ -624,13 +625,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  adminNote,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
+                NoticeBody(content: adminNote),
                 const SizedBox(height: 8),
                 Text(
                   l10n.inquiryAnswerDate(resolvedAt),

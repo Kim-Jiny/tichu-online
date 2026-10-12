@@ -19,6 +19,7 @@ import 'settings_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
+import '../widgets/notice_body.dart';
 import '../widgets/game_type_icon.dart';
 import '../util/image_precache.dart';
 import '../widgets/profile_avatar.dart';
@@ -392,10 +393,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                adminNote,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
-              ),
+              // The answer is written in markdown by the admin; a plain Text
+              // showed the asterisks and ran every paragraph together.
+              NoticeBody(content: adminNote),
             ],
           ),
         ),

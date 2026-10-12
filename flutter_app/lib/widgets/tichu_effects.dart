@@ -133,7 +133,7 @@ class TichuFxLayer extends StatelessWidget {
                 // 키가 Align 에 있어야 앞 배너가 빠져도 뒤 배너 상태(진행 중인
                 // 애니메이션)가 새로 시작되지 않는다.
                 key: ValueKey(events[i].id),
-                alignment: Alignment(0, -0.2 + i * 0.24),
+                alignment: Alignment(0, -0.5 + i * 0.22),
                 child: _FxBanner(
                   event: events[i],
                   onDone: _doneFor(events[i].id),

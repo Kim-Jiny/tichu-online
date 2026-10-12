@@ -1795,9 +1795,17 @@ class GameService extends ChangeNotifier {
         // combo 가 문자열일 때도, {type: ..} 객체일 때도 있다.
         final comboField = data['combo'];
         final comboType = comboField is Map ? comboField['type'] : comboField;
-        _sfx.play(comboType.toString().startsWith('bomb_') ? 'bomb' : 'card');
         final cards =
             (data['cards'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        // 봉황이 들어 있으면(싱글 포함) 일반 카드 소리 대신 봉황 소리.
+        // 폭탄에는 봉황이 못 들어가니 둘이 겹치지 않는다.
+        _sfx.play(
+          comboType.toString().startsWith('bomb_')
+              ? 'bomb'
+              : cards.contains('special_phoenix')
+              ? 'phoenix'
+              : 'card',
+        );
         if (cards.contains('special_dragon')) _sfx.play('dragon');
         if (cards.contains('special_dog')) _sfx.play('dog');
         // Clear dog banner when next cards are played

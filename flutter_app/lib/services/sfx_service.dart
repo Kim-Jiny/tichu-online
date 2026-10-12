@@ -23,6 +23,7 @@ class SfxService {
     'defeat': 'sfx/defeat.wav',
     'chat': 'sfx/chat.wav',
     'bomb': 'sfx/bomb.wav',
+    'phoenix': 'sfx/phoenix.wav',
     // 스몰·라지 티츄 성공 / 실패 (티츄 연출과 함께)
     'tichu_success': 'sfx/tichu_success.wav',
     'tichu_fail': 'sfx/tichu_fail.wav',

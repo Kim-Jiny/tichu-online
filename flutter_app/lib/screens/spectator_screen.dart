@@ -313,11 +313,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         // Chat panel overlay
         if (_chatOpen) _buildChatPanel(game),
 
-        // Bug #10: Game end overlay for spectators
-        if (phase == 'game_end')
-          _buildGameEndOverlay(game, totalScores, players),
-
-        // 티츄·패 털기·원투 연출. 터치는 통과시킨다.
+        // 티츄·패 털기·원투 연출. 결과 팝업 아래에 깔고 터치는 통과시킨다.
         Positioned.fill(
           child: TichuFxLayer(
             events: _fx,
@@ -326,6 +322,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             },
           ),
         ),
+
+        // Bug #10: Game end overlay for spectators
+        if (phase == 'game_end')
+          _buildGameEndOverlay(game, totalScores, players),
       ],
     );
   }

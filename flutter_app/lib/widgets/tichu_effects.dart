@@ -114,6 +114,9 @@ class TichuFxLayer extends StatelessWidget {
   final List<TichuFxEvent> events;
   final void Function(int id) onDone;
 
+  VoidCallback _doneFor(int id) =>
+      () => onDone(id);
+
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) return const SizedBox.shrink();
@@ -124,12 +127,16 @@ class TichuFxLayer extends StatelessWidget {
           children: [
             for (var i = 0; i < events.length; i++)
               // 같은 순간에 여러 개가 겹치면 위아래로 밀어 서로 안 가린다.
+              // onDone 은 애니메이션이 끝날 때 불리는데, 그 사이 events 가
+              // 줄어 있을 수 있으니 인덱스가 아니라 id 를 미리 잡아 둔다.
               Align(
+                // 키가 Align 에 있어야 앞 배너가 빠져도 뒤 배너 상태(진행 중인
+                // 애니메이션)가 새로 시작되지 않는다.
+                key: ValueKey(events[i].id),
                 alignment: Alignment(0, -0.3 + i * 0.28),
                 child: _FxBanner(
-                  key: ValueKey(events[i].id),
                   event: events[i],
-                  onDone: () => onDone(events[i].id),
+                  onDone: _doneFor(events[i].id),
                 ),
               ),
           ],
@@ -140,7 +147,7 @@ class TichuFxLayer extends StatelessWidget {
 }
 
 class _FxBanner extends StatefulWidget {
-  const _FxBanner({super.key, required this.event, required this.onDone});
+  const _FxBanner({required this.event, required this.onDone});
 
   final TichuFxEvent event;
   final VoidCallback onDone;

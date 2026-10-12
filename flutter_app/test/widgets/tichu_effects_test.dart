@@ -70,4 +70,34 @@ void main() {
     expect(taps, 1);
     await tester.pump(const Duration(seconds: 3));
   });
+
+  testWidgets('목록이 줄어든 뒤에 끝나는 연출도 예외 없이 id 로 알린다', (tester) async {
+    final events = [
+      TichuFxEvent(id: 1, kind: TichuFxKind.finished, title: 'a'), // 1.5s
+      TichuFxEvent(id: 2, kind: TichuFxKind.oneTwo, title: 'b'), // 2.8s
+    ];
+    final done = <int>[];
+    late StateSetter set;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            set = setState;
+            return TichuFxLayer(
+              events: List.of(events),
+              onDone: (id) {
+                done.add(id);
+                set(() => events.removeWhere((e) => e.id == id));
+              },
+            );
+          },
+        ),
+      ),
+    );
+    // 1번이 먼저 끝나 목록에서 빠진 뒤, 인덱스가 밀린 2번이 끝난다.
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(tester.takeException(), isNull);
+    expect(done, [1, 2]);
+  });
 }

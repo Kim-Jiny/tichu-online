@@ -586,6 +586,22 @@ class _GameScreenState extends State<GameScreen> {
                       if (state.needsToCallRank && !_birdCallDialogOpen)
                         _buildCallRankDialog(game),
 
+                      // Tichu / finish / one-two effects sit under the score
+                      // dialog (a banner over the board hid the scores) and
+                      // let touches through.
+                      Positioned.fill(
+                        child: TichuFxLayer(
+                          events: _fx,
+                          onDone: (id) {
+                            if (mounted) {
+                              setState(
+                                () => _fx.removeWhere((e) => e.id == id),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+
                       if (_roundEndReady &&
                           (state.phase == 'round_end' ||
                               state.phase == 'game_end'))
@@ -626,20 +642,6 @@ class _GameScreenState extends State<GameScreen> {
                       // Chat panel
                       if (_chatOpen) _buildChatPanel(game),
 
-                      // Tichu / finish / one-two effects stay above everything
-                      // and let touches through.
-                      Positioned.fill(
-                        child: TichuFxLayer(
-                          events: _fx,
-                          onDone: (id) {
-                            if (mounted) {
-                              setState(
-                                () => _fx.removeWhere((e) => e.id == id),
-                              );
-                            }
-                          },
-                        ),
-                      ),
                     ],
                   );
                 },

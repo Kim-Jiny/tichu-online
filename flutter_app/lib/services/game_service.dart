@@ -1815,22 +1815,11 @@ class GameService extends ChangeNotifier {
         );
         if (cards.contains('special_dragon')) _sfx.play('dragon');
         if (cards.contains('special_dog')) _sfx.play('dog');
-        // Clear dog banner when next cards are played
-        if (dogPlayActive) {
-          _dogClearTimer?.cancel();
-          dogPlayActive = false;
-          dogPlayPlayerName = '';
-          notifyListeners();
-        }
+        // 개 배너/연출은 다음 카드가 나와도 지우지 않는다 — 봇 빠름 모드는
+        // 0.1~0.3초 만에 이어 내서 연출이 보이기도 전에 사라졌다. 타이머가 지운다.
         break;
       case 'bomb_played':
         _sfx.play('bomb');
-        if (dogPlayActive) {
-          _dogClearTimer?.cancel();
-          dogPlayActive = false;
-          dogPlayPlayerName = '';
-          notifyListeners();
-        }
         break;
       case 'player_passed':
         break;

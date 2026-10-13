@@ -3219,6 +3219,12 @@ abstract class L10n {
   /// **'The Dog was played'**
   String get gameDogPlayed;
 
+  /// No description provided for @gameDogPassedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} played the Dog → {to} leads'**
+  String gameDogPassedTo(String from, String to);
+
   /// No description provided for @gamePlayedCards.
   ///
   /// In en, this message translates to:

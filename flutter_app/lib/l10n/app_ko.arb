@@ -522,6 +522,7 @@
   "gameTeamLabel": "팀 {label}",
   "gameDogPlayedBy": "{name}이(가) 개를 냈어",
   "gameDogPlayed": "개가 나왔어",
+  "gameDogPassedTo": "{from}이(가) 개를 냈어 → {to} 선공",
   "gamePlayedCards": "가 낸 패",
   "gamePlay": "내기",
   "gamePass": "패스",

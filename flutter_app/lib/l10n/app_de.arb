@@ -532,6 +532,7 @@
   "gameTeamLabel": "Team {label}",
   "gameDogPlayedBy": "{name} hat den Hund gespielt",
   "gameDogPlayed": "Der Hund wurde gespielt",
+  "gameDogPassedTo": "{from} hat den Hund gespielt → {to} spielt aus",
   "gamePlayedCards": ": Karten",
   "gamePlay": "Spielen",
   "gamePass": "Passen",

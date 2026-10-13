@@ -1747,6 +1747,11 @@ class L10nDe extends L10n {
   String get gameDogPlayed => 'Der Hund wurde gespielt';
 
   @override
+  String gameDogPassedTo(String from, String to) {
+    return '$from hat den Hund gespielt → $to spielt aus';
+  }
+
+  @override
   String get gamePlayedCards => ': Karten';
 
   @override

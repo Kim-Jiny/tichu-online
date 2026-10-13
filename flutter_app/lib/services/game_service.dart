@@ -206,6 +206,12 @@ class GameService extends ChangeNotifier {
   // Dog play UI
   bool dogPlayActive = false;
   String dogPlayPlayerName = '';
+  // 개가 어디서 어디로 갔는지 — 낸 사람 id, 선공을 넘겨받은 사람 id/이름.
+  // dogPlaySeq 는 날아가는 애니메이션이 매번 새로 시작하도록 하는 키.
+  String? dogFromId;
+  String? dogToId;
+  String dogToName = '';
+  int dogPlaySeq = 0;
 
   // Chat
   List<Map<String, dynamic>> chatMessages = [];
@@ -254,6 +260,7 @@ class GameService extends ChangeNotifier {
   Map<String, dynamic>? bankDepositInfo;
   List<Map<String, dynamic>> shopItems = [];
   List<Map<String, dynamic>> inventoryItems = [];
+
   /// 목록을 한 번이라도 받았는지. 빈 목록과 "아직 못 받음"을 가른다(새 아이템 표시용).
   bool inventoryLoadedOnce = false;
 
@@ -2038,8 +2045,9 @@ class GameService extends ChangeNotifier {
         if (cancelledFrom.isNotEmpty &&
             pendingFriendRequests.remove(cancelledFrom)) {
           pendingFriendRequestCount = pendingFriendRequests.length;
-          pendingFriendRequestsDetailed
-              .removeWhere((r) => r['nickname'] == cancelledFrom);
+          pendingFriendRequestsDetailed.removeWhere(
+            (r) => r['nickname'] == cancelledFrom,
+          );
         }
         notifyListeners();
         break;
@@ -2700,9 +2708,12 @@ class GameService extends ChangeNotifier {
             rewardType: (data['reward'] as Map?)?['type'] as String?,
             rewardGold: (data['reward'] as Map?)?['gold'] as int?,
             rewardDays: _daysUntil((data['reward'] as Map?)?['expiresAt']),
-            rewardItemNameKo: (data['reward'] as Map?)?['itemNameKo'] as String?,
-            rewardItemNameEn: (data['reward'] as Map?)?['itemNameEn'] as String?,
-            rewardItemNameDe: (data['reward'] as Map?)?['itemNameDe'] as String?,
+            rewardItemNameKo:
+                (data['reward'] as Map?)?['itemNameKo'] as String?,
+            rewardItemNameEn:
+                (data['reward'] as Map?)?['itemNameEn'] as String?,
+            rewardItemNameDe:
+                (data['reward'] as Map?)?['itemNameDe'] as String?,
           ),
         );
         _couponCompleter = null;
@@ -2962,6 +2973,17 @@ class GameService extends ChangeNotifier {
   void _handleDogPlayed(Map<String, dynamic> data) {
     dogPlayActive = true;
     dogPlayPlayerName = (data['playerName'] as String?) ?? '';
+    dogFromId = data['player'] as String?;
+    dogToId = data['nextPlayer'] as String?;
+    dogToName = '';
+    final toId = dogToId;
+    final st = gameState;
+    if (toId != null && st != null) {
+      for (final p in st.players) {
+        if (p.id == toId) dogToName = p.name;
+      }
+    }
+    dogPlaySeq++;
     // NOTE: We intentionally do NOT arm the 2s game-state hold here. The Dog
     // can only be led on an empty trick, so there are no played cards to keep
     // visible — holding the state just froze the turn indicator on the Dog
@@ -2970,7 +2992,7 @@ class GameService extends ChangeNotifier {
     // _dogClearTimer below) already conveys that the Dog was played.
 
     _dogClearTimer?.cancel();
-    _dogClearTimer = Timer(const Duration(seconds: 2), () {
+    _dogClearTimer = Timer(const Duration(milliseconds: 2800), () {
       if (_disposed) return;
       dogPlayActive = false;
       dogPlayPlayerName = '';
@@ -4661,7 +4683,8 @@ class GameService extends ChangeNotifier {
     sentFriendRequests.remove(nickname);
     sentFriendRequestsDetailed.removeWhere((r) => r['nickname'] == nickname);
     for (final user in searchResults) {
-      if (user['nickname'] == nickname && user['friendStatus'] == 'pending_outgoing') {
+      if (user['nickname'] == nickname &&
+          user['friendStatus'] == 'pending_outgoing') {
         user['friendStatus'] = 'none';
       }
     }

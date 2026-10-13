@@ -1702,6 +1702,11 @@ class L10nKo extends L10n {
   String get gameDogPlayed => '개가 나왔어';
 
   @override
+  String gameDogPassedTo(String from, String to) {
+    return '$from이(가) 개를 냈어 → $to 선공';
+  }
+
+  @override
   String get gamePlayedCards => '가 낸 패';
 
   @override

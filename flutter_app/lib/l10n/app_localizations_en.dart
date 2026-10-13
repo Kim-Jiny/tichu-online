@@ -1737,6 +1737,11 @@ class L10nEn extends L10n {
   String get gameDogPlayed => 'The Dog was played';
 
   @override
+  String gameDogPassedTo(String from, String to) {
+    return '$from played the Dog → $to leads';
+  }
+
+  @override
   String get gamePlayedCards => '\'s play';
 
   @override

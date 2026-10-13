@@ -642,7 +642,6 @@ class _GameScreenState extends State<GameScreen> {
 
                       // Chat panel
                       if (_chatOpen) _buildChatPanel(game),
-
                     ],
                   );
                 },
@@ -1509,6 +1508,49 @@ class _GameScreenState extends State<GameScreen> {
                 );
               }(),
             ],
+            // 개: 낸 자리에서 선공을 받는 자리로 날아간다.
+            if (game.dogPlayActive &&
+                game.dogFromId != null &&
+                game.dogToId != null)
+              () {
+                Offset? seatCenter(String id) {
+                  final pl = _firstWhereOrNull(
+                    state.players,
+                    (p) => p.id == id,
+                  );
+                  if (pl == null) return null;
+                  if (pl.position == 'self') {
+                    return Offset(centerX, height - 8 * boardScale);
+                  }
+                  for (final (_, key, angleDeg) in positions) {
+                    if (key != pl.position) continue;
+                    final a = angleDeg * math.pi / 180;
+                    final dx = key == 'partner'
+                        ? math.cos(a)
+                        : (key == 'left' ? -1.0 : 1.0);
+                    return Offset(
+                      centerX + seatRadiusX * dx,
+                      centerY + seatRadiusY * math.sin(a),
+                    );
+                  }
+                  return null;
+                }
+
+                final from = seatCenter(game.dogFromId!);
+                final to = seatCenter(game.dogToId!);
+                if (from == null || to == null) return const SizedBox.shrink();
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: _DogFlight(
+                      key: ValueKey(game.dogPlaySeq),
+                      from: from,
+                      to: to,
+                      cardWidth: 44 * _s,
+                      cardHeight: 61 * _s,
+                    ),
+                  ),
+                );
+              }(),
             // 중앙 트릭: Stack 마지막에 얹어 좌석 프로필 위로 그려진다.
             // Align 대신 Positioned(top) — Align 은 자식 높이가 커지면 top 이
             // 위로 밀려 "카드 표시할 때 트릭박스가 오히려 위로 자라는" 것처럼
@@ -1874,7 +1916,10 @@ class _GameScreenState extends State<GameScreen> {
             SizedBox(height: 4 * _s),
 
             if (game.dogPlayActive)
-              _buildDogPlayedBanner(game.dogPlayPlayerName),
+              _buildDogPlayedBanner(
+                game.dogPlayPlayerName,
+                toName: game.dogToName,
+              ),
 
             if (game.dogPlayActive) SizedBox(height: 4 * _s),
 
@@ -2154,7 +2199,8 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildDogPlayedBanner(String playerName) {
+  Widget _buildDogPlayedBanner(String playerName, {String toName = ''}) {
+    String clip(String n) => n.length > 8 ? '${n.substring(0, 8)}..' : n;
     // The Dog gets its own banner instead of going through the normal trick
     // pile, and it kept a hardcoded 32x45 card while every other played card is
     // 44x61 * _s — so on a scaled-up board the Dog came out at under half size.
@@ -2168,7 +2214,11 @@ class _GameScreenState extends State<GameScreen> {
       child: Column(
         children: [
           Text(
-            playerName.isNotEmpty
+            playerName.isNotEmpty && toName.isNotEmpty
+                ? L10n.of(
+                    context,
+                  ).gameDogPassedTo(clip(playerName), clip(toName))
+                : playerName.isNotEmpty
                 ? L10n.of(context).gameDogPlayedBy(
                     playerName.length > 8
                         ? '${playerName.substring(0, 8)}..'
@@ -4014,6 +4064,108 @@ class _AutoDismissDialogState extends State<_AutoDismissDialog> {
       behavior: HitTestBehavior.opaque,
       onTap: _close,
       child: widget.child,
+    );
+  }
+}
+
+/// 개 카드가 낸 사람 자리에서 선공을 받는 자리로 포물선을 그리며 날아가고,
+/// 도착한 자리에는 파동이 퍼진다. 어디서 어디로 갔는지, 그래서 누구 차례인지를
+/// 눈으로 바로 보여주기 위한 연출.
+class _DogFlight extends StatefulWidget {
+  final Offset from;
+  final Offset to;
+  final double cardWidth;
+  final double cardHeight;
+
+  const _DogFlight({
+    super.key,
+    required this.from,
+    required this.to,
+    required this.cardWidth,
+    required this.cardHeight,
+  });
+
+  @override
+  State<_DogFlight> createState() => _DogFlightState();
+}
+
+class _DogFlightState extends State<_DogFlight>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        // 0~0.2 제자리에서 떠오름, 0.2~0.75 비행, 이후 도착 파동 + 사라짐.
+        final fly = Curves.easeInOutCubic.transform(
+          ((t - 0.2) / 0.55).clamp(0.0, 1.0),
+        );
+        final base = Offset.lerp(widget.from, widget.to, fly)!;
+        final arc = -math.sin(fly * math.pi) * 36;
+        final pos = base + Offset(0, arc);
+        final pop = t < 0.2 ? Curves.easeOutBack.transform(t / 0.2) : 1.0;
+        final scale = 0.6 + 0.4 * pop + math.sin(fly * math.pi) * 0.25;
+        final opacity = t > 0.85 ? (1 - (t - 0.85) / 0.15) : 1.0;
+        final ripple = ((t - 0.7) / 0.3).clamp(0.0, 1.0);
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (ripple > 0)
+              Positioned(
+                left: widget.to.dx - 40,
+                top: widget.to.dy - 40,
+                width: 80,
+                height: 80,
+                child: Opacity(
+                  opacity: (1 - ripple) * 0.8,
+                  child: Transform.scale(
+                    scale: 0.5 + ripple * 1.1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFE6A800),
+                          width: 4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: pos.dx - widget.cardWidth / 2,
+              top: pos.dy - widget.cardHeight / 2,
+              child: Opacity(
+                opacity: opacity.clamp(0.0, 1.0),
+                child: Transform.rotate(
+                  angle: (1 - fly) * -0.25 + fly * 0.1,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: PlayingCard(
+                      cardId: 'special_dog',
+                      width: widget.cardWidth,
+                      height: widget.cardHeight,
+                      isInteractive: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -991,6 +991,17 @@
     }
   },
   "gameDogPlayed": "The Dog was played",
+  "gameDogPassedTo": "{from} played the Dog → {to} leads",
+  "@gameDogPassedTo": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
   "gamePlayedCards": "'s play",
   "gamePlay": "Play",
   "gamePass": "Pass",

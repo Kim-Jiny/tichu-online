@@ -2301,8 +2301,6 @@ class _GameScreenState extends State<GameScreen> {
     final double baseCardH = 62 * _s;
     var cardW = baseCardW;
     var cardH = baseCardH;
-    final double minOverlap = 24 * _s;
-    final double maxOverlap = 34 * _s;
 
     // Phoenix-as-single → overlay a chip on the card showing what rank
     // it beat (e.g. "↑Q"), so the table can read the play at a glance.
@@ -2365,58 +2363,31 @@ class _GameScreenState extends State<GameScreen> {
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - 16; // padding
 
-        // Shrink the cards rather than spill out of the box. Even at the
-        // tightest overlap a long straight needs more width than the trick
-        // panel has once the board is scaled up, and the overflow drew over
-        // the seats around it. Proportions are kept, and the floor stops a
-        // seven-card play from turning into confetti.
+        // 7장 이상은 한 줄에 밀어넣지 말고 두 줄로. 관전 트릭과 동일 규칙.
+        final rows = cards.length >= 7 ? 2 : 1;
+        final perRow = (cards.length + rows - 1) ~/ rows;
+
+        // 카드 크기와 겹침은 "한 줄에 들어갈 장수" 기준으로 정한다. 예전엔
+        // 전체 장수로 줄여서, 두 줄로 나눌 긴 스트레이트가 오히려 쪼그라들고
+        // (겹침은 고정 px 라) 간격도 어긋났다. 겹침은 카드 폭 비율로 유지한다.
+        const minRatio = 24 / 44;
+        const maxRatio = 34 / 44;
         cardW = baseCardW;
         cardH = baseCardH;
-        if (cards.length > 1) {
-          final needed = cardW + minOverlap * (cards.length - 1);
-          if (needed > availableWidth) {
-            final fit = (availableWidth / needed).clamp(0.62, 1.0);
-            cardW *= fit;
-            cardH *= fit;
-          }
+        final needed = cardW * (1 + minRatio * (perRow - 1));
+        if (needed > availableWidth) {
+          final fit = (availableWidth / needed).clamp(0.62, 1.0);
+          cardW *= fit;
+          cardH *= fit;
         }
-
-        // Calculate overlap to fit all cards in one row
-        final neededOverlap = cards.length > 1
-            ? (availableWidth - cardW) / (cards.length - 1)
-            : availableWidth;
-        // 7장 이상은 한 줄에 밀어넣지 말고 두 줄로. 관전 트릭과 동일 규칙.
-        final wantTwoRows = cards.length >= 7;
-
-        if (!wantTwoRows && neededOverlap >= minOverlap) {
-          // Fits in one row
-          final overlap = neededOverlap.clamp(minOverlap, maxOverlap);
-          final totalWidth = cardW + overlap * (cards.length - 1);
-          return Center(
-            child: SizedBox(
-              width: totalWidth,
-              height: cardH,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (int i = 0; i < cards.length; i++)
-                    Positioned(left: i * overlap, child: playingCard(cards[i])),
-                ],
-              ),
-            ),
-          );
-        }
-
-        // Split into two rows
-        final mid = (cards.length + 1) ~/ 2;
-        final row1 = cards.sublist(0, mid);
-        final row2 = cards.sublist(mid);
+        final rowMinOverlap = cardW * minRatio;
+        final rowMaxOverlap = cardW * maxRatio;
 
         Widget buildRow(List<String> rowCards) {
           final overlap = rowCards.length > 1
-              ? ((availableWidth - cardW) / (rowCards.length - 1)).clamp(
-                  minOverlap,
-                  maxOverlap,
+              ? ((availableWidth - cardW) / (perRow - 1)).clamp(
+                  rowMinOverlap,
+                  rowMaxOverlap,
                 )
               : 0.0;
           final totalWidth = cardW + overlap * (rowCards.length - 1);
@@ -2436,6 +2407,10 @@ class _GameScreenState extends State<GameScreen> {
           );
         }
 
+        if (rows == 1) return Center(child: buildRow(cards));
+
+        final row1 = cards.sublist(0, perRow);
+        final row2 = cards.sublist(perRow);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [

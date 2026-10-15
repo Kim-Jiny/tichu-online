@@ -481,3 +481,104 @@ class _CartoonPulseState extends State<CartoonPulse>
     );
   }
 }
+
+/// 카툰 테마: 다이얼로그·시트·버튼·입력창·스위치를 한 번에 같은 결로 만든다.
+///
+/// 화면 하나를 `Theme(data: cartoonTheme(...))` 로 감싸면, 그 화면에서 연
+/// showDialog / showModalBottomSheet 도 이 테마를 물려받는다(Flutter 가
+/// 호출한 context 의 테마를 캡처한다). 화면별로 대화상자를 일일이 고치지 않아도
+/// 되고, 나중에 앱 전체 테마로 올리기도 쉽다.
+ThemeData cartoonTheme(ThemeData base) {
+  const ink = Cartoon.ink;
+  TextStyle jua(double size, {Color color = ink}) => TextStyle(
+    fontFamily: Cartoon.font,
+    fontFamilyFallback: Cartoon.fontFallback,
+    fontSize: size,
+    color: color,
+  );
+  final side = BorderSide(color: ink, width: 2.5);
+  RoundedRectangleBorder shape(double r) => RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(r),
+    side: side,
+  );
+  OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(14),
+    borderSide: BorderSide(color: c, width: w),
+  );
+  return base.copyWith(
+    dialogTheme: DialogThemeData(
+      backgroundColor: Cartoon.paper,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: ink, width: 3),
+      ),
+      titleTextStyle: jua(21),
+      contentTextStyle: base.textTheme.bodyMedium?.copyWith(
+        color: ink,
+        fontSize: 15,
+        height: 1.5,
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Cartoon.paper,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        side: BorderSide(color: ink, width: 3),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Cartoon.orange,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        textStyle: jua(16, color: Colors.white),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: shape(14),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: ink, textStyle: jua(16)),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ink,
+        textStyle: jua(15),
+        side: side,
+        shape: shape(14),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      hintStyle: TextStyle(color: ink.withValues(alpha: 0.4)),
+      border: border(ink, 2.5),
+      enabledBorder: border(ink, 2.5),
+      focusedBorder: border(Cartoon.orange, 3),
+      errorBorder: border(Cartoon.red, 2.5),
+      focusedErrorBorder: border(Cartoon.red, 3),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? Colors.white : ink,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? Cartoon.green : Colors.white,
+      ),
+      trackOutlineColor: const WidgetStatePropertyAll(ink),
+      trackOutlineWidth: const WidgetStatePropertyAll(2.5),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: ink,
+      contentTextStyle: jua(15, color: Colors.white),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    dividerTheme: DividerThemeData(
+      color: ink.withValues(alpha: 0.12),
+      thickness: 1.5,
+    ),
+  );
+}

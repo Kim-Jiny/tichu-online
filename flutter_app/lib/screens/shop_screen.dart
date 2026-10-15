@@ -22,12 +22,6 @@ import 'gold_shop_screen.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import '../widgets/store_link.dart';
 
-/// Below this the list stays single-column whatever the shape.
-///
-/// Landscape alone is not enough — a small phone turned sideways is wider than
-/// it is tall but each half would be too narrow to hold a row.
-const double _kShopTwoColumnMinWidth = 560;
-
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key});
 
@@ -263,52 +257,58 @@ class _ShopScreenState extends State<ShopScreen> {
     final adjustedScale = isAndroid
         ? (baseScale * 0.92).clamp(0.9, 1.0)
         : baseScale;
-    return DefaultTabController(
-      length: 2,
-      child: MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(adjustedScale)),
-        child: Scaffold(
-          // On the web the engine has already shrunk its canvas to the visual
-          // viewport by the time the keyboard is up, so letting the Scaffold
-          // subtract viewInsets on top of that takes the keyboard height off
-          // twice and leaves an empty band above the keyboard. Native keeps the
-          // default, where the inset is the only thing doing the resizing.
-          resizeToAvoidBottomInset: kIsWeb ? false : null,
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: DefaultTabController(
+        length: 2,
+        child: MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(adjustedScale)),
+          child: Scaffold(
+            // On the web the engine has already shrunk its canvas to the visual
+            // viewport by the time the keyboard is up, so letting the Scaffold
+            // subtract viewInsets on top of that takes the keyboard height off
+            // twice and leaves an empty band above the keyboard. Native keeps the
+            // default, where the inset is the only thing doing the resizing.
+            resizeToAvoidBottomInset: kIsWeb ? false : null,
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: themeColors,
+                ),
               ),
-            ),
-            child: SafeArea(
-              child: Consumer<GameService>(
-                builder: (context, game, _) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    _maybeShowShopActionResult(context, game);
-                    _maybeShowPurchaseDialog(context, game);
-                    _maybeShowNicknameChangeResult(context, game);
-                    _maybeShowCustomTitleResult(context, game);
-                    _maybeShowAdRewardResult(context, game);
-                    _syncInventoryNew(game);
-                  });
-                  // Header and wallet are one flat bar, the two reward actions
-                  // are one short strip, and everything below is a single sheet.
-                  // Before this the screen was six stacked white cards with the
-                  // item list squeezed into what was left — under half the
-                  // screen on a phone.
-                  return Column(
-                    children: [
-                      _buildTopBar(context, game),
-                      _buildRewardStrip(game),
-                      Expanded(child: _buildContentSheet(game)),
-                    ],
-                  );
-                },
+              // 아래 안전영역은 비워 두지 않는다: 시트가 화면 끝까지 내려가고, 목록
+              // 아래 여백(viewPadding)이 그만큼 띄워서 마지막 줄이 가려지지 않는다.
+              child: SafeArea(
+                bottom: false,
+                child: Consumer<GameService>(
+                  builder: (context, game, _) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      _maybeShowShopActionResult(context, game);
+                      _maybeShowPurchaseDialog(context, game);
+                      _maybeShowNicknameChangeResult(context, game);
+                      _maybeShowCustomTitleResult(context, game);
+                      _maybeShowAdRewardResult(context, game);
+                      _syncInventoryNew(game);
+                    });
+                    // Header and wallet are one flat bar, the two reward actions
+                    // are one short strip, and everything below is a single sheet.
+                    // Before this the screen was six stacked white cards with the
+                    // item list squeezed into what was left — under half the
+                    // screen on a phone.
+                    return Column(
+                      children: [
+                        _buildTopBar(context, game),
+                        _buildRewardStrip(game),
+                        Expanded(child: _buildContentSheet(game)),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -1310,6 +1310,7 @@ class _ShopScreenState extends State<ShopScreen> {
         final w = constraints.maxWidth;
         final cols = w < 520 ? 2 : (w < 860 ? 3 : 4);
         final rows = <Widget>[];
+        final groupOf = <Map<String, dynamic>, List<Map<String, dynamic>>>{};
         var pending = <Map<String, dynamic>>[];
         var rowIndex = 0;
         void flush() {
@@ -1331,7 +1332,13 @@ class _ShopScreenState extends State<ShopScreen> {
                         if (i > 0) const SizedBox(width: 10),
                         Expanded(
                           child: i < chunk.length
-                              ? _buildShopCard(context, game, chunk[i])
+                              ? ((groupOf[chunk[i]]?.length ?? 1) > 1
+                                    ? _buildGroupedFeatureCard(
+                                        context,
+                                        game,
+                                        groupOf[chunk[i]]!,
+                                      )
+                                    : _buildShopCard(context, game, chunk[i]))
                               : const SizedBox.shrink(),
                         ),
                       ],
@@ -1345,25 +1352,16 @@ class _ShopScreenState extends State<ShopScreen> {
         }
 
         for (final g in ordered) {
-          if (g.length == 1) {
-            pending.add(g.first);
-            if (pending.length == cols) flush();
-          } else {
-            flush();
-            rows.add(
-              CartoonEntrance(
-                key: ValueKey('shop-group-${g.first['item_key']}'),
-                delay: Duration(milliseconds: 40 * rowIndex.clamp(0, 6)),
-                from: const Offset(0, 18),
-                child: _buildGroupedFeatureCard(context, game, g),
-              ),
-            );
-            rowIndex++;
-          }
+          pending.add(g.first);
+          groupOf[g.first] = g;
+          if (pending.length == cols) flush();
         }
         flush();
         return ListView(
-          padding: const EdgeInsets.only(top: 6, bottom: 28),
+          padding: EdgeInsets.only(
+            top: 6,
+            bottom: 28 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
           children: rows,
         );
       },
@@ -1536,77 +1534,6 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  /// One column on a phone, two once the window is wide enough.
-  ///
-  /// A landscape browser window gave each row the full width of the screen, so
-  /// a one-line item stretched a metre wide with its price marooned at the far
-  /// edge — and the list still needed scrolling for what would have fit.
-  ///
-  /// Shared by the shop and the inventory: they are the same list with
-  /// different rows, and the split has to look identical in both.
-  Widget _buildResponsiveItemList<T>(List<T> entries, Widget Function(T) tile) {
-    const separator = Divider(
-      height: 1,
-      thickness: 1,
-      indent: 16,
-      endIndent: 16,
-      color: Color(0xFFF2ECE9),
-    );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Shape, not just width. A fold opened flat is around 2200x1768 —
-        // wider than tall, but under the old 720px cut-off, so it kept the
-        // one-column list a phone gets and wasted the second half of the
-        // screen. Landscape-ish AND wide enough is the test.
-        final wideEnough = constraints.maxWidth >= _kShopTwoColumnMinWidth;
-        final landscapeish = constraints.maxWidth > constraints.maxHeight;
-        if (!wideEnough || !landscapeish) {
-          return ListView.separated(
-            padding: const EdgeInsets.only(bottom: 24),
-            itemCount: entries.length,
-            separatorBuilder: (_, _) => separator,
-            itemBuilder: (context, index) => tile(entries[index]),
-          );
-        }
-
-        // Dealt alternately rather than split down the middle: rows differ in
-        // height (a grouped feature card is several times a plain row), and
-        // halving the list by count leaves one column much longer than the
-        // other. Alternating keeps the two ends roughly level.
-        final left = <T>[];
-        final right = <T>[];
-        for (var i = 0; i < entries.length; i++) {
-          (i.isEven ? left : right).add(entries[i]);
-        }
-
-        Widget column(List<T> group) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var i = 0; i < group.length; i++) ...[
-              if (i > 0) separator,
-              tile(group[i]),
-            ],
-          ],
-        );
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: column(left)),
-              // A plain gap, not a VerticalDivider: the Row sits in a scroll
-              // view so its height is unbounded, and the divider's full-height
-              // rule has nothing to measure against.
-              const SizedBox(width: 20),
-              Expanded(child: column(right)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   // Theme rank for shop ordering: groups same-game/same-purpose items together.
   // Only meaningful in the utility tab (mixed themes); other categories all
   // fall through to the same bucket and keep their order via the stable tiebreak.
@@ -1634,6 +1561,7 @@ class _ShopScreenState extends State<ShopScreen> {
     GameService game,
     List<Map<String, dynamic>> tiers,
   ) {
+    final l10n = L10n.of(context);
     final first = tiers.first;
     final baseName = _stripDurationSuffix(_getLocalizedItemName(first));
     Map<String, dynamic>? ownedInv;
@@ -1647,95 +1575,67 @@ class _ShopScreenState extends State<ShopScreen> {
         ? _formatExpire(context, ownedExpiry)
         : null;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-      decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          // Anywhere on the row, not only the chips: a row you cannot tap to read
-          // about is a dead end, and the chips are small targets.
-          onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    // 단일 카드와 같은 칸 크기 — 가격 알약 자리에 기간별 칩이 세로로 들어간다.
+    return CartoonPressable(
+      scale: 0.96,
+      // 카드 어디를 눌러도 같은 시트가 열린다: 두 기간을 한 시트에서 고른다.
+      onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
               children: [
-                _buildShopRowVisual(first, 58, isNew: _isNew(first)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              baseName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4A3A33),
-                              ),
-                            ),
-                          ),
-                          if (ownedActive)
-                            _badge(
-                              L10n.of(context).shopItemOwned,
-                              const Color(0xFF7E57C2),
-                              const Color(0xFFEDE7F6),
-                            ),
-                        ],
-                      ),
-                      if (ownedExpiryText != null) ...[
-                        const SizedBox(height: 3),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.schedule,
-                              size: 12,
-                              color: Color(0xFF7E57C2),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              ownedExpiryText,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF7E57C2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: tiers
-                            .map((t) => _buildTierChip(context, t, tiers))
-                            .toList(),
-                      ),
-                    ],
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _buildShopRowVisual(first, 84, isNew: _isNew(first)),
                 ),
+                if (ownedActive)
+                  Positioned(
+                    right: 0,
+                    top: -2,
+                    child: _cartoonTag(l10n.shopItemOwned, Cartoon.green),
+                  ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              baseName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Cartoon.userText(size: 14.5, height: 1.2),
+            ),
+            if (ownedExpiryText != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                ownedExpiryText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.userText(
+                  size: 11,
+                  color: const Color(0xFF2E8B57),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            for (var i = 0; i < tiers.length; i++) ...[
+              if (i > 0) const SizedBox(height: 5),
+              _buildTierChip(context, tiers[i], tiers),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  // Duration option chip: "7일 · 1000골드". Reuses the server-localized "(7일)"
-  // suffix so no new duration strings are needed. Tap -> detail sheet for that
-  // exact tier.
+  // 기간 칩: 왼쪽에 "7일", 오른쪽에 가격. 칸 폭을 꽉 채운다. 누르면 그 기간이
+  // 아니라 같은 시트가 열린다(두 기간 모두 거기서 살 수 있다).
   Widget _buildTierChip(
     BuildContext context,
     Map<String, dynamic> tier,
@@ -1748,48 +1648,30 @@ class _ShopScreenState extends State<ShopScreen> {
         : '${tier['duration_days'] ?? ''}';
     final price = tier['price'] ?? 0;
     final onSale = _isOnSale(tier);
-    return CartoonPressable(
-      // Same sheet as the row: it carries both durations, so which chip was
-      // tapped no longer decides what can be bought.
-      onTap: () => _showItemDetailSheet(context, tier, tiers: tiers),
-      child: Container(
-        decoration: BoxDecoration(
-          color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                durationLabel,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF5A4A80),
-                ),
-              ),
-              const SizedBox(width: 6),
-              GoldIcon(size: 13, amount: price is int ? price : null),
-              const SizedBox(width: 2),
-              Text(
-                formatGold(price),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: onSale
-                      ? const Color(0xFFD32F2F)
-                      : const Color(0xFF4A4080),
-                ),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+      ),
+      child: Row(
+        children: [
+          Text(
+            durationLabel,
+            style: Cartoon.userText(size: 13, weight: FontWeight.w900),
           ),
-        ),
+          const Spacer(),
+          GoldIcon(size: 16, amount: price is int ? price : null),
+          const SizedBox(width: 4),
+          Text(
+            formatGold(price),
+            style: Cartoon.text(
+              size: 15,
+              color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2036,9 +1918,23 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
       );
     }
-    return _buildResponsiveItemList<Map<String, dynamic>>(
-      items,
-      (item) => _buildInventoryItem(context, item),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: ListView.builder(
+          padding: EdgeInsets.only(
+            top: 6,
+            bottom: 28 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, i) => CartoonEntrance(
+            key: ValueKey('inv-${items[i]['item_key']}'),
+            delay: Duration(milliseconds: 40 * i.clamp(0, 6)),
+            from: const Offset(0, 18),
+            child: _buildInventoryItem(context, items[i]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2080,315 +1976,340 @@ class _ShopScreenState extends State<ShopScreen> {
         : null;
     final equipped = isActive && !noEquipAction;
 
-    return Material(
-      // Equipped is now a tinted row with a left accent bar instead of a blue
-      // card outline — there are no cards left to outline.
-      color: equipped ? const Color(0xFFF3F8FD) : Colors.transparent,
-      child: InkWell(
-        onTap: () => _showItemDetailSheet(context, item),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: equipped ? const Color(0xFF5C9DD6) : Colors.transparent,
-                width: 3,
-              ),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildShopRowVisual(item, 58),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A3A33),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      decoration: Cartoon.panelDecoration(
+        color: equipped ? const Color(0xFFE6F2FF) : Cartoon.paper,
+        radius: 20,
+        shadowOffset: 4,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showItemDetailSheet(context, item),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildShopRowVisual(item, 64),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A3A33),
+                              ),
                             ),
                           ),
-                        ),
-                        if (equipped)
-                          _badge(
-                            l10n.shopStatusInUse,
-                            const Color(0xFF1565C0),
-                            const Color(0xFFDDECF7),
-                          )
-                        // A pass that is switched off is not "활성화됨": the
-                        // button beside it already says 사용 안 함, and two
-                        // labels disagreeing is worse than one missing.
-                        else if (noEquipAction && (!isToggleable || featureOn))
-                          _badge(
-                            l10n.shopStatusActivated,
-                            const Color(0xFF1565C0),
-                            const Color(0xFFDDECF7),
+                          if (equipped)
+                            _badge(
+                              l10n.shopStatusInUse,
+                              const Color(0xFF1565C0),
+                              const Color(0xFFDDECF7),
+                            )
+                          // A pass that is switched off is not "활성화됨": the
+                          // button beside it already says 사용 안 함, and two
+                          // labels disagreeing is worse than one missing.
+                          else if (noEquipAction &&
+                              (!isToggleable || featureOn))
+                            _badge(
+                              l10n.shopStatusActivated,
+                              const Color(0xFF1565C0),
+                              const Color(0xFFDDECF7),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      if (isCustomTitle && game.myCustomTitleText != null) ...[
+                        // What the pass is currently set to. Without it the row
+                        // says only that you hold a custom title, not which one.
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: TitleChip(
+                            titleKey:
+                                'custom:${game.myCustomTitleColor ?? 'rose'}',
+                            titleName: game.myCustomTitleText,
+                            fontSize: 12,
                           ),
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 2),
-                    if (isCustomTitle && game.myCustomTitleText != null) ...[
-                      // What the pass is currently set to. Without it the row
-                      // says only that you hold a custom title, not which one.
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: TitleChip(
-                          titleKey:
-                              'custom:${game.myCustomTitleColor ?? 'rose'}',
-                          titleName: game.myCustomTitleText,
-                          fontSize: 12,
+                      Text(
+                        expiresText ??
+                            (isConsumable
+                                ? l10n.shopStatusReadyToUse
+                                : l10n.shopPermanentOwned),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF8A7A72),
+                          height: 1.3,
                         ),
                       ),
-                    ],
-                    Text(
-                      expiresText ??
-                          (isConsumable
-                              ? l10n.shopStatusReadyToUse
-                              : l10n.shopPermanentOwned),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF8A7A72),
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Spacer(),
-                        if (isToggleable)
-                          // A button that says the current state, not a switch:
-                          // switching it off costs days that keep running, so it
-                          // asks first — and a switch that opens a dialog is a
-                          // button wearing the wrong clothes.
-                          SizedBox(
-                            height: 30,
-                            child: ElevatedButton(
-                              onPressed: () => _showFeatureToggleDialog(
-                                context,
-                                game,
-                                effectType,
-                                featureOn,
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: featureOn
-                                    ? const Color(0xFFDDF0E4)
-                                    : const Color(0xFFEFEBE9),
-                                foregroundColor: featureOn
-                                    ? const Color(0xFF33734B)
-                                    : const Color(0xFF8A7A72),
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Spacer(),
+                          if (isToggleable)
+                            // A button that says the current state, not a switch:
+                            // switching it off costs days that keep running, so it
+                            // asks first — and a switch that opens a dialog is a
+                            // button wearing the wrong clothes.
+                            SizedBox(
+                              height: 34,
+                              child: ElevatedButton(
+                                onPressed: () => _showFeatureToggleDialog(
+                                  context,
+                                  game,
+                                  effectType,
+                                  featureOn,
                                 ),
-                                minimumSize: const Size(0, 30),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text(
-                                featureOn
-                                    ? l10n.shopFeatureInUse
-                                    : l10n.shopFeatureOff,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          )
-                        else if (isCustomTitle) ...[
-                          // Two things to do with a written title: change the
-                          // text, and take it off without losing it. Unequip is
-                          // the same slot clear as any other title; putting it
-                          // back on re-saves the stored text.
-                          if (game.myCustomTitleText != null)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: SizedBox(
-                                height: 30,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final worn =
-                                        game.equippedTitle?.startsWith(
-                                          'custom:',
-                                        ) ==
-                                        true;
-                                    if (worn) {
-                                      _runItemAction(
-                                        itemKey,
-                                        () => game.unequipCategory('title'),
-                                      );
-                                    } else {
-                                      _runItemAction(
-                                        itemKey,
-                                        () => game.setCustomTitle(
-                                          game.myCustomTitleText!,
-                                          game.myCustomTitleColor ?? 'rose',
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        game.equippedTitle?.startsWith(
-                                              'custom:',
-                                            ) ==
-                                            true
-                                        ? const Color(0xFFE3F2FD)
-                                        : const Color(0xFFB3E5FC),
-                                    foregroundColor: const Color(0xFF4A3A33),
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                    ),
-                                    minimumSize: const Size(0, 30),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: featureOn
+                                      ? const Color(0xFFDDF0E4)
+                                      : const Color(0xFFEFEBE9),
+                                  foregroundColor: featureOn
+                                      ? const Color(0xFF33734B)
+                                      : const Color(0xFF8A7A72),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
                                   ),
-                                  child: Text(
-                                    game.equippedTitle?.startsWith('custom:') ==
-                                            true
-                                        ? l10n.shopButtonUnequip
-                                        : l10n.shopButtonEquip,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                                  minimumSize: const Size(0, 34),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: const BorderSide(
+                                      color: Cartoon.ink,
+                                      width: 2.2,
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          SizedBox(
-                            height: 30,
-                            child: ElevatedButton(
-                              onPressed: _busyItemKeys.contains(itemKey)
-                                  ? null
-                                  : () => _showCustomTitleDialog(context, game),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFB3E5FC),
-                                foregroundColor: const Color(0xFF4A3A33),
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                minimumSize: const Size(0, 30),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                child: Text(
+                                  featureOn
+                                      ? l10n.shopFeatureInUse
+                                      : l10n.shopFeatureOff,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                l10n.customTitleButton,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ] else if (!noEquipAction)
-                          SizedBox(
-                            height: 30,
-                            child: ElevatedButton(
-                              onPressed: _busyItemKeys.contains(itemKey)
-                                  ? null
-                                  : () {
-                                      if (effectType == 'nickname_change') {
-                                        _showNicknameChangeDialog(
-                                          context,
-                                          game,
-                                        );
-                                      } else if (effectType == 'custom_title') {
-                                        _showCustomTitleDialog(context, game);
-                                      } else if (isConsumable) {
-                                        _showUseConfirmDialog(
-                                          context,
-                                          itemKey,
-                                          name,
-                                          () => _runItemAction(
-                                            itemKey,
-                                            () => game.useItem(itemKey),
-                                          ),
-                                        );
-                                      } else if (equipped) {
-                                        // Same button, other direction: what is
-                                        // on can be taken off. There was no way
-                                        // back to "no banner" once one was worn.
+                            )
+                          else if (isCustomTitle) ...[
+                            // Two things to do with a written title: change the
+                            // text, and take it off without losing it. Unequip is
+                            // the same slot clear as any other title; putting it
+                            // back on re-saves the stored text.
+                            if (game.myCustomTitleText != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: SizedBox(
+                                  height: 34,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      final worn =
+                                          game.equippedTitle?.startsWith(
+                                            'custom:',
+                                          ) ==
+                                          true;
+                                      if (worn) {
                                         _runItemAction(
                                           itemKey,
-                                          () => game.unequipCategory(category),
+                                          () => game.unequipCategory('title'),
                                         );
                                       } else {
                                         _runItemAction(
                                           itemKey,
-                                          () => game.equipItem(itemKey),
+                                          () => game.setCustomTitle(
+                                            game.myCustomTitleText!,
+                                            game.myCustomTitleColor ?? 'rose',
+                                          ),
                                         );
                                       }
                                     },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isConsumable
-                                    ? const Color(0xFFFFE0B2)
-                                    : (equipped
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          game.equippedTitle?.startsWith(
+                                                'custom:',
+                                              ) ==
+                                              true
                                           ? const Color(0xFFE3F2FD)
-                                          : const Color(0xFFB3E5FC)),
-                                foregroundColor: const Color(0xFF4A3A33),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                minimumSize: const Size(0, 30),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: _busyItemKeys.contains(itemKey)
-                                  ? const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Color(0xFF4A3A33),
+                                          : const Color(0xFFB3E5FC),
+                                      foregroundColor: const Color(0xFF4A3A33),
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
                                       ),
-                                    )
-                                  : Text(
-                                      isCustomTitle
-                                          ? l10n.customTitleButton
-                                          : isConsumable
-                                          ? l10n.shopButtonUse
-                                          : (equipped
-                                                ? l10n.shopButtonUnequip
-                                                : l10n.shopButtonEquip),
+                                      minimumSize: const Size(0, 34),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: const BorderSide(
+                                          color: Cartoon.ink,
+                                          width: 2.2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      game.equippedTitle?.startsWith(
+                                                'custom:',
+                                              ) ==
+                                              true
+                                          ? l10n.shopButtonUnequip
+                                          : l10n.shopButtonEquip,
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
+                                  ),
+                                ),
+                              ),
+                            SizedBox(
+                              height: 34,
+                              child: ElevatedButton(
+                                onPressed: _busyItemKeys.contains(itemKey)
+                                    ? null
+                                    : () =>
+                                          _showCustomTitleDialog(context, game),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB3E5FC),
+                                  foregroundColor: const Color(0xFF4A3A33),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
+                                  minimumSize: const Size(0, 34),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: const BorderSide(
+                                      color: Cartoon.ink,
+                                      width: 2.2,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  l10n.customTitleButton,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
+                          ] else if (!noEquipAction)
+                            SizedBox(
+                              height: 34,
+                              child: ElevatedButton(
+                                onPressed: _busyItemKeys.contains(itemKey)
+                                    ? null
+                                    : () {
+                                        if (effectType == 'nickname_change') {
+                                          _showNicknameChangeDialog(
+                                            context,
+                                            game,
+                                          );
+                                        } else if (effectType ==
+                                            'custom_title') {
+                                          _showCustomTitleDialog(context, game);
+                                        } else if (isConsumable) {
+                                          _showUseConfirmDialog(
+                                            context,
+                                            itemKey,
+                                            name,
+                                            () => _runItemAction(
+                                              itemKey,
+                                              () => game.useItem(itemKey),
+                                            ),
+                                          );
+                                        } else if (equipped) {
+                                          // Same button, other direction: what is
+                                          // on can be taken off. There was no way
+                                          // back to "no banner" once one was worn.
+                                          _runItemAction(
+                                            itemKey,
+                                            () =>
+                                                game.unequipCategory(category),
+                                          );
+                                        } else {
+                                          _runItemAction(
+                                            itemKey,
+                                            () => game.equipItem(itemKey),
+                                          );
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isConsumable
+                                      ? const Color(0xFFFFE0B2)
+                                      : (equipped
+                                            ? const Color(0xFFE3F2FD)
+                                            : const Color(0xFFB3E5FC)),
+                                  foregroundColor: const Color(0xFF4A3A33),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: const BorderSide(
+                                      color: Cartoon.ink,
+                                      width: 2.2,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
+                                  minimumSize: const Size(0, 34),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: _busyItemKeys.contains(itemKey)
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFF4A3A33),
+                                        ),
+                                      )
+                                    : Text(
+                                        isCustomTitle
+                                            ? l10n.customTitleButton
+                                            : isConsumable
+                                            ? l10n.shopButtonUse
+                                            : (equipped
+                                                  ? l10n.shopButtonUnequip
+                                                  : l10n.shopButtonEquip),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -3025,8 +2946,13 @@ class _ShopScreenState extends State<ShopScreen> {
           expand: false,
           builder: (_, scrollCtl) => Container(
             decoration: const BoxDecoration(
-              color: Color(0xFFFAF6F2),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              color: Cartoon.paper,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(
+                top: BorderSide(color: Cartoon.ink, width: 3),
+                left: BorderSide(color: Cartoon.ink, width: 3),
+                right: BorderSide(color: Cartoon.ink, width: 3),
+              ),
             ),
             // Price and CTA are pinned below the scroll area. Inside it they sat
             // past the fold at the sheet's initial height, so the buy button was
@@ -3044,11 +2970,11 @@ class _ShopScreenState extends State<ShopScreen> {
                         Center(
                           child: Container(
                             width: 40,
-                            height: 4,
+                            height: 6,
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFD8CEC8),
-                              borderRadius: BorderRadius.circular(2),
+                              color: Cartoon.ink.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           ),
                         ),
@@ -3056,14 +2982,24 @@ class _ShopScreenState extends State<ShopScreen> {
                           clipBehavior: Clip.none,
                           children: [
                             Container(
-                              height: 140,
+                              height: 150,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: gradient,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 3,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Cartoon.ink,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Center(
                                 child: Icon(
@@ -3085,22 +3021,12 @@ class _ShopScreenState extends State<ShopScreen> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFF5F6D),
-                                          Color(0xFFFFC371),
-                                        ],
+                                      color: Cartoon.red,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Cartoon.ink,
+                                        width: 2.5,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFFFF5F6D,
-                                          ).withValues(alpha: 0.5),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
                                     ),
                                     child: const Text(
                                       'NEW',
@@ -3154,10 +3080,9 @@ class _ShopScreenState extends State<ShopScreen> {
                             Expanded(
                               child: Text(
                                 name,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4A3A33),
+                                style: Cartoon.userText(
+                                  size: 22,
+                                  weight: FontWeight.w900,
                                 ),
                               ),
                             ),
@@ -3272,9 +3197,11 @@ class _ShopScreenState extends State<ShopScreen> {
                     20,
                     12 + MediaQuery.viewPaddingOf(ctx).bottom,
                   ),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFAF6F2),
-                    border: Border(top: BorderSide(color: Color(0xFFEDE4DE))),
+                  decoration: BoxDecoration(
+                    color: Cartoon.cream,
+                    border: const Border(
+                      top: BorderSide(color: Cartoon.ink, width: 3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3286,11 +3213,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             const SizedBox(width: 4),
                             Text(
                               '${formatGold(price)} G',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4A4080),
-                              ),
+                              style: Cartoon.text(size: 22),
                             ),
                           ],
                         ),
@@ -3347,54 +3270,32 @@ class _ShopScreenState extends State<ShopScreen> {
                             final action = owned
                                 ? _ownedActions(ctx, game, item)
                                 : null;
-                            final buyButton = SizedBox(
-                              height: 46,
-                              child: ElevatedButton(
-                                onPressed: lockedAsOwned
-                                    ? null
-                                    : (canBuy
-                                          ? () {
-                                              Navigator.pop(ctx);
-                                              if (treatAsExtend) {
-                                                _showExtendConfirmDialog(
-                                                  context,
-                                                  game,
-                                                  item,
-                                                );
-                                              } else {
-                                                game.buyItem(itemKey);
-                                              }
-                                            }
-                                          : null),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: treatAsExtend
-                                      ? const Color(0xFFBBDEFB)
-                                      : const Color(0xFFC7E6D0),
-                                  foregroundColor: treatAsExtend
-                                      ? const Color(0xFF1565C0)
-                                      : const Color(0xFF2E5A3A),
-                                  disabledBackgroundColor: const Color(
-                                    0xFFE5E5E5,
-                                  ),
-                                  disabledForegroundColor: const Color(
-                                    0xFF9A9A9A,
-                                  ),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  lockedAsOwned
-                                      ? l10n.shopItemOwned
-                                      : (treatAsExtend
-                                            ? l10n.shopButtonExtend
-                                            : l10n.shopButtonPurchase),
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                            final buyButton = CartoonButton(
+                              height: 52,
+                              color: treatAsExtend
+                                  ? Cartoon.blue
+                                  : Cartoon.green,
+                              onPressed: (lockedAsOwned || !canBuy)
+                                  ? null
+                                  : () {
+                                      Navigator.pop(ctx);
+                                      if (treatAsExtend) {
+                                        _showExtendConfirmDialog(
+                                          context,
+                                          game,
+                                          item,
+                                        );
+                                      } else {
+                                        game.buyItem(itemKey);
+                                      }
+                                    },
+                              child: CartoonButton.label(
+                                lockedAsOwned
+                                    ? l10n.shopItemOwned
+                                    : (treatAsExtend
+                                          ? l10n.shopButtonExtend
+                                          : l10n.shopButtonPurchase),
+                                size: 19,
                               ),
                             );
                             // Side by side, not stacked: a second full-width
@@ -3539,45 +3440,20 @@ class _ShopScreenState extends State<ShopScreen> {
     VoidCallback onTap, {
     bool compact = false,
   }) {
-    final text = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: compact ? 13.5 : 15,
-        fontWeight: FontWeight.w700,
+    return CartoonButton(
+      height: 52,
+      color: const Color(0xFFB08CFF),
+      onPressed: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!compact) ...[
+            Icon(icon, size: 20, color: Colors.white),
+            const SizedBox(width: 6),
+          ],
+          Flexible(child: CartoonButton.label(label, size: compact ? 15 : 17)),
+        ],
       ),
-    );
-    return SizedBox(
-      width: double.infinity,
-      height: 46,
-      child: compact
-          ? ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEDE7F6),
-                foregroundColor: const Color(0xFF6A4FA8),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: text,
-            )
-          : ElevatedButton.icon(
-              onPressed: onTap,
-              icon: Icon(icon, size: 18),
-              label: text,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEDE7F6),
-                foregroundColor: const Color(0xFF6A4FA8),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
     );
   }
 
@@ -3630,70 +3506,48 @@ class _ShopScreenState extends State<ShopScreen> {
     final durationLabel = match != null
         ? match.group(1)!
         : '${tier['duration_days'] ?? ''}';
-    return SizedBox(
-      height: 46,
-      child: ElevatedButton(
-        onPressed: canBuy
-            ? () {
-                Navigator.pop(sheetCtx);
-                if (extend) {
-                  _showExtendConfirmDialog(context, game, tier);
-                } else {
-                  game.buyItem(tierKey);
-                }
+    return CartoonButton(
+      height: 60,
+      color: extend ? Cartoon.blue : Cartoon.green,
+      onPressed: canBuy
+          ? () {
+              Navigator.pop(sheetCtx);
+              if (extend) {
+                _showExtendConfirmDialog(context, game, tier);
+              } else {
+                game.buyItem(tierKey);
               }
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: extend
-              ? const Color(0xFFBBDEFB)
-              : const Color(0xFFC7E6D0),
-          foregroundColor: extend
-              ? const Color(0xFF1565C0)
-              : const Color(0xFF2E5A3A),
-          disabledBackgroundColor: const Color(0xFFE5E5E5),
-          disabledForegroundColor: const Color(0xFF9A9A9A),
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            }
+          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            durationLabel,
+            maxLines: 1,
+            style: Cartoon.userText(
+              size: 12,
+              color: Colors.white,
+              weight: FontWeight.w900,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              durationLabel,
-              maxLines: 1,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GoldIcon(size: 15, amount: price),
+                const SizedBox(width: 3),
+                Cartoon.outlinedText(formatGold(price), size: 15),
+                const SizedBox(width: 4),
+                Cartoon.outlinedText(
+                  extend ? l10n.shopButtonExtend : l10n.shopButtonPurchase,
+                  size: 13,
+                ),
+              ],
             ),
-            const SizedBox(height: 1),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GoldIcon(size: 14, amount: price),
-                  const SizedBox(width: 3),
-                  Text(
-                    formatGold(price),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    extend ? l10n.shopButtonExtend : l10n.shopButtonPurchase,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -4085,18 +3939,15 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _chip(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFE7E3),
-        borderRadius: BorderRadius.circular(8),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: Color(0xFF6A5A52),
-          fontWeight: FontWeight.w600,
-        ),
+        style: Cartoon.userText(size: 12, weight: FontWeight.w700),
       ),
     );
   }

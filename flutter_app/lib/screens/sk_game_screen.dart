@@ -3716,7 +3716,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               Row(
                 children: [
                   SizedBox(
-                    width: isLandscape ? 18 : 22,
+                    width: isLandscape ? 20 : 24,
                     child: Text(
                       '#',
                       textAlign: TextAlign.center,
@@ -3739,7 +3739,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: isLandscape ? 30 : 34,
+                    width: isLandscape ? 34 : 38,
                     child: Text(
                       L10n.of(context).skGameBonusHeader,
                       textAlign: TextAlign.center,
@@ -3750,10 +3750,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: isLandscape ? 40 : 44,
+                    width: isLandscape ? 42 : 46,
                     child: Text(
                       L10n.of(context).skGameScoreHeader,
                       textAlign: TextAlign.end,
+                      maxLines: 1,
+                      softWrap: false,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
                         color: Cartoon.ink.withValues(alpha: 0.6),
@@ -3761,10 +3763,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: isLandscape ? 42 : 46,
+                    width: isLandscape ? 44 : 48,
                     child: Text(
                       L10n.of(context).skGameTotalScoreHeader,
                       textAlign: TextAlign.end,
+                      maxLines: 1,
+                      softWrap: false,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
                         color: Cartoon.ink.withValues(alpha: 0.6),
@@ -3814,7 +3818,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Row(
                         children: [
                           SizedBox(
-                            width: isLandscape ? 18 : 22,
+                            width: isLandscape ? 20 : 24,
                             child: Text(
                               '$rank',
                               textAlign: TextAlign.center,
@@ -3837,30 +3841,35 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           ),
                           Expanded(
                             flex: 2,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  success
-                                      ? Icons.check_circle_rounded
-                                      : Icons.cancel_rounded,
-                                  size: 15,
-                                  color: success ? Cartoon.green : Cartoon.red,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$tricks/$bid',
-                                  style: Cartoon.userText(
-                                    size: 12 + 2,
-                                    color: Cartoon.ink,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    success
+                                        ? Icons.check_circle_rounded
+                                        : Icons.cancel_rounded,
+                                    size: 15,
+                                    color: success
+                                        ? Cartoon.green
+                                        : Cartoon.red,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$tricks/$bid',
+                                    style: Cartoon.userText(
+                                      size: 12 + 2,
+                                      color: Cartoon.ink,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           SizedBox(
-                            width: isLandscape ? 30 : 34,
+                            width: isLandscape ? 34 : 38,
                             child: bonus > 0
                                 ? Text(
                                     '+$bonus',
@@ -3873,25 +3882,37 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 : const SizedBox.shrink(),
                           ),
                           SizedBox(
-                            width: isLandscape ? 40 : 44,
-                            child: Text(
-                              '${roundScore > 0 ? '+' : ''}$roundScore',
-                              style: Cartoon.userText(
-                                size: isLandscape ? 14 : 16,
-                                color: roundScore,
+                            width: isLandscape ? 42 : 46,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${roundScore > 0 ? '+' : ''}$roundScore',
+                                style: Cartoon.userText(
+                                  size: isLandscape ? 14 : 16,
+                                  color: roundScore,
+                                ),
+                                textAlign: TextAlign.end,
+                                maxLines: 1,
+                                softWrap: false,
                               ),
-                              textAlign: TextAlign.end,
                             ),
                           ),
                           SizedBox(
-                            width: isLandscape ? 42 : 46,
-                            child: Text(
-                              '${p.totalScore}',
-                              style: Cartoon.userText(
-                                size: isLandscape ? 14 : 16,
-                                color: Cartoon.ink,
+                            width: isLandscape ? 44 : 48,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                '${p.totalScore}',
+                                style: Cartoon.userText(
+                                  size: isLandscape ? 14 : 16,
+                                  color: Cartoon.ink,
+                                ),
+                                textAlign: TextAlign.end,
+                                maxLines: 1,
+                                softWrap: false,
                               ),
-                              textAlign: TextAlign.end,
                             ),
                           ),
                         ],

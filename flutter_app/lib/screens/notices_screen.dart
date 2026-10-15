@@ -295,10 +295,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
             // worth as much on iOS, where the code itself is withheld and the
             // reader has to ask.
             if (hasCoupon)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: couponIcon(size: 20),
-              ),
+              Padding(padding: EdgeInsets.only(right: 8), child: CouponTag()),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(

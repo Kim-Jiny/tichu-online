@@ -134,10 +134,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
         children: [
           couponIcon(size: 22),
           const SizedBox(width: 8),
-          Text(
-            l10n.couponRedeemTitle,
-            style: Cartoon.text(size: 21),
-          ),
+          Text(l10n.couponRedeemTitle, style: Cartoon.text(size: 21)),
         ],
       ),
       content: SizedBox(
@@ -240,45 +237,6 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
   }
 }
 
-/// A ticket: two panels with a perforated line between them.
-///
-/// The first attempt was a rounded beige card with the code inside, and it
-/// read as a notice box rather than as something you tear off — which is the
-/// whole point of a coupon. The shape does that work: notches bitten out of
-/// both edges, a dashed line across, the code in monospace on the stub.
-class _TicketClipper extends CustomClipper<Path> {
-  /// Distance from the top to the perforation, where the notches sit.
-  final double notchY;
-
-  static const double notchRadius = 9;
-  static const double radius = 16;
-
-  _TicketClipper({required this.notchY});
-
-  @override
-  Path getClip(Size size) {
-    final body = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, size.width, size.height),
-          Radius.circular(radius),
-        ),
-      );
-    final bites = Path()
-      ..addOval(Rect.fromCircle(center: Offset(0, notchY), radius: notchRadius))
-      ..addOval(
-        Rect.fromCircle(
-          center: Offset(size.width, notchY),
-          radius: notchRadius,
-        ),
-      );
-    return Path.combine(PathOperation.difference, body, bites);
-  }
-
-  @override
-  bool shouldReclip(covariant _TicketClipper old) => old.notchY != notchY;
-}
-
 class _DashedLine extends StatelessWidget {
   final Color color;
 
@@ -309,164 +267,214 @@ class _DashedLine extends StatelessWidget {
   }
 }
 
-/// The coupon attached to a notice: the code, a way to copy it, and the way in.
-///
-/// Shown on every platform: only the stub below the perforation is gated, on
-/// [couponRedeemAllowed].
+/// 공지 목록에서 "쿠폰이 들어 있는 글" 표시. 노란 티켓 모양 알약이 살짝 기울어
+/// 숨 쉬듯 움직여서, 작은 아이콘보다 먼저 눈에 띈다. 코드는 iOS 에서 가려지지만
+/// 이 표시는 어디서나 보인다 — 어떤 글에 쿠폰이 있는지 아는 것도 정보다.
+class CouponTag extends StatelessWidget {
+  const CouponTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return CartoonPulse(
+      amount: 0.06,
+      child: Transform.rotate(
+        angle: -0.07,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 3, 9, 3),
+          decoration: BoxDecoration(
+            color: Cartoon.yellow,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: Cartoon.ink, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.confirmation_number_rounded,
+                size: 15,
+                color: Cartoon.ink,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                L10n.of(context).couponSectionTitle,
+                style: Cartoon.text(size: 12.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 공지 상세에 붙는 쿠폰 티켓: 위에 "쿠폰" 리본, 가운데 코드(복사 버튼), 점선 아래
+/// 등록 버튼. 자르는 모양(clip) 대신 테두리 있는 카드로 — 테두리와 그림자가
+/// 잘려 나가지 않게.
 class NoticeCouponBlock extends StatelessWidget {
   final String code;
 
   const NoticeCouponBlock({super.key, required this.code});
 
-  /// Where the perforation sits, measured from the top of the ticket. Has to
-  /// match the height of everything above it — the clipper cannot ask the
-  /// children how tall they are, so the two are kept in step by hand.
-  static const double _notchY = 116;
-
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    const ink = Color(0xFF7A5B25);
-    const line = Color(0xFFE3C48C);
     final canRedeem = couponRedeemAllowed;
 
     return Center(
-      // Left to itself this stretched to the full width of a browser window
-      // and stopped looking like a thing you tear off.
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
-        child: ClipPath(
-          clipper: canRedeem
-              ? _TicketClipper(notchY: _notchY)
-              : const _PlainClipper(),
+        child: CartoonEntrance(
+          from: const Offset(0, 24),
           child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFFF8EC), Color(0xFFFDEFD6)],
-              ),
+            margin: const EdgeInsets.only(bottom: 4),
+            decoration: Cartoon.panelDecoration(
+              color: const Color(0xFFFFF1C9),
+              radius: 22,
+              shadowOffset: 4,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  height: _notchY,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.local_activity_rounded,
-                              size: 15,
-                              color: ink,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              l10n.couponSectionTitle,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.6,
-                                color: ink,
+                            decoration: BoxDecoration(
+                              color: Cartoon.orange,
+                              borderRadius: BorderRadius.circular(11),
+                              border: Border.all(color: Cartoon.ink, width: 2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.confirmation_number_rounded,
+                                  size: 17,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 5),
+                                Cartoon.outlinedText(
+                                  l10n.couponSectionTitle,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          CartoonFloat(
+                            amplitude: 3,
+                            child: couponIcon(size: 30),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // 코드는 읽고, 복사하고, 입력하는 유일한 것 — 따로 틀을 둔다.
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Cartoon.ink, width: 2.2),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SelectableText(
+                                code,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2.5,
+                                  color: Cartoon.ink,
+                                ),
+                              ),
+                            ),
+                            CartoonPressable(
+                              scale: 0.88,
+                              onTap: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: code),
+                                );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(content: Text(l10n.couponCopied)),
+                                  );
+                              },
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Cartoon.yellow,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 2.2,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Cartoon.ink,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.copy_rounded,
+                                  size: 20,
+                                  color: Cartoon.ink,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const Spacer(),
-                        // The code sits in its own outlined slot: it is the
-                        // one thing on here to read, copy and type.
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.75),
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: line),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: SelectableText(
-                                  code,
-                                  maxLines: 1,
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 2.5,
-                                    color: Color(0xFF4E3A1C),
-                                  ),
-                                ),
-                              ),
-                              InkWell(
-                                borderRadius: BorderRadius.circular(6),
-                                onTap: () async {
-                                  await Clipboard.setData(
-                                    ClipboardData(text: code),
-                                  );
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(
-                                      SnackBar(
-                                        content: Text(l10n.couponCopied),
-                                      ),
-                                    );
-                                },
-                                child: const Padding(
-                                  padding: EdgeInsets.all(4),
-                                  child: Icon(
-                                    Icons.copy_rounded,
-                                    size: 17,
-                                    color: ink,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                // No stub where there is nothing to tear off. Notches around an
-                // empty strip read as a rendering fault, not as a design.
+                // 떼어 낼 곳이 없으면(iOS 앱) 점선도 버튼도 두지 않는다.
                 if (canRedeem) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: _DashedLine(color: line),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: _DashedLine(
+                      color: Cartoon.ink.withValues(alpha: 0.4),
+                    ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB07B2E),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: CartoonButton(
+                      height: 50,
+                      color: Cartoon.green,
+                      onPressed: () =>
+                          showCouponRedeemDialog(context, presetCode: code),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.redeem_rounded,
+                            color: Colors.white,
+                            size: 22,
                           ),
-                        ),
-                        onPressed: () =>
-                            showCouponRedeemDialog(context, presetCode: code),
-                        icon: const Icon(Icons.redeem_rounded, size: 17),
-                        label: Text(
-                          l10n.couponRedeemButton,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                          const SizedBox(width: 6),
+                          CartoonButton.label(
+                            l10n.couponRedeemButton,
+                            size: 18,
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -478,21 +486,4 @@ class NoticeCouponBlock extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The ticket with no stub: a plain rounded card.
-class _PlainClipper extends CustomClipper<Path> {
-  const _PlainClipper();
-
-  @override
-  Path getClip(Size size) => Path()
-    ..addRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        const Radius.circular(_TicketClipper.radius),
-      ),
-    );
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

@@ -119,34 +119,47 @@ class NoticeBody extends StatelessWidget {
     final spans = <TextSpan>[];
     for (final piece in parseInline(raw)) {
       if (piece.href != null) {
-        spans.add(TextSpan(
-          text: piece.text,
-          style: base.copyWith(
-            color: _accent,
-            decoration: TextDecoration.underline,
-            decorationColor: _accent,
-            fontWeight: piece.bold ? FontWeight.w700 : null,
+        spans.add(
+          TextSpan(
+            text: piece.text,
+            style: base.copyWith(
+              color: _accent,
+              decoration: TextDecoration.underline,
+              decorationColor: _accent,
+              fontWeight: piece.bold ? FontWeight.w700 : null,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                final uri = Uri.tryParse(piece.href!);
+                if (uri != null) {
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
           ),
-          recognizer: TapGestureRecognizer()
-            ..onTap = () {
-              final uri = Uri.tryParse(piece.href!);
-              if (uri != null) {
-                launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            },
-        ));
+        );
       } else {
-        spans.add(TextSpan(
-          text: piece.text,
-          style: piece.bold ? base.copyWith(fontWeight: FontWeight.w800) : null,
-        ));
+        spans.add(
+          TextSpan(
+            text: piece.text,
+            style: piece.bold
+                ? base.copyWith(fontWeight: FontWeight.w800)
+                : null,
+          ),
+        );
       }
     }
     return TextSpan(children: spans);
   }
 }
 
-enum NoticeBlockKind { paragraph, heading1, heading2, heading3, bullet, divider }
+enum NoticeBlockKind {
+  paragraph,
+  heading1,
+  heading2,
+  heading3,
+  bullet,
+  divider,
+}
 
 class NoticeBlock {
   NoticeBlock.paragraph(this.text)
@@ -157,8 +170,8 @@ class NoticeBlock {
     : kind = level == 1
           ? NoticeBlockKind.heading1
           : level == 2
-              ? NoticeBlockKind.heading2
-              : NoticeBlockKind.heading3,
+          ? NoticeBlockKind.heading2
+          : NoticeBlockKind.heading3,
       items = const [],
       ordered = false;
   NoticeBlock.bullet(this.items, {this.ordered = false})

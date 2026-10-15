@@ -23,7 +23,11 @@ class LevelBadge extends StatelessWidget {
     final tier = _tierFor(lv);
     // Slightly smaller number on 2-digit levels so it stays inside the circle
     // at small sizes.
-    final fontSize = lv > 99 ? size * 0.40 : lv > 9 ? size * 0.50 : size * 0.58;
+    final fontSize = lv > 99
+        ? size * 0.40
+        : lv > 9
+        ? size * 0.50
+        : size * 0.58;
 
     return Container(
       width: size,
@@ -81,11 +85,7 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.35, -0.45),
         radius: 1.05,
-        colors: [
-          Color(0xFFF2A86A),
-          Color(0xFFB05A22),
-          Color(0xFF4C1F06),
-        ],
+        colors: [Color(0xFFF2A86A), Color(0xFFB05A22), Color(0xFF4C1F06)],
         stops: [0.0, 0.5, 1.0],
       ),
       borderColor: Color(0xFF2E1303),
@@ -103,11 +103,7 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [
-          Color(0xFFFFFFFF),
-          Color(0xFFC2C7CC),
-          Color(0xFF5E646A),
-        ],
+        colors: [Color(0xFFFFFFFF), Color(0xFFC2C7CC), Color(0xFF5E646A)],
         stops: [0.0, 0.55, 1.0],
       ),
       borderColor: Color(0xFF2F3338),
@@ -124,11 +120,7 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [
-          Color(0xFFFFF6C2),
-          Color(0xFFE8B948),
-          Color(0xFF8A5E00),
-        ],
+        colors: [Color(0xFFFFF6C2), Color(0xFFE8B948), Color(0xFF8A5E00)],
         stops: [0.0, 0.55, 1.0],
       ),
       borderColor: Color(0xFF4A3000),

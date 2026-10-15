@@ -33,8 +33,9 @@ class MidGameJoinButton extends StatelessWidget {
         final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Text(l10n.midJoinConfirmTitle),
             content: Text(l10n.midJoinConfirmBody),
             actions: [

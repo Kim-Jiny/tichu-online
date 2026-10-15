@@ -241,8 +241,8 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   @override
   void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text
-        || oldWidget.suppressed != widget.suppressed) {
+    if (oldWidget.text != widget.text ||
+        oldWidget.suppressed != widget.suppressed) {
       _scheduleSync();
     }
   }
@@ -330,8 +330,9 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
               offset: Offset(0, -widget.gap),
               child: IgnorePointer(
                 child: ConstrainedBox(
-                  constraints:
-                      BoxConstraints(maxWidth: _fitWidth ?? _grownMaxWidth),
+                  constraints: BoxConstraints(
+                    maxWidth: _fitWidth ?? _grownMaxWidth,
+                  ),
                   child: SeatChatBubble(
                     text: text,
                     fontSize: _grownFontSize,
@@ -365,10 +366,7 @@ class _TailPainter extends CustomPainter {
       ..close();
     canvas.drawPath(path, Paint()..color = fill);
     // Cover the body's border where the tail joins it.
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, 2),
-      Paint()..color = fill,
-    );
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 2), Paint()..color = fill);
     final edge = Paint()
       ..color = SeatChatBubble._border
       ..style = PaintingStyle.stroke
@@ -386,5 +384,6 @@ class _TailPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TailPainter oldDelegate) => oldDelegate.fill != fill;
+  bool shouldRepaint(covariant _TailPainter oldDelegate) =>
+      oldDelegate.fill != fill;
 }

@@ -29,10 +29,10 @@ class PlayingCard extends StatelessWidget {
   });
 
   static const Map<String, Color> suitColors = {
-    'spade': Color(0xFF2B2B2B),  // matte black
-    'heart': Color(0xFFD24B4B),  // matte red
+    'spade': Color(0xFF2B2B2B), // matte black
+    'heart': Color(0xFFD24B4B), // matte red
     'diamond': Color(0xFF6FB6E5), // matte sky
-    'club': Color(0xFF4BAA6A),   // matte green
+    'club': Color(0xFF4BAA6A), // matte green
   };
 
   static const Map<String, String> specialImages = {
@@ -51,7 +51,9 @@ class PlayingCard extends StatelessWidget {
     final effectiveBorderColor = isSelected
         ? const Color(0xFF4D99FF)
         : borderColor ?? (isFaceUp ? const Color(0xFFE6DCE8) : backBorder);
-    final effectiveBorderWidth = isSelected ? 2.0 : (borderColor != null ? 2.0 : 1.0);
+    final effectiveBorderWidth = isSelected
+        ? 2.0
+        : (borderColor != null ? 2.0 : 1.0);
 
     return GestureDetector(
       onTap: isInteractive ? onTap : null,
@@ -66,7 +68,9 @@ class PlayingCard extends StatelessWidget {
               transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
               decoration: BoxDecoration(
                 color: isFaceUp ? Colors.white : backBg,
-                borderRadius: BorderRadius.circular((width / 48 * 14).clamp(4, 14)),
+                borderRadius: BorderRadius.circular(
+                  (width / 48 * 14).clamp(4, 14),
+                ),
                 border: Border.all(
                   color: effectiveBorderColor,
                   width: effectiveBorderWidth,
@@ -260,7 +264,8 @@ class SuitIcon extends StatelessWidget {
         ),
       );
     }
-    final paintColor = color ?? PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
+    final paintColor =
+        color ?? PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
     return SizedBox(
       width: size,
       height: size,

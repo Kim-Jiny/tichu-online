@@ -22,10 +22,8 @@ class HostCrown extends StatelessWidget {
       width: size,
       // A missing asset must not take the seat layout with it — the emoji is a
       // fine stand-in.
-      errorBuilder: (_, _, _) => Text(
-        '👑',
-        style: TextStyle(fontSize: size * 0.8, height: 1.0),
-      ),
+      errorBuilder: (_, _, _) =>
+          Text('👑', style: TextStyle(fontSize: size * 0.8, height: 1.0)),
     );
   }
 }

@@ -48,6 +48,7 @@ List<TichuFxEvent> buildTichuFxEvents(
                 ? l10n.gameFxLargeTichuSuccess
                 : l10n.gameFxSmallTichuSuccess,
             subtitle: score(s, plus: true),
+            large: s.large,
           ),
         );
       case TichuFxKind.tichuFail:
@@ -59,6 +60,7 @@ List<TichuFxEvent> buildTichuFxEvents(
                 ? l10n.gameFxLargeTichuFail
                 : l10n.gameFxSmallTichuFail,
             subtitle: score(s, plus: false),
+            large: s.large,
           ),
         );
       case TichuFxKind.oneTwo:

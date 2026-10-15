@@ -2094,11 +2094,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 compact: true,
                 isInteractive: false,
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   'vs',
-                  style: TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
+                  style: Cartoon.text(
+                    size: 15,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
               LoveLetterCard(
@@ -2143,28 +2146,27 @@ class _LLGameScreenState extends State<LLGameScreen> {
         children: [
           Text(
             resultText,
-            style: const TextStyle(color: Color(0xFF5A4038), fontSize: 14),
+            style: Cartoon.userText(size: 15),
             textAlign: TextAlign.center,
           ),
           if (extraWidget != null) ...[const SizedBox(height: 12), extraWidget],
           if (isMyEffect) ...[
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => gs.llEffectAck(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE91E63),
-                foregroundColor: Colors.white,
-              ),
-              child: Text(l10n.llOk),
+            gameButton(
+              l10n.llOk,
+              () => gs.llEffectAck(),
+              color: Cartoon.orange,
+              height: 44,
+              size: 17,
             ),
           ] else ...[
             const SizedBox(height: 8),
             const SizedBox(
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF8A7A72),
+                strokeWidth: 2.6,
+                color: Cartoon.orange,
               ),
             ),
           ],
@@ -2194,10 +2196,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
       const SizedBox(height: 12),
       Text(
         '$winnerLabel: $winnerText',
-        style: TextStyle(
-          color: const Color(0xFF5A4038),
-          fontSize: 16,
-          fontWeight: lastRound.isShared ? FontWeight.w800 : FontWeight.normal,
+        style: Cartoon.userText(
+          size: 17,
+          weight: lastRound.isShared ? FontWeight.w800 : FontWeight.w700,
         ),
       ),
       if (lastRound.setAside != null || lastRound.faceUpCards.isNotEmpty) ...[
@@ -2205,9 +2206,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFFBF6F2),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFEDE3DD)),
+            color: Cartoon.cream,
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2221,9 +2221,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       width: 110,
                       child: Text(
                         l10n.llSetAsideHidden,
-                        style: const TextStyle(
-                          color: Color(0xFF8A7A72),
-                          fontSize: 12,
+                        style: Cartoon.text(
+                          size: 13,
+                          color: Cartoon.ink.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -2249,9 +2249,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       width: 110,
                       child: Text(
                         l10n.llSetAsideFaceUp,
-                        style: const TextStyle(
-                          color: Color(0xFF8A7A72),
-                          fontSize: 12,
+                        style: Cartoon.text(
+                          size: 13,
+                          color: Cartoon.ink.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -2293,15 +2293,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: p.eliminated
-                        ? const Color(0xFFB0A39E)
-                        : const Color(0xFF8A7A72),
-                    fontSize: 13,
-                    decoration: p.eliminated
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+                  style:
+                      Cartoon.userText(
+                        size: 14,
+                        color: p.eliminated
+                            ? Cartoon.ink.withValues(alpha: 0.35)
+                            : Cartoon.ink.withValues(alpha: 0.75),
+                      ).copyWith(
+                        decoration: p.eliminated
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -2318,7 +2320,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 const SizedBox(width: 44, height: 62),
               if (discards.isNotEmpty) ...[
                 const SizedBox(width: 6),
-                Container(width: 1, height: 48, color: const Color(0xFFE0D8D4)),
+                Container(
+                  width: 2,
+                  height: 48,
+                  color: Cartoon.ink.withValues(alpha: 0.15),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: SingleChildScrollView(
@@ -2360,73 +2366,78 @@ class _LLGameScreenState extends State<LLGameScreen> {
         : null;
 
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 380),
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        // SingleChildScrollView lets the panel scroll on short screens
-        // where the round details + token rows + next-round notice would
-        // otherwise overflow the available height by a hair.
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.llRoundEnd,
-                style: const TextStyle(
-                  color: Color(0xFFE91E63),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+      child: CartoonEntrance(
+        from: const Offset(0, 28),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 380),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
+          decoration: Cartoon.panelDecoration(radius: 26, shadowOffset: 4),
+          // SingleChildScrollView lets the panel scroll on short screens
+          // where the round details + token rows + next-round notice would
+          // otherwise overflow the available height by a hair.
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: gamePillDecoration(
+                    radius: 16,
+                    color: Cartoon.yellow,
+                  ),
+                  child: Text(l10n.llRoundEnd, style: Cartoon.text(size: 19)),
                 ),
-              ),
-              if (lastRound != null)
-                ..._buildRoundDetailsContent(context, state, lastRound, l10n),
-              const SizedBox(height: 16),
-              // Token status
-              ...state.players.map(
-                (p) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 80,
-                        child: Text(
-                          p.name,
-                          style: const TextStyle(
-                            color: Color(0xFF8A7A72),
-                            fontSize: 13,
+                if (lastRound != null)
+                  ..._buildRoundDetailsContent(context, state, lastRound, l10n),
+                const SizedBox(height: 16),
+                // Token status
+                ...state.players.map(
+                  (p) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            p.name,
+                            style: Cartoon.userText(
+                              size: 14,
+                              color: Cartoon.ink.withValues(alpha: 0.75),
+                            ),
                           ),
                         ),
-                      ),
-                      ...List.generate(
-                        state.targetTokens,
-                        (i) => Padding(
-                          padding: const EdgeInsets.only(right: 2),
-                          child: Icon(
-                            Icons.favorite,
-                            color: i < p.tokens
-                                ? const Color(0xFFE91E63)
-                                : const Color(0xFFE0D8D4),
-                            size: 14,
+                        ...List.generate(
+                          state.targetTokens,
+                          (i) => Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Icon(
+                              Icons.favorite_rounded,
+                              color: i < p.tokens
+                                  ? Cartoon.red
+                                  : Cartoon.ink.withValues(alpha: 0.18),
+                              size: 16,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.llNextRoundAuto,
-                style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 11),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  l10n.llNextRoundAuto,
+                  style: Cartoon.text(
+                    size: 12,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2450,104 +2461,112 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
     return Center(
       child: SingleChildScrollView(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 380),
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE0D8D4)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.llGameEnd,
-                style: const TextStyle(
-                  color: Color(0xFFE91E63),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (winner != null)
-                Text(
-                  '${winner.name} ${l10n.llWins}!',
-                  style: const TextStyle(
-                    color: Color(0xFF5A4038),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              if (lastRound != null)
-                ..._buildRoundDetailsContent(context, state, lastRound, l10n),
-              const SizedBox(height: 16),
-              ...sorted.asMap().entries.map((entry) {
-                final i = entry.key;
-                final p = entry.value;
-                return Container(
-                  margin: const EdgeInsets.symmetric(vertical: 2),
+        child: CartoonEntrance(
+          from: const Offset(0, 28),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
+            decoration: Cartoon.panelDecoration(radius: 26, shadowOffset: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: 18,
+                    vertical: 7,
                   ),
-                  decoration: BoxDecoration(
-                    color: i == 0
-                        ? const Color(0xFFFFF8E1)
-                        : const Color(0xFFF0EBE8),
-                    borderRadius: BorderRadius.circular(8),
+                  decoration: gamePillDecoration(
+                    radius: 18,
+                    color: Cartoon.yellow,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '#${i + 1} ',
-                        style: TextStyle(
-                          color: i == 0
-                              ? Colors.amber
-                              : const Color(0xFF8A7A72),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      const Icon(
+                        Icons.emoji_events_rounded,
+                        size: 22,
+                        color: Cartoon.orangeDeep,
                       ),
-                      SizedBox(
-                        width: 80,
-                        child: Text(
-                          p.name,
-                          style: const TextStyle(
-                            color: Color(0xFF5A4038),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      ...List.generate(
-                        state.targetTokens,
-                        (j) => Padding(
-                          padding: const EdgeInsets.only(right: 2),
-                          child: Icon(
-                            Icons.favorite,
-                            color: j < p.tokens
-                                ? const Color(0xFFE91E63)
-                                : const Color(0xFFE0D8D4),
-                            size: 14,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(width: 6),
+                      Text(l10n.llGameEnd, style: Cartoon.text(size: 20)),
                     ],
                   ),
-                );
-              }),
-              const SizedBox(height: 16),
-              if (_gameEndCountdown > 0)
-                Text(
-                  '${l10n.llReturnIn} $_gameEndCountdown...',
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                    fontSize: 12,
-                  ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                if (winner != null)
+                  Text(
+                    '${winner.name} ${l10n.llWins}!',
+                    style: Cartoon.userText(size: 19, weight: FontWeight.w800),
+                  ),
+                if (lastRound != null)
+                  ..._buildRoundDetailsContent(context, state, lastRound, l10n),
+                const SizedBox(height: 16),
+                ...sorted.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final p = entry.value;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: i == 0
+                        ? gamePillDecoration(
+                            radius: 14,
+                            color: const Color(0xFFFFF1B8),
+                          )
+                        : BoxDecoration(
+                            color: Cartoon.cream,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '#${i + 1} ',
+                          style: Cartoon.text(
+                            size: 16,
+                            color: i == 0
+                                ? Cartoon.orangeDeep
+                                : Cartoon.ink.withValues(alpha: 0.55),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            p.name,
+                            style: Cartoon.userText(size: 15),
+                          ),
+                        ),
+                        ...List.generate(
+                          state.targetTokens,
+                          (j) => Padding(
+                            padding: const EdgeInsets.only(right: 2),
+                            child: Icon(
+                              Icons.favorite_rounded,
+                              color: j < p.tokens
+                                  ? Cartoon.red
+                                  : Cartoon.ink.withValues(alpha: 0.18),
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 16),
+                if (_gameEndCountdown > 0)
+                  Text(
+                    '${l10n.llReturnIn} $_gameEndCountdown...',
+                    style: Cartoon.text(
+                      size: 13,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import '../widgets/cartoon_icons.dart';
 import '../widgets/game_type_icon.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/sk_number_card.dart';
@@ -1812,6 +1813,8 @@ class _SectionArt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCard = asset.contains('/cards/');
+    final vector = cartoonIconForAsset(asset, width: 34);
+    if (vector != null) return vector;
     final image = Image.asset(
       asset,
       width: isCard ? 28 : 34,

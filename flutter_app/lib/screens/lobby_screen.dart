@@ -2981,11 +2981,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Image.asset(
-                                                'assets/icons/allowSpectators.webp',
+                                              const EyeIcon(
                                                 width: 28,
                                                 height: 22,
-                                                fit: BoxFit.contain,
                                               ),
                                               if (room.spectatorCount > 0) ...[
                                                 const SizedBox(width: 4),
@@ -5449,7 +5447,7 @@ class _LockChipState extends State<_LockChip>
           borderRadius: BorderRadius.circular(s * 0.34),
           border: Border.all(color: Cartoon.ink, width: s >= 30 ? 2.5 : 2),
         ),
-        child: Image.asset('assets/icons/private.webp', fit: BoxFit.contain),
+        child: LockIcon(width: s * 0.6, height: s * 0.6),
       ),
     );
   }

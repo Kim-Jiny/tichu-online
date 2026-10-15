@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/cartoon.dart';
+import 'host_crown.dart';
 
 // 직접 그린 카툰 아이콘(벡터). 굵은 갈색 테두리 + 단색 몸통이라 어느 크기에서도 선명하다.
 
@@ -167,6 +168,116 @@ class _RobotPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => false;
 }
 
+/// 비밀방 표시: 주황 자물쇠.
+class LockIcon extends StatelessWidget {
+  const LockIcon({super.key, this.width = 20, this.height = 20});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: height,
+    child: CustomPaint(painter: _LockPainter()),
+  );
+}
+
+class _LockPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final sw = (s * 0.1).clamp(1.2, 2.8);
+    final pad = sw / 2 + 0.3;
+    final ox = (size.width - s) / 2;
+    final oy = (size.height - s) / 2;
+    double x(double t) => ox + pad + (s - pad * 2) * t;
+    double y(double t) => oy + pad + (s - pad * 2) * t;
+    final line = _line(sw);
+
+    // 고리
+    final shackle = Path()
+      ..moveTo(x(0.26), y(0.46))
+      ..lineTo(x(0.26), y(0.30))
+      ..arcToPoint(
+        Offset(x(0.74), y(0.30)),
+        radius: Radius.circular((s - pad * 2) * 0.24),
+      )
+      ..lineTo(x(0.74), y(0.46));
+    canvas.drawPath(shackle, line..strokeWidth = sw * 1.15);
+    line.strokeWidth = sw;
+    // 몸통
+    final body = RRect.fromLTRBR(
+      x(0.12),
+      y(0.44),
+      x(0.88),
+      y(0.96),
+      Radius.circular(s * 0.14),
+    );
+    canvas.drawRRect(body, _fill(Cartoon.orange));
+    canvas.drawRRect(body, line);
+    // 열쇠 구멍
+    canvas.drawCircle(Offset(x(0.5), y(0.64)), s * 0.07, _fill(Cartoon.ink));
+    canvas.drawLine(Offset(x(0.5), y(0.66)), Offset(x(0.5), y(0.80)), line);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+/// 관전 허용 표시: 눈.
+class EyeIcon extends StatelessWidget {
+  const EyeIcon({super.key, this.width = 24, this.height = 18});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: height,
+    child: CustomPaint(painter: _EyePainter()),
+  );
+}
+
+class _EyePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final sw = (h * 0.11).clamp(1.2, 2.8);
+    final pad = sw / 2 + 0.3;
+    double x(double t) => pad + (w - pad * 2) * t;
+    double y(double t) => pad + (h - pad * 2) * t;
+    final line = _line(sw);
+
+    final eye = Path()
+      ..moveTo(x(0.0), y(0.5))
+      ..quadraticBezierTo(x(0.5), y(-0.45), x(1.0), y(0.5))
+      ..quadraticBezierTo(x(0.5), y(1.45), x(0.0), y(0.5))
+      ..close();
+    canvas.drawPath(eye, _fill(Colors.white));
+    final c = Offset(x(0.5), y(0.5));
+    final r = (h - pad * 2) * 0.3;
+    canvas.save();
+    canvas.clipPath(eye);
+    canvas.drawCircle(c, r, _fill(Cartoon.blue));
+    canvas.restore();
+    canvas.drawCircle(c, r, line..strokeWidth = sw * 0.8);
+    line.strokeWidth = sw;
+    canvas.drawCircle(c, r * 0.45, _fill(Cartoon.ink));
+    canvas.drawCircle(
+      Offset(c.dx - r * 0.3, c.dy - r * 0.3),
+      r * 0.2,
+      _fill(Colors.white),
+    );
+    canvas.drawPath(eye, line);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
 /// 예전 이미지 경로로 부르던 곳을 위한 연결: 새로 그린 아이콘이 있으면 그것을 준다.
 Widget? cartoonIconForAsset(String asset, {double? width, double? height}) {
   if (asset.endsWith('lankIcon.webp')) {
@@ -174,6 +285,15 @@ Widget? cartoonIconForAsset(String asset, {double? width, double? height}) {
   }
   if (asset.endsWith('allowBotReplacement.webp')) {
     return BotSwapIcon(width: width ?? 20, height: height ?? 18);
+  }
+  if (asset.endsWith('private.webp')) {
+    return LockIcon(width: width ?? 20, height: height ?? 20);
+  }
+  if (asset.endsWith('allowSpectators.webp')) {
+    return EyeIcon(width: width ?? 24, height: height ?? 18);
+  }
+  if (asset.endsWith('crown.webp')) {
+    return HostCrown(size: width ?? 34);
   }
   return null;
 }

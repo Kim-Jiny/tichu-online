@@ -2649,9 +2649,6 @@ class _ShopScreenState extends State<ShopScreen> {
     final gradient =
         (visual['gradient'] as List<Color>?) ??
         [Colors.white, Colors.grey.shade100];
-    final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
-    final iconColor =
-        (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
 
     showModalBottomSheet(
       context: context,
@@ -2697,70 +2694,109 @@ class _ShopScreenState extends State<ShopScreen> {
                             ),
                           ),
                         ),
-                        Stack(
-                          clipBehavior: Clip.none,
+                        // 이름·종류·상태를 한 줄 머리글로. 큰 그림 상자는 아이콘 하나뿐이라
+                        // 시트 높이만 먹었다.
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              height: 150,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: gradient,
-                                ),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: Cartoon.ink,
-                                  width: 2.2,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Cartoon.ink,
-                                    offset: Offset(0, 2.5),
+                            _buildShopRowVisual(item, 72, isNew: _isNew(item)),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Cartoon.userText(
+                                      size: 21,
+                                      weight: FontWeight.w900,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      if (isSeason)
+                                        _badge(
+                                          l10n.shopTagSeason,
+                                          const Color(0xFF1565C0),
+                                          const Color(0xFFE3F2FD),
+                                        )
+                                      else if (owned)
+                                        _badge(
+                                          l10n.shopItemOwned,
+                                          const Color(0xFF7E57C2),
+                                          const Color(0xFFEDE7F6),
+                                        )
+                                      else if (onSale)
+                                        _badge(
+                                          l10n.shopTagLimited,
+                                          const Color(0xFFD32F2F),
+                                          const Color(0xFFFFEBEE),
+                                        ),
+                                      _chip(_categoryLabel(context, category)),
+                                      _chip(
+                                        isPermanent
+                                            ? (category == 'utility'
+                                                  ? l10n.shopDetailConsumable
+                                                  : l10n.shopDetailPermanent)
+                                            : (durationDays != null
+                                                  ? l10n.shopDetailDuration(
+                                                      durationDays as int,
+                                                    )
+                                                  : l10n.shopTagDurationOnly),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Icon(
-                                  iconData,
-                                  color: iconColor,
-                                  size: 64,
-                                ),
-                              ),
                             ),
-                            if (_isNew(item))
-                              Positioned(
-                                left: 10,
-                                top: -8,
-                                child: Transform.rotate(
-                                  angle: -0.2,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Cartoon.red,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: Cartoon.ink,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'NEW',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
+                        // 가격은 이름 바로 아래에 크게 — 아래 바까지 눈을 내리지 않아도
+                        // 알 수 있게. (기간별 상품은 아래 버튼 하나하나에 가격이 있다.)
+                        if (tierList == null && !ownedPermanent) ...[
+                          const SizedBox(height: 14),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: onSale
+                                    ? const Color(0xFFFFE3E3)
+                                    : Cartoon.cream,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GoldIcon(size: 26, amount: price),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    formatGold(price),
+                                    style: Cartoon.text(
+                                      size: 26,
+                                      color: onSale
+                                          ? const Color(0xFFD32F2F)
+                                          : Cartoon.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         // Cosmetics are bought on how they look, so show the
                         // thing itself applied: a banner and a title on a
                         // waiting-room seat, a theme as the screen behind it.
@@ -2768,10 +2804,9 @@ class _ShopScreenState extends State<ShopScreen> {
                           const SizedBox(height: 14),
                           Text(
                             l10n.shopPreviewLabel,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF8A7A72),
+                            style: Cartoon.text(
+                              size: 14,
+                              color: Cartoon.ink.withValues(alpha: 0.6),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -2793,101 +2828,22 @@ class _ShopScreenState extends State<ShopScreen> {
                             ),
                           ),
                         ],
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                name,
-                                style: Cartoon.userText(
-                                  size: 22,
-                                  weight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                            if (isSeason)
-                              _badge(
-                                l10n.shopTagSeason,
-                                const Color(0xFF1565C0),
-                                const Color(0xFFE3F2FD),
-                              )
-                            else if (owned)
-                              _badge(
-                                l10n.shopItemOwned,
-                                const Color(0xFF7E57C2),
-                                const Color(0xFFEDE7F6),
-                              )
-                            else if (onSale)
-                              _badge(
-                                l10n.shopTagLimited,
-                                const Color(0xFFD32F2F),
-                                const Color(0xFFFFEBEE),
-                              ),
-                          ],
-                        ),
-                        // 가격은 이름 바로 아래에 크게 — 아래 바까지 눈을 내리지 않아도
-                        // 알 수 있게. (기간별 상품은 아래 버튼 하나하나에 가격이 있다.)
-                        if (tierList == null && !ownedPermanent) ...[
-                          const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: onSale
-                                    ? const Color(0xFFFFE3E3)
-                                    : Cartoon.cream,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Cartoon.ink,
-                                  width: 2,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Cartoon.ink,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GoldIcon(size: 26, amount: price),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    formatGold(price),
-                                    style: Cartoon.text(
-                                      size: 26,
-                                      color: onSale
-                                          ? const Color(0xFFD32F2F)
-                                          : Cartoon.ink,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
                         if (ownedExpiryText != null) ...[
                           const SizedBox(height: 6),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.schedule,
-                                size: 13,
+                                Icons.schedule_rounded,
+                                size: 15,
                                 color: Color(0xFF7E57C2),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 ownedExpiryText,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF7E57C2),
+                                style: Cartoon.userText(
+                                  size: 13,
+                                  color: const Color(0xFF7E57C2),
                                 ),
                               ),
                             ],
@@ -2897,33 +2853,14 @@ class _ShopScreenState extends State<ShopScreen> {
                           const SizedBox(height: 10),
                           Text(
                             description,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              color: Color(0xFF5A4038),
+                            style: Cartoon.userText(
+                              size: 14,
+                              weight: FontWeight.w600,
+                              color: Cartoon.ink.withValues(alpha: 0.8),
                               height: 1.5,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            _chip(_categoryLabel(context, category)),
-                            _chip(
-                              isPermanent
-                                  ? (category == 'utility'
-                                        ? l10n.shopDetailConsumable
-                                        : l10n.shopDetailPermanent)
-                                  : (durationDays != null
-                                        ? l10n.shopDetailDuration(
-                                            durationDays as int,
-                                          )
-                                        : l10n.shopTagDurationOnly),
-                            ),
-                            if (isSeason) _chip(l10n.shopTagSeason),
-                          ],
-                        ),
                         if (_saleWindowText(item) != null) ...[
                           const SizedBox(height: 10),
                           Row(
@@ -2940,12 +2877,11 @@ class _ShopScreenState extends State<ShopScreen> {
                                 l10n.shopSaleWindow(
                                   _saleWindowText(item) ?? '',
                                 ),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                style: Cartoon.userText(
+                                  size: 12.5,
                                   color: onSale
                                       ? const Color(0xFFD32F2F)
-                                      : const Color(0xFF9A8E8A),
+                                      : Cartoon.ink.withValues(alpha: 0.5),
                                 ),
                               ),
                             ],

@@ -2920,8 +2920,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
-  /// 크라켄·흰고래 같은 특수 카드 효과를 알리는 가운데 패널.
-  /// 카드가 통 튀며 나타나고, 제목·설명·선공·보너스를 순서대로 읽게 쌓는다.
+  /// 크라켄·흰고래 같은 특수 카드 효과: 설명 글 없이 연출만.
+  /// 카드가 쾅 하고 커지며 흔들리고, 뒤에서 색종이가 터진다. 글자는 짧은 제목
+  /// 알약 하나(와 있으면 보너스 칩)뿐이다 — 설명은 읽기 전에 사라진다.
   Widget _skEffectPanel({
     required String cardId,
     required double cardSize,
@@ -2932,60 +2933,79 @@ class _SKGameScreenState extends State<SKGameScreen> {
     String? bonusText,
     Widget? timer,
   }) {
-    return CartoonEntrance(
-      from: const Offset(0, 14),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 270),
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: Cartoon.panelDecoration(
-          color: color,
-          radius: 22,
-          shadowOffset: 3,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
+    final isKraken = cardId == 'sk_kraken';
+    final big = cardSize * 1.35;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: big * 2.2,
+            height: big * 1.45,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
-                _buildCard(cardId, size: cardSize),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Cartoon.userText(size: 19, height: 1.15),
-                      ),
-                      if (subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          subtitle,
-                          style: Cartoon.text(
-                            size: 14,
-                            height: 1.25,
-                            color: Cartoon.ink.withValues(alpha: 0.75),
-                          ),
-                        ),
-                      ],
-                    ],
+                // 카드 뒤 둥근 빛 번짐(번지지 않는 단색 원 두 겹)
+                Container(
+                  width: big * 1.5,
+                  height: big * 1.5,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
                   ),
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CartoonConfetti(seed: isKraken ? 7 : 3, count: 36),
+                  ),
+                ),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 750),
+                  curve: Curves.linear,
+                  builder: (context, t, child) {
+                    // 앞 40%: 작게→크게 튀어나옴, 이후: 좌우로 빠르게 흔들리다 가라앉음.
+                    final pop = Curves.elasticOut.transform(
+                      (t / 0.55).clamp(0.0, 1.0),
+                    );
+                    final shake = t < 0.4
+                        ? 0.0
+                        : math.sin((t - 0.4) * 40) * 0.09 * (1 - t);
+                    return Transform.rotate(
+                      angle: shake,
+                      child: Transform.scale(
+                        scale: 0.2 + 0.8 * pop,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildCard(cardId, size: big),
                 ),
               ],
             ),
-            if (bonusText != null) ...[
-              const SizedBox(height: 8),
-              _skInfoChip(bonusText, const Color(0xFFCDEFD6)),
-            ],
-            if (footer != null) ...[
-              const SizedBox(height: 8),
-              _skInfoChip(footer, Colors.white),
-            ],
-            ?timer,
+          ),
+          const SizedBox(height: 4),
+          CartoonEntrance(
+            delay: const Duration(milliseconds: 250),
+            from: const Offset(0, 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: gamePillDecoration(color: Cartoon.yellow),
+              child: Text(title, style: Cartoon.userText(size: 19)),
+            ),
+          ),
+          if (bonusText != null) ...[
+            const SizedBox(height: 6),
+            _skInfoChip(bonusText, const Color(0xFFCDEFD6)),
           ],
-        ),
+          if (footer != null) ...[
+            const SizedBox(height: 6),
+            _skInfoChip(footer, Colors.white),
+          ],
+          ?timer,
+        ],
       ),
     );
   }

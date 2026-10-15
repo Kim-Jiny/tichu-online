@@ -187,14 +187,12 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuGoalTitle,
-          art: 'assets/cards/dragon.webp',
           child: _RuleText(L10n.of(context).rulesTichuGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuCardCompositionTitle,
-          art: 'assets/icons/tichuSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -238,7 +236,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuSpecialTitle,
-          art: 'assets/cards/phoenix.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -289,7 +286,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.campaign,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuDeclarationTitle,
-          art: 'assets/cards/bird.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -317,7 +313,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuFlowTitle,
-          art: 'assets/cards/dog.webp',
           child: _RuleText(L10n.of(context).rulesTichuFlowBody),
         ),
         _section(
@@ -424,14 +419,12 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkGoalTitle,
-          art: 'assets/cards/sk_skull_king.webp',
           child: _RuleText(L10n.of(context).rulesSkGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkCardCompositionTitle,
-          art: 'assets/cards/sk_card_back.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -526,7 +519,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkSpecialTitle,
-          art: 'assets/cards/sk_pirate.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -590,14 +582,12 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkFlowTitle,
-          art: 'assets/cards/sk_escape.webp',
           child: _RuleText(L10n.of(context).rulesSkFlowBody),
         ),
         _section(
           icon: Icons.visibility,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkLeadDemoTitle,
-          art: 'assets/cards/sk_tigress.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -705,7 +695,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.extension,
           iconColor: const Color(0xFFFF8A65),
           title: L10n.of(context).rulesSkExpansionTitle,
-          art: 'assets/cards/sk_kraken.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -752,14 +741,12 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlGoalTitle,
-          art: 'assets/cards/ll_Princess.webp',
           child: _RuleText(L10n.of(context).rulesLlGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlCardCompositionTitle,
-          art: 'assets/icons/llSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -825,7 +812,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlCardEffectsTitle,
-          art: 'assets/cards/ll_Prince.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -903,7 +889,6 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlFlowTitle,
-          art: 'assets/cards/ll_Handmaid.webp',
           child: _RuleText(L10n.of(context).rulesLlFlowBody),
         ),
         _section(
@@ -928,14 +913,12 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtGoalTitle,
-          art: 'assets/icons/mtSymbol.webp',
           child: _RuleText(L10n.of(context).rulesMtGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtCardCompositionTitle,
-          art: 'assets/icons/mtSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

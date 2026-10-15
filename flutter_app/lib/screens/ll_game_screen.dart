@@ -3009,7 +3009,45 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 ),
               ],
-              const Spacer(),
+              // 내가 낸 카드는 이름·하트가 있는 이 줄 안에 작게 둔다. 따로 줄을 만들면
+              // 첫 카드를 내는 순간 아래 영역이 커져 보드가 밀린다.
+              Expanded(
+                child: selfPlayer.discardPile.isEmpty
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          reverse: true,
+                          child: Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 5),
+                                child: Text(
+                                  L10n.of(context).llPlayed,
+                                  style: Cartoon.text(
+                                    size: 11,
+                                    color: Cartoon.ink.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                              for (final cardId in selfPlayer.discardPile)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 2),
+                                  child: LoveLetterCard(
+                                    cardId: cardId,
+                                    width: 20,
+                                    height: 28,
+                                    borderRadius: 5,
+                                    compact: true,
+                                    isInteractive: false,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
               // Tokens
               ...List.generate(
                 state.targetTokens,
@@ -3028,52 +3066,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
           const SizedBox(height: 8),
           // My discard pile
-          // 낸 카드 줄의 자리는 처음부터 잡아 둔다. 첫 카드를 내는 순간 줄이 생기면
-          // 아래 영역이 커져서 보드와 이벤트 로그가 위로 밀렸다.
-          ...[
-            SizedBox(
-              height: 44,
-              child: selfPlayer.discardPile.isEmpty
-                  ? null
-                  : Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Text(
-                            L10n.of(context).llPlayed,
-                            style: Cartoon.text(
-                              size: 12,
-                              color: Cartoon.ink.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: selfPlayer.discardPile
-                                  .map(
-                                    (cardId) => Padding(
-                                      padding: const EdgeInsets.only(right: 3),
-                                      child: LoveLetterCard(
-                                        cardId: cardId,
-                                        width: 31,
-                                        height: 44,
-                                        borderRadius: 7,
-                                        compact: true,
-                                        isInteractive: false,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-            const SizedBox(height: 8),
-          ],
+
           // Card description
           if (_selectedCard != null) _buildCardDescription(context),
           // My cards

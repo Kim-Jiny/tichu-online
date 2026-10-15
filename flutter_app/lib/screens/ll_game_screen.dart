@@ -972,23 +972,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5EDE7).withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: gamePillDecoration(radius: 99),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.style, size: 13, color: Color(0xFF8A7A72)),
+                    const Icon(Icons.style, size: 14, color: Cartoon.ink),
                     const SizedBox(width: 3),
                     Text(
                       '${state.drawPileCount}',
-                      style: const TextStyle(
-                        color: Color(0xFF8A7A72),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Cartoon.text(size: 13),
                     ),
                   ],
                 ),
@@ -1000,17 +993,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     horizontal: 9,
                     vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0CF).withValues(alpha: 0.96),
-                    borderRadius: BorderRadius.circular(999),
+                  decoration: gamePillDecoration(
+                    radius: 99,
+                    color: Cartoon.yellow,
                   ),
                   child: Text(
                     currentPlayer.name,
-                    style: const TextStyle(
-                      color: Color(0xFF5A4038),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: Cartoon.userText(size: 13, weight: FontWeight.w800),
                   ),
                 ),
               ],
@@ -1020,10 +1009,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
             const SizedBox(height: 8),
             Text(
               L10n.of(context).llSetAsideFaceUp,
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+              style: Cartoon.text(
+                size: 12,
+                color: Cartoon.ink.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 5),
@@ -1270,16 +1258,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                     player.name,
                                   ) ??
                                   false,
-                              border:
-                                  (isCurrent || highlighted) &&
-                                      !player.eliminated
-                                  ? Border.all(
-                                      color: highlighted
-                                          ? const Color(0xFF64B5F6)
-                                          : const Color(0xFFE6C86A),
-                                      width: 1.8,
-                                    )
-                                  : null,
+                              border: Border.all(
+                                color:
+                                    (isCurrent || highlighted) &&
+                                        !player.eliminated
+                                    ? (highlighted
+                                          ? Cartoon.blue
+                                          : Cartoon.yellow)
+                                    : Cartoon.ink,
+                                width:
+                                    (isCurrent || highlighted) &&
+                                        !player.eliminated
+                                    ? 3.5
+                                    : 2.0,
+                              ),
                               fallback: player.isBot
                                   ? BotAvatar(
                                       size: avatarDiameter,
@@ -1307,15 +1299,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 padding: EdgeInsets.symmetric(
                                   vertical: ultraTight ? 1.0 : 2.0,
                                 ),
-                                color: Colors.black.withValues(alpha: 0.55),
+                                color: Cartoon.ink.withValues(alpha: 0.75),
                                 child: Text(
                                   L10n.of(context).llEliminated,
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: Cartoon.text(
+                                    size:
+                                        (ultraTight ? 10.0 : 11.5) * seatScale,
                                     color: Colors.white,
-                                    fontSize:
-                                        (ultraTight ? 9.0 : 10.5) * seatScale,
-                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -1339,18 +1330,20 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: player.eliminated
-                                  ? const Color(0xFFBBAAAA)
-                                  : const Color(0xFF5A4038),
-                              fontSize: nameFontSize,
-                              fontWeight: isCurrent
-                                  ? FontWeight.w800
-                                  : FontWeight.w700,
-                              decoration: player.eliminated
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
+                            style:
+                                Cartoon.userText(
+                                  size: nameFontSize,
+                                  color: player.eliminated
+                                      ? Cartoon.ink.withValues(alpha: 0.4)
+                                      : Cartoon.ink,
+                                  weight: isCurrent
+                                      ? FontWeight.w800
+                                      : FontWeight.w700,
+                                ).copyWith(
+                                  decoration: player.eliminated
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
                           ),
                         ),
                         if (!player.connected)
@@ -1358,7 +1351,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             padding: const EdgeInsets.only(left: 3),
                             child: Icon(
                               Icons.wifi_off,
-                              color: Colors.red,
+                              color: Cartoon.red,
                               size: statusIconSize,
                             ),
                           ),
@@ -1366,8 +1359,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           Padding(
                             padding: const EdgeInsets.only(left: 3),
                             child: Icon(
-                              Icons.shield,
-                              color: Colors.blueAccent,
+                              Icons.shield_rounded,
+                              color: Cartoon.blue,
                               size: statusIconSize,
                             ),
                           ),
@@ -1379,10 +1372,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       padding: EdgeInsets.only(top: ultraTight ? 1 : 2),
                       child: Text(
                         '⏱ ${player.timeoutCount}/3',
-                        style: TextStyle(
-                          color: const Color(0xFFE65100),
-                          fontSize: ultraTight ? 9 : 10,
-                          fontWeight: FontWeight.w800,
+                        style: Cartoon.text(
+                          size: ultraTight ? 10 : 11,
+                          color: Cartoon.orangeDeep,
                         ),
                       ),
                     ),
@@ -1399,12 +1391,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         Padding(
                           padding: EdgeInsets.only(right: ultraTight ? 1 : 2),
                           child: Icon(
-                            Icons.favorite,
+                            Icons.favorite_rounded,
                             color: i < player.tokens
                                 ? player.eliminated
                                       ? const Color(0xFFB98B95)
-                                      : const Color(0xFFE91E63)
-                                : const Color(0xFFE0D8D4),
+                                      : Cartoon.red
+                                : Cartoon.ink.withValues(alpha: 0.18),
                             size: tokenSize,
                           ),
                         ),
@@ -1415,20 +1407,19 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             horizontal: ultraTight ? 4 : 5,
                             vertical: ultraTight ? 1 : 2,
                           ),
-                          decoration: BoxDecoration(
+                          decoration: gamePillDecoration(
+                            radius: 99,
                             color: _remainingSeconds <= 5
-                                ? Colors.red.shade900
-                                : Colors.amber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(999),
+                                ? const Color(0xFFFFD9D6)
+                                : Cartoon.cream,
                           ),
                           child: Text(
                             '${_remainingSeconds}s',
-                            style: TextStyle(
+                            style: Cartoon.text(
+                              size: chipFontSize + 1,
                               color: _remainingSeconds <= 5
-                                  ? Colors.redAccent
-                                  : Colors.amber.shade900,
-                              fontSize: chipFontSize,
-                              fontWeight: FontWeight.w800,
+                                  ? Cartoon.red
+                                  : Cartoon.ink,
                             ),
                           ),
                         ),
@@ -1522,14 +1513,15 @@ class _LLGameScreenState extends State<LLGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFFFFFBF8),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
         title: Text(
           L10n.of(context).llDiscardedCardsTitle(playerName),
-          style: const TextStyle(
-            color: Color(0xFF5A4038),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Cartoon.userText(size: 18, weight: FontWeight.w800),
         ),
         content: SizedBox(
           width: 320,
@@ -1550,10 +1542,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 .toList(),
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(L10n.of(context).llOk),
+          gameButton(
+            L10n.of(context).llOk,
+            () => Navigator.of(ctx).pop(),
+            height: 42,
+            size: 16,
           ),
         ],
       ),

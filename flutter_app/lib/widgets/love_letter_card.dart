@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/cartoon.dart';
+
 class LoveLetterCard extends StatelessWidget {
   final String cardId;
   final bool isSelected;
@@ -84,7 +86,7 @@ class LoveLetterCard extends StatelessWidget {
         height: height,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+          transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
           child: _buildCard(context),
         ),
       ),
@@ -97,7 +99,10 @@ class LoveLetterCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF8B1A1A),
           borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(color: const Color(0xFFB8860B), width: 1.5),
+          border: Border.all(color: Cartoon.ink, width: 1.8),
+          boxShadow: const [
+            BoxShadow(color: Color(0xFF8C7B6C), offset: Offset(0, 2.5)),
+          ],
         ),
         child: const Center(
           child: Icon(Icons.favorite, color: Color(0xFFB8860B), size: 24),
@@ -117,24 +122,19 @@ class LoveLetterCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
           color: isSelected
-              ? const Color(0xFF4D99FF)
-              : color.withValues(alpha: 0.5),
-          width: isSelected ? 2.5 : 1.5,
+              ? const Color(0xFF2F7DE0)
+              : Cartoon.ink.withValues(alpha: 0.7),
+          width: isSelected ? 2.4 : 1.6,
         ),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF4D99FF).withValues(alpha: 0.3),
-                  blurRadius: 6,
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
-                  blurRadius: 6,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+        // 번지지 않는 단색 그림자를 아래로 어긋나게 깔아 종이가 떠 있는 느낌.
+        boxShadow: [
+          BoxShadow(
+            color: isSelected
+                ? const Color(0xFF1F4F94)
+                : const Color(0xFF8C7B6C),
+            offset: Offset(0, isSelected ? 5 : 2.5),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(

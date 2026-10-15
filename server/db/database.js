@@ -10769,11 +10769,24 @@ async function getPublishedNotices() {
   const client = await pool.connect();
   try {
     const res = await client.query(
-      `SELECT id, category, title, content, is_pinned, published_at, coupon_code,
-              title_color
-       FROM tc_notices
-       WHERE status = 'published'
-       ORDER BY is_pinned DESC, published_at DESC
+      // coupon_dead: 글에 쿠폰 코드가 있어도 이미 쓸 수 없는 쿠폰이면(기한 지남,
+      // 운영자가 끔, 수량 소진, 코드에 맞는 쿠폰 없음) 클라이언트가 쿠폰 표시와
+      // 티켓을 떼도록 알린다. 기한은 redeemCoupon 과 같은 시계(UTC)로 SQL 에서 비교.
+      `SELECT n.id, n.category, n.title, n.content, n.is_pinned, n.published_at,
+              n.coupon_code, n.title_color,
+              CASE WHEN n.coupon_code IS NULL OR n.coupon_code = '' THEN FALSE
+                   ELSE (c.code IS NULL
+                         OR NOT c.is_active
+                         OR (c.expires_at IS NOT NULL
+                             AND c.expires_at < (NOW() AT TIME ZONE 'UTC'))
+                         OR (c.max_redemptions IS NOT NULL
+                             AND c.redeemed_count >= c.max_redemptions))
+              END AS coupon_dead
+       FROM tc_notices n
+       LEFT JOIN tc_coupons c
+              ON c.code = UPPER(REGEXP_REPLACE(n.coupon_code, '\\s+', '', 'g'))
+       WHERE n.status = 'published'
+       ORDER BY n.is_pinned DESC, n.published_at DESC
        LIMIT 50`
     );
     return { success: true, notices: res.rows };

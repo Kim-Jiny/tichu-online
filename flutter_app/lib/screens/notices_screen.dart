@@ -236,7 +236,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final title = item['title']?.toString() ?? '';
     final category = item['category']?.toString() ?? 'general';
     final isPinned = item['is_pinned'] == true;
-    final hasCoupon = (item['coupon_code']?.toString() ?? '').isNotEmpty;
+    // 기한이 지났거나 꺼졌거나 소진된 쿠폰은 표시를 떼 — 서버가 coupon_dead 로 알린다
+    // (옛 서버는 이 필드를 안 보내므로 없으면 살아 있는 것으로 본다).
+    final hasCoupon =
+        (item['coupon_code']?.toString() ?? '').isNotEmpty &&
+        item['coupon_dead'] != true;
     final publishedAt = _formatShortDate(item['published_at']);
     final titleColor = noticeTitleColor(item['title_color']);
     final noticeId = item['id'];
@@ -403,7 +407,9 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final publishedAt = _formatShortDate(item['published_at']);
     // Shown everywhere now: the ticket prints the code on every platform and
     // only its redeem stub is gated.
-    final couponCode = item['coupon_code']?.toString() ?? '';
+    final couponCode = item['coupon_dead'] == true
+        ? ''
+        : (item['coupon_code']?.toString() ?? '');
 
     Navigator.push(
       context,

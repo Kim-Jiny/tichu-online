@@ -1680,7 +1680,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
         alpha: isGuardActionPanel ? (_guardPeekActive ? 0.02 : 0.10) : 0.3,
       ),
       padding: const EdgeInsets.only(bottom: 8),
-      child: content,
+      child: CartoonEntrance(
+        key: ValueKey('eff-${effect.type}-${effect.resolved}'),
+        from: const Offset(0, 22),
+        child: content,
+      ),
     );
   }
 
@@ -2459,6 +2463,23 @@ class _LLGameScreenState extends State<LLGameScreen> {
         ? state.roundHistory.last
         : null;
 
+    return Stack(
+      children: [
+        const Positioned.fill(child: CartoonConfetti(seed: 9, count: 48)),
+        _buildGameEndCard(context, gs, state, l10n, sorted, winner, lastRound),
+      ],
+    );
+  }
+
+  Widget _buildGameEndCard(
+    BuildContext context,
+    GameService gs,
+    LLGameStateData state,
+    L10n l10n,
+    List<LLPlayer> sorted,
+    LLPlayer? winner,
+    LLRoundHistory? lastRound,
+  ) {
     return Center(
       child: SingleChildScrollView(
         child: CartoonEntrance(
@@ -2587,8 +2608,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
     ];
     showModalBottomSheet(
       context: context,
+      backgroundColor: Cartoon.paper,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        side: BorderSide(color: Cartoon.ink, width: 2.5),
       ),
       builder: (context) => SafeArea(
         child: Padding(
@@ -2600,26 +2623,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Cartoon.ink.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                l10n.llCardGuideTitle,
-                style: const TextStyle(
-                  color: Color(0xFF5A4038),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(l10n.llCardGuideTitle, style: Cartoon.text(size: 19)),
               const SizedBox(height: 12),
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: cards.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(color: Color(0xFFE0D8D4), height: 1),
+                  separatorBuilder: (context, index) => Container(
+                    height: 2,
+                    color: Cartoon.ink.withValues(alpha: 0.12),
+                  ),
                   itemBuilder: (context, i) {
                     final (type, value, count, desc) = cards[i];
                     final color =
@@ -2644,18 +2662,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
                               children: [
                                 Text(
                                   '$name ($value) ×$count',
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                  style: Cartoon.text(
+                                    size: 15,
+                                    color: Color.lerp(
+                                      color,
+                                      Cartoon.ink,
+                                      0.25,
+                                    )!,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   desc,
-                                  style: const TextStyle(
-                                    color: Color(0xFF6A5A52),
-                                    fontSize: 12,
+                                  style: Cartoon.userText(
+                                    size: 13,
+                                    color: Cartoon.ink.withValues(alpha: 0.8),
+                                    weight: FontWeight.w600,
                                     height: 1.4,
                                   ),
                                 ),
@@ -2708,15 +2730,12 @@ class _LLGameScreenState extends State<LLGameScreen> {
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0ED),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: gamePillDecoration(radius: 14),
       child: Text(
         desc,
-        style: const TextStyle(
-          color: Color(0xFF5A4038),
-          fontSize: 11,
+        style: Cartoon.userText(
+          size: 12.5,
+          weight: FontWeight.w600,
           height: 1.3,
         ),
       ),
@@ -2743,25 +2762,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final isMyTurn = state.isMyTurn;
 
     return Container(
+      // 내 차례엔 노란 바탕과 두꺼운 윗줄, 아니면 크림 바탕(티츄와 같은 규칙).
       decoration: BoxDecoration(
-        color: isMyTurn
-            ? const Color(0xFFFFF8E1)
-            : Colors.white.withValues(alpha: 0.85),
+        color: isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
-          top: BorderSide(
-            color: isMyTurn ? const Color(0xFFFFCA28) : const Color(0xFFE0D8D4),
-            width: isMyTurn ? 2.5 : 1.0,
-          ),
+          top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),
         ),
-        boxShadow: isMyTurn
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFFFD54F).withValues(alpha: 0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ]
-            : null,
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       child: Column(
@@ -2771,27 +2778,23 @@ class _LLGameScreenState extends State<LLGameScreen> {
             children: [
               Text(
                 selfPlayer.name,
-                style: const TextStyle(
-                  color: Color(0xFF5A4038),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Cartoon.userText(size: 14, weight: FontWeight.w800),
               ),
               if (selfPlayer.protected)
                 const Padding(
                   padding: EdgeInsets.only(left: 4),
-                  child: Icon(Icons.shield, color: Colors.blueAccent, size: 14),
+                  child: Icon(
+                    Icons.shield_rounded,
+                    color: Cartoon.blue,
+                    size: 16,
+                  ),
                 ),
               if (selfPlayer.eliminated)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
                     'OUT',
-                    style: TextStyle(
-                      color: Colors.red.shade300,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Cartoon.text(size: 12, color: Cartoon.red),
                   ),
                 ),
               if (state.isMyTurn && _remainingSeconds > 0)
@@ -2799,23 +2802,22 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   padding: const EdgeInsets.only(left: 8),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
+                      horizontal: 8,
                       vertical: 2,
                     ),
-                    decoration: BoxDecoration(
+                    decoration: gamePillDecoration(
+                      radius: 99,
                       color: _remainingSeconds <= 5
-                          ? Colors.red.shade900
-                          : Colors.amber.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
+                          ? const Color(0xFFFFD9D6)
+                          : Cartoon.cream,
                     ),
                     child: Text(
                       '${_remainingSeconds}s',
-                      style: TextStyle(
+                      style: Cartoon.text(
+                        size: 13,
                         color: _remainingSeconds <= 5
-                            ? Colors.redAccent
-                            : Colors.amber,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                            ? Cartoon.red
+                            : Cartoon.ink,
                       ),
                     ),
                   ),
@@ -2829,29 +2831,21 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       horizontal: 8,
                       vertical: 3,
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFB74D)),
+                    decoration: gamePillDecoration(
+                      radius: 12,
+                      color: Cartoon.yellow,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           '${gs.myTimeoutCount}/3',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100),
-                          ),
+                          style: Cartoon.text(size: 13),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           L10n.of(context).gameNotAfk,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFE65100),
-                          ),
+                          style: Cartoon.text(size: 12),
                         ),
                       ],
                     ),
@@ -2865,11 +2859,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 (i) => Padding(
                   padding: const EdgeInsets.only(right: 2),
                   child: Icon(
-                    Icons.favorite,
+                    Icons.favorite_rounded,
                     color: i < selfPlayer.tokens
-                        ? const Color(0xFFE91E63)
-                        : const Color(0xFFE0D8D4),
-                    size: 14,
+                        ? Cartoon.red
+                        : Cartoon.ink.withValues(alpha: 0.18),
+                    size: 17,
                   ),
                 ),
               ),
@@ -2886,9 +2880,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     padding: const EdgeInsets.only(right: 6),
                     child: Text(
                       L10n.of(context).llPlayed,
-                      style: const TextStyle(
-                        color: Color(0xFF8A7A72),
-                        fontSize: 11,
+                      style: Cartoon.text(
+                        size: 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -2948,29 +2942,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
           const SizedBox(height: 8),
           // Play button
           if (state.isMyTurn && state.phase == 'playing')
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _selectedCard != null
-                    ? () {
-                        gs.llPlayCard(_selectedCard!);
-                        setState(() => _selectedCard = null);
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black,
-                  disabledBackgroundColor: const Color(0xFFE0D8D4),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: Text(
-                  L10n.of(context).llPlay,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            gameButton(
+              L10n.of(context).llPlay,
+              _selectedCard != null
+                  ? () {
+                      gs.llPlayCard(_selectedCard!);
+                      setState(() => _selectedCard = null);
+                    }
+                  : null,
+              color: Cartoon.blue,
+              height: 48,
+              size: 18,
+              expand: true,
             ),
         ],
       ),
@@ -2995,18 +2978,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (viewingPlayer == null) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        decoration: const BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
         ),
         child: Text(
           L10n.of(context).skGameTapToRequestCards,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF8A7A72),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: Cartoon.userText(
+            size: 14,
+            color: Cartoon.ink.withValues(alpha: 0.6),
           ),
         ),
       );
@@ -3015,10 +2997,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (isPending && !isApproved) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        decoration: const BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -3027,17 +3009,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
               width: 14,
               height: 14,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFFFB74D),
+                strokeWidth: 2.4,
+                color: Cartoon.orange,
               ),
             ),
             const SizedBox(width: 6),
             Text(
               L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              style: Cartoon.userText(
+                size: 14,
+                color: Cartoon.ink.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -3048,10 +3029,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (isApproved) {
       return Container(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+        decoration: const BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3065,11 +3046,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     child: Text(
                       L10n.of(context).skGamePlayerHand(viewingPlayer.name),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF5A4038),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Cartoon.userText(size: 14),
                     ),
                   ),
                   SizedBox(
@@ -3082,9 +3059,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       padding: EdgeInsets.zero,
                       splashRadius: 18,
                       icon: const Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Color(0xFF8A7A72),
+                        Icons.close_rounded,
+                        size: 20,
+                        color: Cartoon.ink,
                       ),
                       onPressed: () => setState(() => _viewingPlayerId = null),
                     ),
@@ -3193,26 +3170,32 @@ class _LLGameScreenState extends State<LLGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.skGameLeaveTitle),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
+        title: Text(l10n.skGameLeaveTitle, style: Cartoon.text(size: 22)),
         // A mid-game-join room hands the seat to a bot instead of ending
         // the match; say so rather than warning about the wrong outcome.
         content: Text(
           gs.canLeaveInProgress
               ? l10n.midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : l10n.skGameLeaveConfirm,
+          style: Cartoon.text(size: 16.5, height: 1.4),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonCancel),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(l10n.commonCancel, style: Cartoon.text(size: 17)),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              gs.leaveRoom();
-            },
-            child: Text(l10n.skGameLeaveButton),
-          ),
+          gameButton(l10n.skGameLeaveButton, () {
+            Navigator.pop(ctx);
+            gs.leaveRoom();
+          }, color: Cartoon.red),
         ],
       ),
     );
@@ -3312,11 +3295,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
               RichText(
                 textAlign: TextAlign.left,
                 text: TextSpan(
-                  style: TextStyle(
-                    color: const Color(0xFF5A4038),
-                    fontSize: i == lines.length - 1 ? 13 : 11,
-                    fontWeight: i == lines.length - 1
-                        ? FontWeight.w700
+                  style: Cartoon.userText(
+                    size: i == lines.length - 1 ? 14 : 12,
+                    weight: i == lines.length - 1
+                        ? FontWeight.w800
                         : FontWeight.w600,
                   ),
                   children: [
@@ -3325,7 +3307,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         text: seg.text,
                         style: seg.emphasized
                             ? const TextStyle(
-                                color: Color(0xFFE91E63),
+                                color: Cartoon.red,
                                 fontWeight: FontWeight.w800,
                               )
                             : null,

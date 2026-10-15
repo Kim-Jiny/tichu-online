@@ -2540,7 +2540,7 @@ class _ShopScreenState extends State<ShopScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(localizeServiceMessage(msg, L10n.of(context))),
-        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+        backgroundColor: ok ? Cartoon.green : Cartoon.red,
       ),
     );
   }
@@ -2593,7 +2593,7 @@ class _ShopScreenState extends State<ShopScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+        backgroundColor: ok ? Cartoon.green : Cartoon.red,
       ),
     );
   }
@@ -2610,7 +2610,7 @@ class _ShopScreenState extends State<ShopScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(ok ? L10n.of(context).customTitleSaved : (msg ?? '')),
-        backgroundColor: ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350),
+        backgroundColor: ok ? Cartoon.green : Cartoon.red,
       ),
     );
   }
@@ -4780,7 +4780,7 @@ class _ShopScreenState extends State<ShopScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(displayMsg),
-        backgroundColor: success ? Colors.green : Colors.red,
+        backgroundColor: success ? Cartoon.green : Cartoon.red,
       ),
     );
   }

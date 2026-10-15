@@ -1081,9 +1081,7 @@ void showProfileReportDialog(
                             rootMessenger.showSnackBar(
                               SnackBar(
                                 content: Text(game.reportResultMessage!),
-                                backgroundColor: success
-                                    ? null
-                                    : const Color(0xFFE57373),
+                                backgroundColor: success ? null : Cartoon.red,
                               ),
                             );
                             game.reportResultSuccess = null;

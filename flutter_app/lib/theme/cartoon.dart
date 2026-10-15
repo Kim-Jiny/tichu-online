@@ -572,10 +572,15 @@ ThemeData cartoonTheme(ThemeData base) {
       trackOutlineWidth: const WidgetStatePropertyAll(2.5),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: ink,
-      contentTextStyle: jua(15, color: Colors.white),
+      backgroundColor: Cartoon.paper,
+      contentTextStyle: jua(16),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: ink, width: 2.2),
+      ),
     ),
     dividerTheme: DividerThemeData(
       color: ink.withValues(alpha: 0.12),

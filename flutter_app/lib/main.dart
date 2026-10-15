@@ -26,6 +26,7 @@ import 'l10n/korean_josa.dart';
 import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/invite_link_service.dart';
+import 'theme/cartoon.dart';
 import 'widgets/draggable_chat_panel.dart';
 import 'services/session_service.dart';
 import 'services/locale_service.dart';
@@ -181,7 +182,8 @@ const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
 Future<void> _initAndroidForegroundNotifications() async {
   await _localNotifications
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(_androidChannel);
   await _localNotifications.initialize(
     const InitializationSettings(
@@ -405,13 +407,15 @@ ThemeData _buildTheme() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: colorScheme.inverseSurface,
-      contentTextStyle: TextStyle(
-        fontFamily: _webFont,
-        color: colorScheme.onInverseSurface,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      backgroundColor: Cartoon.paper,
+      contentTextStyle: Cartoon.text(size: 16),
       behavior: SnackBarBehavior.floating,
+      elevation: 0,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: Cartoon.ink, width: 2.2),
+      ),
     ),
     dividerTheme: DividerThemeData(color: colorScheme.outlineVariant),
     listTileTheme: ListTileThemeData(

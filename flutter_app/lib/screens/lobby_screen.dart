@@ -1810,7 +1810,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         messenger.showSnackBar(
                           SnackBar(
                             content: Text(duplicateLoginMessage),
-                            backgroundColor: Colors.red,
+                            backgroundColor: Cartoon.red,
                           ),
                         );
                       });

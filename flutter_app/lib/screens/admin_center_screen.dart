@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../theme/cartoon.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
@@ -103,7 +104,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(message),
-                        backgroundColor: success ? Colors.green : Colors.red,
+                        backgroundColor: success ? Cartoon.green : Cartoon.red,
                       ),
                     );
                     game.requestAdminDashboard();

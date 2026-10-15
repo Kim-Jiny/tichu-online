@@ -1295,7 +1295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         content: Text(
                           success ? l10n.settingsLinkComplete : message,
                         ),
-                        backgroundColor: success ? Colors.green : Colors.red,
+                        backgroundColor: success ? Cartoon.green : Cartoon.red,
                       ),
                     );
                   }

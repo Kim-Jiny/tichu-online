@@ -79,7 +79,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: const Color(0xFFB3261E),
+            backgroundColor: Cartoon.red,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -98,7 +98,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(L10n.of(context).mailboxClaimedToast),
-          backgroundColor: const Color(0xFF2E7D32),
+          backgroundColor: Cartoon.green,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -590,7 +590,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                       ),
                       const SizedBox(width: 8),
                       if (claimed)
-                        _stateChip(l10n.mailboxClaimed, const Color(0xFF2E7D32))
+                        _stateChip(l10n.mailboxClaimed, Cartoon.green)
                       else if (expired)
                         _stateChip(l10n.mailboxExpired, const Color(0xFF8A7A72))
                       else

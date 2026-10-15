@@ -345,14 +345,25 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
+  /// 지금 화면에 선택된 시즌 그대로 다시 받는다. 예전엔 무조건 "이번 시즌" 을
+  /// 요청해서, 지난 시즌을 보다가 새로고침하면 목록은 이번 시즌 것으로 바뀌는데
+  /// 선택 칸은 지난 시즌을 가리켰다 (이번 시즌에 아직 기록이 없으면 빈 목록).
   void _refreshRankings() {
     final game = context.read<GameService>();
+    final id = _selectedSeasonId;
+    final seasons = game.seasons;
+    final isActive =
+        id == null ||
+        seasons.isEmpty ||
+        seasons.any((s) => s['id'] == id && s['status'] == 'active');
     if (_rankingGameType == 'skull_king') {
-      game.requestSKRankings();
+      isActive ? game.requestSKRankings() : game.requestSKRankingsForSeason(id);
     } else if (_rankingGameType == 'mighty') {
-      game.requestMightyRankings();
+      isActive
+          ? game.requestMightyRankings()
+          : game.requestMightyRankingsForSeason(id);
     } else {
-      game.requestRankings();
+      isActive ? game.requestRankings() : game.requestRankingsForSeason(id);
     }
   }
 

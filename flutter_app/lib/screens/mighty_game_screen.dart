@@ -87,13 +87,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // a new trick starts (lead suit changes).
   int _lastTrickCount = -1;
 
-  // 마이티·조커·조커콜이 나오는 순간의 색종이 연출.
-  // 이미 나온 패(재접속 직후의 첫 동기화 등)로는 터지지 않게 본 것을 기억한다.
-  final Set<String> _fxSeenPlays = {};
-  int _fxRound = -1;
-  bool _fxReady = false;
-  int _fxSeq = 0;
-
   // Deal-miss reveal: user can dismiss; keyed by "round-playerId" so a new event re-shows
   String? _dismissedDealMissKey;
 
@@ -518,8 +511,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           }
         }
 
-        _detectFx(state);
-
         return Stack(
           children: [
             Column(
@@ -528,14 +519,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Expanded(child: _buildActiveBoardStage(state, game)),
               ],
             ),
-            if (_fxSeq > 0)
-              Positioned.fill(
-                child: CartoonConfetti(
-                  key: ValueKey('fx-$_fxSeq'),
-                  seed: _fxSeq,
-                  count: 34,
-                ),
-              ),
             if (_moreOpen) _buildMoreMenu(game),
             if (_viewersOpen) _buildViewersPanel(game),
             if (_soundPanelOpen) _buildSoundPanel(game),
@@ -567,32 +550,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         );
       },
     );
-  }
-
-  /// 상태가 바뀐 순간을 연출로 바꾼다. build 안에서 불리므로 setState 는 다음
-  /// 프레임으로 미룬다.
-  void _detectFx(MightyGameStateData state) {
-    if (state.round != _fxRound) {
-      _fxRound = state.round;
-      _fxSeenPlays.clear();
-    }
-    var burst = false;
-    for (final play in state.currentTrick) {
-      final key = '${state.round}-${play.playerId}-${play.cardId}';
-      if (!_fxSeenPlays.add(key)) continue;
-      // 처음 받은 상태(재접속 등)에 이미 깔려 있던 패는 지나간 일이다.
-      if (!_fxReady) continue;
-      final isMighty = play.cardId == state.mightyCard;
-      final isJoker = play.cardId == 'mighty_joker';
-      final isJokerCall =
-          state.jokerCallActive && play.cardId == state.jokerCallCard;
-      if (isMighty || isJoker || isJokerCall) burst = true;
-    }
-    _fxReady = true;
-    if (!burst) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _fxSeq++);
-    });
   }
 
   Widget _buildEndPhaseOverlay(BuildContext context, GameService game) {

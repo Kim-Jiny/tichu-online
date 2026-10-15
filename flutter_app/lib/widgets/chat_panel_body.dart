@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/cartoon.dart';
+
 /// The two halves every chat panel has in common: the reversed message list
 /// and the composer under it.
 ///
@@ -86,11 +88,10 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
           ),
         ),
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-            ),
+            color: Cartoon.paper,
+            border: Border(top: BorderSide(color: Cartoon.ink, width: 2.5)),
           ),
           child: Row(
             children: [
@@ -100,13 +101,43 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                   focusNode: _focus,
                   decoration: InputDecoration(
                     hintText: widget.hintText,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                    hintStyle: TextStyle(
+                      color: Cartoon.ink.withValues(alpha: 0.4),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: Cartoon.ink,
+                        width: 2.2,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: Cartoon.ink,
+                        width: 2.2,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: Cartoon.orange,
+                        width: 2.6,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                   ),
-                  style: const TextStyle(fontSize: 14),
+                  style: Cartoon.userText(size: 14, weight: FontWeight.w500),
                   onSubmitted: (_) => _sendKeepingFocus(),
                 ),
               ),
+              const SizedBox(width: 8),
               // 입력창의 "바깥"으로 치지 않게 묶는다.
               //
               // TextField 는 바깥을 탭하면 포커스를 놓는데, 바로 옆 전송
@@ -115,9 +146,26 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
               // 커서가 사라졌다. 엔터로 보낼 때 커서를 남기기로 한 것과 같은
               // 이유로, 버튼도 커서를 뺏지 않는 게 맞다.
               TextFieldTapRegion(
-                child: IconButton(
-                  onPressed: widget.onSend,
-                  icon: Icon(Icons.send, color: widget.sendIconColor),
+                child: CartoonPressable(
+                  scale: 0.88,
+                  onTap: widget.onSend,
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: widget.sendIconColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                      boxShadow: const [
+                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               if (widget.trailingInset > 0)

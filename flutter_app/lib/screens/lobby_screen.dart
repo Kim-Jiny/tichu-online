@@ -3462,47 +3462,47 @@ class _LobbyScreenState extends State<LobbyScreen> {
     bool active = false,
     int badge = 0,
   }) {
-    return GestureDetector(
+    return CartoonPressable(
+      scale: 0.88,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            margin: const EdgeInsets.only(left: 4),
-            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.only(left: 6, bottom: 3),
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: active ? const Color(0xFF6A5A52) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active
-                    ? const Color(0xFF6A5A52)
-                    : const Color(0xFFE6DDD8),
-              ),
+              color: active ? Cartoon.orange : Cartoon.paper,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Cartoon.ink, width: 2.2),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+              ],
             ),
             child: Icon(
               icon,
-              size: 18,
-              color: active ? Colors.white : const Color(0xFF7A6A62),
+              size: 21,
+              color: active ? Colors.white : Cartoon.ink,
             ),
           ),
           if (badge > 0)
             Positioned(
-              right: -4,
-              top: -4,
+              right: -5,
+              top: -6,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
+                  color: Cartoon.red,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Colors.white, width: 1.2),
+                  border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
                 child: Text(
                   badge > 99 ? '99+' : '$badge',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
@@ -3532,17 +3532,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           duration: const Duration(milliseconds: 160),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
+            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -3609,10 +3599,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF6F3F2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Cartoon.cream,
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(color: Cartoon.ink, width: 2.2),
                     ),
-                    child: Icon(icon, size: 19, color: const Color(0xFF6A5A52)),
+                    child: Icon(icon, size: 21, color: Cartoon.ink),
                   ),
                   if (badgeCount > 0)
                     Positioned(
@@ -3625,9 +3616,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE53935),
+                          color: Cartoon.red,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Colors.white, width: 1.2),
+                          border: Border.all(color: Cartoon.ink, width: 1.8),
                         ),
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
@@ -3648,10 +3639,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF8A7A72),
+                style: Cartoon.userText(
+                  size: 10,
+                  weight: FontWeight.w800,
+                  color: Cartoon.ink.withValues(alpha: 0.75),
                 ),
               ),
             ],
@@ -3673,8 +3664,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         isLandscape ? 6 : 8,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFFFDFBFA),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+        color: Cartoon.paper,
+        border: Border(bottom: BorderSide(color: Cartoon.ink, width: 3)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+        boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
       ),
       // One row: back, a title block (room name + its rules underneath), then
       // icon-only actions. It was two rows — title with two chips and a share
@@ -3683,12 +3676,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // affordance; switch-to-spectator moved into the ⋯ sheet.
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => _leaveRoom(game),
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF8A7A72),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+          CartoonPressable(
+            scale: 0.88,
+            onTap: () => _leaveRoom(game),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Cartoon.paper,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                ],
+              ),
+              child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -3704,15 +3707,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   children: [
                     Text(
                       game.currentRoomName,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF4E3A34),
+                      style: Cartoon.userText(
+                        size: 18,
+                        weight: FontWeight.w900,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 1),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         Flexible(
@@ -3729,9 +3731,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF9C8B84),
+                            style: Cartoon.userText(
+                              size: 12,
+                              weight: FontWeight.w600,
+                              color: Cartoon.ink.withValues(alpha: 0.6),
                             ),
                           ),
                         ),
@@ -3746,12 +3749,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ),
                           Text(
                             '${game.playerCount}/${game.effectiveRoomMaxPlayers}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                            style: Cartoon.text(
+                              size: 13,
                               color: full
-                                  ? const Color(0xFF4CAF50)
-                                  : const Color(0xFFFF9800),
+                                  ? const Color(0xFF2E9E4F)
+                                  : const Color(0xFFE5791A),
                             ),
                           ),
                         ],
@@ -3857,6 +3859,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Column(children: rows);
   }
 
+  Widget _teamPill(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+      ),
+      child: Cartoon.outlinedText(label, size: 15),
+    );
+  }
+
   Widget _buildRoomPlayersPanel(GameService game) {
     // No card of its own: the seat rows inside already carry their own fills,
     // and wrapping them in a white panel on a tinted page just added a border to
@@ -3869,8 +3883,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFFFE9B8),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: Cartoon.ink, width: 2.2),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -3891,10 +3909,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         : game.currentGameType == 'mighty'
                         ? L10n.of(context).lobbyMightyRanked
                         : L10n.of(context).lobbyTichuRanked,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFE65100),
+                    style: Cartoon.text(
+                      size: 15,
+                      color: const Color(0xFFB45309),
                     ),
                   ),
                 ],
@@ -3942,7 +3959,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     : game.currentGameType == 'mighty'
                     ? const Color(0xFF1565C0)
                     : const Color(0xFF2D2D3D),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: Cartoon.ink, width: 2.2),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -3959,9 +3980,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         : L10n.of(
                             context,
                           ).lobbySkullKingPlayers(game.roomMaxPlayers),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                    style: Cartoon.userText(
+                      size: 14,
+                      weight: FontWeight.w900,
                       color: Colors.white,
                     ),
                   ),
@@ -4016,14 +4037,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        const Text(
-                          'TEAM A',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF6A9BD1),
-                          ),
-                        ),
+                        _teamPill('TEAM A', const Color(0xFF6AA9E8)),
                         const SizedBox(height: 8),
                         _buildClickablePlayerSlot(
                           game.roomPlayers[0],
@@ -4043,14 +4057,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        const Text(
-                          'TEAM B',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFF5B8C0),
-                          ),
-                        ),
+                        _teamPill('TEAM B', const Color(0xFFF08A9A)),
                         const SizedBox(height: 8),
                         _buildClickablePlayerSlot(
                           game.roomPlayers[1],
@@ -4092,75 +4099,52 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     : game.playerCount >= game.effectiveRoomMaxPlayers;
                 if (!canStart) return const SizedBox.shrink();
                 final everyoneReady = _allNonHostReady(game);
-                return FractionallySizedBox(
-                  widthFactor: 2 / 3,
-                  child: SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => game.startGame(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDEDBFA),
-                        foregroundColor: const Color(0xFF4A4080),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: everyoneReady
-                              ? const BorderSide(
-                                  color: Color(0xFF6C63FF),
-                                  width: 2.5,
-                                )
-                              : BorderSide.none,
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        L10n.of(context).lobbyStartGame,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                // 모두 준비되면 시작 버튼이 숨 쉬듯 움직여 "지금 눌러" 를 알린다.
+                final startButton = CartoonButton(
+                  height: 56,
+                  color: Cartoon.green,
+                  onPressed: () => game.startGame(),
+                  child: CartoonButton.label(
+                    L10n.of(context).lobbyStartGame,
+                    size: 22,
                   ),
+                );
+                return FractionallySizedBox(
+                  widthFactor: 0.8,
+                  child: everyoneReady
+                      ? CartoonPulse(child: startButton)
+                      : startButton,
                 );
               },
             ),
           ] else
             FractionallySizedBox(
-              widthFactor: 2 / 3,
-              child: SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () => game.toggleReady(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isMyReady(game)
-                        ? const Color(0xFFC8E6C9)
-                        : const Color(0xFFFFE082),
-                    foregroundColor: _isMyReady(game)
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFF5A4038),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      // Border only on ready — not-ready stays borderless so
-                      // it doesn't compete with host's start-game emphasis.
-                      side: _isMyReady(game)
-                          ? const BorderSide(
-                              color: Color(0xFF43A047),
-                              width: 2.5,
-                            )
-                          : BorderSide.none,
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    _isMyReady(game)
-                        ? L10n.of(context).lobbyReadyDone
-                        : L10n.of(context).lobbyReady,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              widthFactor: 0.8,
+              child: CartoonButton(
+                height: 56,
+                // 준비 전엔 노랑(눌러라), 준비하면 초록(됐다).
+                color: _isMyReady(game) ? Cartoon.green : Cartoon.yellow,
+                onPressed: () => game.toggleReady(),
+                child: _isMyReady(game)
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                          const SizedBox(width: 6),
+                          CartoonButton.label(
+                            L10n.of(context).lobbyReadyDone,
+                            size: 20,
+                          ),
+                        ],
+                      )
+                    : Text(
+                        L10n.of(context).lobbyReady,
+                        style: Cartoon.text(size: 22),
+                      ),
               ),
             ),
         ],
@@ -4236,9 +4220,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F3F1),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      decoration: BoxDecoration(
+        color: Cartoon.cream,
+        border: Border(
+          bottom: BorderSide(
+            color: Cartoon.ink.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
       ),
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -4435,11 +4424,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.5)),
+                color: Cartoon.paper,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: Cartoon.ink, width: 2),
               ),
-              child: Icon(icon, size: 18, color: color),
+              child: Icon(icon, size: 19, color: color),
             ),
           ),
         ),
@@ -4450,23 +4439,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // tint and radius, so the panel read as two different kinds of thing.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6DDD8)),
+      decoration: Cartoon.panelDecoration(
+        color: const Color(0xFFE9EEFF),
+        radius: 18,
+        shadowOffset: 3,
       ),
       child: Row(
         children: [
-          const Icon(Icons.smart_toy, size: 16, color: Color(0xFF7A6A62)),
-          const SizedBox(width: 6),
+          const Icon(
+            Icons.smart_toy_rounded,
+            size: 20,
+            color: Color(0xFF3949AB),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               l10n.lobbyFillEmptyWithBots,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF3949AB),
-              ),
+              style: Cartoon.userText(size: 13, weight: FontWeight.w900),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -4537,12 +4526,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: fg.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
+        style: Cartoon.userText(size: 12.5, weight: FontWeight.w900, color: fg),
       ),
     );
   }
@@ -4563,7 +4552,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: const Color(0xFFE8E0F8),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4577,10 +4567,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
           const SizedBox(width: 5),
           Text(
             L10n.of(context).midJoinRoomBadge,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF4A4080),
+            style: Cartoon.userText(
+              size: 12.5,
+              weight: FontWeight.w900,
+              color: const Color(0xFF4A4080),
             ),
           ),
         ],
@@ -4605,8 +4595,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F3F2),
-          borderRadius: BorderRadius.circular(12),
+          color: Cartoon.cream,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: Cartoon.ink, width: 2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4614,16 +4605,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Icon(
               on ? Icons.shuffle : Icons.groups,
               size: 14,
-              color: const Color(0xFF9C8B84),
+              color: Cartoon.ink,
             ),
             const SizedBox(width: 6),
             Text(
               on ? randomLabel : fixedLabel,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF8A7A72),
-              ),
+              style: Cartoon.userText(size: 13, weight: FontWeight.w900),
             ),
           ],
         ),
@@ -4643,16 +4630,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 4,
-                    ),
-                  ]
-                : null,
+            color: selected ? Cartoon.orange : Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(
+              color: selected ? Cartoon.ink : Colors.transparent,
+              width: 2,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -4660,19 +4643,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
               Icon(
                 icon,
                 size: 14,
-                color: selected
-                    ? const Color(0xFF6A5A52)
-                    : const Color(0xFFA89C96),
+                color: selected ? Colors.white : Cartoon.ink,
               ),
               const SizedBox(width: 5),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: selected
-                      ? const Color(0xFF5A4038)
-                      : const Color(0xFFA89C96),
+                style: Cartoon.userText(
+                  size: 13,
+                  weight: FontWeight.w900,
+                  color: selected ? Colors.white : Cartoon.ink,
                 ),
               ),
             ],
@@ -4684,8 +4663,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0EBE8),
-        borderRadius: BorderRadius.circular(13),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4790,11 +4770,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
               // blocked pink, blocked-slot grey, plain beige) made four seats look
               // like four unrelated widgets; ready and "my slot" are already said
               // by the border, and "bot" by the avatar's corner marker.
+              // 불투명해야 한다(단색 그림자가 비치지 않게). 빈 자리는 살짝 연한
+              // 크림, 막힌 자리는 회색.
               final fallbackColor = isSlotBlocked
-                  ? const Color(0xFFEFEBE9)
+                  ? const Color(0xFFE9E4DF)
                   : isBlockedPlayer
-                  ? const Color(0xFFFAF3F3)
-                  : Colors.white.withValues(alpha: 0.72);
+                  ? const Color(0xFFFAEDED)
+                  : isEmpty
+                  ? const Color(0xFFFBF5E8)
+                  : Cartoon.paper;
               return Container(
                 width: double.infinity,
                 // Sized off the avatar: a 46dp photo with 7 above and below,
@@ -4806,23 +4790,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // to the box is identical on all four edges. At 8 it wasn't,
                 // and one pixel of difference is visible when the thing it
                 // frames is a square.
-                height: 60,
+                height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 7),
                 decoration: BoxDecoration(
                   color: bannerGradient == null ? fallbackColor : null,
                   gradient: bannerGradient,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    // "My slot" is now indicated by a thicker brown-green
-                    // border instead of a tinted background, so the banner
-                    // gradient stays visible.
-                    color: isSlotBlocked
-                        ? const Color(0xFFCFC7C0)
-                        : (isMySlot || isReady)
-                        ? const Color(0xFF66BB6A)
-                        : const Color(0xFFE6DDD8),
-                    width: (isMySlot || isReady) ? 2 : 1,
+                    // 내 자리·준비한 자리는 초록 테두리로, 나머지는 진한 갈색.
+                    // 빈 자리는 옅게 해서 "아직 비었다"가 보인다.
+                    color: (isMySlot || isReady)
+                        ? const Color(0xFF2E9E4F)
+                        : (isEmpty || isSlotBlocked)
+                        ? Cartoon.ink.withValues(alpha: 0.4)
+                        : Cartoon.ink,
+                    width: (isMySlot || isReady) ? 3 : 2.2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isEmpty || isSlotBlocked)
+                          ? Cartoon.ink.withValues(alpha: 0.4)
+                          : ((isMySlot || isReady)
+                                ? const Color(0xFF2E9E4F)
+                                : Cartoon.ink),
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
@@ -4877,11 +4870,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             player.name,
                           );
                           const avatarSize = 46.0;
-                          final avatar = ProfileAvatar(
-                            photoUrl: resolved,
-                            size: avatarSize,
-                            blocked: hidden,
-                            fallback: DefaultAvatar(size: avatarSize),
+                          final avatar = Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Cartoon.ink, width: 2),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: ProfileAvatar(
+                                photoUrl: resolved,
+                                size: avatarSize - 4,
+                                blocked: hidden,
+                                fallback: DefaultAvatar(size: avatarSize - 4),
+                              ),
+                            ),
                           );
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),
@@ -5038,10 +5040,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         : (player != null && !player.connected)
                                         ? const Color(0xFFBBAAAA)
                                         : player != null
-                                        ? const Color(0xFF5A4038)
+                                        ? Cartoon.ink
                                         : isSlotBlocked
                                         ? const Color(0xFF8A7A72)
-                                        : const Color(0xFFAA9A92);
+                                        : Cartoon.ink.withValues(alpha: 0.4);
                                     return Text(
                                       player?.name ??
                                           (isSlotBlocked
@@ -5055,9 +5057,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         fontSize: 16,
                                         color:
                                             bannerTextOverride ?? defaultColor,
-                                        fontWeight: isMySlot
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
+                                        fontWeight: isMySlot || player != null
+                                            ? FontWeight.w900
+                                            : FontWeight.w600,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     );
@@ -5083,16 +5085,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             vertical: 7,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF66BB6A),
-                            borderRadius: BorderRadius.circular(10),
+                            color: Cartoon.green,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Cartoon.ink, width: 2.2),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Cartoon.ink,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Text(
                             L10n.of(context).lobbyTakeSeat,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
+                            style: Cartoon.text(size: 14, color: Colors.white),
                           ),
                         ),
                       ),
@@ -5190,24 +5195,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE8EAF6),
-                            borderRadius: BorderRadius.circular(8),
+                            color: const Color(0xFFE9EEFF),
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(color: Cartoon.ink, width: 2),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.smart_toy,
-                                size: 14,
+                                Icons.smart_toy_rounded,
+                                size: 16,
                                 color: Color(0xFF3949AB),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 L10n.of(context).lobbyBot,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF3949AB),
+                                style: Cartoon.userText(
+                                  size: 12.5,
+                                  weight: FontWeight.w900,
+                                  color: const Color(0xFF3949AB),
                                 ),
                               ),
                             ],
@@ -5228,16 +5234,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E0),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFFFE0B2)),
+                            color: const Color(0xFFFFE9B8),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Cartoon.ink, width: 2),
                           ),
                           child: Text(
                             '${player.seasonRating}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFE65100),
+                            style: Cartoon.text(
+                              size: 14,
+                              color: const Color(0xFFB45309),
                             ),
                           ),
                         ),
@@ -5261,12 +5266,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFCDD2),
-                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xFFFFE3E3),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                             ),
                             child: const Icon(
-                              Icons.close,
-                              size: 16,
+                              Icons.close_rounded,
+                              size: 18,
                               color: Color(0xFFC62828),
                             ),
                           ),

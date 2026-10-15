@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import 'profile_avatar.dart';
 
 /// One chat line: sender avatar, name, and the message bubble.
@@ -107,23 +108,29 @@ class ChatBubble extends StatelessWidget {
                   child: Text(
                     sender,
                     style: TextStyle(
-                      fontSize: senderFontSize,
-                      color: const Color(0xFF8A8A8A),
+                      fontSize: senderFontSize + 1,
+                      fontWeight: FontWeight.w800,
+                      color: Cartoon.ink.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
               Container(
                 padding: bubblePadding,
+                // 카툰: 내 말풍선과 남의 말풍선 모두 진한 테두리 + 작은 단색 그림자.
                 decoration: BoxDecoration(
-                  color: isMe ? mineColor : theirsColor,
+                  color: isMe ? mineColor : Colors.white,
                   borderRadius: BorderRadius.circular(bubbleRadius),
-                  border: isMe ? null : theirsBorder,
+                  border: Border.all(color: Cartoon.ink, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                  ],
                 ),
                 child: Text(
                   message,
                   style: TextStyle(
                     fontSize: messageFontSize,
-                    color: isMe ? Colors.white : const Color(0xFF333333),
+                    fontWeight: FontWeight.w600,
+                    color: isMe ? Colors.white : Cartoon.ink,
                   ),
                 ),
               ),

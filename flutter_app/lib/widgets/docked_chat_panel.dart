@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 import 'chat_panel_body.dart';
 
@@ -113,15 +114,10 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       key: _boxKey,
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        color: Cartoon.paper,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Cartoon.ink, width: 2.5),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -157,7 +153,12 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       onVerticalDragEnd: resizable ? _onDragEnd : null,
       child: Container(
         padding: const EdgeInsets.only(left: 10, right: 4),
-        color: widget.accentColor,
+        decoration: BoxDecoration(
+          color: widget.accentColor,
+          border: const Border(
+            bottom: BorderSide(color: Cartoon.ink, width: 2.5),
+          ),
+        ),
         child: Row(
           children: [
             if (resizable) ...[
@@ -168,11 +169,7 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
               child: Text(
                 widget.title,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
+                style: Cartoon.text(size: 16, color: Colors.white),
               ),
             ),
             GestureDetector(

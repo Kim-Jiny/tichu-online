@@ -14,6 +14,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
+import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart' show gameButton, gamePillDecoration;
 import '../l10n/app_localizations.dart';
 
 /// Scale that makes [image] cover a [viewport]-sized square. `cover`, not
@@ -27,9 +29,12 @@ double coverScaleFor(Size image, double viewport) {
 
 /// Transform that centres a cover-scaled image in the square.
 Matrix4 centredCoverTransform(Size scaledChild, double viewport) {
-  return Matrix4.identity()
-    ..translateByDouble((viewport - scaledChild.width) / 2,
-        (viewport - scaledChild.height) / 2, 0, 1);
+  return Matrix4.identity()..translateByDouble(
+    (viewport - scaledChild.width) / 2,
+    (viewport - scaledChild.height) / 2,
+    0,
+    1,
+  );
 }
 
 /// Which part of the SOURCE image the viewport square is showing.
@@ -66,8 +71,12 @@ Rect visibleSourceRect({
 /// runs ~700KB — bigger than the original the picker gave us — while the same
 /// frame as JPEG is ~55KB, and the server re-encodes to JPEG regardless. The
 /// PNG was pure upload cost, paid on the user's mobile connection.
-Future<Uint8List?> renderSquare(ui.Image image, Rect src,
-    {double size = 512, int quality = 85}) async {
+Future<Uint8List?> renderSquare(
+  ui.Image image,
+  Rect src, {
+  double size = 512,
+  int quality = 85,
+}) async {
   if (src.width <= 0 || src.height <= 0) return null;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
@@ -192,42 +201,82 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
+    final canConfirm = _image != null && !_busy;
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(l10n.profilePhotoCropTitle),
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _image == null || _busy ? null : _confirm,
-            child: Text(
-              l10n.commonConfirm,
-              style: TextStyle(
-                color: _image == null || _busy ? Colors.white38 : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+      body: CartoonBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Row(
+                  children: [
+                    CartoonPressable(
+                      scale: 0.88,
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Cartoon.paper,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Cartoon.ink,
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.profilePhotoCropTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Cartoon.text(size: 22),
+                      ),
+                    ),
+                    gameButton(
+                      l10n.commonConfirm,
+                      canConfirm ? _confirm : null,
+                      color: Cartoon.green,
+                      height: 44,
+                      size: 17,
+                      hPad: 18,
+                    ),
+                  ],
+                ),
               ),
-            ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(child: _buildStage()),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: gamePillDecoration(radius: 16),
+                  child: Text(
+                    l10n.profilePhotoCropHint,
+                    textAlign: TextAlign.center,
+                    style: Cartoon.userText(
+                      size: 13.5,
+                      weight: FontWeight.w600,
+                      color: Cartoon.ink.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(child: Center(child: _buildStage())),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-            child: Text(
-              l10n.profilePhotoCropHint,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -236,12 +285,12 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
     if (_failed) {
       return Text(
         L10n.of(context).profilePhotoUploadFailed,
-        style: const TextStyle(color: Colors.white70),
+        style: Cartoon.userText(size: 15, color: Cartoon.red),
       );
     }
     final image = _image;
     if (image == null) {
-      return const CircularProgressIndicator(color: Colors.white);
+      return const CartoonLoader();
     }
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -256,7 +305,15 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
         return SizedBox(
           width: side,
           height: side,
-          child: ClipRect(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Cartoon.ink, width: 2.5),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
             child: InteractiveViewer(
               transformationController: _controller,
               // Zero margin is what forbids panning past the edges, so the

@@ -85,6 +85,9 @@ class PlayerProfileBody extends StatefulWidget {
 class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   late String _tab = widget.initialGame;
 
+  /// 0 전적(요약·게임별 카드), 1 최근 전적. 한 화면에 다 늘어놓지 않고 나눈다.
+  int _view = 0;
+
   @override
   Widget build(BuildContext context) => _buildProfileContent(
     widget.data,
@@ -157,20 +160,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           _buildPrivateOwnerPanel(l10n, game),
           const SizedBox(height: 10),
         ],
-        _buildMannerLeaveRow(
-          // Every game they have played, not Tichu's count. The desertions and
-          // reports on the other side of this score are account-wide, so a
-          // Mighty regular used to be judged on walk-outs from games that were
-          // never counted as played. It also has to agree with the 전체 tab
-          // sitting right underneath it.
-          totalGames:
-              (totalGames as int) +
-              (skGames as int) +
-              ((profile['mightyTotalGames'] ?? 0) as int) +
-              (llGames as int),
+        _buildSummaryStrip(
+          l10n,
+          profile,
           reportCount: reportCount as int,
           leaveCount: leaveCount as int,
         ),
+        const SizedBox(height: 12),
+        _buildViewToggle(l10n),
         const SizedBox(height: 10),
         // 게임 선택: 드롭다운 + 하단 시트 대신 한 줄 칩. 한 번에 바로 전환.
         SizedBox(
@@ -251,7 +248,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           ),
         ),
         const SizedBox(height: 10),
-        if (isAll) ...[
+        if (_view == 1) ...[
+          _buildRecentMatches(filteredMatches, profileNickname),
+        ] else if (isAll) ...[
           _buildAllGamesCards(l10n, profile),
         ] else if (selectedTab == 'tichu') ...[
           _buildProfileSectionCard(
@@ -388,9 +387,166 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             ],
           ),
         ],
-        const SizedBox(height: 12),
-        _buildRecentMatches(filteredMatches, profileNickname),
       ],
+    );
+  }
+
+  /// 맨 위 한눈에: 승률 · 전적 · 매너. 예전엔 매너/탈주 줄이 따로 있고 승률은
+  /// 아래 카드 안에 있어서, 이 사람이 어떤 사람인지 알려면 스크롤해야 했다.
+  Widget _buildSummaryStrip(
+    L10n l10n,
+    Map<String, dynamic> profile, {
+    required int reportCount,
+    required int leaveCount,
+  }) {
+    int n(String key) => (profile[key] ?? 0) as int;
+    final games =
+        n('totalGames') +
+        n('skTotalGames') +
+        n('mightyTotalGames') +
+        n('llTotalGames');
+    final wins = n('wins') + n('skWins') + n('mightyWins') + n('llWins');
+    final losses =
+        n('losses') + n('skLosses') + n('mightyLosses') + n('llLosses');
+    final decided = wins + losses;
+    final winRate = decided == 0 ? 0 : (wins * 100 / decided).round();
+    final manner = _calcMannerScore(games, leaveCount, reportCount);
+    final mannerColor = _mannerColor(manner);
+
+    Widget tile({
+      required Widget top,
+      required String value,
+      required String label,
+      String? sub,
+      Color? tint,
+    }) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          decoration: BoxDecoration(
+            color: tint ?? Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Cartoon.ink, width: 2.2),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            ],
+          ),
+          child: Column(
+            children: [
+              top,
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(value, style: Cartoon.text(size: 26)),
+              ),
+              Text(
+                label,
+                style: Cartoon.userText(
+                  size: 12,
+                  weight: FontWeight.w700,
+                  color: Cartoon.ink.withValues(alpha: 0.65),
+                ),
+              ),
+              if (sub != null)
+                Text(
+                  sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Cartoon.userText(
+                    size: 10.5,
+                    weight: FontWeight.w500,
+                    color: Cartoon.ink.withValues(alpha: 0.5),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        spacing: 8,
+        children: [
+          tile(
+            top: const Icon(
+              Icons.emoji_events_rounded,
+              size: 22,
+              color: Color(0xFFF5B301),
+            ),
+            value: games == 0 ? '-' : '$winRate%',
+            label: l10n.lobbyStatWinRate,
+            tint: const Color(0xFFFFF6DD),
+          ),
+          tile(
+            top: const Icon(Icons.style_rounded, size: 22, color: Cartoon.blue),
+            value: '$games',
+            label: l10n.lobbyStatRecord,
+            sub: games == 0
+                ? null
+                : l10n.lobbyRecordFormat(games, wins, losses),
+          ),
+          tile(
+            top: Icon(_mannerIcon(manner), size: 22, color: mannerColor),
+            value: '$manner',
+            label: l10n.rankingMannerScore,
+            sub: l10n.lobbyDesertions(leaveCount),
+            tint: mannerColor.withValues(alpha: 0.10),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 전적 ↔ 최근 전적 토글.
+  Widget _buildViewToggle(L10n l10n) {
+    Widget seg(int i, String label, IconData icon) {
+      final on = _view == i;
+      return Expanded(
+        child: CartoonPressable(
+          scale: 0.95,
+          onTap: () => setState(() => _view = i),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 38,
+            decoration: BoxDecoration(
+              color: on ? Cartoon.orange : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: on ? Cartoon.ink : Colors.transparent,
+                width: 2.2,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 19, color: on ? Colors.white : Cartoon.ink),
+                const SizedBox(width: 5),
+                on
+                    ? Cartoon.outlinedText(label, size: 15)
+                    : Text(label, style: Cartoon.text(size: 15)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+      ),
+      child: Row(
+        children: [
+          seg(0, l10n.lobbyStatRecord, Icons.bar_chart_rounded),
+          const SizedBox(width: 4),
+          seg(1, l10n.lobbyRecentMatchesTitle, Icons.history_rounded),
+        ],
+      ),
     );
   }
 
@@ -560,147 +716,6 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildMannerLeaveRow({
-    required int totalGames,
-    required int reportCount,
-    required int leaveCount,
-  }) {
-    final l10n = L10n.of(context);
-    final manner = _calcMannerScore(totalGames, leaveCount, reportCount);
-    final color = _mannerColor(manner);
-    final icon = _mannerIcon(manner);
-    final compact = MediaQuery.of(context).size.width < 400;
-    final boxDeco = BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Cartoon.ink, width: 2.2),
-      boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
-    );
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: boxDeco,
-            child: compact
-                ? Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(icon, color: color, size: 17),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              l10n.rankingMannerScore,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8A8A8A),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$manner',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, color: color, size: 17),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          '${l10n.rankingMannerScore} $manner',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: boxDeco,
-            child: compact
-                ? Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            color: Color(0xFFE57373),
-                            size: 17,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              l10n.gameDesertionLabel,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8A8A8A),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$leaveCount',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF9A6A6A),
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Color(0xFFE57373),
-                        size: 17,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          l10n.lobbyDesertions(leaveCount),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF9A6A6A),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1392,94 +1407,168 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
     });
   }
 
+  /// 0 전체, 1 승리, 2 패배 — 지금까지 불러온 줄에만 적용된다.
+  int _filter = 0;
+
+  bool _passes(dynamic m) {
+    if (_filter == 0) return true;
+    final o = _PlayerProfileBodyState._outcomeOf(m, widget.nickname);
+    if (_filter == 1) return o == _MatchOutcome.win;
+    return o == _MatchOutcome.loss || o == _MatchOutcome.desertion;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final media = MediaQuery.of(context).size;
-    final width = math.max(240.0, math.min(media.width - 64, 520.0));
-    final height = (media.height * 0.66).clamp(240.0, 620.0);
-    return AlertDialog(
+    final width = math.max(240.0, math.min(media.width - 32, 540.0));
+    final height = (media.height * 0.78).clamp(320.0, 700.0);
+    final shown = _matches.where(_passes).toList();
+
+    Widget filterChip(int i, String label, Color color) {
+      final on = _filter == i;
+      return CartoonPressable(
+        onTap: () {
+          setState(() => _filter = i);
+          // 걸러서 화면이 안 차면 다음 쪽을 더 가져온다.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || !_hasMore || _loading) return;
+            if (_scroll.hasClients && _scroll.position.maxScrollExtent <= 0) {
+              _load();
+            }
+          });
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: on ? color : Cartoon.paper,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: Cartoon.ink, width: 2.2),
+            boxShadow: [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, on ? 3 : 2)),
+            ],
+          ),
+          child: Text(
+            label,
+            style: Cartoon.text(
+              size: 14.5,
+              color: on ? Colors.white : Cartoon.ink,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      actionsPadding: const EdgeInsets.fromLTRB(8, 0, 14, 10),
-      // No card around the title. It sat inside the dialog's own frame — a
-      // border drawn just inside a border — the same thing the profile popup's
-      // header had before it was taken off.
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF2EBE7),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.history,
-              size: 20,
-              color: Color(0xFF6A5A52),
-            ),
-          ),
-          const SizedBox(width: 11),
-          // No count under the title. It reads as the size of the record, but
-          // it is only how far this list has been paged so far — it climbs as
-          // you scroll, which makes the number itself look unreliable.
-          Expanded(
-            child: Text(
-              l10n.profileMatchHistoryTitle,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF3E312A),
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: SizedBox(
+      child: SizedBox(
         width: width,
         height: height,
-        // No tally across the top. It counted the rows in hand, which climbs
-        // every time another page arrives — a summary that changes as you
-        // scroll is one nobody can trust.
-        child: Column(
-          children: [
-            Expanded(
-              child: _matches.isEmpty
-                  ? Center(
-                      child: _loading
-                          ? const CircularProgressIndicator()
-                          : Text(
-                              l10n.lobbyNoRecentMatches,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF9A8E8A),
-                              ),
-                            ),
-                    )
-                  // No explicit Scrollbar: Material already puts one on desktop
-                  // and the web through its ScrollBehavior.
-                  : ListView.separated(
-                      controller: _scroll,
-                      padding: const EdgeInsets.only(right: 2),
-                      itemCount: _matches.length + (_hasMore ? 1 : 0),
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (_, index) {
-                        if (index >= _matches.length) return _buildFooter();
-                        return widget.cardBuilder(_matches[index]);
-                      },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: Cartoon.cream,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Cartoon.ink, width: 2.5),
+                      boxShadow: const [
+                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                      ],
                     ),
-            ),
-          ],
+                    child: const Icon(
+                      Icons.history_rounded,
+                      size: 26,
+                      color: Cartoon.ink,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // 제목 밑에 개수는 두지 않는다 — 스크롤하며 쪽이 붙을수록 올라가서
+                  // 숫자 자체를 못 믿게 보인다.
+                  Expanded(
+                    child: Text(
+                      l10n.profileMatchHistoryTitle,
+                      style: Cartoon.text(size: 22),
+                    ),
+                  ),
+                  CartoonPressable(
+                    scale: 0.88,
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Cartoon.paper,
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: Cartoon.ink, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Cartoon.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                spacing: 8,
+                children: [
+                  filterChip(0, l10n.profileAllGames, Cartoon.ink),
+                  filterChip(1, l10n.profileOutcomeWin, Cartoon.green),
+                  filterChip(2, l10n.profileOutcomeLoss, Cartoon.red),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: shown.isEmpty
+                    ? Center(
+                        child: _loading || _hasMore
+                            ? const CircularProgressIndicator(
+                                color: Cartoon.orange,
+                                strokeWidth: 4,
+                              )
+                            : Text(
+                                l10n.lobbyNoRecentMatches,
+                                style: Cartoon.userText(
+                                  size: 14,
+                                  color: Cartoon.ink.withValues(alpha: 0.6),
+                                ),
+                              ),
+                      )
+                    : ListView.builder(
+                        controller: _scroll,
+                        padding: const EdgeInsets.only(right: 2, bottom: 6),
+                        itemCount: shown.length + (_hasMore ? 1 : 0),
+                        itemBuilder: (_, index) {
+                          if (index >= shown.length) return _buildFooter();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: CartoonEntrance(
+                              key: ValueKey('mh-${shown[index].hashCode}'),
+                              delay: Duration(milliseconds: 30 * (index % 8)),
+                              from: const Offset(0, 12),
+                              pop: false,
+                              child: widget.cardBuilder(shown[index]),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.commonClose),
-        ),
-      ],
     );
   }
 
@@ -1488,9 +1577,9 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
     padding: EdgeInsets.symmetric(vertical: 14),
     child: Center(
       child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 3, color: Cartoon.orange),
       ),
     ),
   );

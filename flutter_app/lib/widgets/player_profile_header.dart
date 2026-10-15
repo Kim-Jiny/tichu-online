@@ -190,12 +190,16 @@ class PlayerProfileHeader extends StatelessWidget {
           Row(
             spacing: 8,
             children: [
+              // 친구 추가가 주된 동작이라 넓게, 차단·신고는 아이콘만 작게.
               Expanded(child: _friendButton(context, l10n, onBanner)),
-              Expanded(
+              SizedBox(
+                width: 50,
                 child: _blockButton(context, l10n, isBlockedUser, onBanner),
               ),
-              Expanded(
+              SizedBox(
+                width: 50,
                 child: _iconButton(
+                  iconOnly: true,
                   icon: Icons.report_outlined,
                   color: const Color(0xFFE57373),
                   tooltip: l10n.gameReport,
@@ -397,6 +401,7 @@ class PlayerProfileHeader extends StatelessWidget {
     bool onBanner,
   ) {
     return _iconButton(
+      iconOnly: true,
       icon: blocked ? Icons.block : Icons.shield_outlined,
       color: blocked ? const Color(0xFF64B5F6) : const Color(0xFFFF8A65),
       tooltip: blocked ? l10n.gameUnblock : l10n.gameBlock,
@@ -426,7 +431,30 @@ class PlayerProfileHeader extends StatelessWidget {
     required String tooltip,
     required VoidCallback onTap,
     bool onBanner = false,
+    bool iconOnly = false,
   }) {
+    if (iconOnly) {
+      return Tooltip(
+        message: tooltip,
+        child: CartoonPressable(
+          scale: 0.9,
+          onTap: onTap,
+          child: Container(
+            height: 40,
+            margin: const EdgeInsets.only(bottom: 3),
+            decoration: BoxDecoration(
+              color: onBanner ? Colors.white : Cartoon.paper,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Cartoon.ink, width: 2.2),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Icon(icon, size: 21, color: color),
+          ),
+        ),
+      );
+    }
     return CartoonPressable(
       scale: 0.93,
       onTap: onTap,

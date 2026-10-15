@@ -104,6 +104,8 @@ class _RulesScreenState extends State<RulesScreen> {
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
+                  // 게임을 바꾸면 새 스크롤로 시작해서 항상 맨 위부터 보여 준다.
+                  key: ValueKey(_selectedGame),
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   child: switch (_selectedGame) {
                     'tichu' => _buildTichuRules(),

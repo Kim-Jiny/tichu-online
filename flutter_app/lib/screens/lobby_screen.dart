@@ -1218,8 +1218,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 skExpansionsSelected.contains(
                                                   entry[0],
                                                 );
-                                            return GestureDetector(
-                                              behavior: HitTestBehavior.opaque,
+                                            // 확장팩마다 자기 테마 색: 크라켄 보라,
+                                            // 흰고래 하늘, 약탈 금색. 안 눌렀을 땐 옅은
+                                            // 바탕에 진한 글자, 누르면 진한 색이 찬다.
+                                            final (
+                                              strong,
+                                              pale,
+                                              emoji,
+                                            ) = switch (entry[0]) {
+                                              'kraken' => (
+                                                const Color(0xFF7B3FC4),
+                                                const Color(0xFFF1E5FB),
+                                                '🐙',
+                                              ),
+                                              'white_whale' => (
+                                                const Color(0xFF1E88D6),
+                                                const Color(0xFFDDF1FD),
+                                                '🐳',
+                                              ),
+                                              _ => (
+                                                const Color(0xFFE29A00),
+                                                const Color(0xFFFFF0CC),
+                                                '💰',
+                                              ),
+                                            };
+                                            return CartoonPressable(
+                                              scale: 0.95,
                                               onTap: () => setState(() {
                                                 if (selected) {
                                                   skExpansionsSelected.remove(
@@ -1241,42 +1265,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                       horizontal: 4,
                                                     ),
                                                 decoration: BoxDecoration(
-                                                  // Solid brown, not the theme accent:
-                                                  // the accent is a pale peach and a
-                                                  // pale fill did not read as "on".
                                                   color: selected
-                                                      ? const Color(0xFF6A5A52)
-                                                      : Colors.white.withValues(
-                                                          alpha: 0.82,
-                                                        ),
+                                                      ? strong
+                                                      : pale,
                                                   borderRadius:
-                                                      BorderRadius.circular(12),
+                                                      BorderRadius.circular(14),
                                                   border: Border.all(
-                                                    color: selected
-                                                        ? const Color(
-                                                            0xFF6A5A52,
-                                                          )
-                                                        : const Color(
-                                                            0xFFE0D5D0,
-                                                          ),
+                                                    color: Cartoon.ink,
+                                                    width: selected ? 2.6 : 1.8,
                                                   ),
                                                 ),
                                                 child: Column(
                                                   children: [
                                                     Text(
-                                                      entry[1],
+                                                      '$emoji ${entry[1]}',
                                                       maxLines: 1,
                                                       overflow:
                                                           TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.w800,
+                                                      style: Cartoon.userText(
+                                                        size: 13,
+                                                        weight: FontWeight.w800,
                                                         color: selected
                                                             ? Colors.white
-                                                            : const Color(
-                                                                0xFF8A7A72,
-                                                              ),
+                                                            : Color.lerp(
+                                                                strong,
+                                                                Cartoon.ink,
+                                                                0.35,
+                                                              )!,
                                                       ),
                                                     ),
                                                     const SizedBox(height: 2),
@@ -1285,16 +1300,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                       maxLines: 1,
                                                       overflow:
                                                           TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        fontSize: 9,
+                                                      style: Cartoon.userText(
+                                                        size: 10,
+                                                        weight: FontWeight.w600,
                                                         color: selected
                                                             ? Colors.white
                                                                   .withValues(
-                                                                    alpha: 0.85,
+                                                                    alpha: 0.9,
                                                                   )
-                                                            : const Color(
-                                                                0xFFAAA09C,
-                                                              ),
+                                                            : Cartoon.ink
+                                                                  .withValues(
+                                                                    alpha: 0.6,
+                                                                  ),
                                                       ),
                                                     ),
                                                   ],

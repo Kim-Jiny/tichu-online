@@ -1510,21 +1510,12 @@ class _GameScreenState extends State<GameScreen> {
                         // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
                         // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
                         border: (p?.hasLargeTichu ?? false)
-                            ? Border.all(
-                                color: const Color(0xFFD24B4B),
-                                width: 2.0,
-                              )
+                            ? Border.all(color: Cartoon.red, width: 3.0)
                             : (p?.hasSmallTichu ?? false)
-                            ? Border.all(
-                                color: const Color(0xFF4A90D9),
-                                width: 2.0,
-                              )
+                            ? Border.all(color: Cartoon.blue, width: 3.0)
                             : isTurn
-                            ? Border.all(
-                                color: const Color(0xFFE6C86A),
-                                width: 1.5,
-                              )
-                            : null,
+                            ? Border.all(color: Cartoon.orange, width: 3.0)
+                            : Border.all(color: Cartoon.ink, width: 2.0),
                         fallback: (p?.isBot ?? false)
                             ? BotAvatar(size: avatarDiameter, name: p!.name)
                             : DefaultAvatar(size: avatarDiameter),
@@ -1553,12 +1544,10 @@ class _GameScreenState extends State<GameScreen> {
                         vertical: 3 * _s,
                       ),
                       decoration: BoxDecoration(
-                        color: isTurn
-                            ? const Color(0xFFFFF2B3)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
+                        color: isTurn ? Cartoon.yellow : Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
                         border: isTurn
-                            ? Border.all(color: const Color(0xFFE6C86A))
+                            ? Border.all(color: Cartoon.ink, width: 1.6)
                             : null,
                       ),
                       child: Row(
@@ -1571,25 +1560,14 @@ class _GameScreenState extends State<GameScreen> {
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: isMyTeam
-                                  ? const Color(0xFFE3F0FF)
-                                  : const Color(0xFFFFE8EC),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isMyTeam
-                                    ? const Color(0xFF4A90D9)
-                                    : const Color(0xFFD24B4B),
-                                width: 0.5,
-                              ),
+                              color: isMyTeam ? Cartoon.blue : Cartoon.red,
+                              borderRadius: BorderRadius.circular(99),
                             ),
                             child: Text(
                               teamLabel,
-                              style: TextStyle(
-                                fontSize: 8 * _ts,
-                                fontWeight: FontWeight.bold,
-                                color: isMyTeam
-                                    ? const Color(0xFF4A90D9)
-                                    : const Color(0xFFD24B4B),
+                              style: Cartoon.text(
+                                size: 10 * _ts,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -1608,12 +1586,11 @@ class _GameScreenState extends State<GameScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               softWrap: false,
-                              style: TextStyle(
+                              style: Cartoon.userText(
+                                size: nameFontSize + 1,
                                 color: (p?.connected ?? true)
-                                    ? const Color(0xFF5A4038)
+                                    ? Cartoon.ink
                                     : Colors.grey,
-                                fontSize: nameFontSize,
-                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
@@ -1800,32 +1777,20 @@ class _GameScreenState extends State<GameScreen> {
     final turnLabel = state.isMyTurn
         ? l10n.gameMyTurnShort
         : l10n.gamePlayerWaiting(currentPlayerName);
-    final timerFontSize = 13 * _s;
-    final timerIconSize = 14 * _s;
-    const timerPadding = EdgeInsets.symmetric(horizontal: 10, vertical: 5);
+    final urgent = _remainingSeconds <= 10;
     return Container(
-      padding: timerPadding,
-      decoration: BoxDecoration(
-        color: _remainingSeconds <= 10
-            ? const Color(0xFFFFE4E4)
-            : Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _remainingSeconds <= 10
-              ? const Color(0xFFFF6B6B)
-              : const Color(0xFFCCCCCC),
-          width: _remainingSeconds <= 10 ? 2 : 1,
-        ),
+      padding: EdgeInsets.symmetric(horizontal: 10 * _s, vertical: 4 * _s),
+      decoration: gamePillDecoration(
+        radius: 14,
+        color: urgent ? const Color(0xFFFFD9D6) : Cartoon.cream,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.schedule,
-            size: timerIconSize,
-            color: _remainingSeconds <= 10
-                ? const Color(0xFFCC4444)
-                : const Color(0xFF6A5A52),
+            Icons.schedule_rounded,
+            size: 16 * _s,
+            color: urgent ? Cartoon.red : Cartoon.ink,
           ),
           SizedBox(width: 5 * _s),
           Flexible(
@@ -1834,12 +1799,9 @@ class _GameScreenState extends State<GameScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               softWrap: false,
-              style: TextStyle(
-                fontSize: timerFontSize,
-                fontWeight: FontWeight.bold,
-                color: _remainingSeconds <= 10
-                    ? const Color(0xFFCC4444)
-                    : const Color(0xFF5A4038),
+              style: Cartoon.userText(
+                size: 14 * _s,
+                color: urgent ? Cartoon.red : Cartoon.ink,
               ),
             ),
           ),
@@ -2016,9 +1978,9 @@ class _GameScreenState extends State<GameScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F5),
-        borderRadius: BorderRadius.circular(12 * _s),
-        border: Border.all(color: const Color(0xFFE6DCE8)),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(16 * _s),
+        border: Border.all(color: Cartoon.ink, width: 1.8),
       ),
       child: Column(
         children: [
@@ -2034,9 +1996,9 @@ class _GameScreenState extends State<GameScreen> {
                         : playerName,
                   )
                 : L10n.of(context).gameDogPlayed,
-            style: TextStyle(
-              fontSize: 11 * _ts,
-              color: const Color(0xFF8A7A72),
+            style: Cartoon.userText(
+              size: 12.5 * _ts,
+              color: Cartoon.ink.withValues(alpha: 0.7),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -2477,12 +2439,12 @@ class _GameScreenState extends State<GameScreen> {
             reversed[i],
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: Cartoon.userText(
+              size: i == 0 ? 14 : 12,
               color: reversedMine[i]
                   ? const Color(0xFF2F6FC4)
                   : const Color(0xFFB23A3A),
-              fontSize: i == 0 ? 13 : 11,
-              fontWeight: i == 0 ? FontWeight.w700 : FontWeight.w600,
+              weight: i == 0 ? FontWeight.w800 : FontWeight.w700,
             ),
           ),
         ],
@@ -3443,17 +3405,17 @@ class _GameScreenState extends State<GameScreen> {
     if (player.hasLargeTichu) {
       return _tichuBadge(
         label: L10n.of(context).gameBadgeLarge,
-        bg: const Color(0xFFFF4444),
+        bg: Cartoon.red,
         fg: Colors.white,
-        border: const Color(0xFFCC0000),
+        border: Cartoon.ink,
       );
     }
     if (player.hasSmallTichu) {
       return _tichuBadge(
         label: L10n.of(context).gameBadgeSmall,
-        bg: const Color(0xFF2979FF),
+        bg: Cartoon.blue,
         fg: Colors.white,
-        border: const Color(0xFF1565C0),
+        border: Cartoon.ink,
       );
     }
     return null;
@@ -3469,18 +3431,10 @@ class _GameScreenState extends State<GameScreen> {
     // 꼴찌(4등)는 3명이 털면 저절로 정해져서 알릴 거리가 아니다.
     if (rank >= 4) return const SizedBox.shrink();
     final (Color bg, Color border, Color fg) = switch (rank) {
-      1 => (
-        const Color(0xFFFFD54F),
-        const Color(0xFFF9A825),
-        const Color(0xFF5A4038),
-      ),
-      2 => (
-        const Color(0xFFE0E0E0),
-        const Color(0xFF9E9E9E),
-        const Color(0xFF424242),
-      ),
-      3 => (const Color(0xFFD7A57A), const Color(0xFF8D6E63), Colors.white),
-      _ => (const Color(0xFFBDBDBD), const Color(0xFF757575), Colors.white),
+      1 => (Cartoon.yellow, Cartoon.ink, Cartoon.ink),
+      2 => (const Color(0xFFE3E3E3), Cartoon.ink, Cartoon.ink),
+      3 => (const Color(0xFFE0A877), Cartoon.ink, Cartoon.ink),
+      _ => (const Color(0xFFBDBDBD), Cartoon.ink, Cartoon.ink),
     };
     // 처음 나타날 때만 통통 튀어나온다. 같은 값으로 다시 그려질 땐 가만히 있다.
     return TweenAnimationBuilder<double>(
@@ -3510,26 +3464,15 @@ class _GameScreenState extends State<GameScreen> {
     required Color border,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: border, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: bg.withValues(alpha: 0.4),
-            blurRadius: 6 * _s,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 13 * _ts,
-          fontWeight: FontWeight.bold,
-          color: fg,
-        ),
+        style: Cartoon.text(size: 14 * _ts, color: fg),
       ),
     );
   }

@@ -2014,7 +2014,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Column(
       children: [
         Expanded(child: body),
-        if (!isLandscape) _buildLobbyBottomNav(game),
         if (_bannerAd != null && _bannerAdLoaded)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -2029,6 +2028,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
           ),
+        // 탭은 맨 아래, 광고는 그 위.
+        if (!isLandscape) _buildLobbyBottomNav(game),
       ],
     );
   }
@@ -2649,8 +2650,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildEmptyRoomList() =>
       _buildEmptyState(L10n.of(context).lobbyEmptyRoomList);
 
-  /// 방이 없을 때: 졸고 있는 마스코트 + 바로 방을 만들 수 있는 버튼.
-  /// 글자만 있던 빈 화면은 "그래서 뭘 해야 하지?" 에 답이 없었다.
+  /// 방이 없을 때: 졸고 있는 마스코트. 방 만들기 버튼은 목록 아래에 이미 있으니
+  /// 여기엔 따로 두지 않는다 (같은 버튼이 두 개 보이던 문제).
   Widget _buildEmptyState(String message) {
     return _fillScrollable(
       Padding(
@@ -2675,19 +2676,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
               message,
               textAlign: TextAlign.center,
               style: Cartoon.text(size: 17, height: 1.4),
-            ),
-            const SizedBox(height: 18),
-            CartoonPulse(
-              child: CartoonButton(
-                expand: false,
-                height: 50,
-                color: Cartoon.green,
-                onPressed: _showCreateRoomDialog,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 26),
-                  child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
-                ),
-              ),
             ),
           ],
         ),

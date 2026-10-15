@@ -1722,7 +1722,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
       final reason = isBlocked
           ? l10n.llDescHandmaid
           : (effect.type == 'handmaid' ? l10n.llDescHandmaid : null);
-      final reasonText = reason?.replaceFirst(RegExp(r'^[^:：]*[:：]\s*'), '');
+      final reasonText = reason?.replaceFirst(
+        RegExp(r'^\d+\s*·\s*[^:：]*[:：]\s*'),
+        '',
+      );
       content = Container(
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.all(16),
@@ -2800,6 +2803,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     final color =
                         LoveLetterCard.cardColors[type] ?? Colors.grey;
                     final name = _getCardTypeName(type, l10n);
+                    // 설명 앞의 "4 · 시녀:" 라벨은 제목에 이미 있어 뺀다.
+                    final body = desc.replaceFirst(
+                      RegExp(r'^\d+\s*·\s*[^:：]*[:：]\s*'),
+                      '',
+                    );
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -2807,30 +2815,65 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         children: [
                           LoveLetterCard(
                             cardId: 'll_$type',
-                            width: 36,
-                            height: 52,
+                            width: 46,
+                            height: 66,
+                            borderRadius: 9,
                             compact: true,
                             isInteractive: false,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '$name ($value) ×$count',
-                                  style: Cartoon.text(
-                                    size: 15,
-                                    color: Color.lerp(
-                                      color,
-                                      Cartoon.ink,
-                                      0.25,
-                                    )!,
-                                  ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Cartoon.ink,
+                                          width: 1.6,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '$value',
+                                        style: Cartoon.text(
+                                          size: 13,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        name,
+                                        style: Cartoon.text(size: 17),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 1,
+                                      ),
+                                      decoration: gamePillDecoration(
+                                        radius: 99,
+                                      ),
+                                      child: Text(
+                                        '×$count',
+                                        style: Cartoon.text(size: 13),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 4),
                                 Text(
-                                  desc,
+                                  body,
                                   style: Cartoon.userText(
                                     size: 13,
                                     color: Cartoon.ink.withValues(alpha: 0.8),

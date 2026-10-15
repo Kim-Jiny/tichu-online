@@ -1317,70 +1317,80 @@ class _FriendsScreenState extends State<FriendsScreen>
                   ],
                 ),
               ),
-              // Messages
+              // Messages: 빈 곳이나 말풍선 바깥을 누르면 키보드가 내려간다.
               Expanded(
-                child: Consumer<GameService>(
-                  builder: (context, game, _) {
-                    final messages = game.dmMessages[_dmChatPartner] ?? [];
-                    if (messages.isEmpty) {
-                      return Center(
-                        child: _emptyState(L10n.of(context).friendsDmEmpty),
-                      );
-                    }
-                    return ListView.builder(
-                      controller: _dmScrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: messages.length + (_dmLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (_dmLoadingMore && index == 0) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(8),
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  color: Cartoon.orange,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                  child: Consumer<GameService>(
+                    builder: (context, game, _) {
+                      final messages = game.dmMessages[_dmChatPartner] ?? [];
+                      if (messages.isEmpty) {
+                        return Center(
+                          child: _emptyState(L10n.of(context).friendsDmEmpty),
+                        );
+                      }
+                      return ListView.builder(
+                        controller: _dmScrollController,
+                        // 목록을 끌어내려도 키보드가 내려간다.
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: messages.length + (_dmLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (_dmLoadingMore && index == 0) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(8),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    color: Cartoon.orange,
+                                  ),
                                 ),
                               ),
-                            ),
+                            );
+                          }
+                          final msgIndex = _dmLoadingMore ? index - 1 : index;
+                          final msg = messages[msgIndex];
+                          final isMine = msg['sender'] == game.playerName;
+                          // 상대 말풍선은 연속된 말의 첫 줄(또는 날짜가 바뀐 첫 줄)에만
+                          // 프로필 사진을 붙인다.
+                          final prev = msgIndex > 0
+                              ? messages[msgIndex - 1]
+                              : null;
+                          final firstOfRun =
+                              prev == null ||
+                              prev['sender'] != msg['sender'] ||
+                              needsDayDivider(messages, msgIndex, _dmSentAt);
+                          final bubble = _buildMessageBubble(
+                            msg,
+                            isMine,
+                            avatarUrl: _partnerPhoto(game),
+                            showAvatar: !isMine && firstOfRun,
                           );
-                        }
-                        final msgIndex = _dmLoadingMore ? index - 1 : index;
-                        final msg = messages[msgIndex];
-                        final isMine = msg['sender'] == game.playerName;
-                        // 상대 말풍선은 연속된 말의 첫 줄(또는 날짜가 바뀐 첫 줄)에만
-                        // 프로필 사진을 붙인다.
-                        final prev = msgIndex > 0
-                            ? messages[msgIndex - 1]
-                            : null;
-                        final firstOfRun =
-                            prev == null ||
-                            prev['sender'] != msg['sender'] ||
-                            needsDayDivider(messages, msgIndex, _dmSentAt);
-                        final bubble = _buildMessageBubble(
-                          msg,
-                          isMine,
-                          avatarUrl: _partnerPhoto(game),
-                          showAvatar: !isMine && firstOfRun,
-                        );
-                        // Bubbles carry a clock time and nothing else, so a
-                        // conversation spread over weeks read as one long
-                        // afternoon. The divider is what says which day you
-                        // are looking at.
-                        if (!needsDayDivider(messages, msgIndex, _dmSentAt)) {
-                          return bubble;
-                        }
-                        return Column(
-                          children: [_buildDayDivider(_dmSentAt(msg)!), bubble],
-                        );
-                      },
-                    );
-                  },
+                          // Bubbles carry a clock time and nothing else, so a
+                          // conversation spread over weeks read as one long
+                          // afternoon. The divider is what says which day you
+                          // are looking at.
+                          if (!needsDayDivider(messages, msgIndex, _dmSentAt)) {
+                            return bubble;
+                          }
+                          return Column(
+                            children: [
+                              _buildDayDivider(_dmSentAt(msg)!),
+                              bubble,
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
               // Input

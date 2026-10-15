@@ -3215,18 +3215,16 @@ class _GameScreenState extends State<GameScreen> {
               height: badgeSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFF5A4038),
+                color: Cartoon.ink,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1),
+                border: Border.all(color: Cartoon.cream, width: 1.4),
               ),
               child: Text(
                 '$count',
-                style: TextStyle(
-                  fontSize: 11 * _ts * scale,
-                  fontWeight: FontWeight.w800,
+                style: Cartoon.text(
+                  size: 12 * _ts * scale,
                   color: Colors.white,
-                  height: 1.0,
-                ),
+                ).copyWith(height: 1.0),
               ),
             ),
           ),
@@ -3290,10 +3288,7 @@ class _GameScreenState extends State<GameScreen> {
                 children: [
                   Text(
                     L10n.of(dialogCtx).gameReceivedCards,
-                    style: TextStyle(
-                      fontSize: 18 * _ts,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Cartoon.text(size: 20 * _ts),
                   ),
                   SizedBox(height: 12 * _s),
                   _buildExchangeSummaryRowLine([
@@ -3304,9 +3299,9 @@ class _GameScreenState extends State<GameScreen> {
                   SizedBox(height: 12 * _s),
                   Text(
                     L10n.of(dialogCtx).gameTapToClose,
-                    style: TextStyle(
-                      fontSize: 12 * _ts,
-                      color: const Color(0xFF9A8E8A),
+                    style: Cartoon.text(
+                      size: 13 * _ts,
+                      color: Cartoon.ink.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -3338,9 +3333,9 @@ class _GameScreenState extends State<GameScreen> {
                   item.name.length > 4
                       ? '${item.name.substring(0, 4)}…'
                       : item.name,
-                  style: TextStyle(
-                    fontSize: 12 * _ts,
-                    color: const Color(0xFF8A7A72),
+                  style: Cartoon.userText(
+                    size: 13 * _ts,
+                    color: Cartoon.ink.withValues(alpha: 0.65),
                   ),
                 ),
                 SizedBox(height: 4 * _s),

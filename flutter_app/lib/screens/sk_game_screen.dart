@@ -375,33 +375,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildRecoveryLoading({required String title}) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 320),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Colors.white),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return Center(child: CartoonLoadingCard(title: title));
   }
 
   /// Avatar for a waiting-room seat: photo, bot art, or the default
@@ -1123,8 +1097,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
     if (entries.isEmpty) return;
     showModalBottomSheet(
       context: context,
+      backgroundColor: Cartoon.paper,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        side: BorderSide(color: Cartoon.ink, width: 2.5),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -1136,18 +1112,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Cartoon.ink.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 l10n.skGameIncludedExpansions,
-                style: const TextStyle(
-                  color: Color(0xFF5A4038),
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Cartoon.text(size: 19),
               ),
               const SizedBox(height: 14),
               Flexible(
@@ -1160,9 +1132,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFBF6F2),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFEDE3DD)),
+                        color: Cartoon.cream,
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1174,21 +1145,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  e.name,
-                                  style: const TextStyle(
-                                    color: Color(0xFF3E312A),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
+                                Text(e.name, style: Cartoon.text(size: 17)),
                                 if (e.desc.isNotEmpty) ...[
                                   const SizedBox(height: 6),
                                   Text(
                                     e.desc,
-                                    style: const TextStyle(
-                                      color: Color(0xFF6A5A52),
-                                      fontSize: 12,
+                                    style: Cartoon.userText(
+                                      size: 13,
+                                      color: Cartoon.ink.withValues(alpha: 0.8),
+                                      weight: FontWeight.w600,
                                       height: 1.45,
                                     ),
                                   ),
@@ -1750,10 +1715,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             height: timeoutHeight,
                             child: Text(
                               '⏱ ${p.timeoutCount}/3',
-                              style: TextStyle(
-                                color: const Color(0xFFE65100),
-                                fontSize: compact ? 8.5 : 10,
-                                fontWeight: FontWeight.w800,
+                              style: Cartoon.text(
+                                size: compact ? 9.5 : 11,
+                                color: Cartoon.orangeDeep,
                               ),
                             ),
                           ),
@@ -1832,18 +1796,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   child: Icon(
                                     Icons.wifi_off,
                                     size: offlineIconSize,
-                                    color: const Color(0xFFE53935),
+                                    color: Cartoon.red,
                                   ),
                                 ),
                               Flexible(
                                 child: Text(
                                   p.name,
-                                  style: TextStyle(
+                                  style: Cartoon.userText(
+                                    size: nameFontSize,
                                     color: p.connected
-                                        ? const Color(0xFF5A4038)
-                                        : const Color(0xFFE53935),
-                                    fontSize: nameFontSize,
-                                    fontWeight: FontWeight.w600,
+                                        ? Cartoon.ink
+                                        : Cartoon.red,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1863,11 +1826,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           children: [
                             Text(
                               '${p.totalScore}',
-                              style: TextStyle(
-                                color: const Color(0xFF5A4038),
-                                fontSize: scoreFontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Cartoon.text(size: scoreFontSize),
                             ),
                             SizedBox(
                               height: bidHeight,

@@ -32,6 +32,7 @@ import '../widgets/seat_chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
 import '../theme/cartoon.dart';
+import '../widgets/gold_history_dialog.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -2072,24 +2073,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
-              decoration: BoxDecoration(
-                color: Cartoon.cream,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/icons/goldIcon.webp',
-                    width: 26,
-                    height: 26,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(_withCommas(game.gold), style: Cartoon.text(size: 18)),
-                ],
+            CartoonPressable(
+              scale: 0.93,
+              onTap: () => showGoldHistoryDialog(context, game),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/icons/goldIcon.webp',
+                      width: 26,
+                      height: 26,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(_withCommas(game.gold), style: Cartoon.text(size: 18)),
+                  ],
+                ),
               ),
             ),
           ],

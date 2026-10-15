@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show pendingCampaignTaps, pendingPushOpens;
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 
 /// Whether to raise the first-time consent popup here.
 ///
@@ -163,6 +164,63 @@ class _MarketingPushGateState extends State<MarketingPushGate> {
   }
 }
 
+/// 마케팅 팝업 공통 틀: 카툰 패널 모양의 팝업.
+AlertDialog _marketingShell({
+  Widget? title,
+  required Widget content,
+  required List<Widget> actions,
+}) {
+  return AlertDialog(
+    backgroundColor: Cartoon.paper,
+    surfaceTintColor: Colors.transparent,
+    scrollable: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(26),
+      side: const BorderSide(color: Cartoon.ink, width: 2.5),
+    ),
+    titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+    contentPadding: const EdgeInsets.fromLTRB(22, 14, 22, 8),
+    actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+    title: title,
+    content: content,
+    actions: actions,
+  );
+}
+
+Widget _marketingButton(String label, VoidCallback onTap, {Color? color}) {
+  return CartoonButton(
+    expand: false,
+    height: 46,
+    color: color ?? Cartoon.orange,
+    onPressed: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: CartoonButton.label(label, size: 18),
+    ),
+  );
+}
+
+Widget _marketingGhost(String label, VoidCallback onTap) {
+  return TextButton(
+    onPressed: onTap,
+    style: TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      foregroundColor: Cartoon.ink.withValues(alpha: 0.6),
+    ),
+    child: Text(label, style: Cartoon.text(size: 17)),
+  );
+}
+
+Widget _marketingTitle(Widget leading, String text) {
+  return Row(
+    children: [
+      leading,
+      const SizedBox(width: 12),
+      Expanded(child: Text(text, style: Cartoon.text(size: 22, height: 1.15))),
+    ],
+  );
+}
+
 /// Asks for marketing consent, once.
 ///
 /// Opt-in, with declining as the plainly available answer rather than a
@@ -174,38 +232,23 @@ class _ConsentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      backgroundColor: const Color(0xFFFDFBFA),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 14, 24, 8),
-      title: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF1D6),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Icon(
-              Icons.campaign_rounded,
-              size: 20,
-              color: Color(0xFFE08A1E),
-            ),
+    return _marketingShell(
+      title: _marketingTitle(
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Cartoon.yellow,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Cartoon.ink, width: 2),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              l10n.marketingConsentTitle,
-              style: const TextStyle(
-                fontSize: 17.5,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF3E312A),
-              ),
-            ),
+          child: const Icon(
+            Icons.campaign_rounded,
+            size: 28,
+            color: Cartoon.ink,
           ),
-        ],
+        ),
+        l10n.marketingConsentTitle,
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -213,58 +256,36 @@ class _ConsentDialog extends StatelessWidget {
         children: [
           Text(
             l10n.marketingConsentBody,
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.55,
-              color: Color(0xFF5A4038),
-            ),
+            style: Cartoon.text(size: 16.5, height: 1.5),
           ),
           const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F1EE),
-              borderRadius: BorderRadius.circular(12),
+              color: Cartoon.cream,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
               l10n.marketingConsentNote,
-              style: const TextStyle(
-                fontSize: 12.5,
-                height: 1.5,
-                color: Color(0xFF8A7A72),
+              style: Cartoon.text(
+                size: 13.5,
+                height: 1.45,
+                color: Cartoon.ink.withValues(alpha: 0.65),
               ),
             ),
           ),
         ],
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            foregroundColor: const Color(0xFF8A7A72),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          child: Text(l10n.marketingConsentDecline),
+        _marketingGhost(
+          l10n.marketingConsentDecline,
+          () => Navigator.pop(context, false),
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFE08A1E),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          child: Text(l10n.marketingConsentAccept),
+        _marketingButton(
+          l10n.marketingConsentAccept,
+          () => Navigator.pop(context, true),
+          color: Cartoon.green,
         ),
       ],
     );
@@ -308,18 +329,23 @@ class _ConfirmConsentDialog extends StatelessWidget {
         ? '-'
         : '${d.year}. ${d.month.toString().padLeft(2, '0')}. '
               '${d.day.toString().padLeft(2, '0')}.';
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      backgroundColor: const Color(0xFFFDFBFA),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 14, 24, 8),
-      title: Text(
-        l10n.marketingConfirmTitle,
-        style: const TextStyle(
-          fontSize: 17.5,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF3E312A),
+    return _marketingShell(
+      title: _marketingTitle(
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Cartoon.blue.withValues(alpha: 1),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Cartoon.ink, width: 2),
+          ),
+          child: const Icon(
+            Icons.notifications_active_rounded,
+            size: 26,
+            color: Colors.white,
+          ),
         ),
+        l10n.marketingConfirmTitle,
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -327,19 +353,15 @@ class _ConfirmConsentDialog extends StatelessWidget {
         children: [
           Text(
             l10n.marketingConfirmBody,
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.55,
-              color: Color(0xFF5A4038),
-            ),
+            style: Cartoon.text(size: 16.5, height: 1.5),
           ),
           const SizedBox(height: 14),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F1EE),
-              borderRadius: BorderRadius.circular(12),
+              color: Cartoon.cream,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,34 +382,15 @@ class _ConfirmConsentDialog extends StatelessWidget {
           ),
         ],
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            foregroundColor: const Color(0xFF8A7A72),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          child: Text(l10n.marketingConfirmStop),
+        _marketingGhost(
+          l10n.marketingConfirmStop,
+          () => Navigator.pop(context, false),
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFE08A1E),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          child: Text(l10n.marketingConfirmKeep),
+        _marketingButton(
+          l10n.marketingConfirmKeep,
+          () => Navigator.pop(context, true),
+          color: Cartoon.green,
         ),
       ],
     );
@@ -397,22 +400,16 @@ class _ConfirmConsentDialog extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       SizedBox(
-        width: 74,
+        width: 80,
         child: Text(
           label,
-          style: const TextStyle(fontSize: 12.5, color: Color(0xFF9A8E8A)),
-        ),
-      ),
-      Expanded(
-        child: Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF5A4038),
+          style: Cartoon.text(
+            size: 14,
+            color: Cartoon.ink.withValues(alpha: 0.55),
           ),
         ),
       ),
+      Expanded(child: Text(value, style: Cartoon.text(size: 14.5))),
     ],
   );
 }
@@ -429,67 +426,44 @@ class PushRewardDialog extends StatelessWidget {
     final l10n = L10n.of(context);
     final gold = reward.gold ?? 0;
     final isGold = reward.rewardType == 'gold' && gold > 0;
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: const Color(0xFFFDFBFA),
-      contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
+    return _marketingShell(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const SizedBox(height: 6),
           Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF4DC),
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: Cartoon.yellow,
               shape: BoxShape.circle,
+              border: Border.all(color: Cartoon.ink, width: 2.5),
             ),
             child: Icon(
               isGold ? Icons.savings_rounded : Icons.card_giftcard_rounded,
-              size: 34,
-              color: const Color(0xFFE0A21E),
+              size: 40,
+              color: Cartoon.ink,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             l10n.pushRewardTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF3E312A),
-            ),
+            style: Cartoon.text(size: 24),
           ),
           const SizedBox(height: 8),
           Text(
             isGold ? l10n.pushRewardGold(gold) : l10n.pushRewardItem,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 15,
-              height: 1.5,
-              color: Color(0xFF5A4038),
-            ),
+            style: Cartoon.text(size: 17, height: 1.45),
           ),
         ],
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
       actions: [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () => Navigator.pop(context),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE08A1E),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            child: Text(l10n.commonConfirm),
-          ),
+        CartoonButton(
+          height: 50,
+          onPressed: () => Navigator.pop(context),
+          child: CartoonButton.label(l10n.commonConfirm, size: 19),
         ),
       ],
     );

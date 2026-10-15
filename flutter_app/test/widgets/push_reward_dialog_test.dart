@@ -1,3 +1,4 @@
+import 'package:tichu_online/theme/cartoon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tichu_online/l10n/app_localizations.dart';
@@ -93,7 +94,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('50'), findsOneWidget);
 
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.byType(CartoonButton));
     await tester.pumpAndSettle();
     expect(find.textContaining('50'), findsNothing);
   });

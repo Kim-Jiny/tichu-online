@@ -2478,14 +2478,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Row(children: _buildGameFilterChips()),
                 ),
               ),
-              IconButton(
-                onPressed: () {
-                  game.requestRoomList();
-                },
-                icon: const Icon(Icons.refresh),
-                color: const Color(0xFF8A7A72),
-                visualDensity: VisualDensity.compact,
-              ),
+              _RefreshChip(onTap: game.requestRoomList),
             ],
           ),
           const SizedBox(height: 8),
@@ -5505,6 +5498,61 @@ class _LockChipState extends State<_LockChip>
           ],
         ),
         child: Image.asset('assets/icons/private.webp', fit: BoxFit.contain),
+      ),
+    );
+  }
+}
+
+/// 필터 칩과 같은 결의 새로고침 버튼. 누르면 한 바퀴 돈다.
+class _RefreshChip extends StatefulWidget {
+  const _RefreshChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_RefreshChip> createState() => _RefreshChipState();
+}
+
+class _RefreshChipState extends State<_RefreshChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CartoonPressable(
+      onTap: () {
+        _c.forward(from: 0);
+        widget.onTap();
+      },
+      child: Container(
+        width: 38,
+        height: 34,
+        margin: const EdgeInsets.only(bottom: 3, left: 4),
+        decoration: BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
+        ),
+        child: RotationTransition(
+          turns: CurvedAnimation(parent: _c, curve: Curves.easeInOutCubic),
+          child: const Icon(
+            Icons.refresh_rounded,
+            color: Cartoon.ink,
+            size: 22,
+          ),
+        ),
       ),
     );
   }

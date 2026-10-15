@@ -2754,7 +2754,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // "게임 중" chip. The state belongs to the room, not to one corner of
       // it, and saying it with the surface costs no width — which is what the
       // row had run out of.
-      color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
+      color: isInProgress
+          ? const Color(0xFFE9E4DF)
+          : (room.isPrivate ? const Color(0xFFFFF0C4) : Cartoon.paper),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2779,7 +2781,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
           decoration: BoxDecoration(
             // 색이 반드시 있어야 한다: 번지지 않는 단색 그림자는 투명한 상자
             // 안쪽까지 비쳐서, 색 없는 상자가 통째로 먹색이 된다.
-            color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
+            color: isInProgress
+                ? const Color(0xFFE9E4DF)
+                : (room.isPrivate ? const Color(0xFFFFF0C4) : Cartoon.paper),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Cartoon.ink, width: 2.5),
             boxShadow: const [
@@ -2841,16 +2845,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     // emoji rendered next to it would read as a
                                     // different badge from a different set.
                                     if (room.isPrivate) ...[
-                                      Image.asset(
-                                        'assets/icons/private.webp',
-                                        // Taller than wide (113x144), so it
-                                        // ran past the cap height of the room
-                                        // name beside it at the old 16.
-                                        width: 12,
-                                        height: 14,
-                                        fit: BoxFit.contain,
-                                      ),
-                                      const SizedBox(width: 4),
+                                      const _LockChip(size: 24),
+                                      const SizedBox(width: 6),
                                     ],
                                     if (room.isRanked) ...[
                                       Image.asset(
@@ -3127,28 +3123,54 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }) {
     final controller = TextEditingController();
     final l10n = L10n.of(context);
+    void submit(BuildContext ctx) {
+      final password = controller.text.trim();
+      if (password.isEmpty) return;
+      Navigator.pop(ctx);
+      onSubmit(password);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title),
+        backgroundColor: Cartoon.paper,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: Cartoon.ink, width: 3),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        title: Row(
+          children: [
+            const _LockChip(size: 36),
+            const SizedBox(width: 10),
+            Expanded(child: Text(title, style: Cartoon.text(size: 20))),
+          ],
+        ),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(hintText: l10n.lobbyPassword),
+          autofocus: true,
           obscureText: true,
+          style: Cartoon.userText(size: 18),
+          onSubmitted: (_) => submit(ctx),
+          decoration: Cartoon.inputDecoration(
+            hint: l10n.lobbyPassword,
+            icon: Icons.vpn_key_rounded,
+          ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonCancel),
+            child: Text(l10n.commonCancel, style: Cartoon.text(size: 17)),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final password = controller.text.trim();
-              if (password.isEmpty) return;
-              Navigator.pop(ctx);
-              onSubmit(password);
-            },
-            child: Text(buttonText),
+          CartoonButton(
+            expand: false,
+            height: 46,
+            onPressed: () => submit(ctx),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: CartoonButton.label(buttonText, size: 18),
+            ),
           ),
         ],
       ),
@@ -5429,6 +5451,60 @@ class _SeatDotsState extends State<_SeatDots>
                 ),
               ]
             : null,
+      ),
+    );
+  }
+}
+
+/// 비밀방 자물쇠: 노란 알약 안의 자물쇠가 가끔 달각거린다.
+class _LockChip extends StatefulWidget {
+  const _LockChip({required this.size});
+
+  final double size;
+
+  @override
+  State<_LockChip> createState() => _LockChipState();
+}
+
+class _LockChipState extends State<_LockChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.size;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        // 앞 20% 에서만 좌우로 달각, 나머지는 가만히.
+        final t = (_c.value / 0.2).clamp(0.0, 1.0);
+        final angle = _c.value < 0.2
+            ? math.sin(t * math.pi * 4) * 0.28 * (1 - t)
+            : 0.0;
+        return Transform.rotate(angle: angle, child: child);
+      },
+      child: Container(
+        width: s,
+        height: s,
+        padding: EdgeInsets.all(s * 0.2),
+        decoration: BoxDecoration(
+          color: Cartoon.yellow,
+          borderRadius: BorderRadius.circular(s * 0.34),
+          border: Border.all(color: Cartoon.ink, width: s >= 30 ? 2.5 : 2),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Image.asset('assets/icons/private.webp', fit: BoxFit.contain),
       ),
     );
   }

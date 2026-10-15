@@ -2133,16 +2133,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: const Color(0xFF5E35B1),
+              color: const Color(0xFF7E57C2),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+              border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
             child: const Icon(Icons.check, size: 13, color: Colors.white),
           ),
@@ -2874,6 +2867,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 color: Cartoon.ink.withValues(alpha: 0.7),
               ),
             ),
+          // 선 무늬 — 따라 내야 하는 무늬를 가운데에 늘 보여 준다.
+          if (!ended && _skLeadSuit(state.currentTrick) != null) ...[
+            const SizedBox(height: 6),
+            Builder(
+              builder: (_) {
+                final lead = _skLeadSuit(state.currentTrick)!;
+                return Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: gamePillDecoration(radius: 99),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CustomPaint(
+                      painter: SkSuitPainter(
+                        suit: lead,
+                        color: skSuitColors[lead] ?? Cartoon.ink,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
           if (whaleNullifyLabel != null && ended) ...[
             const SizedBox(height: 6),
             _skInfoChip(whaleNullifyLabel, const Color(0xFFD3ECFF)),
@@ -3203,14 +3219,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   }
                 },
                 color: Cartoon.green,
-                height: isLandscape ? 44 : 50,
-                size: isLandscape ? 18 : 20,
+                height: isLandscape ? 40 : 44,
+                size: isLandscape ? 17 : 19,
                 expand: true,
               ),
             )
           else if (state.isMyTurn)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+            // 버튼과 같은 높이로 맞춰, 카드를 고르는 순간 보드가 밀리지 않게.
+            Container(
+              height: isLandscape ? 40 : 44,
+              alignment: Alignment.center,
+              margin: const EdgeInsets.only(bottom: 6),
               child: Text(
                 L10n.of(context).skGameSelectCard,
                 style: Cartoon.text(size: isLandscape ? 16 : 18),
@@ -3371,28 +3390,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
             child: Opacity(
               opacity: !isMyTurn || isLegal ? 1.0 : 0.4,
-              child: Container(
-                decoration: isSelected
-                    ? BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(
-                              0xFF355D89,
-                            ).withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      )
-                    : null,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: padding),
-                  child: _buildCard(
-                    cardId,
-                    size: cardHeight,
-                    highlighted: isSelected,
-                  ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: padding),
+                child: _buildCard(
+                  cardId,
+                  size: cardHeight,
+                  highlighted: isSelected,
                 ),
               ),
             ),
@@ -4102,15 +4105,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// server's SkullKingGame.getLegalCards: if no numbered card has been
   /// led yet, anything is legal; otherwise must follow the lead suit if
   /// possible, and special (non-number) cards are always legal.
-  Set<String> _previewSkLegalCards(SKGameStateData state) {
-    final hand = state.myCards;
-    final trick = state.currentTrick;
-    if (hand.isEmpty) return const <String>{};
-    if (trick.isEmpty) return hand.toSet();
-    // Mirrors SkullKingGame.getLeadSuit.
-    // Tigress counts as pirate or escape based on the player's choice, so
-    // it never sets the lead suit.
-    String? leadSuit;
+  /// 지금 트릭의 리드 무늬. 없으면 null.
+  String? _skLeadSuit(List<SKTrickPlay> trick) {
     for (final play in trick) {
       final info = _parseCardId(play.cardId);
       var type = info.type;
@@ -4121,9 +4117,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
       // 스컬킹·크라켄·흰고래가 먼저 나왔다면 리드 색은 없고, 그 뒤의 숫자도
       // 리드를 만들지 못한다.
       if (type == 'escape' || type == 'loot') continue;
-      if (type == 'number') leadSuit = info.suit;
-      break;
+      return type == 'number' ? info.suit : null;
     }
+    return null;
+  }
+
+  Set<String> _previewSkLegalCards(SKGameStateData state) {
+    final hand = state.myCards;
+    final trick = state.currentTrick;
+    if (hand.isEmpty) return const <String>{};
+    if (trick.isEmpty) return hand.toSet();
+    // Mirrors SkullKingGame.getLeadSuit.
+    // Tigress counts as pirate or escape based on the player's choice, so
+    // it never sets the lead suit.
+    final leadSuit = _skLeadSuit(trick);
     if (leadSuit == null) return hand.toSet();
     final hasLeadSuit = hand.any((c) {
       final info = _parseCardId(c);

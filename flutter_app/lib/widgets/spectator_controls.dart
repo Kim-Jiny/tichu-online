@@ -304,7 +304,6 @@ class _SpectatorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = nickname.isEmpty ? '?' : nickname.characters.first;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: nickname.isEmpty
@@ -332,7 +331,11 @@ class _SpectatorRow extends StatelessWidget {
                   color: Cartoon.yellow,
                   borderRadius: BorderRadius.circular(avatarCornerRadius(36)),
                 ),
-                child: Text(initial, style: Cartoon.userText(size: 16)),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Cartoon.ink,
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(width: 12),

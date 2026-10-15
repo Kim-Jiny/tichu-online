@@ -2357,113 +2357,94 @@ class _LobbyScreenState extends State<LobbyScreen> {
         timeText = '${fmt(start)} ~ ${fmt(end)}';
       } catch (_) {}
     }
+    return _noticeBar(
+      icon: Icons.construction_rounded,
+      color: Cartoon.yellow,
+      text: game.maintenanceMessage.isNotEmpty
+          ? game.maintenanceMessage
+          : L10n.of(context).lobbyMaintenanceDefault,
+      subText: timeText,
+      userText: game.maintenanceMessage.isNotEmpty,
+    );
+  }
+
+  /// 로비 위쪽 알림 줄(점검·문의 답변·오류) 공통 모양: 색 아이콘 칩 + 글자, 옅은 바탕에
+  /// 얇은 테두리. 상자를 늘리지 않으려고 그림자는 없다.
+  Widget _noticeBar({
+    required IconData icon,
+    required Color color,
+    required String text,
+    String subText = '',
+    bool userText = false,
+    Widget? trailing,
+  }) {
+    final style = userText
+        ? Cartoon.userText(size: 15)
+        : Cartoon.text(size: 16, height: 1.25);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFB74D)),
+        color: Color.lerp(color, Colors.white, 0.75),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
-          const Icon(Icons.construction, color: Color(0xFFE65100), size: 20),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: Cartoon.ink, width: 1.6),
+            ),
+            child: Icon(icon, color: Cartoon.ink, size: 20),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  game.maintenanceMessage.isNotEmpty
-                      ? game.maintenanceMessage
-                      : L10n.of(context).lobbyMaintenanceDefault,
-                  style: const TextStyle(
-                    color: Color(0xFFE65100),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (timeText.isNotEmpty)
+                Text(text, style: style),
+                if (subText.isNotEmpty)
                   Text(
-                    timeText,
-                    style: const TextStyle(
-                      color: Color(0xFFBF360C),
-                      fontSize: 11,
+                    subText,
+                    style: Cartoon.text(
+                      size: 13,
+                      color: Cartoon.ink.withValues(alpha: 0.6),
                     ),
                   ),
               ],
             ),
           ),
+          ?trailing,
         ],
       ),
     );
   }
 
   Widget _buildInquiryBanner(GameService game) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF90CAF9)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5), size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              localizeInquiryBanner(
-                game.inquiryBannerMessage,
-                L10n.of(context),
-              ),
-              style: const TextStyle(
-                color: Color(0xFF1E88E5),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          GestureDetector(
-            onTap: () => game.requestInquiries(),
-            child: const Icon(
-              Icons.refresh,
-              size: 18,
-              color: Color(0xFF1E88E5),
-            ),
-          ),
-        ],
+    return _noticeBar(
+      icon: Icons.mark_email_read_rounded,
+      color: Cartoon.blue,
+      text: localizeInquiryBanner(game.inquiryBannerMessage, L10n.of(context)),
+      trailing: CartoonPressable(
+        scale: 0.85,
+        onTap: () => game.requestInquiries(),
+        child: const Padding(
+          padding: EdgeInsets.all(4),
+          child: Icon(Icons.refresh_rounded, size: 22, color: Cartoon.ink),
+        ),
       ),
     );
   }
 
   Widget _buildErrorBanner(String message) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFEBEE),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEF9A9A)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning, color: Color(0xFFC62828), size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              localizeServiceMessage(message, L10n.of(context)),
-              style: const TextStyle(
-                color: Color(0xFFC62828),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return _noticeBar(
+      icon: Icons.warning_rounded,
+      color: Cartoon.red,
+      text: localizeServiceMessage(message, L10n.of(context)),
     );
   }
 

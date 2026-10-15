@@ -859,6 +859,230 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// ─── 회원가입·닉네임 설정 팝업 공통 부품(카툰) ─────────────────────────────
+
+/// 어두운 배경 위에 뜨는 카툰 패널. 제목 줄(아이콘 칩 + 제목 + 닫기)을 갖는다.
+Widget _signupCard({
+  required BuildContext context,
+  required IconData icon,
+  required Color iconColor,
+  required String title,
+  required VoidCallback onClose,
+  required List<Widget> children,
+}) {
+  return GestureDetector(
+    onTap: () => FocusScope.of(context).unfocus(),
+    child: Container(
+      color: Colors.black54,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: CartoonPanel(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: iconColor,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: Icon(icon, color: Cartoon.ink, size: 26),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(title, style: Cartoon.text(size: 24)),
+                      ),
+                      CartoonPressable(
+                        scale: 0.88,
+                        onTap: onClose,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Cartoon.cream,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Cartoon.ink,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  ...children,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+InputDecoration _signupDecoration(
+  String hint,
+  IconData icon, {
+  Widget? suffix,
+}) {
+  return Cartoon.inputDecoration(hint: hint, icon: icon, radius: 14).copyWith(
+    counterText: '',
+    suffixIcon: suffix,
+    hintStyle: Cartoon.userText(
+      size: 15,
+      color: Cartoon.ink.withValues(alpha: 0.4),
+      weight: FontWeight.w500,
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+  );
+}
+
+Widget _signupLabel(String text) => Padding(
+  padding: const EdgeInsets.only(bottom: 6, left: 2),
+  child: Text(text, style: Cartoon.text(size: 16)),
+);
+
+Widget _signupField({
+  required TextEditingController controller,
+  required String label,
+  required String hint,
+  required IconData icon,
+  bool obscure = false,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _signupLabel(label),
+      TextField(
+        controller: controller,
+        obscureText: obscure,
+        style: Cartoon.userText(size: 17),
+        decoration: _signupDecoration(hint, icon),
+      ),
+    ],
+  );
+}
+
+/// 닉네임 입력 + 중복 확인 버튼 + 결과 한 줄.
+Widget _signupNicknameRow({
+  required TextEditingController controller,
+  required ValueChanged<String> onChanged,
+  required String hint,
+  required String checkLabel,
+  required bool checking,
+  required bool checked,
+  required bool available,
+  required String? status,
+  required VoidCallback onCheck,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              maxLength: 10,
+              style: Cartoon.userText(size: 17),
+              decoration: _signupDecoration(
+                hint,
+                Icons.badge_rounded,
+                suffix: checked
+                    ? Icon(
+                        available
+                            ? Icons.check_circle_rounded
+                            : Icons.cancel_rounded,
+                        color: available ? Cartoon.green : Cartoon.red,
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CartoonButton(
+            expand: false,
+            height: 50,
+            radius: 14,
+            color: Cartoon.blue,
+            onPressed: checking ? null : onCheck,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: checking
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : CartoonButton.label(checkLabel, size: 16),
+            ),
+          ),
+        ],
+      ),
+      if (status != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6, left: 4),
+          child: Text(
+            status,
+            style: Cartoon.userText(
+              size: 13.5,
+              color: available ? const Color(0xFF2E9B52) : Cartoon.red,
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+Widget _signupSubmit({
+  required String label,
+  required bool loading,
+  required VoidCallback onTap,
+  required Color color,
+}) {
+  return CartoonButton(
+    color: color,
+    height: 56,
+    onPressed: loading ? null : onTap,
+    child: loading
+        ? const SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: Colors.white,
+            ),
+          )
+        : CartoonButton.label(label, size: 21),
+  );
+}
+
+Widget _signupError(String? error) => error == null
+    ? const SizedBox.shrink()
+    : Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: Text(
+          error,
+          textAlign: TextAlign.center,
+          style: Cartoon.userText(size: 14.5, color: Cartoon.red),
+        ),
+      );
+
 class RegisterDialog extends StatefulWidget {
   final String serverUrl;
   final VoidCallback onClose;
@@ -1061,246 +1285,56 @@ class _RegisterDialogState extends State<RegisterDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        color: Colors.black54,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.loginRegisterTitle,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: widget.onClose,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildInputField(
-                    controller: _usernameController,
-                    label: l10n.loginUsernameLabel,
-                    hint: l10n.loginUsernameHintRegister,
-                    icon: Icons.person_outline,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    controller: _passwordController,
-                    label: l10n.loginPasswordLabel,
-                    hint: l10n.loginPasswordHintRegister,
-                    icon: Icons.lock_outline,
-                    obscure: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    controller: _confirmPasswordController,
-                    label: l10n.loginConfirmPasswordLabel,
-                    hint: l10n.loginConfirmPasswordHint,
-                    icon: Icons.lock_outline,
-                    obscure: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildNicknameField(),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5A9E6F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              l10n.loginSubmitRegister,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscure = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _signupCard(
+      context: context,
+      icon: Icons.person_add_rounded,
+      iconColor: Cartoon.green,
+      title: l10n.loginRegisterTitle,
+      onClose: widget.onClose,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
-          ),
+        _signupField(
+          controller: _usernameController,
+          label: l10n.loginUsernameLabel,
+          hint: l10n.loginUsernameHintRegister,
+          icon: Icons.person_rounded,
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFAA9A92), fontSize: 14),
-            prefixIcon: Icon(icon, color: const Color(0xFFAA9A92)),
-            filled: true,
-            fillColor: const Color(0xFFF8F4F2),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
+        const SizedBox(height: 14),
+        _signupField(
+          controller: _passwordController,
+          label: l10n.loginPasswordLabel,
+          hint: l10n.loginPasswordHintRegister,
+          icon: Icons.lock_rounded,
+          obscure: true,
         ),
-      ],
-    );
-  }
-
-  Widget _buildNicknameField() {
-    final l10n = L10n.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.loginNicknameLabel,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
-          ),
+        const SizedBox(height: 14),
+        _signupField(
+          controller: _confirmPasswordController,
+          label: l10n.loginConfirmPasswordLabel,
+          hint: l10n.loginConfirmPasswordHint,
+          icon: Icons.lock_rounded,
+          obscure: true,
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _nicknameController,
-                onChanged: _onNicknameChanged,
-                maxLength: 10,
-                decoration: InputDecoration(
-                  hintText: l10n.loginNicknameHint,
-                  hintStyle: const TextStyle(
-                    color: Color(0xFFAA9A92),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.badge_outlined,
-                    color: Color(0xFFAA9A92),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF8F4F2),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  suffixIcon: _nicknameChecked
-                      ? Icon(
-                          _nicknameAvailable
-                              ? Icons.check_circle
-                              : Icons.cancel,
-                          color: _nicknameAvailable ? Colors.green : Colors.red,
-                        )
-                      : null,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _nicknameChecking ? null : _checkNickname,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B7355),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                ),
-                child: _nicknameChecking
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        l10n.loginCheckAvailability,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-              ),
-            ),
-          ],
+        const SizedBox(height: 14),
+        _signupLabel(l10n.loginNicknameLabel),
+        _signupNicknameRow(
+          controller: _nicknameController,
+          onChanged: _onNicknameChanged,
+          hint: l10n.loginNicknameHint,
+          checkLabel: l10n.loginCheckAvailability,
+          checking: _nicknameChecking,
+          checked: _nicknameChecked,
+          available: _nicknameAvailable,
+          status: _nicknameStatus,
+          onCheck: _checkNickname,
         ),
-        if (_nicknameStatus != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            _nicknameStatus!,
-            style: TextStyle(
-              fontSize: 12,
-              color: _nicknameAvailable ? Colors.green : Colors.red,
-            ),
-          ),
-        ],
+        const SizedBox(height: 22),
+        _signupSubmit(
+          label: l10n.loginSubmitRegister,
+          loading: _isLoading,
+          onTap: _register,
+          color: Cartoon.green,
+        ),
+        _signupError(_error),
       ],
     );
   }
@@ -1436,176 +1470,42 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Container(
-        color: Colors.black54,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.loginSetNicknameTitle,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: widget.onClose,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.loginSetNicknameDesc,
-                    style: const TextStyle(
-                      color: Color(0xFF8A7A72),
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nicknameController,
-                          onChanged: _onNicknameChanged,
-                          maxLength: 10,
-                          decoration: InputDecoration(
-                            hintText: l10n.loginNicknameHint,
-                            hintStyle: const TextStyle(
-                              color: Color(0xFFAA9A92),
-                              fontSize: 14,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.badge_outlined,
-                              color: Color(0xFFAA9A92),
-                            ),
-                            filled: true,
-                            fillColor: const Color(0xFFF8F4F2),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            suffixIcon: _nicknameChecked
-                                ? Icon(
-                                    _nicknameAvailable
-                                        ? Icons.check_circle
-                                        : Icons.cancel,
-                                    color: _nicknameAvailable
-                                        ? Colors.green
-                                        : Colors.red,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: _nicknameChecking ? null : _checkNickname,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8B7355),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                          ),
-                          child: _nicknameChecking
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  l10n.loginCheckAvailability,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_nicknameStatus != null) ...[
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _nicknameStatus!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _nicknameAvailable ? Colors.green : Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF28C26),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              l10n.loginGetStarted,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return _signupCard(
+      context: context,
+      icon: Icons.badge_rounded,
+      iconColor: Cartoon.yellow,
+      title: l10n.loginSetNicknameTitle,
+      onClose: widget.onClose,
+      children: [
+        Text(
+          l10n.loginSetNicknameDesc,
+          style: Cartoon.text(
+            size: 15.5,
+            height: 1.4,
+            color: Cartoon.ink.withValues(alpha: 0.65),
           ),
         ),
-      ),
+        const SizedBox(height: 16),
+        _signupNicknameRow(
+          controller: _nicknameController,
+          onChanged: _onNicknameChanged,
+          hint: l10n.loginNicknameHint,
+          checkLabel: l10n.loginCheckAvailability,
+          checking: _nicknameChecking,
+          checked: _nicknameChecked,
+          available: _nicknameAvailable,
+          status: _nicknameStatus,
+          onCheck: _checkNickname,
+        ),
+        const SizedBox(height: 22),
+        _signupSubmit(
+          label: l10n.loginGetStarted,
+          loading: _isLoading,
+          onTap: _submit,
+          color: Cartoon.orange,
+        ),
+        _signupError(_error),
+      ],
     );
   }
 }

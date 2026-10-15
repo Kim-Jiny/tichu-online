@@ -679,39 +679,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 '$category · $createdAt',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+                style: Cartoon.userText(
+                  size: 12,
+                  weight: FontWeight.w500,
+                  color: Cartoon.ink.withValues(alpha: 0.6),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 content,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF5A4038)),
+                style: Cartoon.userText(size: 13, weight: FontWeight.w500),
               ),
               const SizedBox(height: 16),
               if (status == 'resolved' && adminNote.isNotEmpty) ...[
                 Text(
                   l10n.inquiryAnswerLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4CAF50),
-                  ),
+                  style: Cartoon.text(size: 12, color: Color(0xFF4CAF50)),
                 ),
                 const SizedBox(height: 6),
                 NoticeBody(content: adminNote),
                 const SizedBox(height: 8),
                 Text(
                   l10n.inquiryAnswerDate(resolvedAt),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF8A7A72),
+                  style: Cartoon.userText(
+                    size: 11,
+                    weight: FontWeight.w500,
+                    color: Cartoon.ink.withValues(alpha: 0.6),
                   ),
                 ),
               ] else if (status != 'resolved') ...[
                 Text(
                   l10n.inquiryNoAnswer,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF9A8E8A),
+                  style: Cartoon.userText(
+                    size: 12,
+                    weight: FontWeight.w500,
+                    color: Cartoon.ink.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -1386,9 +1388,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         onPressed: () => _showLinkDialog(),
                                         child: Text(
                                           l10n.commonLink,
-                                          style: const TextStyle(
+                                          style: Cartoon.userText(
+                                            size: 12,
+                                            weight: FontWeight.w500,
                                             color: Color(0xFF7E57C2),
-                                            fontSize: 12,
                                           ),
                                         ),
                                       )
@@ -1426,10 +1429,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           game.unreadNoticeCount > 9
                                               ? '9+'
                                               : '${game.unreadNoticeCount}',
-                                          style: const TextStyle(
+                                          style: Cartoon.text(
+                                            size: 10,
                                             color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
                                           ),
                                           textAlign: TextAlign.center,
                                         ),
@@ -1479,10 +1481,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           game.unreadMailCount > 9
                                               ? '9+'
                                               : '${game.unreadMailCount}',
-                                          style: const TextStyle(
+                                          style: Cartoon.text(
+                                            size: 10,
                                             color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
                                           ),
                                           textAlign: TextAlign.center,
                                         ),
@@ -1838,10 +1839,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                                 ),
                                                 child: Text(
                                                   l10n.settingsUpdate,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
+                                                  style: Cartoon.text(size: 12),
                                                 ),
                                               )
                                             : null,

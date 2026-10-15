@@ -47,7 +47,7 @@ void main() {
     await tester.pumpWidget(harness(onSend: () => sent++));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.send));
+    await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
 
     expect(sent, 1, reason: '탭이 손잡이에 먹히면 여기서 0 이 된다');
@@ -71,7 +71,7 @@ void main() {
     await tester.pumpWidget(harness(onSend: () {}));
     await tester.pumpAndSettle();
 
-    final send = tester.getRect(find.byIcon(Icons.send));
+    final send = tester.getRect(find.byIcon(Icons.send_rounded));
     final grip = tester.getRect(find.byIcon(Icons.open_in_full));
     expect(send.overlaps(grip), isFalse,
         reason: '전송 $send / 손잡이 $grip');

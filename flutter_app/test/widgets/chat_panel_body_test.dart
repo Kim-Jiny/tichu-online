@@ -98,7 +98,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '버튼으로 한 번에');
     expect(inputHasFocus(tester), isTrue, reason: '준비 상태 확인');
 
-    await tester.tap(find.byIcon(Icons.send));
+    await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
 
     expect(sent, 1);
@@ -126,7 +126,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(inputHasFocus(tester), isFalse, reason: '준비 상태 확인');
 
-    await tester.tap(find.byIcon(Icons.send));
+    await tester.tap(find.byIcon(Icons.send_rounded));
     await tester.pumpAndSettle();
 
     expect(sent, 1);

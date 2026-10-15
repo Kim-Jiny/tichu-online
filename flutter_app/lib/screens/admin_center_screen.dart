@@ -22,9 +22,9 @@ int _toInt(dynamic v, [int fallback = 0]) {
 
 String _won(int n) {
   final s = n.abs().toString().replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+$)'),
-        (m) => '${m[1]},',
-      );
+    RegExp(r'(\d)(?=(\d{3})+$)'),
+    (m) => '${m[1]},',
+  );
   return '${n < 0 ? '-' : ''}₩$s';
 }
 
@@ -44,11 +44,15 @@ String _formatTimestamp(dynamic v) {
 
 class _AdminCenterScreenState extends State<AdminCenterScreen> {
   final TextEditingController _searchController = TextEditingController();
-  static const _panelColor = Color(0xFFF9F5F3);
   static const _inkColor = Color(0xFF5A4038);
   static const _mutedColor = Color(0xFF8A7A72);
   String _selectedCard = 'active';
-  static const _userCardIds = {'active', 'newToday', 'weeklyActive', 'allUsers'};
+  static const _userCardIds = {
+    'active',
+    'newToday',
+    'weeklyActive',
+    'allUsers',
+  };
 
   @override
   void initState() {
@@ -84,21 +88,27 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
+          child: SafeArea(
+            child: Consumer<GameService>(
+              builder: (context, game, _) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   if (game.adminActionSuccess != null) {
                     final success = game.adminActionSuccess == true;
-                    final message = localizeServiceMessage(game.adminActionMessage ?? (success ? 'admin_action_success' : 'admin_action_failed'), L10n.of(context));
+                    final message = localizeServiceMessage(
+                      game.adminActionMessage ??
+                          (success
+                              ? 'admin_action_success'
+                              : 'admin_action_failed'),
+                      L10n.of(context),
+                    );
                     game.adminActionSuccess = null;
                     game.adminActionMessage = null;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -110,23 +120,23 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     game.requestAdminDashboard();
                     game.requestAdminInquiries();
                     game.requestAdminReports();
-                    game.requestAdminUsers(search: _searchController.text.trim());
+                    game.requestAdminUsers(
+                      search: _searchController.text.trim(),
+                    );
                   }
                 });
 
-              return Column(
-                children: [
-                  _buildTopBar(context, isCompact),
-                  _buildDashboard(game, isCompact),
-                  SizedBox(height: isCompact ? 10 : 14),
-                  Expanded(
-                    child: _buildSelectedSection(game, isCompact),
-                  ),
-                ],
-              );
-            },
+                return Column(
+                  children: [
+                    _buildTopBar(context, isCompact),
+                    _buildDashboard(game, isCompact),
+                    SizedBox(height: isCompact ? 10 : 14),
+                    Expanded(child: _buildSelectedSection(game, isCompact)),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -156,29 +166,34 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     return Container(
       margin: EdgeInsets.all(isCompact ? 12 : 16),
       padding: EdgeInsets.all(isCompact ? 8 : 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(18),
-      ),
+      decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 3),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF8A7A72),
-            visualDensity: isCompact ? VisualDensity.compact : VisualDensity.standard,
+          CartoonPressable(
+            scale: 0.9,
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Cartoon.cream,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: Cartoon.ink, width: 1.8),
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: Cartoon.ink,
+                size: 22,
+              ),
+            ),
           ),
-          SizedBox(width: isCompact ? 2 : 4),
+          SizedBox(width: isCompact ? 8 : 12),
           Expanded(
             child: Text(
               L10n.of(context).adminCenterTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: isCompact ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF5A4038),
-              ),
+              style: Cartoon.text(size: isCompact ? 20 : 22),
             ),
           ),
         ],
@@ -199,18 +214,70 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     final totalReports = _toInt(dash['totalReports']);
     final todayGames = _toInt(dash['todayGames']);
     final todayRankedGames = _toInt(dash['todayRankedGames']);
-    final todayCasualGames = (todayGames - todayRankedGames).clamp(0, todayGames);
+    final todayCasualGames = (todayGames - todayRankedGames).clamp(
+      0,
+      todayGames,
+    );
 
-    final cards = <({String id, String label, String value, Color color, IconData icon})>[
-      (id: 'active', label: l.adminActiveUsers, value: '$activeUsers', color: const Color(0xFF42A5F5), icon: Icons.wifi_tethering),
-      (id: 'newToday', label: l.adminNewUsersToday, value: '$newUsersToday', color: const Color(0xFF26A69A), icon: Icons.person_add_alt_1_outlined),
-      (id: 'weeklyActive', label: l.adminWeeklyActives, value: '$weeklyActives', color: const Color(0xFF66BB6A), icon: Icons.trending_up),
-      (id: 'revenue', label: l.adminTodayRevenue, value: _won(todayNetRevenue), color: const Color(0xFFFFA726), icon: Icons.payments_outlined),
-      (id: 'pendingInquiries', label: l.adminPendingInquiries, value: '$pendingInquiries / $totalInquiries', color: const Color(0xFFAB47BC), icon: Icons.mail_outline),
-      (id: 'pendingReports', label: l.adminPendingReports, value: '$pendingReports / $totalReports', color: const Color(0xFFEF5350), icon: Icons.report_outlined),
-      (id: 'casualGames', label: l.adminCasualGames, value: '$todayCasualGames / $todayGames', color: const Color(0xFF5C6BC0), icon: Icons.sports_esports_outlined),
-      (id: 'rankedGames', label: l.adminRankedGames, value: '$todayRankedGames / $todayGames', color: const Color(0xFFFF7043), icon: Icons.emoji_events_outlined),
-    ];
+    final cards =
+        <({String id, String label, String value, Color color, IconData icon})>[
+          (
+            id: 'active',
+            label: l.adminActiveUsers,
+            value: '$activeUsers',
+            color: const Color(0xFF42A5F5),
+            icon: Icons.wifi_tethering,
+          ),
+          (
+            id: 'newToday',
+            label: l.adminNewUsersToday,
+            value: '$newUsersToday',
+            color: const Color(0xFF26A69A),
+            icon: Icons.person_add_alt_1_outlined,
+          ),
+          (
+            id: 'weeklyActive',
+            label: l.adminWeeklyActives,
+            value: '$weeklyActives',
+            color: const Color(0xFF66BB6A),
+            icon: Icons.trending_up,
+          ),
+          (
+            id: 'revenue',
+            label: l.adminTodayRevenue,
+            value: _won(todayNetRevenue),
+            color: const Color(0xFFFFA726),
+            icon: Icons.payments_outlined,
+          ),
+          (
+            id: 'pendingInquiries',
+            label: l.adminPendingInquiries,
+            value: '$pendingInquiries / $totalInquiries',
+            color: const Color(0xFFAB47BC),
+            icon: Icons.mail_outline,
+          ),
+          (
+            id: 'pendingReports',
+            label: l.adminPendingReports,
+            value: '$pendingReports / $totalReports',
+            color: const Color(0xFFEF5350),
+            icon: Icons.report_outlined,
+          ),
+          (
+            id: 'casualGames',
+            label: l.adminCasualGames,
+            value: '$todayCasualGames / $todayGames',
+            color: const Color(0xFF5C6BC0),
+            icon: Icons.sports_esports_outlined,
+          ),
+          (
+            id: 'rankedGames',
+            label: l.adminRankedGames,
+            value: '$todayRankedGames / $todayGames',
+            color: const Color(0xFFFF7043),
+            icon: Icons.emoji_events_outlined,
+          ),
+        ];
 
     final marginH = isCompact ? 12.0 : 16.0;
     final spacing = isCompact ? 8.0 : 10.0;
@@ -220,22 +287,32 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       padding: EdgeInsets.symmetric(horizontal: marginH),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final cardWidth = ((constraints.maxWidth - spacing * 3) / 4).clamp(60.0, 200.0);
+          final cardWidth = ((constraints.maxWidth - spacing * 3) / 4).clamp(
+            60.0,
+            200.0,
+          );
           return Wrap(
             spacing: spacing,
             runSpacing: spacing,
-            children: cards.map((item) => SizedBox(
-              width: cardWidth,
-              height: cardHeight,
-              child: _buildDashboardCard(item, isCompact),
-            )).toList(),
+            children: cards
+                .map(
+                  (item) => SizedBox(
+                    width: cardWidth,
+                    height: cardHeight,
+                    child: _buildDashboardCard(item, isCompact),
+                  ),
+                )
+                .toList(),
           );
         },
       ),
     );
   }
 
-  Widget _buildDashboardCard(({String id, String label, String value, Color color, IconData icon}) item, bool isCompact) {
+  Widget _buildDashboardCard(
+    ({String id, String label, String value, Color color, IconData icon}) item,
+    bool isCompact,
+  ) {
     final isSelected = _selectedCard == item.id;
     return Material(
       color: Colors.white.withValues(alpha: 0.95),
@@ -255,7 +332,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           }
         },
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 12, vertical: isCompact ? 8 : 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 10 : 12,
+            vertical: isCompact ? 8 : 10,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
@@ -276,10 +356,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       item.label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: isCompact ? 10 : 11,
+                      style: Cartoon.userText(
+                        size: isCompact ? 10 : 11,
+                        weight: FontWeight.w600,
                         color: _mutedColor,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -290,9 +370,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   item.value,
-                  style: TextStyle(
-                    fontSize: isCompact ? 18 : 20,
-                    fontWeight: FontWeight.w900,
+                  style: Cartoon.text(
+                    size: isCompact ? 18 : 20,
                     color: item.color,
                   ),
                 ),
@@ -309,10 +388,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminInquiriesError != null) {
-      return Center(child: Text(localizeServiceMessage(game.adminInquiriesError!, L10n.of(context))));
+      return Center(
+        child: Text(
+          localizeServiceMessage(game.adminInquiriesError!, L10n.of(context)),
+        ),
+      );
     }
     return ListView.separated(
-      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 12 : 16,
+        6,
+        isCompact ? 12 : 16,
+        16,
+      ),
       itemCount: game.adminInquiries.length,
       separatorBuilder: (context, separatorIndex) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -332,11 +420,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   if (isCompact) ...[
                     Text(
                       item['title']?.toString() ?? '-',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: _inkColor,
-                      ),
+                      style: Cartoon.text(size: 15, color: _inkColor),
                     ),
                     const SizedBox(height: 8),
                     _buildStatusChip(status, _statusColor(status)),
@@ -346,11 +430,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         Expanded(
                           child: Text(
                             item['title']?.toString() ?? '-',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: _inkColor,
-                            ),
+                            style: Cartoon.text(size: 15, color: _inkColor),
                           ),
                         ),
                         _buildStatusChip(status, _statusColor(status)),
@@ -359,10 +439,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   const SizedBox(height: 8),
                   Text(
                     '${item['user_nickname'] ?? '-'} · ${item['category'] ?? '-'}',
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: Cartoon.userText(
+                      size: 13,
+                      weight: FontWeight.w600,
                       color: _mutedColor,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -380,10 +460,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminReportsError != null) {
-      return Center(child: Text(localizeServiceMessage(game.adminReportsError!, L10n.of(context))));
+      return Center(
+        child: Text(
+          localizeServiceMessage(game.adminReportsError!, L10n.of(context)),
+        ),
+      );
     }
     return ListView.separated(
-      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 16),
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 12 : 16,
+        6,
+        isCompact ? 12 : 16,
+        16,
+      ),
       itemCount: game.adminReports.length,
       separatorBuilder: (context, separatorIndex) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -406,11 +495,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   if (isCompact) ...[
                     Text(
                       item['reported_nickname']?.toString() ?? '-',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: _inkColor,
-                      ),
+                      style: Cartoon.text(size: 15, color: _inkColor),
                     ),
                     const SizedBox(height: 8),
                     _buildStatusChip(status, _statusColor(status)),
@@ -420,11 +505,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         Expanded(
                           child: Text(
                             item['reported_nickname']?.toString() ?? '-',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: _inkColor,
-                            ),
+                            style: Cartoon.text(size: 15, color: _inkColor),
                           ),
                         ),
                         _buildStatusChip(status, _statusColor(status)),
@@ -433,10 +514,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   const SizedBox(height: 8),
                   Text(
                     '${l.adminReportCount(_toInt(item['report_count']))} · ${l.adminReportRoom(item['room_id']?.toString() ?? '-')}',
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: Cartoon.userText(
+                      size: 13,
+                      weight: FontWeight.w600,
                       color: _mutedColor,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -453,7 +534,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 6, isCompact ? 12 : 16, 10),
+          padding: EdgeInsets.fromLTRB(
+            isCompact ? 12 : 16,
+            6,
+            isCompact ? 12 : 16,
+            10,
+          ),
           child: isCompact
               ? Column(
                   children: [
@@ -461,22 +547,32 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: l.adminSearchHint,
-                        prefixIcon: const Icon(Icons.search, color: _mutedColor),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: _mutedColor,
+                        ),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.94),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                       ),
-                      onSubmitted: (_) => game.requestAdminUsers(search: _searchController.text.trim()),
+                      onSubmitted: (_) => game.requestAdminUsers(
+                        search: _searchController.text.trim(),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () => game.requestAdminUsers(search: _searchController.text.trim()),
+                        onPressed: () => game.requestAdminUsers(
+                          search: _searchController.text.trim(),
+                        ),
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF8A7A72),
                         ),
@@ -492,21 +588,31 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: l.adminSearchHint,
-                          prefixIcon: const Icon(Icons.search, color: _mutedColor),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: _mutedColor,
+                          ),
                           filled: true,
                           fillColor: Colors.white.withValues(alpha: 0.94),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
-                        onSubmitted: (_) => game.requestAdminUsers(search: _searchController.text.trim()),
+                        onSubmitted: (_) => game.requestAdminUsers(
+                          search: _searchController.text.trim(),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: () => game.requestAdminUsers(search: _searchController.text.trim()),
+                      onPressed: () => game.requestAdminUsers(
+                        search: _searchController.text.trim(),
+                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF8A7A72),
                       ),
@@ -518,115 +624,153 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         Expanded(
           child: game.adminUsersLoading
               ? const Center(child: CircularProgressIndicator())
-              : Builder(builder: (context) {
-                final filtered = _filterUsersBySelection(game.adminUsers);
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Text(
-                      l.adminNoUsers,
-                      style: const TextStyle(color: _mutedColor),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 0, isCompact ? 12 : 16, 16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, separatorIndex) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    final online = item['isOnline'] == true;
-                    final platform = _platformLabel(item['device_platform']?.toString());
-                    final appVersion = item['app_version']?.toString().trim();
-                    final statusText = online ? l.adminOnline : l.adminOffline;
-                    final roomName = item['roomName']?.toString();
-                    return Material(
-                      color: Colors.white.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(18),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _showUserDetail(item['nickname']?.toString() ?? ''),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 6,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
+              : Builder(
+                  builder: (context) {
+                    final filtered = _filterUsersBySelection(game.adminUsers);
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Text(
+                          l.adminNoUsers,
+                          style: const TextStyle(color: _mutedColor),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      padding: EdgeInsets.fromLTRB(
+                        isCompact ? 12 : 16,
+                        0,
+                        isCompact ? 12 : 16,
+                        16,
+                      ),
+                      itemCount: filtered.length,
+                      separatorBuilder: (context, separatorIndex) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final item = filtered[index];
+                        final online = item['isOnline'] == true;
+                        final platform = _platformLabel(
+                          item['device_platform']?.toString(),
+                        );
+                        final appVersion = item['app_version']
+                            ?.toString()
+                            .trim();
+                        final statusText = online
+                            ? l.adminOnline
+                            : l.adminOffline;
+                        final roomName = item['roomName']?.toString();
+                        return Material(
+                          color: Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(18),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => _showUserDetail(
+                              item['nickname']?.toString() ?? '',
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 11,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        if (platform != null)
-                                          Text(
-                                            platform,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFF1565C0),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            if (platform != null)
+                                              Text(
+                                                platform,
+                                                style: Cartoon.text(
+                                                  size: 12,
+                                                  color: Color(0xFF1565C0),
+                                                ),
+                                              ),
+                                            Text(
+                                              item['nickname']?.toString() ??
+                                                  '-',
+                                              style: Cartoon.text(
+                                                size: 15,
+                                                color: _inkColor,
+                                              ),
+                                            ),
+                                            if (item['is_admin'] == true)
+                                              const Padding(
+                                                padding: EdgeInsets.only(
+                                                  left: 2,
+                                                ),
+                                                child: Icon(
+                                                  Icons.verified,
+                                                  color: Color(0xFF7E57C2),
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            _buildStatusChip(
+                                              statusText,
+                                              _statusColor(
+                                                online ? 'online' : 'offline',
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if ((appVersion != null &&
+                                                appVersion.isNotEmpty) ||
+                                            (roomName != null &&
+                                                roomName.isNotEmpty))
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              [
+                                                if (appVersion != null &&
+                                                    appVersion.isNotEmpty)
+                                                  'v$appVersion',
+                                                if (roomName != null &&
+                                                    roomName.isNotEmpty)
+                                                  roomName,
+                                              ].join(' · '),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Cartoon.userText(
+                                                size: 12,
+                                                weight: FontWeight.w500,
+                                                color: _mutedColor,
+                                              ),
                                             ),
                                           ),
-                                        Text(
-                                          item['nickname']?.toString() ?? '-',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w800,
-                                            color: _inkColor,
-                                          ),
-                                        ),
-                                        if (item['is_admin'] == true)
-                                          const Padding(
-                                            padding: EdgeInsets.only(left: 2),
-                                            child: Icon(
-                                              Icons.verified,
-                                              color: Color(0xFF7E57C2),
-                                              size: 18,
-                                            ),
-                                          ),
-                                        _buildStatusChip(
-                                          statusText,
-                                          _statusColor(online ? 'online' : 'offline'),
-                                        ),
                                       ],
                                     ),
-                                    if ((appVersion != null && appVersion.isNotEmpty) || (roomName != null && roomName.isNotEmpty))
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          [
-                                            if (appVersion != null && appVersion.isNotEmpty) 'v$appVersion',
-                                            if (roomName != null && roomName.isNotEmpty) roomName,
-                                          ].join(' · '),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 12, color: _mutedColor),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: Colors.brown.shade300,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 10),
-                              Icon(
-                                Icons.chevron_right,
-                                color: Colors.brown.shade300,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
-                );
-              }),
+                ),
         ),
       ],
     );
   }
 
-  List<Map<String, dynamic>> _filterUsersBySelection(List<Map<String, dynamic>> users) {
+  List<Map<String, dynamic>> _filterUsersBySelection(
+    List<Map<String, dynamic>> users,
+  ) {
     switch (_selectedCard) {
       case 'active':
         return users.where((u) => u['isOnline'] == true).toList();
@@ -637,7 +781,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           if (c == null) return false;
           final dt = DateTime.tryParse(c.toString())?.toLocal();
           if (dt == null) return false;
-          return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+          return dt.year == now.year &&
+              dt.month == now.month &&
+              dt.day == now.day;
         }).toList();
       case 'weeklyActive':
         final cutoff = DateTime.now().subtract(const Duration(days: 7));
@@ -653,13 +799,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     }
   }
 
-  Widget _buildMatchesList(GameService game, bool isCompact, {required bool rankedOnly}) {
+  Widget _buildMatchesList(
+    GameService game,
+    bool isCompact, {
+    required bool rankedOnly,
+  }) {
     final l = L10n.of(context);
     if (game.adminTodayMatchesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminTodayMatchesError != null) {
-      return Center(child: Text(localizeServiceMessage(game.adminTodayMatchesError!, l)));
+      return Center(
+        child: Text(localizeServiceMessage(game.adminTodayMatchesError!, l)),
+      );
     }
     final filtered = game.adminTodayMatches
         .where((m) => (m['is_ranked'] == true) == rankedOnly)
@@ -682,21 +834,23 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     return Column(
       children: [
         Container(
-          margin: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 0, isCompact ? 12 : 16, 10),
+          margin: EdgeInsets.fromLTRB(
+            isCompact ? 12 : 16,
+            0,
+            isCompact ? 12 : 16,
+            10,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(12),
+            color: Cartoon.paper,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Cartoon.ink, width: 1.8),
           ),
           child: Row(
             children: [
               Text(
                 '${filtered.length}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: _inkColor,
-                ),
+                style: Cartoon.text(size: 18, color: _inkColor),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -710,13 +864,16 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(meta.icon, size: 13, color: faded ? _mutedColor : meta.color),
+                        Icon(
+                          meta.icon,
+                          size: 13,
+                          color: faded ? _mutedColor : meta.color,
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           '${meta.label} $n',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: faded ? FontWeight.w500 : FontWeight.w800,
+                          style: Cartoon.text(
+                            size: 11,
                             color: faded ? _mutedColor : meta.color,
                           ),
                         ),
@@ -730,10 +887,16 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         ),
         Expanded(
           child: ListView.separated(
-            padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 0, isCompact ? 12 : 16, 16),
+            padding: EdgeInsets.fromLTRB(
+              isCompact ? 12 : 16,
+              0,
+              isCompact ? 12 : 16,
+              16,
+            ),
             itemCount: filtered.length,
             separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => _buildMatchCell(filtered[index], isCompact),
+            itemBuilder: (context, index) =>
+                _buildMatchCell(filtered[index], isCompact),
           ),
         ),
       ],
@@ -746,7 +909,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (game.adminTodayPaymentsError != null) {
-      return Center(child: Text(localizeServiceMessage(game.adminTodayPaymentsError!, l)));
+      return Center(
+        child: Text(localizeServiceMessage(game.adminTodayPaymentsError!, l)),
+      );
     }
     final rows = game.adminTodayPayments;
     if (rows.isEmpty) {
@@ -771,25 +936,36 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           margin: EdgeInsets.fromLTRB(marginH, 0, marginH, 10),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(12),
+            color: Cartoon.paper,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Cartoon.ink, width: 1.8),
           ),
           child: Row(
             children: [
-              Text('${rows.length}',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w900, color: _inkColor)),
+              Text(
+                '${rows.length}',
+                style: Cartoon.text(size: 18, color: _inkColor),
+              ),
               const SizedBox(width: 4),
-              const Text('건', style: TextStyle(color: _mutedColor, fontSize: 12)),
+              Text(
+                '건',
+                style: Cartoon.userText(
+                  size: 12,
+                  weight: FontWeight.w500,
+                  color: _mutedColor,
+                ),
+              ),
               const Spacer(),
-              Text('추정 ${_won(gross)}',
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF2E7D32))),
+              Text(
+                '추정 ${_won(gross)}',
+                style: Cartoon.text(size: 14, color: Color(0xFF2E7D32)),
+              ),
               if (refundCount > 0) ...[
                 const SizedBox(width: 8),
-                Text('환불 $refundCount',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFC62828))),
+                Text(
+                  '환불 $refundCount',
+                  style: Cartoon.text(size: 12, color: Color(0xFFC62828)),
+                ),
               ],
             ],
           ),
@@ -815,9 +991,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE6DEDA)),
+        color: Cartoon.paper,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.5),
+          width: 1.6,
+        ),
       ),
       child: Row(
         children: [
@@ -825,12 +1004,16 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: refunded ? const Color(0xFFFFF3E0) : const Color(0xFFE8F5E9),
+              color: refunded
+                  ? const Color(0xFFFFF3E0)
+                  : const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               refunded ? Icons.undo : Icons.payments_outlined,
-              color: refunded ? const Color(0xFFFB8C00) : const Color(0xFF43A047),
+              color: refunded
+                  ? const Color(0xFFFB8C00)
+                  : const Color(0xFF43A047),
               size: 20,
             ),
           ),
@@ -846,13 +1029,14 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         r['nickname']?.toString() ?? '?',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, color: _inkColor, fontSize: 14),
+                        style: Cartoon.text(size: 14, color: _inkColor),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    _payBadge(platform == 'ios' ? 'iOS' : 'AOS',
-                        const Color(0xFF5C6BC0)),
+                    _payBadge(
+                      platform == 'ios' ? 'iOS' : 'AOS',
+                      const Color(0xFF5C6BC0),
+                    ),
                     if (sandbox) ...[
                       const SizedBox(width: 4),
                       _payBadge('SANDBOX', const Color(0xFF9E9E9E)),
@@ -868,11 +1052,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   r['product_id']?.toString() ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: _mutedColor, fontSize: 11),
+                  style: Cartoon.userText(
+                    size: 11,
+                    weight: FontWeight.w500,
+                    color: _mutedColor,
+                  ),
                 ),
                 Text(
                   '+${gold}G · ${_formatTimestamp(r['verified_at'])}',
-                  style: const TextStyle(color: _mutedColor, fontSize: 11),
+                  style: Cartoon.userText(
+                    size: 11,
+                    weight: FontWeight.w500,
+                    color: _mutedColor,
+                  ),
                 ),
               ],
             ),
@@ -883,7 +1075,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              color: refunded ? const Color(0xFFB0A39E) : const Color(0xFF2E7D32),
+              color: refunded
+                  ? const Color(0xFFB0A39E)
+                  : const Color(0xFF2E7D32),
               decoration: refunded ? TextDecoration.lineThrough : null,
             ),
           ),
@@ -899,10 +1093,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
-      ),
+      child: Text(text, style: Cartoon.text(size: 10, color: color)),
     );
   }
 
@@ -933,7 +1124,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: typeMeta.color.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(8),
@@ -945,11 +1139,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       const SizedBox(width: 4),
                       Text(
                         typeMeta.label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: typeMeta.color,
-                        ),
+                        style: Cartoon.text(size: 11, color: typeMeta.color),
                       ),
                     ],
                   ),
@@ -957,7 +1147,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 if (isRanked) ...[
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF7043).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(8),
@@ -976,7 +1169,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 const Spacer(),
                 Text(
                   created.split(' ').last, // HH:MM only
-                  style: const TextStyle(fontSize: 12, color: _mutedColor, fontWeight: FontWeight.w600),
+                  style: Cartoon.userText(
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: _mutedColor,
+                  ),
                 ),
               ],
             ),
@@ -986,12 +1183,20 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.flag_outlined, size: 12, color: Color(0xFFE53935)),
+                  const Icon(
+                    Icons.flag_outlined,
+                    size: 12,
+                    color: Color(0xFFE53935),
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       'deserter: $deserter',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFFE53935), fontWeight: FontWeight.w600),
+                      style: Cartoon.userText(
+                        size: 11,
+                        weight: FontWeight.w600,
+                        color: Color(0xFFE53935),
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1002,7 +1207,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               const SizedBox(height: 4),
               Text(
                 endReason,
-                style: const TextStyle(fontSize: 10, color: _mutedColor, fontStyle: FontStyle.italic),
+                style: Cartoon.userText(
+                  size: 10,
+                  weight: FontWeight.w500,
+                  color: _mutedColor,
+                ),
               ),
             ],
           ],
@@ -1049,22 +1258,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             players,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isWinner ? FontWeight.w800 : FontWeight.w600,
-              color: color,
-            ),
+            style: Cartoon.text(size: 12, color: color),
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          '$score',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w900,
-            color: color,
-          ),
-        ),
+        Text('$score', style: Cartoon.text(size: 13, color: color)),
       ],
     );
   }
@@ -1085,7 +1283,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             ),
             child: Text(
               '${playerCount}p',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _inkColor),
+              style: Cartoon.text(size: 11, color: _inkColor),
             ),
           ),
           const SizedBox(width: 8),
@@ -1095,7 +1293,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             playerSummary.isEmpty ? '-' : playerSummary,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: _inkColor, fontWeight: FontWeight.w600, height: 1.4),
+            style: Cartoon.userText(
+              size: 12,
+              weight: FontWeight.w600,
+              color: _inkColor,
+              height: 1.4,
+            ),
           ),
         ),
       ],
@@ -1105,15 +1308,35 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   ({String label, Color color, IconData icon}) _gameTypeMeta(String gameType) {
     switch (gameType) {
       case 'tichu':
-        return (label: 'TICHU', color: const Color(0xFF42A5F5), icon: Icons.style_outlined);
+        return (
+          label: 'TICHU',
+          color: const Color(0xFF42A5F5),
+          icon: Icons.style_outlined,
+        );
       case 'skull_king':
-        return (label: 'SK', color: const Color(0xFFAB47BC), icon: Icons.sailing_outlined);
+        return (
+          label: 'SK',
+          color: const Color(0xFFAB47BC),
+          icon: Icons.sailing_outlined,
+        );
       case 'love_letter':
-        return (label: 'LL', color: const Color(0xFFEF5350), icon: Icons.mail_outlined);
+        return (
+          label: 'LL',
+          color: const Color(0xFFEF5350),
+          icon: Icons.mail_outlined,
+        );
       case 'mighty':
-        return (label: 'MIGHTY', color: const Color(0xFFFFA726), icon: Icons.casino_outlined);
+        return (
+          label: 'MIGHTY',
+          color: const Color(0xFFFFA726),
+          icon: Icons.casino_outlined,
+        );
       default:
-        return (label: gameType.toUpperCase(), color: _mutedColor, icon: Icons.help_outline);
+        return (
+          label: gameType.toUpperCase(),
+          color: _mutedColor,
+          icon: Icons.help_outline,
+        );
     }
   }
 
@@ -1149,15 +1372,18 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.commonClose),
+          ),
           FilledButton(
             onPressed: item['status'] == 'resolved'
                 ? null
                 : () {
                     context.read<GameService>().resolveAdminInquiry(
-                          _toInt(item['id']),
-                          noteController.text.trim(),
-                        );
+                      _toInt(item['id']),
+                      noteController.text.trim(),
+                    );
                     Navigator.pop(ctx);
                   },
             child: Text(l.adminResolved),
@@ -1180,7 +1406,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           child: Consumer<GameService>(
             builder: (context, game, _) {
               if (game.adminReportGroupLoading) {
-                return const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()));
+                return const SizedBox(
+                  height: 180,
+                  child: Center(child: CircularProgressIndicator()),
+                );
               }
               return SingleChildScrollView(
                 child: Column(
@@ -1191,7 +1420,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF9F6F5),
+                        color: Cartoon.cream,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
@@ -1213,7 +1442,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.commonClose),
+          ),
           TextButton(
             onPressed: () {
               game.updateAdminReportStatus(target, roomId, 'reviewed');
@@ -1245,8 +1477,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           width: _dialogWidth(ctx, 420),
           child: Consumer<GameService>(
             builder: (context, game, _) {
-              if (game.adminUserDetailLoading || game.adminUserDetail?['nickname'] != nickname) {
-                return const SizedBox(height: 220, child: Center(child: CircularProgressIndicator()));
+              if (game.adminUserDetailLoading ||
+                  game.adminUserDetail?['nickname'] != nickname) {
+                return const SizedBox(
+                  height: 220,
+                  child: Center(child: CircularProgressIndicator()),
+                );
               }
               final user = game.adminUserDetail ?? const <String, dynamic>{};
               return SingleChildScrollView(
@@ -1255,15 +1491,36 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildDetailRow(l.adminUsername, '${user['username'] ?? '-'}'),
+                      _buildDetailRow(
+                        l.adminUsername,
+                        '${user['username'] ?? '-'}',
+                      ),
                       _buildDetailRow(l.adminRating, '${user['rating'] ?? 0}'),
                       _buildDetailRow(l.adminGold, '${user['gold'] ?? 0}'),
-                      _buildDetailRow(l.adminRecord, l.adminWinLoss(_toInt(user['wins']), _toInt(user['losses']))),
-                      _buildDetailRow(l.adminStatus, '${user['onlineStatus'] ?? 'offline'}'),
+                      _buildDetailRow(
+                        l.adminRecord,
+                        l.adminWinLoss(
+                          _toInt(user['wins']),
+                          _toInt(user['losses']),
+                        ),
+                      ),
+                      _buildDetailRow(
+                        l.adminStatus,
+                        '${user['onlineStatus'] ?? 'offline'}',
+                      ),
                       if (user['roomName'] != null)
-                        _buildDetailRow(l.adminCurrentRoom, '${user['roomName']}'),
-                      _buildDetailRow(l.adminJoinedAt, _formatTimestamp(user['created_at'])),
-                      _buildDetailRow(l.adminLastLogin, _formatTimestamp(user['last_login'])),
+                        _buildDetailRow(
+                          l.adminCurrentRoom,
+                          '${user['roomName']}',
+                        ),
+                      _buildDetailRow(
+                        l.adminJoinedAt,
+                        _formatTimestamp(user['created_at']),
+                      ),
+                      _buildDetailRow(
+                        l.adminLastLogin,
+                        _formatTimestamp(user['last_login']),
+                      ),
                     ],
                   ),
                 ),
@@ -1272,7 +1529,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.commonClose)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.commonClose),
+          ),
         ],
       ),
     );
@@ -1283,27 +1543,20 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _panelColor,
-        borderRadius: BorderRadius.circular(16),
+        color: Cartoon.paper,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: _inkColor,
-            ),
-          ),
+          Text(title, style: Cartoon.text(size: 15, color: _inkColor)),
           const SizedBox(height: 10),
           child,
         ],
       ),
     );
   }
-
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
@@ -1315,22 +1568,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             width: 72,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: _mutedColor,
-              ),
+              style: Cartoon.text(size: 12, color: _mutedColor),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: _inkColor,
-              ),
-            ),
+            child: Text(value, style: Cartoon.text(size: 13, color: _inkColor)),
           ),
         ],
       ),
@@ -1344,14 +1586,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
+      child: Text(label, style: Cartoon.text(size: 12, color: color)),
     );
   }
 
@@ -1384,5 +1619,4 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
         return const Color(0xFF8A7A72);
     }
   }
-
 }

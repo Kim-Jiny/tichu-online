@@ -505,7 +505,9 @@ class TichuApp extends StatelessWidget {
             );
             return _isDesktopWeb ? _WebMinHeight(child: scaled) : scaled;
           },
-          theme: _buildTheme(),
+          // 앱 전체 기본을 카툰으로: 화면마다 따로 씌우지 않은 다이얼로그·시트·
+          // 버튼·입력칸도 같은 모양이 된다.
+          theme: cartoonTheme(_buildTheme()),
           home: const _OrientationGate(child: _EntryScreen()),
         ),
       ),

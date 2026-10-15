@@ -542,6 +542,22 @@ ThemeData cartoonTheme(ThemeData base) {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(foregroundColor: ink, textStyle: jua(16)),
     ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: Cartoon.orange,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        textStyle: jua(16, color: Colors.white),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: shape(14),
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: Cartoon.paper,
+      surfaceTintColor: Colors.transparent,
+      shape: shape(16),
+      textStyle: jua(16),
+    ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: ink,

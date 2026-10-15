@@ -78,6 +78,12 @@ class L10nKoJosa extends L10nKo {
   L10nKoJosa() : super('ko');
 
   @override
+  String gameDogPassedTo(String from, String to) =>
+      resolveKoreanJosa(super.gameDogPassedTo(from, to));
+  @override
+  String settingsDeleteTypeNickname(String nickname) =>
+      resolveKoreanJosa(super.settingsDeleteTypeNickname(nickname));
+  @override
   String skGameCardViewRejected(String name) =>
       resolveKoreanJosa(super.skGameCardViewRejected(name));
   @override
@@ -96,8 +102,7 @@ class L10nKoJosa extends L10nKo {
   String llGuardEffect(String name) =>
       resolveKoreanJosa(super.llGuardEffect(name));
   @override
-  String llSpyEffect(String name) =>
-      resolveKoreanJosa(super.llSpyEffect(name));
+  String llSpyEffect(String name) => resolveKoreanJosa(super.llSpyEffect(name));
   @override
   String llBaronEffect(String name) =>
       resolveKoreanJosa(super.llBaronEffect(name));

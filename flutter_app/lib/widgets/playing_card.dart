@@ -128,16 +128,7 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildJokerCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(7),
-      child: Image.asset(
-        'assets/cards/joker.webp',
-        fit: BoxFit.cover,
-        width: width,
-        height: height,
-        errorBuilder: (ctx, err, stack) => _buildJokerFallback(),
-      ),
-    );
+    return _artFill('assets/cards/joker.webp', fallback: _buildJokerFallback);
   }
 
   Widget _buildJokerFallback() {
@@ -225,13 +216,25 @@ class PlayingCard extends StatelessWidget {
       return const Center(child: Text('?'));
     }
 
+    return _artFill(imagePath);
+  }
+
+  /// 그림 카드: 그림 자체가 카드 테두리(흰 둥근 틀)를 품고 있어서 그대로 얹으면
+  /// 우리 테두리 안에 또 하나의 테두리가 생긴다. 살짝 확대해 그림의 가장자리를
+  /// 잘라 내고, 둥근 모서리를 바깥 카드와 맞춘다.
+  Widget _artFill(String imagePath, {Widget Function()? fallback}) {
+    final outer = (width / 48 * 12).clamp(4.0, 13.0);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(7),
-      child: Image.asset(
-        imagePath,
-        fit: BoxFit.cover,
-        width: width,
-        height: height,
+      borderRadius: BorderRadius.circular((outer - 1.5).clamp(3.0, 12.0)),
+      child: Transform.scale(
+        scale: 1.07,
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+          width: width,
+          height: height,
+          errorBuilder: fallback == null ? null : (c, e, st) => fallback(),
+        ),
       ),
     );
   }

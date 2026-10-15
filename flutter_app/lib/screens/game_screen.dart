@@ -35,6 +35,8 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  int _dogBannerDismissedSeq = -1;
+
   /// The last thing each player said, shown briefly over their seat.
   late final SeatChatBubbles _seatChat = SeatChatBubbles(() {
     if (mounted) setState(() {});
@@ -1620,7 +1622,15 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildCenterArea(GameStateData state, GameService game) {
     // 중앙 트릭 영역은 배경 상자 없이 내용만 얹는다 (Mighty/SK/LL 톤).
-    final showDogBanner = game.dogPlayActive && state.currentTrick.isEmpty;
+    // 다른 패가 한 번이라도 나온 뒤에는 그 개 배너를 다시 보이지 않는다. 트릭이
+    // 치워져 판이 비면 아직 남아 있는 개 연출이 다시 떠오르던 것을 막는다.
+    if (game.dogPlayActive && state.currentTrick.isNotEmpty) {
+      _dogBannerDismissedSeq = game.dogPlaySeq;
+    }
+    final showDogBanner =
+        game.dogPlayActive &&
+        state.currentTrick.isEmpty &&
+        _dogBannerDismissedSeq != game.dogPlaySeq;
     return Center(
       child: Container(
         width: 260 * _s,

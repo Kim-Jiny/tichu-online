@@ -4683,8 +4683,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ? const Color(0x14000000)
                     : isBlockedPlayer
                     ? const Color(0xFFFAEDED)
-                    : (isMySlot || isReady)
-                    ? const Color(0xFFDDF3E2)
                     : isEmpty
                     ? Colors.white.withValues(alpha: 0.35)
                     : Colors.white.withValues(alpha: 0.7);
@@ -5208,7 +5206,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       : null;
                   final readyColor =
                       bannerTextOverride ?? const Color(0xFF43A047);
-                  final readyAlpha = bannerTextOverride != null ? 0.28 : 0.18;
+                  final readyAlpha = bannerTextOverride != null ? 0.3 : 0.4;
                   return Positioned.fill(
                     child: IgnorePointer(
                       child: Center(

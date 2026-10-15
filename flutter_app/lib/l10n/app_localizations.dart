@@ -9200,6 +9200,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Cards & Effects (16 total)'**
   String get rulesLlCardGuideTitle;
+
+  /// No description provided for @shopNeedMoreGold.
+  ///
+  /// In en, this message translates to:
+  /// **'You need {amount} more gold'**
+  String shopNeedMoreGold(String amount);
+
+  /// No description provided for @shopTapToPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Try it out now?'**
+  String get shopTapToPlay;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

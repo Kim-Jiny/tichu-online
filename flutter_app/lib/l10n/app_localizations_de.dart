@@ -5248,4 +5248,12 @@ class L10nDe extends L10n {
 
   @override
   String get rulesLlCardGuideTitle => 'Karten & Effekte (insgesamt 16)';
+
+  @override
+  String shopNeedMoreGold(String amount) {
+    return 'Dir fehlen $amount Gold';
+  }
+
+  @override
+  String get shopTapToPlay => 'Gleich ausprobieren?';
 }

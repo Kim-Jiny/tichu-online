@@ -1799,5 +1799,7 @@
   "rulesSkLootDemoTag": "Beide erfüllt → je +20",
   "rulesTichuCardGuideTitle": "Karten & Effekte (insgesamt 56)",
   "rulesSkCardGuideTitle": "Karten & Effekte (65 im Basisspiel)",
-  "rulesLlCardGuideTitle": "Karten & Effekte (insgesamt 16)"
+  "rulesLlCardGuideTitle": "Karten & Effekte (insgesamt 16)",
+  "shopNeedMoreGold": "Dir fehlen {amount} Gold",
+  "shopTapToPlay": "Gleich ausprobieren?"
 }

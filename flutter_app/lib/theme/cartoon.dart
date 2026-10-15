@@ -582,3 +582,94 @@ ThemeData cartoonTheme(ThemeData base) {
     ),
   );
 }
+
+/// 한 번 터지는 색종이. 부모 가운데에서 위로 솟았다가 흩날리며 떨어진다.
+/// 터치는 통과시킨다. 구매 완료 같은 축하 장면 뒤에 깐다.
+class CartoonConfetti extends StatefulWidget {
+  const CartoonConfetti({super.key, this.seed = 1, this.count = 54});
+
+  final int seed;
+  final int count;
+
+  @override
+  State<CartoonConfetti> createState() => _CartoonConfettiState();
+}
+
+class _CartoonConfettiState extends State<CartoonConfetti>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2000),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) => CustomPaint(
+          painter: _ConfettiPainter(_c.value, widget.seed, widget.count),
+          size: Size.infinite,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter(this.t, this.seed, this.count);
+
+  final double t;
+  final int seed;
+  final int count;
+
+  static const _colors = [
+    Color(0xFFFFD43B),
+    Color(0xFFFF8A65),
+    Color(0xFF4DD0E1),
+    Color(0xFFBA68C8),
+    Color(0xFFFFFFFF),
+    Color(0xFFAED581),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final rng = math.Random(seed * 7919 + 17);
+    for (var i = 0; i < count; i++) {
+      final ang = -math.pi / 2 + (rng.nextDouble() - 0.5) * 3.8;
+      final speed = 160 + rng.nextDouble() * 260;
+      final spin = (rng.nextDouble() - 0.5) * 18;
+      final w = 6 + rng.nextDouble() * 6;
+      final color = _colors[rng.nextInt(_colors.length)];
+      final delay = rng.nextDouble() * 0.1;
+      final tt = ((t - delay) / 0.9).clamp(0.0, 1.0);
+      if (t < delay || tt >= 1) continue;
+      final dist = speed * Curves.easeOut.transform(tt) * 1.1;
+      final pos = Offset(
+        c.dx + math.cos(ang) * dist,
+        c.dy + math.sin(ang) * dist + 340 * tt * tt,
+      );
+      final alpha = 1 - ((tt - 0.7) / 0.3).clamp(0.0, 1.0);
+      canvas
+        ..save()
+        ..translate(pos.dx, pos.dy)
+        ..rotate(spin * tt)
+        ..scale(1, math.cos(tt * 14 + i).abs() * 0.8 + 0.2);
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset.zero, width: w, height: w * 0.6),
+        Paint()..color = color.withValues(alpha: alpha),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter old) => old.t != t;
+}

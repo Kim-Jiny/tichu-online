@@ -1399,12 +1399,23 @@ class _ShopScreenState extends State<ShopScreen> {
         : null;
     final onSale = _isOnSale(item);
     final saleWindow = _saleWindowText(item);
+    // 이미 가진 꾸미기 아이템은 인벤토리까지 가지 않고 카드에서 바로 장착/해제.
+    final effectType = item['effect_type']?.toString() ?? '';
+    final canQuickEquip =
+        owned &&
+        const {'banner', 'title', 'theme'}.contains(category) &&
+        effectType != 'custom_title';
+    final isWorn = canQuickEquip && ownedInv['is_active'] == true;
 
     Widget? ribbon;
     if (isSeason) {
       ribbon = _cartoonTag(l10n.shopTagSeason, Cartoon.blue);
     } else if (owned) {
-      ribbon = _cartoonTag(l10n.shopItemOwned, Cartoon.green);
+      final worn = ownedInv['is_active'] == true;
+      ribbon = _cartoonTag(
+        worn ? l10n.shopStatusInUse : l10n.shopItemOwned,
+        worn ? Cartoon.blue : Cartoon.green,
+      );
     } else if (onSale) {
       ribbon = _cartoonTag(l10n.shopTagLimited, Cartoon.red);
     }
@@ -1469,7 +1480,39 @@ class _ShopScreenState extends State<ShopScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            if (!ownedPermanent)
+            if (canQuickEquip)
+              CartoonPressable(
+                scale: 0.92,
+                onTap: _busyItemKeys.contains(itemKey)
+                    ? null
+                    : () => _runItemAction(
+                        itemKey,
+                        () => isWorn
+                            ? game.unequipCategory(category)
+                            : game.equipItem(itemKey),
+                      ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isWorn ? Cartoon.paper : Cartoon.blue,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Cartoon.ink, width: 2.2),
+                    boxShadow: const [
+                      BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: Text(
+                    isWorn ? l10n.shopButtonUnequip : l10n.shopButtonEquip,
+                    textAlign: TextAlign.center,
+                    style: Cartoon.text(
+                      size: 15,
+                      color: isWorn ? Cartoon.ink : Colors.white,
+                    ),
+                  ),
+                ),
+              )
+            else if (!ownedPermanent)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -1509,6 +1552,157 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "골드가 N 부족해요" + 충전 버튼.
+  Widget _shortageBanner(BuildContext sheetCtx, int lack) {
+    final l10n = L10n.of(sheetCtx);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE3E3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 2.5),
+      ),
+      child: Row(
+        children: [
+          GoldIcon(size: 24, amount: lack),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.shopNeedMoreGold(formatGold(lack)),
+              style: Cartoon.text(size: 16),
+            ),
+          ),
+          CartoonButton(
+            expand: false,
+            height: 40,
+            radius: 14,
+            color: Cartoon.green,
+            onPressed: () {
+              Navigator.pop(sheetCtx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GoldShopScreen()),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: CartoonButton.label(l10n.shopChargeGold, size: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 구매 완료 축하: 색종이가 터지고 아이템이 통통 튀어나온다. 바로 장착도 여기서.
+  void _showPurchaseCelebration(
+    BuildContext context,
+    GameService game, {
+    required Map<String, dynamic> item,
+    required bool extended,
+    required bool canEquip,
+    required String message,
+  }) {
+    final l10n = L10n.of(context);
+    final itemKey = item['item_key']?.toString() ?? '';
+    final name = _getLocalizedItemName(item);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            const Positioned.fill(child: CartoonConfetti()),
+            CartoonEntrance(
+              from: const Offset(0, 40),
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 360),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                decoration: Cartoon.panelDecoration(radius: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CartoonFloat(
+                      amplitude: 5,
+                      child: _buildShopRowVisual(item, 104),
+                    ),
+                    const SizedBox(height: 14),
+                    Cartoon.outlinedText(
+                      extended
+                          ? l10n.shopExtendComplete
+                          : l10n.shopPurchaseComplete,
+                      size: 30,
+                      fill: Cartoon.yellow,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: Cartoon.userText(size: 17),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: Cartoon.userText(
+                        size: 13.5,
+                        weight: FontWeight.w500,
+                        color: Cartoon.ink.withValues(alpha: 0.7),
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CartoonButton(
+                            height: 50,
+                            color: const Color(0xFFB9B0A8),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: CartoonButton.label(
+                              l10n.commonClose,
+                              size: 17,
+                            ),
+                          ),
+                        ),
+                        if (canEquip) ...[
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 3,
+                            child: CartoonPulse(
+                              child: CartoonButton(
+                                height: 50,
+                                color: Cartoon.green,
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  game.equipItem(itemKey);
+                                },
+                                child: CartoonButton.label(
+                                  l10n.shopEquipNow,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2821,38 +3015,19 @@ class _ShopScreenState extends State<ShopScreen> {
         item['effect_type']?.toString() == 'profile_photo' ||
         item['effect_type']?.toString() == 'profile_private';
     final isConsumable = category == 'utility' && !noEquipAction;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          extended
-              ? L10n.of(context).shopExtendComplete
-              : L10n.of(context).shopPurchaseComplete,
-        ),
-        content: Text(
-          extended
-              ? L10n.of(context).shopExtendDone(name)
-              : isConsumable
-              ? L10n.of(context).shopPurchaseDoneConsumable
-              : noEquipAction
-              ? L10n.of(context).shopPurchaseDonePassive2
-              : L10n.of(context).shopPurchaseDoneEquip,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).commonClose),
-          ),
-          if (!extended && !isConsumable && !noEquipAction)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                game.equipItem(itemKey);
-              },
-              child: Text(L10n.of(context).shopEquipNow),
-            ),
-        ],
-      ),
+    _showPurchaseCelebration(
+      context,
+      game,
+      item: item,
+      extended: extended,
+      canEquip: !extended && !isConsumable && !noEquipAction,
+      message: extended
+          ? L10n.of(context).shopExtendDone(name)
+          : isConsumable
+          ? L10n.of(context).shopPurchaseDoneConsumable
+          : noEquipAction
+          ? L10n.of(context).shopPurchaseDonePassive2
+          : L10n.of(context).shopPurchaseDoneEquip,
     );
   }
 
@@ -3107,6 +3282,52 @@ class _ShopScreenState extends State<ShopScreen> {
                               ),
                           ],
                         ),
+                        // 가격은 이름 바로 아래에 크게 — 아래 바까지 눈을 내리지 않아도
+                        // 알 수 있게. (기간별 상품은 아래 버튼 하나하나에 가격이 있다.)
+                        if (tierList == null && !ownedPermanent) ...[
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: onSale
+                                    ? const Color(0xFFFFE3E3)
+                                    : Cartoon.cream,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 2.5,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Cartoon.ink,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GoldIcon(size: 26, amount: price),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    formatGold(price),
+                                    style: Cartoon.text(
+                                      size: 26,
+                                      color: onSale
+                                          ? const Color(0xFFD32F2F)
+                                          : Cartoon.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         if (ownedExpiryText != null) ...[
                           const SizedBox(height: 6),
                           Row(
@@ -3207,18 +3428,26 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (tierList == null)
-                        Row(
-                          children: [
-                            GoldIcon(size: 19, amount: price),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${formatGold(price)} G',
-                              style: Cartoon.text(size: 22),
-                            ),
-                          ],
+                      // 골드가 모자라면 이유와 해결책을 같이: 회색 버튼만 두면 왜
+                      // 못 사는지 알 수 없다.
+                      if (!owned || !ownedPermanent)
+                        Builder(
+                          builder: (_) {
+                            final cheapest = tierList == null
+                                ? price
+                                : tierList
+                                      .map((t) => (t['price'] ?? 0) as int)
+                                      .reduce((x, y) => x < y ? x : y);
+                            final lack = cheapest - game.gold;
+                            if (lack <= 0 || (isSeason && owned)) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _shortageBanner(ctx, lack),
+                            );
+                          },
                         ),
-                      if (tierList == null) const SizedBox(height: 10),
                       if (tierList != null)
                         Builder(
                           builder: (_) {

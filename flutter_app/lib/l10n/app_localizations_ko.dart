@@ -5094,4 +5094,12 @@ class L10nKo extends L10n {
 
   @override
   String get rulesLlCardGuideTitle => '카드 구성 및 효과 (총 16장)';
+
+  @override
+  String shopNeedMoreGold(String amount) {
+    return '골드가 $amount 부족해요';
+  }
+
+  @override
+  String get shopTapToPlay => '지금 바로 써 볼까요?';
 }

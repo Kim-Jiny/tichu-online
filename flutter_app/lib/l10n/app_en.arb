@@ -3042,5 +3042,8 @@
   "rulesSkLootDemoTag": "Both bids made → +20 each",
   "rulesTichuCardGuideTitle": "Cards & Effects (56 total)",
   "rulesSkCardGuideTitle": "Cards & Effects (65 base)",
-  "rulesLlCardGuideTitle": "Cards & Effects (16 total)"
+  "rulesLlCardGuideTitle": "Cards & Effects (16 total)",
+  "shopNeedMoreGold": "You need {amount} more gold",
+  "@shopNeedMoreGold": {"placeholders": {"amount": {"type": "String"}}},
+  "shopTapToPlay": "Try it out now?"
 }

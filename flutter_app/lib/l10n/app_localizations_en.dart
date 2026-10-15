@@ -5212,4 +5212,12 @@ class L10nEn extends L10n {
 
   @override
   String get rulesLlCardGuideTitle => 'Cards & Effects (16 total)';
+
+  @override
+  String shopNeedMoreGold(String amount) {
+    return 'You need $amount more gold';
+  }
+
+  @override
+  String get shopTapToPlay => 'Try it out now?';
 }

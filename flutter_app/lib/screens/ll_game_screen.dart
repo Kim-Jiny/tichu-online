@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../models/ll_game_state.dart';
 import '../widgets/afk_kick_badge.dart';
+import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart';
 import '../widgets/turn_name_pill.dart';
 import '../widgets/love_letter_card.dart';
 import '../widgets/connection_overlay.dart';
@@ -283,14 +285,17 @@ class _LLGameScreenState extends State<LLGameScreen> {
         statusTrailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.style, color: Color(0xFF8A7A72), size: 14),
+            Icon(
+              Icons.style,
+              color: Cartoon.ink.withValues(alpha: 0.55),
+              size: 14,
+            ),
             const SizedBox(width: 6),
             Text(
               '${state.drawPileCount}',
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+              style: Cartoon.text(
+                size: 13,
+                color: Cartoon.ink.withValues(alpha: 0.55),
               ),
             ),
             const SizedBox(width: 8),
@@ -352,10 +357,6 @@ class _LLGameScreenState extends State<LLGameScreen> {
     }
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        border: const Border(bottom: BorderSide(color: Color(0xFFE0D8D4))),
-      ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
@@ -366,50 +367,33 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 Flexible(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 5,
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0EBE8),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    decoration: gamePillDecoration(),
                     child: Text(
                       '${l10n.llRound} ${state.round}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF5A4038),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: Cartoon.text(size: 15),
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 4,
+                    horizontal: 9,
+                    vertical: 5,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0EBE8),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  decoration: gamePillDecoration(),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.style,
-                        color: Color(0xFF8A7A72),
-                        size: 14,
-                      ),
+                      const Icon(Icons.style, color: Cartoon.ink, size: 15),
                       const SizedBox(width: 4),
                       Text(
                         '${state.drawPileCount}',
-                        style: const TextStyle(
-                          color: Color(0xFF8A7A72),
-                          fontSize: 12,
-                        ),
+                        style: Cartoon.text(size: 14),
                       ),
                     ],
                   ),
@@ -484,17 +468,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
       right: 8,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -517,9 +491,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 icon: Icons.visibility,
                 active: _viewersOpen,
                 badgeCount: gs.cardViewers.length,
-                iconColor: hasViewers
-                    ? const Color(0xFF6A9BD1)
-                    : const Color(0xFF5A4038),
+                iconColor: hasViewers ? Cartoon.blue : Cartoon.ink,
                 onTap: () {
                   setState(() {
                     _viewersOpen = !_viewersOpen;
@@ -550,7 +522,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
             _buildTopActionButton(
               icon: Icons.exit_to_app,
               active: false,
-              iconColor: const Color(0xFFE53935),
+              iconColor: Cartoon.red,
               onTap: () {
                 setState(() {
                   _moreOpen = false;
@@ -605,44 +577,30 @@ class _LLGameScreenState extends State<LLGameScreen> {
       child: Container(
         width: 220,
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 const Icon(
-                  Icons.visibility,
+                  Icons.visibility_rounded,
                   size: 18,
-                  color: Color(0xFF6A9BD1),
+                  color: Cartoon.blue,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameViewingMyCards,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
+                    style: Cartoon.text(size: 15),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
                   child: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: Color(0xFF999999),
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Cartoon.ink,
                   ),
                 ),
               ],
@@ -651,7 +609,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
             if (game.cardViewers.isEmpty)
               Text(
                 L10n.of(context).skGameNoViewers,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                style: Cartoon.text(
+                  size: 13,
+                  color: Cartoon.ink.withValues(alpha: 0.5),
+                ),
               )
             else
               ...game.cardViewers.map((viewer) {
@@ -661,16 +622,16 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.person,
-                        size: 16,
-                        color: Color(0xFF888888),
+                      Icon(
+                        Icons.person_rounded,
+                        size: 17,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           nickname,
-                          style: const TextStyle(fontSize: 13),
+                          style: Cartoon.userText(size: 14),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -678,14 +639,14 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         onTap: () => game.revokeCardView(spectatorId),
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(8),
+                          decoration: gamePillDecoration(
+                            radius: 8,
+                            color: const Color(0xFFFFD9D6),
                           ),
                           child: const Icon(
-                            Icons.close,
+                            Icons.close_rounded,
                             size: 14,
-                            color: Color(0xFFE53935),
+                            color: Cartoon.red,
                           ),
                         ),
                       ),
@@ -693,7 +654,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   ),
                 );
               }),
-            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            Container(
+              height: 2,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              color: Cartoon.ink.withValues(alpha: 0.15),
+            ),
             _buildCardViewPrefSection(game),
           ],
         ),
@@ -715,35 +680,36 @@ class _LLGameScreenState extends State<LLGameScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected
-                ? color.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? color : const Color(0xFFE6DCE8),
-              width: selected ? 1.5 : 1,
-            ),
-          ),
+          decoration:
+              gamePillDecoration(
+                radius: 12,
+                color: selected
+                    ? Color.lerp(color, Colors.white, 0.8)
+                    : Cartoon.cream,
+              ).copyWith(
+                border: Border.all(
+                  color: selected ? color : Cartoon.ink.withValues(alpha: 0.35),
+                  width: selected ? 2.4 : 1.6,
+                ),
+              ),
           child: Row(
             children: [
               Icon(
                 icon,
-                size: 14,
-                color: selected ? color : const Color(0xFF999999),
+                size: 16,
+                color: selected ? color : Cartoon.ink.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    color: selected ? color : const Color(0xFF5A4038),
+                  style: Cartoon.text(
+                    size: 13,
+                    color: selected ? color : Cartoon.ink,
                   ),
                 ),
               ),
-              if (selected) Icon(Icons.check, size: 14, color: color),
+              if (selected) Icon(Icons.check_rounded, size: 16, color: color),
             ],
           ),
         ),
@@ -754,32 +720,25 @@ class _LLGameScreenState extends State<LLGameScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          l10n.gameCardViewPolicyTitle,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
-          ),
-        ),
+        Text(l10n.gameCardViewPolicyTitle, style: Cartoon.text(size: 14)),
         const SizedBox(height: 6),
         radio(
           value: 'ask',
           label: l10n.gameCardViewPolicyAsk,
           icon: Icons.help_outline,
-          color: const Color(0xFF6A6090),
+          color: Cartoon.blue,
         ),
         radio(
           value: 'always_allow',
           label: l10n.gameCardViewPolicyAllow,
-          icon: Icons.check_circle,
-          color: const Color(0xFF4CAF50),
+          icon: Icons.check_circle_rounded,
+          color: Cartoon.green,
         ),
         radio(
           value: 'always_deny',
           label: l10n.gameCardViewPolicyDeny,
-          icon: Icons.block,
-          color: const Color(0xFFE53935),
+          icon: Icons.block_rounded,
+          color: Cartoon.red,
         ),
       ],
     );
@@ -1107,33 +1066,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
         color: Colors.transparent,
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3F7FF).withValues(alpha: 0.98),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFCBDCF7)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.visibility, color: Color(0xFF6A9BD1)),
+                  const Icon(Icons.visibility_rounded, color: Cartoon.blue),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       L10n.of(context).skGameCardViewRequest(spectatorNickname),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4080),
-                      ),
+                      style: Cartoon.userText(size: 15),
                     ),
                   ),
                 ],
@@ -1142,28 +1086,24 @@ class _LLGameScreenState extends State<LLGameScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () =>
-                          game.respondCardViewRequest(spectatorId, false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFCC6666),
-                        side: const BorderSide(color: Color(0xFFCC6666)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(L10n.of(context).skGameReject),
+                    child: gameButton(
+                      L10n.of(context).skGameReject,
+                      () => game.respondCardViewRequest(spectatorId, false),
+                      color: Cartoon.red,
+                      height: 44,
+                      size: 16,
+                      expand: true,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () =>
-                          game.respondCardViewRequest(spectatorId, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6A9BD1),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                      child: Text(L10n.of(context).skGameAllow),
+                    child: gameButton(
+                      L10n.of(context).skGameAllow,
+                      () => game.respondCardViewRequest(spectatorId, true),
+                      color: Cartoon.blue,
+                      height: 44,
+                      size: 16,
+                      expand: true,
                     ),
                   ),
                 ],

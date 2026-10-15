@@ -79,6 +79,7 @@ void showGoldHistoryDialog(
   bool earnTab = false,
 }) {
   game.requestGoldHistory();
+  game.requestWallet(); // 보유 골드도 최신으로
   showDialog(
     context: context,
     builder: (dialogContext) => Dialog(
@@ -141,7 +142,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
         _goldDialogHeader(
           widget.dialogContext,
           title: l10n.shopGoldHistory,
-          subtitle: l10n.shopGoldCurrent(game.gold),
+          subtitle: game.walletLoaded ? l10n.shopGoldCurrent(game.gold) : '…',
         ),
         const SizedBox(height: 14),
         _tabToggle(l10n),

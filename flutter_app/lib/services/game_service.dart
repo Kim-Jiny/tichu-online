@@ -245,6 +245,10 @@ class GameService extends ChangeNotifier {
 
   // Shop
   int gold = 0;
+
+  /// 서버에서 지갑을 한 번이라도 받았는가. false 인 동안 [gold] 0 은 "0원" 이 아니라
+  /// "아직 모름" 이다 — 로비·팝업이 0 을 그대로 보여 주면 깜짝 놀란다.
+  bool walletLoaded = false;
   int leaveCount = 0;
   List<Map<String, dynamic>> goldHistory = [];
   // IAP gold products (server-driven; product_ids resolved at runtime, never
@@ -991,6 +995,9 @@ class GameService extends ChangeNotifier {
         // Prefetch attendance state so the shop icon badge / banner is
         // accurate the moment the user lands on the lobby.
         requestAttendanceState();
+        // 로비 골드 표시용. login_success 에는 골드가 없어서, 예전엔 상점을 열거나
+        // 결제·판이 끝나 서버가 밀어줄 때까지 0 으로 보였다.
+        requestWallet();
         // Replay any verify_iap_purchase / claim_attendance that were queued
         // while the WS was offline. Server requires ws.nickname for these,
         // so it MUST run after login_success — not on raw WS connect.
@@ -2302,6 +2309,7 @@ class GameService extends ChangeNotifier {
         if (data['success'] == true) {
           final wallet = data['wallet'] as Map<String, dynamic>? ?? {};
           gold = wallet['gold'] ?? 0;
+          walletLoaded = true;
           leaveCount = wallet['leave_count'] ?? 0;
         }
         notifyListeners();
@@ -2342,6 +2350,7 @@ class GameService extends ChangeNotifier {
         // the request already timed out (keeps the displayed gold correct).
         if (data['success'] == true && data['newGold'] != null) {
           gold = data['newGold'];
+          walletLoaded = true;
         }
         // Resolve ONLY the matching request. Unknown/late ids are ignored
         // (the request already timed out and was cleaned up), so a late
@@ -2481,7 +2490,10 @@ class GameService extends ChangeNotifier {
           }
           // Reflect the new gold balance immediately.
           final newGold = (data['newGold'] as num?)?.toInt();
-          if (newGold != null) gold = newGold;
+          if (newGold != null) {
+            gold = newGold;
+            walletLoaded = true;
+          }
           attendanceError = null;
         } else {
           // Server-confirmed double-claim → sync local UI even if it lagged.
@@ -2856,6 +2868,7 @@ class GameService extends ChangeNotifier {
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
+          walletLoaded = true;
           adRewardRemaining = (data['remaining'] as num?)?.toInt() ?? 0;
           adRewardResult = 'ad_reward_success';
         } else {
@@ -3315,6 +3328,8 @@ class GameService extends ChangeNotifier {
     if (playerName.isEmpty || playerName == nickname) return;
     _profiles.clear();
     _chatPhotos.clear();
+    gold = 0;
+    walletLoaded = false;
     goldHistory = [];
     inventoryItems = [];
     inventoryLoadedOnce = false;
@@ -3340,6 +3355,7 @@ class GameService extends ChangeNotifier {
     attendanceState = null;
     adRewardRemaining = 0;
     gold = 0;
+    walletLoaded = false;
     leaveCount = 0;
     equippedTitleName = null;
     equippedBanner = null;
@@ -3441,6 +3457,7 @@ class GameService extends ChangeNotifier {
     myRankData = null;
     seasons = [];
     gold = 0;
+    walletLoaded = false;
     leaveCount = 0;
     goldHistory = [];
     shopItems = [];

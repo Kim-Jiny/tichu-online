@@ -2092,7 +2092,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   children: [
                     GoldIcon(size: 28, amount: game.gold),
                     const SizedBox(width: 6),
-                    Text(_withCommas(game.gold), style: Cartoon.text(size: 18)),
+                    Text(
+                      game.walletLoaded ? _withCommas(game.gold) : '…',
+                      style: Cartoon.text(size: 18),
+                    ),
                   ],
                 ),
               ),

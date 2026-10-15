@@ -113,11 +113,10 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
     return Container(
       key: _boxKey,
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      // 상자 없이 옅은 흰 바탕만 — 테두리와 그림자는 걷었다.
       decoration: BoxDecoration(
-        color: Cartoon.paper,
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Cartoon.ink, width: 2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -153,12 +152,7 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       onVerticalDragEnd: resizable ? _onDragEnd : null,
       child: Container(
         padding: const EdgeInsets.only(left: 10, right: 4),
-        decoration: BoxDecoration(
-          color: widget.accentColor,
-          border: const Border(
-            bottom: BorderSide(color: Cartoon.ink, width: 2),
-          ),
-        ),
+        decoration: BoxDecoration(color: widget.accentColor),
         child: Row(
           children: [
             if (resizable) ...[

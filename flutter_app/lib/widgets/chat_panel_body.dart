@@ -90,8 +90,12 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
         Container(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           decoration: BoxDecoration(
-            color: Cartoon.paper,
-            border: Border(top: BorderSide(color: Cartoon.ink, width: 2)),
+            border: Border(
+              top: BorderSide(
+                color: Cartoon.ink.withValues(alpha: 0.15),
+                width: 1.5,
+              ),
+            ),
           ),
           child: Row(
             children: [

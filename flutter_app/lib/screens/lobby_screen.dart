@@ -3482,9 +3482,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: active ? Cartoon.orange : Cartoon.paper,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Cartoon.ink, width: 1.6),
+              color: active
+                  ? Cartoon.orange
+                  : Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(13),
             ),
             child: Icon(
               icon,
@@ -3663,11 +3664,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // Three stacked cards (header, players, chat) put three elevations on one
     // screen, and the 16dp margin on every side cost width the room title needs.
     return Container(
-      // 화면 끝까지 붙은 막대가 아니라 떠 있는 패널 — 상태바 아래로 잘려 들어가
-      // 보이던 윗변이 둥글게 닫힌다.
-      margin: EdgeInsets.fromLTRB(12, isLandscape ? 4 : 6, 12, 6),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-      decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 2.5),
+      // 상자 없이 화면 위에 바로 — 헤더까지 상자면 대기실이 상자투성이였다.
+      margin: EdgeInsets.fromLTRB(8, isLandscape ? 2 : 4, 8, 2),
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
       // One row: back, a title block (room name + its rules underneath), then
       // icon-only actions. It was two rows — title with two chips and a share
       // button, then four labelled pastel chips — which spent ~110dp of height
@@ -3682,12 +3681,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Cartoon.paper,
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: Cartoon.ink, width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                ],
               ),
               child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
             ),
@@ -4745,13 +4740,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
               // by the border, and "bot" by the avatar's corner marker.
               // 불투명해야 한다(단색 그림자가 비치지 않게). 빈 자리는 살짝 연한
               // 크림, 막힌 자리는 회색.
+              // 자리는 테두리 없이 옅은 바탕만. 내 자리·준비한 자리는 연초록,
+              // 빈 자리는 거의 투명하게 두어 "아직 비었다"가 조용히 보인다.
               final fallbackColor = isSlotBlocked
-                  ? const Color(0xFFE9E4DF)
+                  ? const Color(0x14000000)
                   : isBlockedPlayer
                   ? const Color(0xFFFAEDED)
+                  : (isMySlot || isReady)
+                  ? const Color(0xFFDDF3E2)
                   : isEmpty
-                  ? const Color(0xFFFBF5E8)
-                  : Cartoon.paper;
+                  ? Colors.white.withValues(alpha: 0.35)
+                  : Colors.white.withValues(alpha: 0.7);
               return Container(
                 width: double.infinity,
                 // Sized off the avatar: a 46dp photo with 7 above and below,
@@ -4769,26 +4768,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   color: bannerGradient == null ? fallbackColor : null,
                   gradient: bannerGradient,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    // 내 자리·준비한 자리는 초록 테두리로, 나머지는 진한 갈색.
-                    // 빈 자리는 옅게 해서 "아직 비었다"가 보인다.
-                    color: (isMySlot || isReady)
-                        ? const Color(0xFF2E9E4F)
-                        : (isEmpty || isSlotBlocked)
-                        ? Cartoon.ink.withValues(alpha: 0.4)
-                        : Cartoon.ink,
-                    width: (isMySlot || isReady) ? 3 : 2.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isEmpty || isSlotBlocked)
-                          ? Cartoon.ink.withValues(alpha: 0.4)
-                          : ((isMySlot || isReady)
-                                ? const Color(0xFF2E9E4F)
-                                : Cartoon.ink),
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [

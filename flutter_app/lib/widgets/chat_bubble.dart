@@ -120,7 +120,12 @@ class ChatBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isMe ? mineColor : Colors.white,
                   borderRadius: BorderRadius.circular(bubbleRadius),
-                  border: Border.all(color: Cartoon.ink, width: 1.5),
+                  border: isMe
+                      ? null
+                      : Border.all(
+                          color: Cartoon.ink.withValues(alpha: 0.2),
+                          width: 1.2,
+                        ),
                 ),
                 child: Text(
                   message,

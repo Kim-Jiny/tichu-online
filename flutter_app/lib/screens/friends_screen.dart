@@ -273,8 +273,6 @@ class _FriendsScreenState extends State<FriendsScreen>
                 maxLines: 1,
               ),
             ),
-            const Spacer(),
-            _headerChip(icon: Icons.refresh_rounded, onTap: _refreshFriends),
           ],
         ),
       ),
@@ -492,20 +490,53 @@ class _FriendsScreenState extends State<FriendsScreen>
               if (row is String) {
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(2, 8, 0, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 3,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Cartoon.cream,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: Text(row, style: Cartoon.text(size: 14)),
                       ),
-                      decoration: BoxDecoration(
-                        color: Cartoon.cream,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Cartoon.ink, width: 2),
-                      ),
-                      child: Text(row, style: Cartoon.text(size: 14)),
-                    ),
+                      const Spacer(),
+                      // 새로고침은 머리글 줄 오른쪽 끝에: 헤더에 홀로 떠 있던 칩을
+                      // 목록 가까이로 옮겼다. 아래로 당겨도 된다.
+                      if (index == 0)
+                        CartoonPressable(
+                          scale: 0.88,
+                          onTap: _refreshFriends,
+                          child: Container(
+                            width: 34,
+                            height: 30,
+                            margin: const EdgeInsets.only(bottom: 3),
+                            decoration: BoxDecoration(
+                              color: Cartoon.paper,
+                              borderRadius: BorderRadius.circular(11),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.2,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.refresh_rounded,
+                              size: 19,
+                              color: Cartoon.ink,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               }

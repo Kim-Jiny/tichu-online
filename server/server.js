@@ -2519,7 +2519,7 @@ function attachWaitingMembers(room, data) {
       sendTo(ws, { type: 'room_joined', roomId: room.id, roomName: room.name });
       attached++;
     } else if (watchers.has(ws.nickname)) {
-      if (!room.addSpectator(ws.playerId, ws.nickname, '').success) continue;
+      if (!room.addSpectator(ws.playerId, ws.nickname, '', ws.photoUrl).success) continue;
       pendingArrivals.delete(ws.nickname);
       ws.roomId = room.id;
       ws.isSpectator = true;
@@ -4547,7 +4547,7 @@ async function handleReconnection(ws) {
         });
         return;
       }
-      const result = room.addSpectator(ws.playerId, ws.nickname, '');
+      const result = room.addSpectator(ws.playerId, ws.nickname, '', ws.photoUrl);
       if (result.success) {
         ws.roomId = room.id;
         ws.isSpectator = true;

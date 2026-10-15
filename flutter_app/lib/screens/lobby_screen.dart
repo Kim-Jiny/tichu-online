@@ -2723,6 +2723,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  /// 스컬킹 확장팩의 테마 색(크라켄 보라·흰고래 파랑·약탈 금색)과 이모지.
+  Color _skExpansionStrongColor(String expansionId) {
+    switch (expansionId) {
+      case 'kraken':
+        return const Color(0xFF7B3FC4);
+      case 'white_whale':
+        return const Color(0xFF1E88D6);
+      case 'loot':
+        return const Color(0xFFE29A00);
+      default:
+        return const Color(0xFF6A5A52);
+    }
+  }
+
+  String _skExpansionEmoji(String expansionId) {
+    switch (expansionId) {
+      case 'kraken':
+        return '🐙';
+      case 'white_whale':
+        return '🐳';
+      case 'loot':
+        return '💰';
+      default:
+        return '';
+    }
+  }
+
   String _skExpansionShortLabel(String expansionId, L10n l10n) {
     switch (expansionId) {
       case 'kraken':
@@ -2906,23 +2933,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF2D2D3D),
+                                            color: _skExpansionStrongColor(exp),
                                             borderRadius: BorderRadius.circular(
-                                              6,
+                                              8,
                                             ),
                                             border: Border.all(
-                                              color: const Color(
-                                                0xFFFFD54F,
-                                              ).withValues(alpha: 0.5),
-                                              width: 0.8,
+                                              color: Cartoon.ink,
+                                              width: 1.4,
                                             ),
                                           ),
                                           child: Text(
-                                            _skExpansionShortLabel(exp, l10n),
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0xFFFFD54F),
-                                              fontWeight: FontWeight.bold,
+                                            '${_skExpansionEmoji(exp)} ${_skExpansionShortLabel(exp, l10n)}',
+                                            style: Cartoon.userText(
+                                              size: 10.5,
+                                              color: Colors.white,
+                                              weight: FontWeight.w800,
                                               height: 1.0,
                                             ),
                                           ),

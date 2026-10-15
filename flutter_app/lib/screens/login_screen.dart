@@ -12,6 +12,7 @@ import '../services/auth_service.dart';
 import '../services/session_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../theme/cartoon.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -346,18 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
           resizeToAvoidBottomInset: kIsWeb ? false : null,
           body: Stack(
             children: [
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFF8F4F6),
-                      Color(0xFFF0E8F0),
-                      Color(0xFFE8F0F8),
-                    ],
-                  ),
-                ),
+              CartoonBackground(
                 child: SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -449,39 +439,25 @@ class _LoginScreenState extends State<LoginScreen> {
           ? CrossAxisAlignment.start
           : CrossAxisAlignment.center,
       children: [
-        Image.asset(
-          'assets/dragonIcon.webp',
-          width: compact ? 72 : 80,
-          height: compact ? 72 : 80,
+        CartoonFloat(
+          child: Image.asset(
+            'assets/dragonIcon.webp',
+            width: compact ? 88 : 104,
+            height: compact ? 88 : 104,
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
+        const SizedBox(height: 10),
+        Cartoon.outlinedText(
           'TICHU',
-          style: TextStyle(
-            fontSize: compact ? 34 : 40,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF5A4038),
-            letterSpacing: compact ? 3 : 4,
-          ),
+          size: compact ? 46 : 56,
+          fill: Cartoon.yellow,
+          letterSpacing: compact ? 3 : 5,
         ),
-        const SizedBox(height: 4),
-        Text(
-          l10n.loginSubtitle,
-          style: TextStyle(
-            fontSize: compact ? 15 : 16,
-            color: const Color(0xFF8A7A72),
-          ),
-        ),
+        const SizedBox(height: 6),
+        Text(l10n.loginSubtitle, style: Cartoon.text(size: compact ? 17 : 18)),
         if (compact) ...[
           const SizedBox(height: 16),
-          Text(
-            l10n.loginTagline,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Color(0xFF8A7A72),
-            ),
-          ),
+          Text(l10n.loginTagline, style: Cartoon.text(size: 15, height: 1.5)),
         ],
       ],
     );
@@ -493,19 +469,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final socialSpacing = compact ? 12.0 : 16.0;
     final loginButtonHeight = compact ? 52.0 : 56.0;
 
-    return Container(
+    return CartoonPanel(
       padding: EdgeInsets.all(cardPadding),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD9CCC8).withValues(alpha: 0.6),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
       child: Column(
         children: [
           _buildTextField(
@@ -527,26 +492,12 @@ class _LoginScreenState extends State<LoginScreen> {
             _buildAutoLoginNotice(session),
           ],
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
+          CartoonButton(
             height: loginButtonHeight,
-            child: ElevatedButton(
-              onPressed: _isConnecting ? null : _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF28C26),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                l10n.loginButton,
-                style: TextStyle(
-                  fontSize: compact ? 16 : 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            onPressed: _isConnecting ? null : _login,
+            child: CartoonButton.label(
+              l10n.loginButton,
+              size: compact ? 20 : 22,
             ),
           ),
           const SizedBox(height: 12),
@@ -554,7 +505,7 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _showRegisterDialog,
             child: Text(
               l10n.loginRegisterButton,
-              style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 16),
+              style: Cartoon.text(size: 17),
             ),
           ),
           if (_error != null) ...[
@@ -728,22 +679,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: TextStyle(fontSize: fontSize),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFAA9A92)),
-        prefixIcon: Icon(icon, color: const Color(0xFFAA9A92)),
-        filled: true,
-        fillColor: const Color(0xFFF8F4F2),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-      ),
+      style: Cartoon.text(size: fontSize),
+      decoration: Cartoon.inputDecoration(hint: hint, icon: icon),
     );
   }
 
@@ -765,13 +702,9 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: borderColor != null ? Border.all(color: borderColor) : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+            border: Border.all(color: Cartoon.ink, width: 2.5),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
             ],
           ),
           child: Center(child: child),

@@ -146,6 +146,12 @@ flutter:
     - assets/splash.webp
     - assets/dragonIcon.webp
 
+  fonts:
+    # 카툰 UI 제목/버튼용. 앱 문자열 글자만 남긴 서브셋 (assets/fonts/README.md)
+    - family: Jua
+      fonts:
+        - asset: assets/fonts/Jua-sub.ttf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

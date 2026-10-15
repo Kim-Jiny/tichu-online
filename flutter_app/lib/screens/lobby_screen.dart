@@ -31,6 +31,7 @@ import '../widgets/docked_chat_panel.dart';
 import '../widgets/seat_chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
+import '../theme/cartoon.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -861,10 +862,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
         height: box,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+          color: Color.lerp(color, Colors.white, 0.55),
           borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
         ),
-        child: Icon(icon, color: color, size: _headerGlyphFor(box)),
+        child: Icon(icon, color: Cartoon.ink, size: _headerGlyphFor(box)),
       ),
     );
   }
@@ -1968,11 +1973,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // growing; a ternary that returns the same number twice only reads as
       // an intention nobody has.
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(18),
+      decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
+      margin: EdgeInsets.fromLTRB(
+        isLandscape ? 12 : 16,
+        isLandscape ? 12 : 16,
+        isLandscape ? 12 : 16,
+        isLandscape ? 16 : 20,
       ),
-      margin: EdgeInsets.all(isLandscape ? 12 : 16),
       clipBehavior: Clip.none,
       // The row is measured before it is built. Five buttons at a fixed size
       // fit a normal phone and nothing else: narrower and they wrap onto a
@@ -2396,27 +2403,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _showCreateRoomDialog,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC7E6D0),
-                foregroundColor: const Color(0xFF3A5A40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                L10n.of(context).lobbyCreateRoom,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          CartoonButton(
+            height: 54,
+            color: Cartoon.green,
+            onPressed: _showCreateRoomDialog,
+            child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
           ),
         ],
       ),
@@ -2503,26 +2494,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 3),
               decoration: BoxDecoration(
-                color: _roomGameFilter == type
-                    ? color
-                    : Colors.white.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _roomGameFilter == type
-                      ? color
-                      : const Color(0xFFE6DDD8),
-                ),
+                color: _roomGameFilter == type ? color : Cartoon.paper,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+                boxShadow: _roomGameFilter == type
+                    ? null
+                    : const [
+                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                      ],
               ),
               child: Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _roomGameFilter == type
-                      ? Colors.white
-                      : const Color(0xFFB4A8A2),
+                style: Cartoon.text(
+                  size: 14,
+                  color: _roomGameFilter == type ? Colors.white : Cartoon.ink,
                 ),
               ),
             ),
@@ -2614,9 +2602,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // "게임 중" chip. The state belongs to the room, not to one corner of
       // it, and saying it with the surface costs no width — which is what the
       // row had run out of.
-      color: isInProgress
-          ? const Color(0xFFEFECEA).withValues(alpha: 0.85)
-          : Colors.white.withValues(alpha: 0.72),
+      color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2640,7 +2626,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE6DDD8)),
+            border: Border.all(color: Cartoon.ink, width: 2.5),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            ],
           ),
           // Clip the contents to the card's INNER curve instead of asking the
           // strip to round itself. A 16px radius on a 6px-wide box is not a
@@ -5112,7 +5101,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final bannerTextOverride = (!isBot && player.connected)
                     ? game.bannerTextColor(player.bannerKey)
                     : null;
-                final readyColor = bannerTextOverride ?? const Color(0xFF43A047);
+                final readyColor =
+                    bannerTextOverride ?? const Color(0xFF43A047);
                 final readyAlpha = bannerTextOverride != null ? 0.28 : 0.18;
                 return Positioned.fill(
                   child: IgnorePointer(

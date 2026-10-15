@@ -13,6 +13,7 @@ import '../services/session_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../theme/cartoon.dart';
+import '../widgets/social_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -639,10 +640,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _buildSocialButton(
                       onTap: () => _handleSocialSignIn('kakao'),
                       backgroundColor: const Color(0xFFFEE500),
-                      child: CustomPaint(
-                        size: const Size(24, 24),
-                        painter: _KakaoLogoPainter(),
-                      ),
+                      child: const KakaoLogo(size: 24),
                     ),
                 ],
               ),
@@ -1635,35 +1633,4 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
       ),
     );
   }
-}
-
-class _KakaoLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF3C1E1E)
-      ..style = PaintingStyle.fill;
-
-    final cx = size.width / 2;
-    final cy = size.height * 0.42;
-    final rx = size.width * 0.48;
-    final ry = size.height * 0.36;
-
-    // Speech bubble body (ellipse)
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy), width: rx * 2, height: ry * 2),
-      paint,
-    );
-
-    // Speech bubble tail
-    final tail = Path()
-      ..moveTo(cx - size.width * 0.1, cy + ry * 0.75)
-      ..lineTo(cx - size.width * 0.18, size.height * 0.92)
-      ..lineTo(cx + size.width * 0.08, cy + ry * 0.85)
-      ..close();
-    canvas.drawPath(tail, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

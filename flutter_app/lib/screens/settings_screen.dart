@@ -13,6 +13,7 @@ import '../services/game_service.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/choice_pill.dart';
 import '../widgets/legal_text_dialog.dart';
+import '../widgets/social_logo.dart';
 import '../widgets/notice_body.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/profile_avatar.dart';
@@ -903,8 +904,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// 선택한 소셜 계정으로 로그인 토큰을 받아 연동 요청을 보낸다.
+  Future<void> _linkWith(String provider) async {
+    final l10n = L10n.of(context);
+    try {
+      late final dynamic result;
+      switch (provider) {
+        case 'google':
+          await AuthService.signOutGoogle();
+          result = await AuthService.signInWithGoogle();
+        case 'apple':
+          result = await AuthService.signInWithApple();
+        default:
+          result = await AuthService.signInWithKakao();
+      }
+      if (result.cancelled || !mounted) return;
+      context.read<GameService>().linkSocial(result.provider, result.token);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsLinkFailed(e.toString()))),
+        );
+      }
+    }
+  }
+
+  /// 연동 팝업: 쓸 수 있는 소셜 계정을 큰 버튼으로 세로로 나열한다. 예전엔
+  /// 글자만 있는 작은 버튼이 하단에 한 줄로 붙어 있어서 로고도 없고 어느 게 어느
+  /// 계정인지 한 번 읽어야 했다.
   void _showLinkDialog() {
     final l10n = L10n.of(context);
+    Widget provider({
+      required String name,
+      required String key,
+      required Color bg,
+      required Color fg,
+      required Widget logo,
+      required BuildContext ctx,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: CartoonPressable(
+          scale: 0.96,
+          onTap: () {
+            Navigator.pop(ctx);
+            _linkWith(key);
+          },
+          child: Container(
+            height: 58,
+            margin: const EdgeInsets.only(bottom: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Cartoon.ink, width: 2.5),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              ],
+            ),
+            child: Row(
+              children: [
+                SizedBox(width: 30, height: 30, child: Center(child: logo)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    name,
+                    style: Cartoon.userText(
+                      size: 18,
+                      weight: FontWeight.w900,
+                      color: fg,
+                    ),
+                  ),
+                ),
+                Text(
+                  l10n.commonLink,
+                  style: Cartoon.text(
+                    size: 15,
+                    color: fg.withValues(alpha: 0.8),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: fg, size: 24),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -913,96 +999,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Color(0xFF7E57C2),
           l10n.linkDialogTitle,
         ),
-        content: Text(l10n.linkDialogContent),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.linkDialogContent),
+              const SizedBox(height: 16),
+              if (SocialConfig.googleEnabled)
+                provider(
+                  ctx: ctx,
+                  name: 'Google',
+                  key: 'google',
+                  bg: Colors.white,
+                  fg: Cartoon.ink,
+                  logo: Image.asset('assets/icons/google_logo.webp'),
+                ),
+              if (SocialConfig.appleEnabled)
+                provider(
+                  ctx: ctx,
+                  name: 'Apple',
+                  key: 'apple',
+                  bg: Colors.black,
+                  fg: Colors.white,
+                  logo: const Icon(Icons.apple, color: Colors.white, size: 28),
+                ),
+              if (SocialConfig.kakaoEnabled)
+                provider(
+                  ctx: ctx,
+                  name: 'Kakao',
+                  key: 'kakao',
+                  bg: const Color(0xFFFEE500),
+                  fg: const Color(0xFF3C1E1E),
+                  logo: const KakaoLogo(size: 26),
+                ),
+            ],
+          ),
+        ),
         actions: [
-          if (SocialConfig.googleEnabled)
-            OutlinedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  await AuthService.signOutGoogle();
-                  final result = await AuthService.signInWithGoogle();
-                  if (result.cancelled || !mounted) return;
-                  context.read<GameService>().linkSocial(
-                    result.provider,
-                    result.token,
-                  );
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.settingsLinkFailed(e.toString())),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Google',
-                style: TextStyle(
-                  color: Color(0xFF4285F4),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          if (SocialConfig.appleEnabled)
-            OutlinedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  final result = await AuthService.signInWithApple();
-                  if (result.cancelled || !mounted) return;
-                  context.read<GameService>().linkSocial(
-                    result.provider,
-                    result.token,
-                  );
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.settingsLinkFailed(e.toString())),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Apple',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          if (SocialConfig.kakaoEnabled)
-            OutlinedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                try {
-                  final result = await AuthService.signInWithKakao();
-                  if (result.cancelled || !mounted) return;
-                  context.read<GameService>().linkSocial(
-                    result.provider,
-                    result.token,
-                  );
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.settingsLinkFailed(e.toString())),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Kakao',
-                style: TextStyle(
-                  color: Color(0xFF3C1E1E),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),

@@ -896,12 +896,18 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             )
           else
             Column(
-              children: recentMatches
-                  .take(_recentMatchesShown)
-                  .map<Widget>(
-                    (match) => _buildMatchRow(match, profileNickname),
-                  )
-                  .toList(),
+              children: [
+                for (final (i, match)
+                    in recentMatches.take(_recentMatchesShown).indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1.5,
+                      color: Cartoon.ink.withValues(alpha: 0.1),
+                    ),
+                  _buildMatchRow(match, profileNickname),
+                ],
+              ],
             ),
         ],
       ),
@@ -938,12 +944,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   /// against this.
   Widget _buildMatchCard(dynamic match, String profileNickname) {
     final outcome = _outcomeOf(match, profileNickname);
+    // 카드 상자 대신 한 줄: 왼쪽 가는 막대가 결과 색을 알려 주고, 줄 사이는 호출한
+    // 목록이 구분선으로 나눈다. 경기마다 상자를 두르면 한 쪽 가득 상자뿐이라 번잡했다.
     return Container(
-      padding: const EdgeInsets.fromLTRB(11, 9, 12, 9),
+      padding: const EdgeInsets.fromLTRB(10, 9, 4, 9),
       decoration: BoxDecoration(
-        color: _outcomeTint(outcome, 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border(
+          left: BorderSide(color: _outcomeColor(outcome), width: 5),
+        ),
       ),
       child: _buildMatchRow(match, profileNickname, padded: false),
     );
@@ -1576,21 +1584,23 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                                 ),
                               ),
                       )
-                    : ListView.builder(
+                    : ListView.separated(
                         controller: _scroll,
                         padding: const EdgeInsets.only(right: 2, bottom: 6),
                         itemCount: shown.length + (_hasMore ? 1 : 0),
+                        separatorBuilder: (_, _) => Divider(
+                          height: 1,
+                          thickness: 1.5,
+                          color: Cartoon.ink.withValues(alpha: 0.1),
+                        ),
                         itemBuilder: (_, index) {
                           if (index >= shown.length) return _buildFooter();
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: CartoonEntrance(
-                              key: ValueKey('mh-${shown[index].hashCode}'),
-                              delay: Duration(milliseconds: 30 * (index % 8)),
-                              from: const Offset(0, 12),
-                              pop: false,
-                              child: widget.cardBuilder(shown[index]),
-                            ),
+                          return CartoonEntrance(
+                            key: ValueKey('mh-${shown[index].hashCode}'),
+                            delay: Duration(milliseconds: 30 * (index % 8)),
+                            from: const Offset(0, 12),
+                            pop: false,
+                            child: widget.cardBuilder(shown[index]),
                           );
                         },
                       ),

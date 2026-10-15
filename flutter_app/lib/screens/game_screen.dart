@@ -601,7 +601,11 @@ class _GameScreenState extends State<GameScreen> {
     //
     // Turn timer is also a separate top-left overlay for the same reason —
     // its appearance/disappearance can't grow the topbar column.
-    final timerBadge = _buildTimerBadge(state);
+    // 플레이 중에는 가운데 차례 알약 옆에 이미 남은 시간이 있다. 위쪽 뱃지는
+    // 교환·라지 티츄처럼 가운데에 시간이 없는 단계에서만 보여 준다.
+    final timerBadge = state.phase == 'playing'
+        ? null
+        : _buildTimerBadge(state);
     return Stack(
       children: [
         Column(
@@ -683,7 +687,7 @@ class _GameScreenState extends State<GameScreen> {
         // height, and a full-width log ran its longest lines ("봇 2: 5스트레이트(5장)
         // - 콜A") straight underneath the avatar. Lines already ellipsize.
         Positioned(
-          top: 82,
+          top: timerBadge == null ? 52 : 82,
           left: 12,
           width: MediaQuery.of(context).size.width * 0.38,
           child: IgnorePointer(child: _buildTrickLogOverlay(state)),
@@ -999,32 +1003,18 @@ class _GameScreenState extends State<GameScreen> {
       right: 20,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                const Icon(Icons.visibility, color: Color(0xFF6A6090)),
+                const Icon(Icons.visibility_rounded, color: Cartoon.blue),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameCardViewRequest(spectatorNickname),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4080),
-                    ),
+                    style: Cartoon.userText(size: 15),
                   ),
                 ),
               ],
@@ -1033,28 +1023,24 @@ class _GameScreenState extends State<GameScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () =>
-                        game.respondCardViewRequest(spectatorId, false),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFCC6666),
-                      side: const BorderSide(color: Color(0xFFCC6666)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: Text(L10n.of(context).gameReject),
+                  child: gameButton(
+                    L10n.of(context).gameReject,
+                    () => game.respondCardViewRequest(spectatorId, false),
+                    color: Cartoon.red,
+                    height: 44,
+                    size: 16,
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        game.respondCardViewRequest(spectatorId, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A9BD1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: Text(L10n.of(context).gameAllow),
+                  child: gameButton(
+                    L10n.of(context).gameAllow,
+                    () => game.respondCardViewRequest(spectatorId, true),
+                    color: Cartoon.blue,
+                    height: 44,
+                    size: 16,
+                    expand: true,
                   ),
                 ),
               ],
@@ -1105,17 +1091,7 @@ class _GameScreenState extends State<GameScreen> {
       child: Container(
         width: 200,
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,27 +1099,23 @@ class _GameScreenState extends State<GameScreen> {
             Row(
               children: [
                 const Icon(
-                  Icons.visibility,
-                  size: 16,
-                  color: Color(0xFF5A4038),
+                  Icons.visibility_rounded,
+                  size: 18,
+                  color: Cartoon.ink,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameViewingMyCards,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
+                    style: Cartoon.text(size: 15),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
                   child: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: Color(0xFF999999),
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Cartoon.ink,
                   ),
                 ),
               ],
@@ -1152,7 +1124,10 @@ class _GameScreenState extends State<GameScreen> {
             if (game.cardViewers.isEmpty)
               Text(
                 L10n.of(context).gameNoViewers,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                style: Cartoon.text(
+                  size: 13,
+                  color: Cartoon.ink.withValues(alpha: 0.5),
+                ),
               )
             else
               ...game.cardViewers.map((viewer) {
@@ -1162,16 +1137,16 @@ class _GameScreenState extends State<GameScreen> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.person,
-                        size: 16,
-                        color: Color(0xFF888888),
+                      Icon(
+                        Icons.person_rounded,
+                        size: 17,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           nickname,
-                          style: const TextStyle(fontSize: 13),
+                          style: Cartoon.userText(size: 14),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1179,14 +1154,14 @@ class _GameScreenState extends State<GameScreen> {
                         onTap: () => game.revokeCardView(spectatorId),
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(8),
+                          decoration: gamePillDecoration(
+                            radius: 8,
+                            color: const Color(0xFFFFD9D6),
                           ),
                           child: const Icon(
-                            Icons.close,
+                            Icons.close_rounded,
                             size: 14,
-                            color: Color(0xFFE53935),
+                            color: Cartoon.red,
                           ),
                         ),
                       ),
@@ -1194,7 +1169,11 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 );
               }),
-            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            Container(
+              height: 2,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              color: Cartoon.ink.withValues(alpha: 0.15),
+            ),
             _buildCardViewPrefSection(game),
           ],
         ),
@@ -1219,35 +1198,36 @@ class _GameScreenState extends State<GameScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected
-                ? color.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? color : const Color(0xFFE6DCE8),
-              width: selected ? 1.5 : 1,
-            ),
-          ),
+          decoration:
+              gamePillDecoration(
+                radius: 12,
+                color: selected
+                    ? Color.lerp(color, Colors.white, 0.8)
+                    : Cartoon.cream,
+              ).copyWith(
+                border: Border.all(
+                  color: selected ? color : Cartoon.ink.withValues(alpha: 0.35),
+                  width: selected ? 2.4 : 1.6,
+                ),
+              ),
           child: Row(
             children: [
               Icon(
                 icon,
-                size: 14,
-                color: selected ? color : const Color(0xFF999999),
+                size: 16,
+                color: selected ? color : Cartoon.ink.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    color: selected ? color : const Color(0xFF5A4038),
+                  style: Cartoon.text(
+                    size: 13,
+                    color: selected ? color : Cartoon.ink,
                   ),
                 ),
               ),
-              if (selected) Icon(Icons.check, size: 14, color: color),
+              if (selected) Icon(Icons.check_rounded, size: 16, color: color),
             ],
           ),
         ),
@@ -1258,32 +1238,25 @@ class _GameScreenState extends State<GameScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          l10n.gameCardViewPolicyTitle,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
-          ),
-        ),
+        Text(l10n.gameCardViewPolicyTitle, style: Cartoon.text(size: 14)),
         const SizedBox(height: 6),
         radio(
           value: 'ask',
           label: l10n.gameCardViewPolicyAsk,
           icon: Icons.help_outline,
-          color: const Color(0xFF6A6090),
+          color: Cartoon.blue,
         ),
         radio(
           value: 'always_allow',
           label: l10n.gameCardViewPolicyAllow,
-          icon: Icons.check_circle,
-          color: const Color(0xFF4CAF50),
+          icon: Icons.check_circle_rounded,
+          color: Cartoon.green,
         ),
         radio(
           value: 'always_deny',
           label: l10n.gameCardViewPolicyDeny,
-          icon: Icons.block,
-          color: const Color(0xFFE53935),
+          icon: Icons.block_rounded,
+          color: Cartoon.red,
         ),
       ],
     );
@@ -1492,10 +1465,9 @@ class _GameScreenState extends State<GameScreen> {
                         padding: const EdgeInsets.only(bottom: 2),
                         child: Text(
                           '⏱ ${p!.timeoutCount}/3',
-                          style: TextStyle(
-                            color: const Color(0xFFE65100),
-                            fontSize: compact ? 9 : 10,
-                            fontWeight: FontWeight.w800,
+                          style: Cartoon.text(
+                            size: compact ? 10 : 11,
+                            color: Cartoon.orangeDeep,
                           ),
                         ),
                       ),
@@ -1579,7 +1551,7 @@ class _GameScreenState extends State<GameScreen> {
                               child: Icon(
                                 Icons.wifi_off,
                                 size: 11,
-                                color: Colors.red,
+                                color: Cartoon.red,
                               ),
                             ),
                           Flexible(
@@ -1592,7 +1564,7 @@ class _GameScreenState extends State<GameScreen> {
                                 size: nameFontSize + 1,
                                 color: (p?.connected ?? true)
                                     ? Cartoon.ink
-                                    : Colors.grey,
+                                    : Cartoon.ink.withValues(alpha: 0.4),
                               ),
                             ),
                           ),

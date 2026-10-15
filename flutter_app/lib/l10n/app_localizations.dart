@@ -4128,7 +4128,7 @@ abstract class L10n {
   /// No description provided for @rulesSkTrumpBody.
   ///
   /// In en, this message translates to:
-  /// **'Black number cards beat all other suit number cards regardless of number. However, you must follow the lead suit (the suit of the first number card) if you can, and may only play black when you have no cards of the led suit.'**
+  /// **'Black number cards beat all other suit number cards regardless of number. However, you must follow the lead suit if you can, and may only play black when you have no cards of the led suit.\n\nThe lead suit is the suit of the first number card played in the trick. If an Escape or Loot is played first, the next number card sets the lead suit. But if a Pirate, Mermaid, Skull King, Kraken or White Whale is played before any number card, the trick has no lead suit, and number cards played afterwards do not create one — everyone may play any card.'**
   String get rulesSkTrumpBody;
 
   /// No description provided for @rulesSkSpecialTitle.
@@ -4146,7 +4146,7 @@ abstract class L10n {
   /// No description provided for @rulesSkSpecialEscapeLine1.
   ///
   /// In en, this message translates to:
-  /// **'Never wins a trick. Can be played at any time regardless of suit following.'**
+  /// **'Never wins a trick. Can be played at any time regardless of suit-following, and playing it first does not set a lead suit — the next number card played sets it.'**
   String get rulesSkSpecialEscapeLine1;
 
   /// No description provided for @rulesSkSpecialEscapeLine2.
@@ -4494,7 +4494,7 @@ abstract class L10n {
   /// No description provided for @rulesSkExpLootDesc.
   ///
   /// In en, this message translates to:
-  /// **'The trick winner earns +20 bonus per Loot card in the trick, and each player who played a Loot card also earns +20 as their own bonus. (Only awarded on bid success)'**
+  /// **'The player who played Loot and the player who wins that trick form an alliance. If both allied players make their bids exactly by the end of the round, each earns +20 bonus per Loot card. If either one fails, neither earns it.'**
   String get rulesSkExpLootDesc;
 
   /// No description provided for @rulesLlGoalTitle.

@@ -2255,7 +2255,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkTrumpBody =>
-      'Schwarze Zahlenkarten schlagen alle anderen Farben unabhängig von der Zahl. Du musst jedoch der geführten Farbe folgen, wenn möglich, und darfst nur Schwarz spielen, wenn du keine Karte der geführten Farbe hast.';
+      'Schwarze Zahlenkarten schlagen alle anderen Farben unabhängig von der Zahl. Du musst jedoch der geführten Farbe folgen, wenn möglich, und darfst nur Schwarz spielen, wenn du keine Karte der geführten Farbe hast.\n\nDie geführte Farbe ist die Farbe der ersten gespielten Zahlenkarte im Stich. Wird zuerst ein Escape oder Loot gespielt, bestimmt die nächste Zahlenkarte die Farbe. Wird jedoch ein Pirat, eine Meerjungfrau, der Skull King, der Kraken oder der Weiße Wal vor einer Zahlenkarte gespielt, gibt es in diesem Stich keine geführte Farbe, und danach gespielte Zahlenkarten legen auch keine fest — alle dürfen jede Karte spielen.';
 
   @override
   String get rulesSkSpecialTitle => 'Spezialkarten-Regeln';
@@ -2265,7 +2265,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkSpecialEscapeLine1 =>
-      'Gewinnt niemals einen Stich. Kann jederzeit unabhängig von der Farbfolge gespielt werden.';
+      'Gewinnt nie einen Stich. Kann jederzeit unabhängig vom Farbzwang gespielt werden; wird er zuerst gespielt, legt er keine Farbe fest — die nächste Zahlenkarte bestimmt sie.';
 
   @override
   String get rulesSkSpecialEscapeLine2 =>
@@ -2461,7 +2461,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkExpLootDesc =>
-      'Der Stichgewinner erhält +20 Bonus pro Loot-Karte im Stich, und jeder Spieler, der eine Loot-Karte gespielt hat, erhält ebenfalls +20 als eigenen Bonus. (Nur bei Bid-Erfolg)';
+      'Der Spieler, der Loot gespielt hat, und der Gewinner dieses Stichs bilden eine Allianz. Wenn beide verbündeten Spieler am Rundenende ihr Gebot exakt erfüllt haben, erhält jeder +20 Bonus pro Loot-Karte. Verfehlt einer sein Gebot, erhält keiner den Bonus.';
 
   @override
   String get rulesLlGoalTitle => 'Spielziel';

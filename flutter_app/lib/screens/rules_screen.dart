@@ -529,11 +529,7 @@ class _RulesScreenState extends State<RulesScreen> {
                   const SizedBox(width: 6),
                   Text(
                     L10n.of(context).rulesSkExpansionTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF3E312A),
-                    ),
+                    style: Cartoon.text(size: 16),
                   ),
                 ],
               ),
@@ -587,10 +583,10 @@ class _RulesScreenState extends State<RulesScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: Cartoon.userText(
+                            size: 14,
+                            weight: FontWeight.w500,
                             height: 1.5,
-                            color: Color(0xFF3E312A),
                           ),
                           children: [
                             TextSpan(
@@ -1021,10 +1017,10 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
-  static const _bodyStyle = TextStyle(
-    fontSize: 15,
+  static final _bodyStyle = Cartoon.userText(
+    size: 15,
+    weight: FontWeight.w500,
     height: 1.6,
-    color: Color(0xFF5A4038),
   );
 }
 
@@ -1097,16 +1093,7 @@ class _SpecialRule extends StatelessWidget {
                   children: [
                     Text(emoji, style: const TextStyle(fontSize: 16)),
                     const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF3E312A),
-                        ),
-                      ),
-                    ),
+                    Flexible(child: Text(title, style: Cartoon.text(size: 15))),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1115,10 +1102,10 @@ class _SpecialRule extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
                     child: Text(
                       '• $line',
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: Cartoon.userText(
+                        size: 14,
+                        weight: FontWeight.w500,
                         height: 1.5,
-                        color: Color(0xFF5A4038),
                       ),
                     ),
                   ),
@@ -1155,10 +1142,11 @@ class _SpecialRule extends StatelessWidget {
                       child: Text(
                         altCardLabel!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 11,
+                        style: Cartoon.userText(
+                          size: 11,
+                          weight: FontWeight.w500,
+                          color: Cartoon.ink.withValues(alpha: 0.6),
                           height: 1.2,
-                          color: Color(0xFF8A7A72),
                         ),
                       ),
                     ),
@@ -1193,11 +1181,7 @@ class _TigressDisplayPreview extends StatelessWidget {
         children: [
           Text(
             L10n.of(context).rulesSkTigressPreviewTitle,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF4A327E),
-            ),
+            style: Cartoon.text(size: 13),
           ),
           const SizedBox(height: 8),
           Row(
@@ -1271,11 +1255,7 @@ class _TigressChoiceCard extends StatelessWidget {
         Flexible(
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF5A4038),
-            ),
+            style: Cartoon.text(size: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1306,7 +1286,7 @@ class _ExampleBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = positive ? const Color(0xFF43A047) : const Color(0xFFC62828);
+    final accent = positive ? Cartoon.green : Cartoon.red;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -1319,16 +1299,7 @@ class _ExampleBlock extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF3E312A),
-                  ),
-                ),
-              ),
+              Expanded(child: Text(title, style: Cartoon.text(size: 14))),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -1337,11 +1308,7 @@ class _ExampleBlock extends StatelessWidget {
                 ),
                 child: Text(
                   result,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: Cartoon.text(size: 13, color: Colors.white),
                 ),
               ),
             ],
@@ -1349,10 +1316,10 @@ class _ExampleBlock extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             setup,
-            style: const TextStyle(
-              fontSize: 13,
+            style: Cartoon.userText(
+              size: 13,
+              weight: FontWeight.w500,
               height: 1.4,
-              color: Color(0xFF5A4038),
             ),
           ),
           const SizedBox(height: 2),
@@ -1401,14 +1368,7 @@ class _TichuDeclarationRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: accent,
-                ),
-              ),
+              Text(title, style: Cartoon.text(size: 15, color: accent)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1418,11 +1378,7 @@ class _TichuDeclarationRow extends StatelessWidget {
                 ),
                 child: Text(
                   L10n.of(context).rulesTichuDeclSuccess(success),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: Cartoon.text(size: 12, color: Colors.white),
                 ),
               ),
               const SizedBox(width: 4),
@@ -1434,11 +1390,7 @@ class _TichuDeclarationRow extends StatelessWidget {
                 ),
                 child: Text(
                   L10n.of(context).rulesTichuDeclFail(fail),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: Cartoon.text(size: 12, color: Colors.white),
                 ),
               ),
             ],
@@ -1446,10 +1398,10 @@ class _TichuDeclarationRow extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             when,
-            style: const TextStyle(
-              fontSize: 13,
+            style: Cartoon.userText(
+              size: 13,
+              weight: FontWeight.w500,
               height: 1.45,
-              color: Color(0xFF5A4038),
             ),
           ),
         ],
@@ -1535,14 +1487,7 @@ class _RuleText extends StatelessWidget {
                     color: Color(0xFFEDE7F6),
                     shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    num.group(1)!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF5E35B1),
-                    ),
-                  ),
+                  child: Text(num.group(1)!, style: Cartoon.text(size: 13)),
                 ),
                 Expanded(
                   child: Text(
@@ -1596,12 +1541,7 @@ class _RuleText extends StatelessWidget {
             padding: const EdgeInsets.only(top: 8, bottom: 2),
             child: Text(
               t,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.5,
-                fontWeight: FontWeight.w800,
-                color: _strong,
-              ),
+              style: Cartoon.text(size: 15, color: _strong, height: 1.5),
             ),
           ),
         );
@@ -1616,7 +1556,12 @@ class _RuleText extends StatelessWidget {
           ),
           child: Text(
             t,
-            style: const TextStyle(fontSize: 15, height: 1.6, color: _ink),
+            style: Cartoon.userText(
+              size: 15,
+              weight: FontWeight.w500,
+              color: _ink,
+              height: 1.6,
+            ),
           ),
         ),
       );
@@ -1653,14 +1598,7 @@ class _ComboRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: accent,
-            ),
-          ),
+          Text(label, style: Cartoon.text(size: 14, color: accent)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 4,
@@ -1716,12 +1654,11 @@ class _SkMini extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: const Color(0xFFB8A9A2), width: 1.5),
         ),
-        child: const Text(
+        child: Text(
           '?',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFFB8A9A2),
+          style: Cartoon.text(
+            size: 24,
+            color: Cartoon.ink.withValues(alpha: 0.45),
           ),
         ),
       );
@@ -1782,20 +1719,16 @@ class _FlowDemo extends StatelessWidget {
             ),
             child: Text(
               tag,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+              style: Cartoon.text(size: 14, color: Colors.white),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             caption,
-            style: const TextStyle(
-              fontSize: 14,
+            style: Cartoon.userText(
+              size: 14,
+              weight: FontWeight.w500,
               height: 1.55,
-              color: Color(0xFF5A4038),
             ),
           ),
         ],
@@ -2018,13 +1951,12 @@ class _CardGuide extends StatelessWidget {
                     Expanded(
                       child: Text(
                         name,
-                        style: TextStyle(
-                          fontSize: 17,
-                          height: 1.25,
-                          fontWeight: FontWeight.w800,
+                        style: Cartoon.text(
+                          size: 17,
                           color: highlight
                               ? const Color(0xFFE65100)
                               : const Color(0xFF3E312A),
+                          height: 1.25,
                         ),
                       ),
                     ),
@@ -2041,11 +1973,7 @@ class _CardGuide extends StatelessWidget {
                       ),
                       child: Text(
                         L10n.of(context).rulesSkCardCount(count),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF5A4038),
-                        ),
+                        style: Cartoon.text(size: 13),
                       ),
                     ),
                   ],
@@ -2063,11 +1991,7 @@ class _CardGuide extends StatelessWidget {
                     ),
                     child: Text(
                       L10n.of(context).rulesSkIncludedByDefault,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE65100),
-                      ),
+                      style: Cartoon.text(size: 12, color: Color(0xFFE65100)),
                     ),
                   ),
                 ],
@@ -2075,11 +1999,11 @@ class _CardGuide extends StatelessWidget {
                 if (sub.isNotEmpty)
                   Text(
                     sub,
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: Cartoon.userText(
+                      size: 14,
+                      weight: FontWeight.w600,
+                      color: Cartoon.ink.withValues(alpha: 0.6),
                       height: 1.4,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF8A7A72),
                     ),
                   ),
                 if (lines.isNotEmpty) const SizedBox(height: 8),
@@ -2099,10 +2023,10 @@ class _CardGuide extends StatelessWidget {
                         Expanded(
                           child: Text(
                             l,
-                            style: const TextStyle(
-                              fontSize: 14,
+                            style: Cartoon.userText(
+                              size: 14,
+                              weight: FontWeight.w500,
                               height: 1.55,
-                              color: Color(0xFF5A4038),
                             ),
                           ),
                         ),

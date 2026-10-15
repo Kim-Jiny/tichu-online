@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import '../services/iap_service.dart';
 import '../widgets/gold_icon.dart';
 
@@ -195,40 +196,49 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     // Same shape as the shop it opens from: theme gradient, transparent header,
     // and one white sheet holding the list. It used to be a stock AppBar with a
     // Material Card per tier, which looked like a different app.
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFFDFC),
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Cartoon.paper,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(26),
+                      ),
+                      border: Border(
+                        top: BorderSide(color: Cartoon.ink, width: 3),
+                        left: BorderSide(color: Cartoon.ink, width: 3),
+                        right: BorderSide(color: Cartoon.ink, width: 3),
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Consumer<GameService>(
+                      builder: (context, game, _) => _buildBody(game),
                     ),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Consumer<GameService>(
-                    builder: (context, game, _) => _buildBody(game),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -236,40 +246,65 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 16, 10),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF8A7A72),
-            visualDensity: VisualDensity.compact,
-          ),
-          Text(
-            L10n.of(context).goldChargeTitle,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
-            ),
-          ),
-          const Spacer(),
-          Consumer<GameService>(
-            builder: (_, game, _) => GoldIcon(size: 20, amount: game.gold),
-          ),
-          const SizedBox(width: 5),
-          Consumer<GameService>(
-            builder: (_, game, _) => Text(
-              _fmt(game.gold),
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
+    return CartoonEntrance(
+      from: const Offset(0, -30),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Row(
+          children: [
+            CartoonPressable(
+              scale: 0.88,
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Cartoon.paper,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Cartoon.ink,
+                  size: 24,
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Flexible(
+              child: Cartoon.outlinedText(
+                L10n.of(context).goldChargeTitle,
+                size: 26,
+                maxLines: 1,
+              ),
+            ),
+            const Spacer(),
+            Consumer<GameService>(
+              builder: (_, game, _) => Container(
+                padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GoldIcon(size: 26, amount: game.gold),
+                    const SizedBox(width: 6),
+                    Text(_fmt(game.gold), style: Cartoon.text(size: 19)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -319,24 +354,27 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     // On web the account panel is the header of the list, not a separate
     // section: the tier buttons do nothing until the player has read it.
     final header = kIsWeb ? 1 : 0;
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: 4, bottom: 20),
+    return ListView.builder(
+      padding: EdgeInsets.only(
+        top: 10,
+        bottom: 20 + MediaQuery.viewPaddingOf(context).bottom,
+      ),
       itemCount: products.length + header + 1,
-      separatorBuilder: (_, index) =>
-          index < header || index == products.length + header - 1
-          ? const SizedBox(height: 12)
-          : const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 16,
-              endIndent: 16,
-              color: Color(0xFFF2ECE9),
-            ),
       itemBuilder: (context, i) {
         if (header == 1 && i == 0) return _buildBankPanel(game);
         final index = i - header;
         if (index == products.length) return _purchaseNotice();
-        return _buildTierRow(products[index], bestPct, index, products.length);
+        return CartoonEntrance(
+          key: ValueKey('gold-${products[index]['product_id']}'),
+          delay: Duration(milliseconds: 60 * index.clamp(0, 6)),
+          from: const Offset(0, 22),
+          child: _buildTierRow(
+            products[index],
+            bestPct,
+            index,
+            products.length,
+          ),
+        );
       },
     );
   }
@@ -634,8 +672,13 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final artSize = 34 + 12 * t;
 
     return Container(
-      color: isBest ? const Color(0xFFFFFBF2) : null,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: Cartoon.panelDecoration(
+        color: isBest ? const Color(0xFFFFF4D6) : Cartoon.paper,
+        radius: 20,
+        shadowOffset: 4,
+      ),
       child: Row(
         children: [
           SizedBox(
@@ -659,11 +702,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                         child: Text(
                           _fmt(total),
                           maxLines: 1,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF4A3A33),
-                          ),
+                          style: Cartoon.text(size: 24),
                         ),
                       ),
                     ),
@@ -750,54 +789,39 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           const SizedBox(width: 10),
           // The price IS the button — there is nothing else to press on a row.
           SizedBox(
-            width: kIsWeb ? 116 : 96,
-            height: 38,
-            child: ElevatedButton(
+            width: kIsWeb ? 116 : 98,
+            child: CartoonButton(
+              height: 50,
+              radius: 16,
+              color: Cartoon.green,
               onPressed: pending
                   ? null
                   : () => kIsWeb ? _claimDeposit(product) : _buy(product),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFE9B0),
-                foregroundColor: const Color(0xFFB07A12),
-                disabledBackgroundColor: const Color(0xFFF0EBE7),
-                elevation: 0,
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
               // Spinner both while the purchase is in-flight AND while the store
               // price is still resolving (pd == null) — clearer than a disabled
               // "..." that looks broken.
               child: pending
                   ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Cartoon.ink,
+                      ),
                     )
                   : FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            priceLabel,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                          Cartoon.outlinedText(priceLabel, size: 17),
                           // The price alone reads as "buy now" — on web it
                           // isn't: the money moves in a banking app first, and
                           // this button only tells us about it afterwards.
                           if (kIsWeb)
-                            Text(
+                            Cartoon.outlinedText(
                               L10n.of(context).goldBankConfirm,
-                              style: const TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w600,
-                                height: 1.1,
-                              ),
+                              size: 11,
                             ),
                         ],
                       ),

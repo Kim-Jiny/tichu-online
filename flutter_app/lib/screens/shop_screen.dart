@@ -4567,7 +4567,8 @@ class _ShopScreenState extends State<ShopScreen> {
 
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(26),
+              side: const BorderSide(color: Cartoon.ink, width: 3),
             ),
             // Capped, not free-sizing. Dialog lets its child take whatever
             // width is on offer, and the rows inside are Expanded — so on a
@@ -4591,11 +4592,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         Expanded(
                           child: Text(
                             l.attendanceDialogTitle,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF5A4038),
-                            ),
+                            style: Cartoon.text(size: 22),
                           ),
                         ),
                         IconButton(
@@ -4608,9 +4605,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     const SizedBox(height: 4),
                     Text(
                       l.attendanceResetInfo(resetClock),
-                      style: const TextStyle(
-                        color: Color(0xFF8A7A72),
-                        fontSize: 12,
+                      style: Cartoon.userText(
+                        size: 12.5,
+                        weight: FontWeight.w600,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -4643,8 +4641,9 @@ class _ShopScreenState extends State<ShopScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
-                          borderRadius: BorderRadius.circular(12),
+                          color: const Color(0xFFD8F5DF),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Cartoon.ink, width: 2.5),
                         ),
                         child: Text(
                           l.attendanceDoneToday,
@@ -4659,20 +4658,15 @@ class _ShopScreenState extends State<ShopScreen> {
                       // Everything above is the same as in the app — which day,
                       // what today pays, the week's rewards. Only the action
                       // changes, because claiming happens in the app.
-                      ElevatedButton.icon(
+                      CartoonButton(
+                        height: 52,
+                        color: Cartoon.orange,
                         onPressed: () => openStoreUrl(
                           storeChoicesFor(defaultTargetPlatform).first.url,
                         ),
-                        icon: const Icon(Icons.phone_iphone),
-                        label: Text(l.attendanceAppOnlyCta),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFB300),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(48),
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
+                        child: CartoonButton.label(
+                          l.attendanceAppOnlyCta,
+                          size: 17,
                         ),
                       )
                     else
@@ -4691,40 +4685,57 @@ class _ShopScreenState extends State<ShopScreen> {
                           final claimed =
                               g.attendanceState?['claimedToday'] == true;
                           final enabled = adReady && !busy && !claimed;
-                          return ElevatedButton.icon(
+                          return CartoonButton(
+                            height: 54,
+                            color: Cartoon.orange,
                             onPressed: enabled
                                 ? () => _attendanceClaim(g)
                                 : null,
-                            icon: (!adReady && !busy && !claimed)
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
+                            child: busy || !adReady
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!adReady && !busy && !claimed) ...[
+                                        const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                      Flexible(
+                                        child: CartoonButton.label(
+                                          busy
+                                              ? l.attendanceClaiming
+                                              : l.attendanceAdLoading,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
                                   )
-                                : const Icon(Icons.play_circle_outline),
-                            label: Text(
-                              busy
-                                  ? l.attendanceClaiming
-                                  : !adReady
-                                  ? l.attendanceAdLoading
-                                  : l.attendanceWatchAdAndClaim(
-                                      (s['todayRewardGold'] as int?) ?? 50,
-                                    ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFB300),
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(0xFFFFD180),
-                              disabledForegroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(48),
-                              textStyle: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                              ),
-                            ),
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.play_circle_fill_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: CartoonButton.label(
+                                          l.attendanceWatchAdAndClaim(
+                                            (s['todayRewardGold'] as int?) ??
+                                                50,
+                                          ),
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                           );
                         },
                       ),
@@ -4746,20 +4757,20 @@ class _ShopScreenState extends State<ShopScreen> {
     bool finale,
   ) {
     final bg = claimed
-        ? const Color(0xFFE8F5E9)
+        ? const Color(0xFFD8F5DF)
         : today
-        ? const Color(0xFFFFF8E1)
+        ? Cartoon.yellow
+        : finale
+        ? const Color(0xFFFFE6B8)
         : Colors.white;
-    final borderColor = today
-        ? const Color(0xFFFFB300)
-        : claimed
-        ? const Color(0xFF66BB6A)
-        : const Color(0xFFE0DAD6);
-    return Container(
+    final cell = Container(
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: today ? 2 : 1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: today ? 3 : 2.2),
+        boxShadow: [
+          BoxShadow(color: Cartoon.ink, offset: Offset(0, today ? 4 : 2)),
+        ],
       ),
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       // Narrow phones can squeeze the cell below the content's natural
@@ -4771,39 +4782,29 @@ class _ShopScreenState extends State<ShopScreen> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Day $day',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: claimed
-                    ? const Color(0xFF2E7D32)
-                    : const Color(0xFF8A7A72),
-              ),
-            ),
+            Text('Day $day', style: Cartoon.text(size: 13)),
             const SizedBox(height: 4),
             claimed
                 ? Icon(
-                    Icons.check_circle,
-                    color: const Color(0xFF43A047),
-                    size: finale ? 22 : 18,
+                    Icons.check_circle_rounded,
+                    color: Cartoon.green,
+                    size: finale ? 26 : 22,
                   )
-                : GoldIcon(size: finale ? 22 : 18, amount: reward),
+                : GoldIcon(size: finale ? 26 : 22, amount: reward),
             const SizedBox(height: 4),
             Text(
               '$reward',
-              style: TextStyle(
-                fontSize: finale ? 13 : 11,
-                fontWeight: FontWeight.w900,
-                color: finale
-                    ? const Color(0xFFE65100)
-                    : const Color(0xFF5A4038),
+              style: Cartoon.text(
+                size: finale ? 17 : 14,
+                color: finale ? const Color(0xFFE65100) : Cartoon.ink,
               ),
             ),
           ],
         ),
       ),
     );
+    // 오늘 받을 칸은 숨 쉬듯 움직여서 눈에 띈다.
+    return today ? CartoonPulse(amount: 0.05, child: cell) : cell;
   }
 
   Future<void> _attendanceClaim(GameService game) async {

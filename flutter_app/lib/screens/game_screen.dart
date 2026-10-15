@@ -1620,6 +1620,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildCenterArea(GameStateData state, GameService game) {
     // 중앙 트릭 영역은 배경 상자 없이 내용만 얹는다 (Mighty/SK/LL 톤).
+    final showDogBanner = game.dogPlayActive && state.currentTrick.isEmpty;
     return Center(
       child: Container(
         width: 260 * _s,
@@ -1715,13 +1716,15 @@ class _GameScreenState extends State<GameScreen> {
 
             SizedBox(height: 4 * _s),
 
-            if (game.dogPlayActive)
+            // 개 배너는 다음 사람이 새 트릭을 시작하기 전까지만. 그 뒤에도 남아
+            // 있으면 개 카드와 새로 낸 패가 위아래로 두 벌 보여 헷갈린다.
+            if (showDogBanner)
               _buildDogPlayedBanner(
                 game.dogPlayPlayerName,
                 toName: game.dogToName,
               ),
 
-            if (game.dogPlayActive) SizedBox(height: 4 * _s),
+            if (showDogBanner) SizedBox(height: 4 * _s),
 
             // Latest trick only
             if (state.currentTrick.isNotEmpty)

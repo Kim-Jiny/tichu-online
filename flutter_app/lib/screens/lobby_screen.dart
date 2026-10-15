@@ -3294,7 +3294,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
           Column(
             children: [
               _buildRoomHeader(game, isLandscape: isLandscape),
-              _roomInfoPills(game),
 
               // Maintenance notice banner (in waiting room)
               if (game.hasMaintenanceNotice) _buildMaintenanceBanner(game),
@@ -3653,72 +3652,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  /// 방 규칙 한눈에: 게임 · 제한 시간 · 목표 점수 · 자리 현황. 예전엔 헤더 제목
-  /// 밑에 11pt 글자 한 줄이라 거의 안 읽혔다.
-  Widget _roomInfoPills(GameService game) {
-    final l10n = L10n.of(context);
-    final type = game.currentGameType;
-    final hasScore = type == 'tichu' || type == 'mighty';
-    Widget pill(Widget lead, String text, {Color? color}) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: color ?? Cartoon.paper,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            lead,
-            const SizedBox(width: 5),
-            Text(
-              text,
-              style: Cartoon.userText(size: 13, weight: FontWeight.w900),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final total = game.effectiveRoomMaxPlayers;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          pill(
-            gameTypeSymbol(type, size: 20),
-            gameTypeLabel(l10n, type),
-            color: Color.lerp(gameTypeColor(type), Colors.white, 0.75),
-          ),
-          pill(
-            const Icon(Icons.timer_rounded, size: 17, color: Cartoon.ink),
-            '${game.roomTurnTimeLimit}${l10n.lobbySuffixSeconds}',
-          ),
-          if (hasScore)
-            pill(
-              const Icon(Icons.flag_rounded, size: 17, color: Cartoon.ink),
-              '${game.roomTargetScore}${l10n.lobbySuffixPoints}',
-            ),
-          pill(
-            _SeatDots(
-              filled: game.playerCount,
-              total: total,
-              color: gameTypeColor(type),
-            ),
-            '${game.playerCount}/$total',
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRoomHeader(GameService game, {required bool isLandscape}) {
     // Flat bar, not a floating card — same treatment as the spectator header.
     // Three stacked cards (header, players, chat) put three elevations on one
@@ -3726,8 +3659,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       // 화면 끝까지 붙은 막대가 아니라 떠 있는 패널 — 상태바 아래로 잘려 들어가
       // 보이던 윗변이 둥글게 닫힌다.
-      margin: EdgeInsets.fromLTRB(12, isLandscape ? 6 : 10, 12, 4),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      margin: EdgeInsets.fromLTRB(12, isLandscape ? 4 : 6, 12, 6),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
       decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
       // One row: back, a title block (room name + its rules underneath), then
       // icon-only actions. It was two rows — title with two chips and a share
@@ -3769,6 +3702,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    // 방 정보는 이 한 줄로 — 알약 줄을 따로 두면 화면을 너무 먹었다.
+                    Builder(
+                      builder: (_) {
+                        final l10n = L10n.of(context);
+                        final type = game.currentGameType;
+                        final total = game.effectiveRoomMaxPlayers;
+                        final full = game.playerCount >= total;
+                        final hasScore = type == 'tichu' || type == 'mighty';
+                        final info = [
+                          gameTypeLabel(l10n, type),
+                          '${game.roomTurnTimeLimit}${l10n.lobbySuffixSeconds}',
+                          if (hasScore)
+                            '${game.roomTargetScore}${l10n.lobbySuffixPoints}',
+                        ].join(' · ');
+                        return Text.rich(
+                          TextSpan(
+                            style: Cartoon.userText(
+                              size: 12.5,
+                              weight: FontWeight.w700,
+                              color: Cartoon.ink.withValues(alpha: 0.62),
+                            ),
+                            children: [
+                              TextSpan(text: '$info · '),
+                              TextSpan(
+                                text: '${game.playerCount}/$total',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: full
+                                      ? const Color(0xFF2E9E4F)
+                                      : const Color(0xFFE5791A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
                     ),
                   ],
                 );
@@ -4082,29 +4054,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           ? 5
                           : game.effectiveRoomMaxPlayers) -
                       game.playerCount;
-                  return Column(
-                    children: [
-                      FractionallySizedBox(
-                        widthFactor: 0.8,
-                        child: CartoonButton(
-                          height: 56,
-                          onPressed: null,
-                          child: Text(
-                            L10n.of(context).lobbyStartGame,
-                            style: Cartoon.text(size: 22, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
+                  return FractionallySizedBox(
+                    widthFactor: 0.8,
+                    child: CartoonButton(
+                      height: 56,
+                      onPressed: null,
+                      child: Text(
                         L10n.of(context).lobbyNeedMorePlayers(need),
-                        style: Cartoon.userText(
-                          size: 13,
-                          weight: FontWeight.w700,
-                          color: Cartoon.ink.withValues(alpha: 0.65),
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Cartoon.text(size: 17, color: Colors.white),
                       ),
-                    ],
+                    ),
                   );
                 }
                 final everyoneReady = _allNonHostReady(game);

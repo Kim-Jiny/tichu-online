@@ -2766,7 +2766,6 @@ class _GameScreenState extends State<GameScreen> {
     // 자리 기준으로 왼쪽·오른쪽을 양쪽에 둔다. 용을 줄 때는 이름보다 "내 왼쪽/오른쪽
     // 사람"으로 고르는 경우가 많아서, 이름은 보조로 아래에 작게만 적는다.
     Widget pick(String side, String? name, bool isLeft) {
-      final label = isLeft ? l10n.gameLeftPlayer : l10n.gameRightPlayer;
       return Expanded(
         child: CartoonButton(
           height: 84,
@@ -2778,23 +2777,12 @@ class _GameScreenState extends State<GameScreen> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isLeft)
-                      const Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    Flexible(child: CartoonButton.label(label, size: 20)),
-                    if (!isLeft)
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                  ],
+                Icon(
+                  isLeft
+                      ? Icons.arrow_back_rounded
+                      : Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 44,
                 ),
                 if ((name ?? '').isNotEmpty)
                   Text(

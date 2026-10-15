@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import '../services/ad_service.dart';
 import '../services/inventory_new_tracker.dart';
 import '../utils/gold_format.dart';
@@ -329,147 +330,138 @@ class _ShopScreenState extends State<ShopScreen> {
     _syncInventoryNew(context.read<GameService>());
   }
 
-  /// Header, wallet and the gold-charge action in one flat row.
-  ///
-  /// Was two stacked rounded cards (title card, then wallet card), which cost
-  /// ~150px of height and read as two unrelated things.
+  /// 카툰 헤더: 뒤로가기 · 제목 · 쿠폰 · 내 프로필, 그 아래 지갑(골드 내역)과 충전.
   Widget _buildTopBar(BuildContext context, GameService game) {
     final l10n = L10n.of(context);
-    // Transparent: the theme gradient runs behind the header and the white
-    // starts at the sheet, so the top of the screen is one colour instead of a
-    // white band pasted over it.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                color: const Color(0xFF8A7A72),
-                visualDensity: VisualDensity.compact,
-              ),
-              Text(
-                l10n.shopTitle,
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-              const Spacer(),
-              // Everything in here is bought for one's own profile, and until
-              // now there was no way to look at it from the shop — you had to
-              // leave, find a seat with your name on it and tap that.
-              // The desertion count and the refresh button used to sit here,
-              // squeezing the avatar into a 26px dot. Neither earned the
-              // space: the count is on the profile this button opens, and the
-              // shop refetches itself on open and after every purchase — the
-              // button existed for a staleness that does not happen.
-              // Left of the avatar: someone holding a code opens the shop
-              // expecting to spend it, so the way in belongs where they
-              // already are. Absent on the iOS app — see couponRedeemAllowed.
-              if (couponRedeemAllowed) ...[
-                Tooltip(
-                  message: l10n.couponRedeemTitle,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => showCouponRedeemDialog(context),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: couponIcon(size: 26),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
-              _buildMyProfileButton(game),
+    Widget chip({required Widget child, required VoidCallback onTap}) {
+      return CartoonPressable(
+        onTap: onTap,
+        scale: 0.88,
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Cartoon.paper,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Cartoon.ink, width: 2.5),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-            child: Row(
+          child: child,
+        ),
+      );
+    }
+
+    return CartoonEntrance(
+      from: const Offset(0, -30),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                chip(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Cartoon.ink,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Cartoon.outlinedText(l10n.shopTitle, size: 28),
+                const Spacer(),
+                // 코드를 들고 온 사람은 쓰려고 상점을 연다 — 쿠폰 입구는 여기.
+                // iOS 앱에는 없다 (couponRedeemAllowed).
+                if (couponRedeemAllowed) ...[
+                  chip(
+                    onTap: () => showCouponRedeemDialog(context),
+                    child: couponIcon(size: 26),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                _buildMyProfileButton(game),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
+                  child: CartoonPressable(
+                    scale: 0.97,
                     onTap: () => _showGoldHistoryDialog(game),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Container(
+                      height: 50,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Cartoon.cream,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Cartoon.ink, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                        ],
+                      ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          GoldIcon(size: 20, amount: game.gold),
-                          const SizedBox(width: 6),
-                          Flexible(
+                          GoldIcon(size: 28, amount: game.gold),
+                          const SizedBox(width: 8),
+                          Expanded(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 l10n.shopGoldAmount(game.gold),
                                 maxLines: 1,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF5A4038),
-                                ),
+                                style: Cartoon.text(size: 22),
                               ),
                             ),
                           ),
                           const Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: Color(0xFFB89C76),
+                            Icons.history_rounded,
+                            size: 20,
+                            color: Cartoon.ink,
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const GoldShopScreen()),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE9B0),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.add_circle,
-                          size: 15,
-                          color: Color(0xFFB07A12),
+                const SizedBox(width: 10),
+                CartoonPulse(
+                  child: CartoonButton(
+                    expand: false,
+                    height: 46,
+                    color: Cartoon.green,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GoldShopScreen(),
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          l10n.shopChargeGold,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFB07A12),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 10, right: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 26,
                           ),
-                        ),
-                      ],
+                          CartoonButton.label(l10n.shopChargeGold, size: 17),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -497,7 +489,10 @@ class _ShopScreenState extends State<ShopScreen> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(avatarCornerRadius(40)),
-              border: Border.all(color: const Color(0xFFE0D8D4), width: 1.5),
+              border: Border.all(color: Cartoon.ink, width: 2.5),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              ],
             ),
             child: ProfileAvatar(
               photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
@@ -514,7 +509,7 @@ class _ShopScreenState extends State<ShopScreen> {
     final hasAttendance = _shouldShowAttendanceBanner(game);
     if (!hasAttendance && !_rewardedAdReady) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
         children: [
           if (hasAttendance) Expanded(child: _buildAttendanceTile(game)),
@@ -534,11 +529,12 @@ class _ShopScreenState extends State<ShopScreen> {
     required VoidCallback? onTap,
     Widget? leadingOverride,
   }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
+    return CartoonPressable(
       onTap: onTap,
+      scale: 0.96,
       child: Container(
-        height: 46,
+        height: 54,
+        margin: const EdgeInsets.only(bottom: 3),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -546,11 +542,15 @@ class _ShopScreenState extends State<ShopScreen> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
         ),
         child: Row(
           children: [
-            leadingOverride ?? Icon(icon, color: Colors.white, size: 18),
+            leadingOverride ?? Icon(icon, color: Colors.white, size: 22),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -561,10 +561,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: Cartoon.userText(
+                      size: 13.5,
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12.5,
+                      weight: FontWeight.w900,
                       height: 1.15,
                     ),
                   ),
@@ -572,9 +572,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: Cartoon.userText(
+                      size: 11.5,
                       color: Colors.white,
-                      fontSize: 11,
+                      weight: FontWeight.w600,
                       height: 1.2,
                     ),
                   ),
@@ -594,8 +595,13 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget _buildContentSheet(GameService game) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFFFFDFC),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        color: Cartoon.paper,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        border: Border(
+          top: BorderSide(color: Cartoon.ink, width: 3),
+          left: BorderSide(color: Cartoon.ink, width: 3),
+          right: BorderSide(color: Cartoon.ink, width: 3),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Builder(
@@ -1087,48 +1093,86 @@ class _ShopScreenState extends State<ShopScreen> {
     ),
   );
 
+  /// 상점 ↔ 인벤토리: 알약 두 칸짜리 토글. 선택된 칸이 색으로 채워진다.
   Widget _buildTabs(GameService game) {
     final t = _newTracker;
     final inventoryHasNew =
-        t != null &&
-        game.inventoryLoadedOnce &&
-        t.anyNew(game.inventoryItems);
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFEFE7E3))),
-      ),
-      child: TabBar(
-        labelColor: const Color(0xFF5A4038),
-        unselectedLabelColor: const Color(0xFF9A8E8A),
-        indicatorColor: const Color(0xFF7E57C2),
-        indicatorWeight: 2.5,
-        indicatorSize: TabBarIndicatorSize.label,
-        dividerColor: Colors.transparent,
-        labelStyle: const TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w800,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w600,
-        ),
-        tabs: [
-          Tab(height: 42, text: L10n.of(context).shopTabShop),
-          Tab(
-            height: 42,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(L10n.of(context).shopTabInventory),
-                if (inventoryHasNew) ...[
-                  const SizedBox(width: 5),
-                  _newDot(),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+        t != null && game.inventoryLoadedOnce && t.anyNew(game.inventoryItems);
+    final l10n = L10n.of(context);
+    return Builder(
+      builder: (tabCtx) {
+        final controller = DefaultTabController.of(tabCtx);
+        return AnimatedBuilder(
+          animation: controller.animation ?? controller,
+          builder: (context, _) {
+            Widget segment(
+              int i,
+              String label,
+              IconData icon, {
+              bool dot = false,
+            }) {
+              final selected = controller.index == i;
+              return Expanded(
+                child: CartoonPressable(
+                  scale: 0.95,
+                  onTap: () => controller.animateTo(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: selected ? Cartoon.orange : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? Cartoon.ink : Colors.transparent,
+                        width: 2.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 22,
+                          color: selected ? Colors.white : Cartoon.ink,
+                        ),
+                        const SizedBox(width: 6),
+                        selected
+                            ? Cartoon.outlinedText(label, size: 18)
+                            : Text(label, style: Cartoon.text(size: 18)),
+                        if (dot) ...[const SizedBox(width: 6), _newDot()],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                ),
+                child: Row(
+                  children: [
+                    segment(0, l10n.shopTabShop, Icons.storefront_rounded),
+                    const SizedBox(width: 4),
+                    segment(
+                      1,
+                      l10n.shopTabInventory,
+                      Icons.backpack_rounded,
+                      dot: inventoryHasNew,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1251,14 +1295,244 @@ class _ShopScreenState extends State<ShopScreen> {
       ).compareTo(_themeRank(b.first['item_key']?.toString() ?? ''));
       return r != 0 ? r : origIndex[a]!.compareTo(origIndex[b]!);
     });
-    // Hairline separators, not gaps between cards: on the sheet these read as
-    // one list, and dropping the per-item border + margin fits ~2 more rows on
-    // a phone screen.
-    return _buildResponsiveItemList<List<Map<String, dynamic>>>(
-      ordered,
-      (g) => g.length == 1
-          ? _buildShopRow(context, game, g.first)
-          : _buildGroupedFeatureCard(context, game, g),
+    return _buildShopGrid(context, game, ordered);
+  }
+
+  /// 단일 아이템은 카드 2열(넓으면 3~4열), 기간별 묶음 카드는 가로 한 줄 전체.
+  /// 한 줄에 몇 개가 들어가는지는 폭으로만 정한다.
+  Widget _buildShopGrid(
+    BuildContext context,
+    GameService game,
+    List<List<Map<String, dynamic>>> ordered,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final cols = w < 520 ? 2 : (w < 860 ? 3 : 4);
+        final rows = <Widget>[];
+        var pending = <Map<String, dynamic>>[];
+        var rowIndex = 0;
+        void flush() {
+          if (pending.isEmpty) return;
+          final chunk = pending;
+          pending = [];
+          rows.add(
+            CartoonEntrance(
+              key: ValueKey('shop-row-${chunk.first['item_key']}'),
+              delay: Duration(milliseconds: 40 * rowIndex.clamp(0, 6)),
+              from: const Offset(0, 18),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < cols; i++) ...[
+                        if (i > 0) const SizedBox(width: 10),
+                        Expanded(
+                          child: i < chunk.length
+                              ? _buildShopCard(context, game, chunk[i])
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          rowIndex++;
+        }
+
+        for (final g in ordered) {
+          if (g.length == 1) {
+            pending.add(g.first);
+            if (pending.length == cols) flush();
+          } else {
+            flush();
+            rows.add(
+              CartoonEntrance(
+                key: ValueKey('shop-group-${g.first['item_key']}'),
+                delay: Duration(milliseconds: 40 * rowIndex.clamp(0, 6)),
+                from: const Offset(0, 18),
+                child: _buildGroupedFeatureCard(context, game, g),
+              ),
+            );
+            rowIndex++;
+          }
+        }
+        flush();
+        return ListView(
+          padding: const EdgeInsets.only(top: 6, bottom: 28),
+          children: rows,
+        );
+      },
+    );
+  }
+
+  /// 카툰 아이템 카드: 큰 썸네일 → 이름 → 종류 → 가격 알약. 누르면 상세 시트.
+  Widget _buildShopCard(
+    BuildContext context,
+    GameService game,
+    Map<String, dynamic> item,
+  ) {
+    final l10n = L10n.of(context);
+    final name = _getLocalizedItemName(item);
+    final price = item['price'] ?? 0;
+    final isSeason = item['is_season'] == true;
+    final isPermanent = item['is_permanent'] == true;
+    final durationDays = item['duration_days'];
+    final itemKey = item['item_key']?.toString() ?? '';
+    final category = item['category']?.toString() ?? '';
+    final ownedMatches = game.inventoryItems.where(
+      (i) => i['item_key'] == itemKey,
+    );
+    final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
+    final owned = ownedInv != null;
+    // 소모품(utility)은 여러 개 살 수 있으니 가졌어도 가격을 숨기지 않는다.
+    final ownedPermanent = owned && isPermanent && category != 'utility';
+    final ownedExpiry = ownedInv?['expires_at'];
+    final ownedExpiryText = ownedExpiry != null
+        ? _formatExpire(context, ownedExpiry)
+        : null;
+    final onSale = _isOnSale(item);
+    final saleWindow = _saleWindowText(item);
+
+    Widget? ribbon;
+    if (isSeason) {
+      ribbon = _cartoonTag(l10n.shopTagSeason, Cartoon.blue);
+    } else if (owned) {
+      ribbon = _cartoonTag(l10n.shopItemOwned, Cartoon.green);
+    } else if (onSale) {
+      ribbon = _cartoonTag(l10n.shopTagLimited, Cartoon.red);
+    }
+
+    return CartoonPressable(
+      scale: 0.96,
+      onTap: () => _showItemDetailSheet(context, item),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: _buildShopRowVisual(item, 84, isNew: _isNew(item)),
+                ),
+                if (ribbon != null)
+                  Positioned(right: 0, top: -2, child: ribbon),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Cartoon.userText(size: 14.5, height: 1.2),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _buildItemTag(
+                context,
+                isSeason,
+                isPermanent,
+                durationDays,
+                category,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Cartoon.userText(
+                size: 11.5,
+                weight: FontWeight.w500,
+                color: Cartoon.ink.withValues(alpha: 0.6),
+              ),
+            ),
+            if (ownedExpiryText != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                ownedExpiryText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.userText(
+                  size: 11,
+                  color: const Color(0xFF2E8B57),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            if (!ownedPermanent)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GoldIcon(size: 18, amount: price is int ? price : null),
+                    const SizedBox(width: 5),
+                    Text(
+                      formatGold(price),
+                      style: Cartoon.text(
+                        size: 16,
+                        color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (saleWindow != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                saleWindow,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.userText(
+                  size: 10.5,
+                  color: onSale
+                      ? const Color(0xFFD32F2F)
+                      : Cartoon.ink.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 카드 모서리에 붙는 작은 라벨(시즌 / 보유중 / 한정).
+  Widget _cartoonTag(String text, Color color) {
+    return Transform.rotate(
+      angle: 0.08,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Cartoon.ink, width: 2),
+        ),
+        child: Text(
+          text,
+          style: Cartoon.userText(
+            size: 10.5,
+            color: Colors.white,
+            weight: FontWeight.w900,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1373,80 +1647,86 @@ class _ShopScreenState extends State<ShopScreen> {
         ? _formatExpire(context, ownedExpiry)
         : null;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        // Anywhere on the row, not only the chips: a row you cannot tap to read
-        // about is a dead end, and the chips are small targets.
-        onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildShopRowVisual(first, 58, isNew: _isNew(first)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            baseName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A3A33),
-                            ),
-                          ),
-                        ),
-                        if (ownedActive)
-                          _badge(
-                            L10n.of(context).shopItemOwned,
-                            const Color(0xFF7E57C2),
-                            const Color(0xFFEDE7F6),
-                          ),
-                      ],
-                    ),
-                    if (ownedExpiryText != null) ...[
-                      const SizedBox(height: 3),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+      decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          // Anywhere on the row, not only the chips: a row you cannot tap to read
+          // about is a dead end, and the chips are small targets.
+          onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildShopRowVisual(first, 58, isNew: _isNew(first)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 12,
-                            color: Color(0xFF7E57C2),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            ownedExpiryText,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF7E57C2),
+                          Expanded(
+                            child: Text(
+                              baseName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF4A3A33),
+                              ),
                             ),
                           ),
+                          if (ownedActive)
+                            _badge(
+                              L10n.of(context).shopItemOwned,
+                              const Color(0xFF7E57C2),
+                              const Color(0xFFEDE7F6),
+                            ),
                         ],
                       ),
+                      if (ownedExpiryText != null) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.schedule,
+                              size: 12,
+                              color: Color(0xFF7E57C2),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              ownedExpiryText,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF7E57C2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: tiers
+                            .map((t) => _buildTierChip(context, t, tiers))
+                            .toList(),
+                      ),
                     ],
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: tiers
-                          .map((t) => _buildTierChip(context, t, tiers))
-                          .toList(),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1468,14 +1748,19 @@ class _ShopScreenState extends State<ShopScreen> {
         : '${tier['duration_days'] ?? ''}';
     final price = tier['price'] ?? 0;
     final onSale = _isOnSale(tier);
-    return Material(
-      color: onSale ? const Color(0xFFFFF3F3) : const Color(0xFFF4F1FB),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        // Same sheet as the row: it carries both durations, so which chip was
-        // tapped no longer decides what can be bought.
-        onTap: () => _showItemDetailSheet(context, tier, tiers: tiers),
-        borderRadius: BorderRadius.circular(10),
+    return CartoonPressable(
+      // Same sheet as the row: it carries both durations, so which chip was
+      // tapped no longer decides what can be bought.
+      onTap: () => _showItemDetailSheet(context, tier, tiers: tiers),
+      child: Container(
+        decoration: BoxDecoration(
+          color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+          ],
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
@@ -1509,201 +1794,6 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  // Row-style item with inline action: visual square left, content + CTA on
-  // the right. Tap CTA = buy/extend immediately (no double-tap). Tap card =
-  // open detail bottom sheet (drag-dismissable, less heavy than a dialog).
-  Widget _buildShopRow(
-    BuildContext context,
-    GameService game,
-    Map<String, dynamic> item,
-  ) {
-    final l10n = L10n.of(context);
-    final name = _getLocalizedItemName(item);
-    final price = item['price'] ?? 0;
-    final isSeason = item['is_season'] == true;
-    final isPermanent = item['is_permanent'] == true;
-    final durationDays = item['duration_days'];
-    final itemKey = item['item_key']?.toString() ?? '';
-    final category = item['category']?.toString() ?? '';
-    // Titles, themes and banners are all duration items, so keying the owned
-    // state off isPermanent hid it for every one of them: you could hold a
-    // title and the shop would still look like you had never bought it, with
-    // no expiry anywhere. Read the inventory row itself.
-    final ownedMatches = game.inventoryItems.where(
-      (i) => i['item_key'] == itemKey,
-    );
-    final ownedInv = ownedMatches.isEmpty ? null : ownedMatches.first;
-    final owned = ownedInv != null;
-    // A permanent *utility* item is a one-shot consumable (탈주 카운트 -1/-3,
-    // 전적 초기화권, …), stackable by design — owning one must not hide the
-    // price as if a further purchase were pointless.
-    final ownedPermanent = owned && isPermanent && category != 'utility';
-    final ownedExpiry = ownedInv?['expires_at'];
-    final ownedExpiryText = ownedExpiry != null
-        ? _formatExpire(context, ownedExpiry)
-        : null;
-    final onSale = _isOnSale(item);
-    final saleWindow = _saleWindowText(item);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _showItemDetailSheet(context, item),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildShopRowVisual(item, 58, isNew: _isNew(item)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A3A33),
-                            ),
-                          ),
-                        ),
-                        if (isSeason)
-                          _badge(
-                            l10n.shopTagSeason,
-                            const Color(0xFF1565C0),
-                            const Color(0xFFE3F2FD),
-                          )
-                        else if (owned)
-                          _badge(
-                            l10n.shopItemOwned,
-                            const Color(0xFF7E57C2),
-                            const Color(0xFFEDE7F6),
-                          )
-                        else if (onSale)
-                          _badge(
-                            l10n.shopTagLimited,
-                            const Color(0xFFD32F2F),
-                            const Color(0xFFFFEBEE),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    // What it is, not what it does: the list stays scannable at
-                    // one line per item and the description — which can run to
-                    // several sentences — belongs to the sheet the row opens.
-                    Text(
-                      _buildItemTag(
-                        context,
-                        isSeason,
-                        isPermanent,
-                        durationDays,
-                        category,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF8A7A72),
-                        height: 1.3,
-                      ),
-                    ),
-                    // Same treatment the grouped feature card gives: holding
-                    // something is only useful information if you can also see
-                    // until when.
-                    if (ownedExpiryText != null) ...[
-                      const SizedBox(height: 3),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.schedule,
-                            size: 12,
-                            color: Color(0xFF7E57C2),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            ownedExpiryText,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF7E57C2),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    // Bottom row: gold price on the left, sale window on the
-                    // right (replaces the inline buy button — purchasing now
-                    // happens in the detail sheet so it's an explicit choice).
-                    Row(
-                      children: [
-                        if (!ownedPermanent) ...[
-                          GoldIcon(
-                            size: 15,
-                            amount: price is int ? price : null,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            formatGold(price),
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF4A4080),
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        if (saleWindow != null)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.schedule,
-                                size: 12,
-                                color: onSale
-                                    ? const Color(0xFFD32F2F)
-                                    : const Color(0xFF9A8E8A),
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                saleWindow,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: onSale
-                                      ? const Color(0xFFD32F2F)
-                                      : const Color(0xFF9A8E8A),
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: Color(0xFFB0A8A2),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildShopRowVisual(
     Map<String, dynamic> item,
     double size, {
@@ -1718,8 +1808,6 @@ class _ShopScreenState extends State<ShopScreen> {
     final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
     final iconColor =
         (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
-    final borderColor =
-        (visual['borderColor'] as Color?) ?? const Color(0xFFE0D8D4);
     final thumbnail = Container(
       width: size,
       height: size,
@@ -1729,8 +1817,8 @@ class _ShopScreenState extends State<ShopScreen> {
           end: Alignment.bottomRight,
           colors: gradient,
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(size >= 70 ? 18 : 12),
+        border: Border.all(color: Cartoon.ink, width: size >= 70 ? 2.5 : 1.5),
       ),
       child: Center(
         child: Icon(iconData, color: iconColor, size: size * 0.45),
@@ -1753,10 +1841,7 @@ class _ShopScreenState extends State<ShopScreen> {
             child: Transform.rotate(
               angle: -0.35,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)],
@@ -3257,7 +3342,8 @@ class _ShopScreenState extends State<ShopScreen> {
                             // exactly like buying the first.
                             final isStackableConsumable =
                                 isPermanent && category == 'utility';
-                            final treatAsExtend = owned && !isStackableConsumable;
+                            final treatAsExtend =
+                                owned && !isStackableConsumable;
                             final action = owned
                                 ? _ownedActions(ctx, game, item)
                                 : null;
@@ -4375,7 +4461,7 @@ class _ShopScreenState extends State<ShopScreen> {
           builder: (context, _) {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
               child: Row(
                 children: [
                   for (var i = 0; i < labels.length; i++) ...[
@@ -4402,23 +4488,34 @@ class _ShopScreenState extends State<ShopScreen> {
     required VoidCallback onTap,
     bool badge = false,
   }) {
-    return Material(
-      color: selected ? const Color(0xFF7E57C2) : const Color(0xFFF3EFF9),
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Padding(
+    return CartoonPressable(
+      onTap: onTap,
+      child: AnimatedScale(
+        scale: selected ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.elasticOut,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 3),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: selected ? Cartoon.blue : Cartoon.paper,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Cartoon.ink, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: Cartoon.ink,
+                offset: Offset(0, selected ? 3 : 2),
+              ),
+            ],
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : const Color(0xFF7A6E82),
+                style: Cartoon.text(
+                  size: 15,
+                  color: selected ? Colors.white : Cartoon.ink,
                 ),
               ),
               if (badge) ...[const SizedBox(width: 5), _newDot()],
@@ -4505,7 +4602,9 @@ class _ShopScreenState extends State<ShopScreen> {
       // "영구" ("permanent") reads as "own it forever, like a cosmetic" — true
       // for a pioneer banner/theme, false for a one-shot consumable that
       // disappears from inventory the moment it's used.
-      return category == 'utility' ? l10n.shopTagConsumable : l10n.shopTagPermanent;
+      return category == 'utility'
+          ? l10n.shopTagConsumable
+          : l10n.shopTagPermanent;
     }
     if (durationDays != null) {
       return l10n.shopTagDuration(durationDays as int);

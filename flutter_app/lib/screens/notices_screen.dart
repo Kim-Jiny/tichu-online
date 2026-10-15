@@ -245,6 +245,112 @@ class _NoticesScreenState extends State<NoticesScreen> {
         widget.unreadIds.contains(noticeId) &&
         !_openedThisVisit.contains(noticeId);
 
+    // 위 줄: 꼬리표(NEW · 분류 · 쿠폰)와 날짜. 아래 줄: 제목이 카드 폭을 통째로.
+    // 예전엔 꼬리표를 제목 왼쪽에 줄줄이 세웠더니 제목이 몇 글자 못 들어갔다.
+    final card = Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.fromLTRB(14, isPinned ? 16 : 12, 10, 12),
+      decoration: Cartoon.panelDecoration(
+        color: isNew ? const Color(0xFFFFF6DD) : Cartoon.paper,
+        radius: 18,
+        shadowOffset: 4,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (isNew)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Cartoon.red,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: const Text(
+                          'NEW',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _categoryBgColor(category),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Cartoon.ink, width: 2),
+                      ),
+                      child: Text(
+                        _categoryLabel(l10n, category),
+                        style: Cartoon.text(
+                          size: 12.5,
+                          color: _categoryTextColor(category),
+                        ),
+                      ),
+                    ),
+                    // Shown on every platform: knowing which post carries a
+                    // coupon is worth as much on iOS, where the code itself is
+                    // withheld and the reader has to ask.
+                    if (hasCoupon) const CouponTag(),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                publishedAt,
+                style: Cartoon.userText(
+                  size: 11.5,
+                  weight: FontWeight.w500,
+                  color: Cartoon.ink.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Cartoon.userText(
+                    size: 16,
+                    weight: isNew ? FontWeight.w900 : FontWeight.w700,
+                    height: 1.3,
+                    // 운영자가 고른 색이 있으면 그 색으로. 목록과 상세가 같아야
+                    // 눌렀을 때 "다른 글인가" 하지 않는다.
+                    color: titleColor ?? Cartoon.ink,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 26,
+                color: Cartoon.ink,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
     return CartoonPressable(
       scale: 0.97,
       onTap: () {
@@ -254,101 +360,39 @@ class _NoticesScreenState extends State<NoticesScreen> {
         }
         _showNoticeDetail(item, l10n);
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: Cartoon.panelDecoration(
-          color: isNew ? const Color(0xFFFFF6DD) : Cartoon.paper,
-          radius: 18,
-          shadowOffset: 4,
-        ),
-        child: Row(
-          children: [
-            if (isNew)
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Cartoon.red,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Cartoon.ink, width: 2),
-                ),
-                child: const Text(
-                  'NEW',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            if (isPinned)
-              const Padding(
-                padding: EdgeInsets.only(right: 8),
-                child: Icon(
-                  Icons.push_pin_rounded,
-                  size: 18,
-                  color: Cartoon.orangeDeep,
-                ),
-              ),
-            // Shown on every platform: knowing which post carries a coupon is
-            // worth as much on iOS, where the code itself is withheld and the
-            // reader has to ask.
-            if (hasCoupon)
-              Padding(padding: EdgeInsets.only(right: 8), child: CouponTag()),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: _categoryBgColor(category),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Cartoon.ink, width: 2),
-              ),
-              child: Text(
-                _categoryLabel(l10n, category),
-                style: Cartoon.text(
-                  size: 12.5,
-                  color: _categoryTextColor(category),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Cartoon.userText(
-                      size: 15,
-                      weight: isNew ? FontWeight.w900 : FontWeight.w700,
-                      // 운영자가 고른 색이 있으면 그 색으로. 목록과 상세가
-                      // 같아야 눌렀을 때 "다른 글인가" 하지 않는다.
-                      color: titleColor ?? Cartoon.ink,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    publishedAt,
-                    style: Cartoon.userText(
-                      size: 11.5,
-                      weight: FontWeight.w500,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+      // 고정 글은 카드 모서리에 압정이 꽂혀 있다 — 줄 안의 작은 아이콘 대신.
+      child: isPinned
+          ? Stack(
+              clipBehavior: Clip.none,
+              children: [
+                card,
+                Positioned(
+                  top: -8,
+                  left: 12,
+                  child: Transform.rotate(
+                    angle: -0.35,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Cartoon.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Cartoon.ink, width: 2.2),
+                        boxShadow: const [
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.push_pin_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 26,
-              color: Cartoon.ink,
-            ),
-          ],
-        ),
-      ),
+                ),
+              ],
+            )
+          : card,
     );
   }
 

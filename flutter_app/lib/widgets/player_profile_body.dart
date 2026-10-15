@@ -250,146 +250,180 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         const SizedBox(height: 10),
         if (_view == 1) ...[
           _buildRecentMatches(filteredMatches, profileNickname),
-        ] else if (isAll) ...[
-          _buildAllGamesCards(l10n, profile),
-        ] else if (selectedTab == 'tichu') ...[
-          _buildProfileSectionCard(
-            title: l10n.lobbyTichuSeasonRanked,
-            accent: _cardAccent('tichu'),
-            background: _cardTint('tichu'),
-            icon: Icons.emoji_events,
-            iconColor: const Color(0xFFFFD54F),
-            mainText: '$seasonRating',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  seasonGames as int,
-                  seasonWins as int,
-                  seasonLosses as int,
-                ),
-              ),
-              _buildStatChip(l10n.lobbyStatWinRate, '$seasonWinRate%'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildProfileSectionCard(
-            title: l10n.lobbyTichuRecord,
-            accent: _cardAccent('tichu'),
-            background: _cardTint('tichu'),
-            icon: Icons.style,
-            iconColor: gameTypeColor('tichu'),
-            mainText: '',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(totalGames, wins, losses),
-              ),
-              _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
-            ],
-          ),
-        ] else if (selectedTab == 'skull_king') ...[
-          _buildProfileSectionCard(
-            title: l10n.lobbySkullKingSeasonRanked,
-            accent: _cardAccent('skull_king'),
-            background: _cardTint('skull_king'),
-            icon: Icons.emoji_events,
-            iconColor: const Color(0xFFFFD54F),
-            mainText: '$skSeasonRating',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  skSeasonGames as int,
-                  skSeasonWins as int,
-                  skSeasonLosses as int,
-                ),
-              ),
-              _buildStatChip(l10n.lobbyStatWinRate, '$skSeasonWinRate%'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildProfileSectionCard(
-            title: l10n.lobbySkullKingRecord,
-            accent: _cardAccent('skull_king'),
-            background: _cardTint('skull_king'),
-            icon: Icons.anchor,
-            iconColor: gameTypeColor('skull_king'),
-            mainText: '',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(skGames, skWins as int, skLosses as int),
-              ),
-              _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
-            ],
-          ),
-        ] else if (selectedTab == 'mighty') ...[
-          _buildProfileSectionCard(
-            title: l10n.rankingMightySeasonRanked,
-            accent: _cardAccent('mighty'),
-            background: _cardTint('mighty'),
-            icon: Icons.emoji_events,
-            iconColor: const Color(0xFFFFD54F),
-            mainText: '${profile['mightySeasonRating'] ?? 1000}',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  (profile['mightySeasonGames'] ?? 0) as int,
-                  (profile['mightySeasonWins'] ?? 0) as int,
-                  (profile['mightySeasonLosses'] ?? 0) as int,
-                ),
-              ),
-              _buildStatChip(
-                l10n.lobbyStatWinRate,
-                '${profile['mightySeasonWinRate'] ?? 0}%',
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _buildProfileSectionCard(
-            title: l10n.rankingMightyRecord,
-            accent: _cardAccent('mighty'),
-            background: _cardTint('mighty'),
-            icon: Icons.military_tech,
-            iconColor: gameTypeColor('mighty'),
-            mainText: '',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(
-                  (profile['mightyTotalGames'] ?? 0) as int,
-                  (profile['mightyWins'] ?? 0) as int,
-                  (profile['mightyLosses'] ?? 0) as int,
-                ),
-              ),
-              _buildStatChip(
-                l10n.lobbyStatWinRate,
-                '${profile['mightyWinRate'] ?? 0}%',
-              ),
-            ],
-          ),
         ] else ...[
-          _buildProfileSectionCard(
-            title: l10n.lobbyLoveLetterRecord,
-            accent: _cardAccent('love_letter'),
-            background: _cardTint('love_letter'),
-            icon: Icons.favorite,
-            iconColor: gameTypeColor('love_letter'),
-            mainText: '',
-            chips: [
-              _buildStatChip(
-                l10n.lobbyStatRecord,
-                l10n.lobbyRecordFormat(llGames, llWins as int, llLosses as int),
+          _statsPanel([
+            if (isAll) ...[
+              _buildAllGamesCards(l10n, profile),
+            ] else if (selectedTab == 'tichu') ...[
+              _buildProfileSectionCard(
+                title: l10n.lobbyTichuSeasonRanked,
+                accent: _cardAccent('tichu'),
+                background: _cardTint('tichu'),
+                icon: Icons.emoji_events,
+                iconColor: const Color(0xFFFFD54F),
+                mainText: '$seasonRating',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      seasonGames as int,
+                      seasonWins as int,
+                      seasonLosses as int,
+                    ),
+                  ),
+                  _buildStatChip(l10n.lobbyStatWinRate, '$seasonWinRate%'),
+                ],
               ),
-              _buildStatChip(l10n.lobbyStatWinRate, '$llWinRate%'),
+              _flatDivider(),
+              _buildProfileSectionCard(
+                title: l10n.lobbyTichuRecord,
+                accent: _cardAccent('tichu'),
+                background: _cardTint('tichu'),
+                icon: Icons.style,
+                iconColor: gameTypeColor('tichu'),
+                mainText: '',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(totalGames, wins, losses),
+                  ),
+                  _buildStatChip(l10n.lobbyStatWinRate, '$winRate%'),
+                ],
+              ),
+            ] else if (selectedTab == 'skull_king') ...[
+              _buildProfileSectionCard(
+                title: l10n.lobbySkullKingSeasonRanked,
+                accent: _cardAccent('skull_king'),
+                background: _cardTint('skull_king'),
+                icon: Icons.emoji_events,
+                iconColor: const Color(0xFFFFD54F),
+                mainText: '$skSeasonRating',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      skSeasonGames as int,
+                      skSeasonWins as int,
+                      skSeasonLosses as int,
+                    ),
+                  ),
+                  _buildStatChip(l10n.lobbyStatWinRate, '$skSeasonWinRate%'),
+                ],
+              ),
+              _flatDivider(),
+              _buildProfileSectionCard(
+                title: l10n.lobbySkullKingRecord,
+                accent: _cardAccent('skull_king'),
+                background: _cardTint('skull_king'),
+                icon: Icons.anchor,
+                iconColor: gameTypeColor('skull_king'),
+                mainText: '',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      skGames,
+                      skWins as int,
+                      skLosses as int,
+                    ),
+                  ),
+                  _buildStatChip(l10n.lobbyStatWinRate, '$skWinRate%'),
+                ],
+              ),
+            ] else if (selectedTab == 'mighty') ...[
+              _buildProfileSectionCard(
+                title: l10n.rankingMightySeasonRanked,
+                accent: _cardAccent('mighty'),
+                background: _cardTint('mighty'),
+                icon: Icons.emoji_events,
+                iconColor: const Color(0xFFFFD54F),
+                mainText: '${profile['mightySeasonRating'] ?? 1000}',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      (profile['mightySeasonGames'] ?? 0) as int,
+                      (profile['mightySeasonWins'] ?? 0) as int,
+                      (profile['mightySeasonLosses'] ?? 0) as int,
+                    ),
+                  ),
+                  _buildStatChip(
+                    l10n.lobbyStatWinRate,
+                    '${profile['mightySeasonWinRate'] ?? 0}%',
+                  ),
+                ],
+              ),
+              _flatDivider(),
+              _buildProfileSectionCard(
+                title: l10n.rankingMightyRecord,
+                accent: _cardAccent('mighty'),
+                background: _cardTint('mighty'),
+                icon: Icons.military_tech,
+                iconColor: gameTypeColor('mighty'),
+                mainText: '',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      (profile['mightyTotalGames'] ?? 0) as int,
+                      (profile['mightyWins'] ?? 0) as int,
+                      (profile['mightyLosses'] ?? 0) as int,
+                    ),
+                  ),
+                  _buildStatChip(
+                    l10n.lobbyStatWinRate,
+                    '${profile['mightyWinRate'] ?? 0}%',
+                  ),
+                ],
+              ),
+            ] else ...[
+              _buildProfileSectionCard(
+                title: l10n.lobbyLoveLetterRecord,
+                accent: _cardAccent('love_letter'),
+                background: _cardTint('love_letter'),
+                icon: Icons.favorite,
+                iconColor: gameTypeColor('love_letter'),
+                mainText: '',
+                chips: [
+                  _buildStatChip(
+                    l10n.lobbyStatRecord,
+                    l10n.lobbyRecordFormat(
+                      llGames,
+                      llWins as int,
+                      llLosses as int,
+                    ),
+                  ),
+                  _buildStatChip(l10n.lobbyStatWinRate, '$llWinRate%'),
+                ],
+              ),
             ],
-          ),
+          ]),
         ],
       ],
     );
   }
+
+  /// 한 게임의 시즌 랭크·전적을 상자 하나 안에 구분선으로 잇는다.
+  Widget _statsPanel(List<Widget> kids) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.35),
+          width: 1.8,
+        ),
+      ),
+      child: Column(children: kids),
+    );
+  }
+
+  Widget _flatDivider() => Divider(
+    height: 1,
+    thickness: 1.5,
+    color: Cartoon.ink.withValues(alpha: 0.1),
+  );
 
   /// 맨 위 한눈에: 승률 · 전적 · 매너. 예전엔 매너/탈주 줄이 따로 있고 승률은
   /// 아래 카드 안에 있어서, 이 사람이 어떤 사람인지 알려면 스크롤해야 했다.
@@ -627,30 +661,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Cartoon.ink.withValues(alpha: 0.35),
-              width: 1.8,
-            ),
-          ),
-          child: Column(
-            children: [
-              for (final (i, t) in tallies.indexed) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1.5,
-                    color: Cartoon.ink.withValues(alpha: 0.1),
-                  ),
-                _buildGameTallyRow(l10n, t),
-              ],
-            ],
-          ),
-        ),
+        _flatDivider(),
+        for (final (i, t) in tallies.indexed) ...[
+          if (i > 0) _flatDivider(),
+          _buildGameTallyRow(l10n, t),
+        ],
       ],
     );
   }
@@ -774,6 +789,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     Colors.white,
   );
 
+  /// 시즌 랭크·전적 한 줄. 상자는 없다 — 바깥 [_statsPanel] 안에서 구분선으로 이어진다.
   Widget _buildProfileSectionCard({
     required String title,
     required Color accent,
@@ -785,23 +801,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   }) {
     // 시즌 레이팅처럼 정수면 0 에서 올라가며 센다.
     final number = int.tryParse(mainText);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Cartoon.ink.withValues(alpha: 0.35),
-          width: 1.8,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         children: [
           Row(
             children: [
               Icon(icon, color: iconColor, size: 22),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(child: Text(title, style: Cartoon.text(size: 15.5))),
               if (mainText.isNotEmpty)
                 number != null
@@ -820,44 +827,32 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                       ),
             ],
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
-            children: chips,
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(spacing: 14, runSpacing: 4, children: chips),
           ),
         ],
       ),
     );
   }
 
+  /// "전적 12전 7승 5패" 처럼 이름과 값을 한 줄 글자로. 칩 상자는 두르지 않는다.
   Widget _buildStatChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Cartoon.ink.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: Cartoon.userText(
-              size: 12,
-              weight: FontWeight.w600,
-              color: Cartoon.ink.withValues(alpha: 0.6),
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: Cartoon.userText(
+            size: 12.5,
+            weight: FontWeight.w600,
+            color: Cartoon.ink.withValues(alpha: 0.55),
           ),
-          const SizedBox(width: 6),
-          Text(value, style: Cartoon.text(size: 15)),
-        ],
-      ),
+        ),
+        const SizedBox(width: 6),
+        Text(value, style: Cartoon.text(size: 15)),
+      ],
     );
   }
 

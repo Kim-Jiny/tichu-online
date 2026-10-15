@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/cartoon.dart';
 import 'rules_screen.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
@@ -563,8 +564,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                             const Icon(
-                              Icons.chevron_right,
-                              color: Color(0xFFB0A8A4),
+                              Icons.chevron_right_rounded,
+                              color: Cartoon.ink,
+                              size: 26,
                             ),
                           ],
                         ),
@@ -988,22 +990,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            ProfileAvatar(
-              photoUrl: photo,
-              size: 44,
-              borderRadius: 14,
-              fallback: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0E7E3),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.person,
-                  size: 26,
-                  color: Color(0xFF9C8B84),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: ProfileAvatar(
+                  photoUrl: photo,
+                  size: 54,
+                  borderRadius: 16,
+                  fallback: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Cartoon.cream,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.person,
+                      size: 26,
+                      color: Color(0xFF9C8B84),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -1017,11 +1031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     game.playerName.isEmpty ? '-' : game.playerName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF4A3A33),
-                    ),
+                    style: Cartoon.userText(size: 18, weight: FontWeight.w900),
                   ),
                   const SizedBox(height: 5),
                   // The same level/exp strip the profile popup draws, so the two
@@ -1031,7 +1041,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: Color(0xFFB0A8A4)),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Cartoon.ink,
+              size: 26,
+            ),
           ],
         ),
       ),
@@ -1051,11 +1065,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     /// [icon] stays required so every row still declares a sensible fallback.
     Widget? leading,
   }) {
+    final tone = iconColor ?? Cartoon.ink;
+    final chip = leading != null
+        ? SizedBox(width: 42, height: 42, child: Center(child: leading))
+        : Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Color.lerp(tone, Colors.white, 0.78),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: enabled
+                    ? Cartoon.ink
+                    : Cartoon.ink.withValues(alpha: 0.3),
+                width: 2.2,
+              ),
+            ),
+            child: Icon(icon, color: tone, size: 23),
+          );
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
-          leading ?? Icon(icon, color: iconColor ?? const Color(0xFF8A7A72)),
+          chip,
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1063,30 +1095,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  style: Cartoon.text(
+                    size: 16.5,
                     color: enabled
-                        ? const Color(0xFF5A4038)
-                        : const Color(0xFFB0A8A4),
+                        ? Cartoon.ink
+                        : Cartoon.ink.withValues(alpha: 0.35),
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: enabled
-                          ? const Color(0xFF8A7A72)
-                          : const Color(0xFFBDB5B1),
+                    style: Cartoon.userText(
+                      size: 12.5,
+                      weight: FontWeight.w500,
+                      color: Cartoon.ink.withValues(alpha: enabled ? 0.6 : 0.3),
+                      height: 1.35,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          ...?trailing == null ? null : [trailing],
+          if (trailing != null)
+            trailing
+          else if (onTap != null && enabled)
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Cartoon.ink,
+              size: 26,
+            ),
         ],
       ),
     );
@@ -1094,33 +1132,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return InkWell(onTap: onTap, child: content);
   }
 
+  int _sectionIndex = 0;
+
   Widget _buildSection(String title, List<Widget> children) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF8A7A72),
+    final index = _sectionIndex++;
+    return CartoonEntrance(
+      key: ValueKey('settings-$title'),
+      delay: Duration(milliseconds: 50 * index.clamp(0, 8)),
+      from: const Offset(0, 18),
+      pop: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 9),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Cartoon.ink, width: 2.2),
+                ),
+                child: Text(title, style: Cartoon.text(size: 14)),
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
+            Container(
+              margin: const EdgeInsets.only(bottom: 3),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+              clipBehavior: Clip.antiAlias,
+              child: Column(children: children),
             ),
-            child: Column(children: children),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1129,651 +1178,710 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final themeColors = context.watch<GameService>().themeGradient;
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              // 출석 알림이 실제로 나갈 수 있는 상태인가. 푸시 자체가 꺼져
-              // 있거나 이벤트·혜택 알림에 동의하지 않았으면 이 스위치를
-              // 켜 둬도 아무것도 안 온다 — 서버가 셋 다 보기 때문이다.
-              // 그래서 스위치를 끄는 대신 비활성으로 둔다. 끄는 것은
-              // 사용자가 한 적 없는 선택이고, 나중에 동의를 켰을 때 조용히
-              // 되살아나는 것도 곤란하다.
-              final attendancePushActive =
-                  game.pushEnabled && game.marketingPushEnabled;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                if (game.socialLinkResultSuccess != null) {
-                  final success = game.socialLinkResultSuccess!;
-                  final message = game.socialLinkResultMessage ?? '';
-                  game.socialLinkResultSuccess = null;
-                  game.socialLinkResultMessage = null;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success ? l10n.settingsLinkComplete : message,
+          child: SafeArea(
+            bottom: false,
+            child: Consumer<GameService>(
+              builder: (context, game, _) {
+                _sectionIndex = 0;
+                // 출석 알림이 실제로 나갈 수 있는 상태인가. 푸시 자체가 꺼져
+                // 있거나 이벤트·혜택 알림에 동의하지 않았으면 이 스위치를
+                // 켜 둬도 아무것도 안 온다 — 서버가 셋 다 보기 때문이다.
+                // 그래서 스위치를 끄는 대신 비활성으로 둔다. 끄는 것은
+                // 사용자가 한 적 없는 선택이고, 나중에 동의를 켰을 때 조용히
+                // 되살아나는 것도 곤란하다.
+                final attendancePushActive =
+                    game.pushEnabled && game.marketingPushEnabled;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  if (game.socialLinkResultSuccess != null) {
+                    final success = game.socialLinkResultSuccess!;
+                    final message = game.socialLinkResultMessage ?? '';
+                    game.socialLinkResultSuccess = null;
+                    game.socialLinkResultMessage = null;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success ? l10n.settingsLinkComplete : message,
+                        ),
+                        backgroundColor: success ? Colors.green : Colors.red,
                       ),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
-                }
-              });
-              return Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                          color: const Color(0xFF8A7A72),
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            l10n.settingsHeaderTitle,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF5A4038),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Column(
-                        children: [
-                          _buildSection(l10n.settingsAccountSection, [
-                            // Avatar, nickname and level as the first row of the
-                            // account section — it says who this account is,
-                            // which is what a "닉네임" row was doing with less.
-                            _buildProfileRow(context, game),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            _buildRow(
-                              icon: Icons.link,
-                              iconColor: const Color(0xFF7E57C2),
-                              title: l10n.settingsSocialLink,
-                              subtitle: game.authProvider != 'local'
-                                  ? l10n.settingsSocialLinked(
-                                      game.authProvider.toUpperCase(),
-                                    )
-                                  : (game.linkedSocialProvider != null &&
-                                        game.linkedSocialProvider != 'local')
-                                  ? l10n.settingsSocialLinked(
-                                      game.linkedSocialProvider!.toUpperCase(),
-                                    )
-                                  : l10n.settingsNoLinkedAccount,
-                              trailing:
-                                  game.authProvider == 'local' &&
-                                      (game.linkedSocialProvider == null ||
-                                          game.linkedSocialProvider == 'local')
-                                  ? TextButton(
-                                      onPressed: () => _showLinkDialog(),
-                                      child: Text(
-                                        l10n.commonLink,
-                                        style: const TextStyle(
-                                          color: Color(0xFF7E57C2),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                          _buildSection(L10n.of(context).settingsNotices, [
-                            _buildRow(
-                              icon: Icons.campaign,
-                              iconColor: const Color(0xFF42A5F5),
-                              title: L10n.of(context).settingsNotices,
-                              onTap: _openNoticesPage,
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (game.unreadNoticeCount > 0)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
-                                      ),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFE53935),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(999),
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 18,
-                                        minHeight: 18,
-                                      ),
-                                      child: Text(
-                                        game.unreadNoticeCount > 9
-                                            ? '9+'
-                                            : '${game.unreadNoticeCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
+                    );
+                  }
+                });
+                return Column(
+                  children: [
+                    CartoonEntrance(
+                      from: const Offset(0, -30),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                        child: Row(
+                          children: [
+                            CartoonPressable(
+                              scale: 0.88,
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Cartoon.paper,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 2.5,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Cartoon.ink,
+                                      offset: Offset(0, 3),
                                     ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Cartoon.ink,
+                                ),
                               ),
                             ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            // 운영자 우편함. Sits with notices rather than with
-                            // support: both are things the team sent that are
-                            // waiting to be read, and a player looking for
-                            // "did they get back to me" checks the same place.
-                            _buildRow(
-                              icon: Icons.mark_email_unread,
-                              iconColor: const Color(0xFFEF6C00),
-                              title: L10n.of(context).mailboxTitle,
-                              onTap: _openMailbox,
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (game.unreadMailCount > 0)
-                                    Container(
-                                      margin: const EdgeInsets.only(right: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
-                                      ),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFE53935),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(999),
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 18,
-                                        minHeight: 18,
-                                      ),
-                                      child: Text(
-                                        game.unreadMailCount > 9
-                                            ? '9+'
-                                            : '${game.unreadMailCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ],
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: Cartoon.outlinedText(
+                                l10n.settingsHeaderTitle,
+                                size: 28,
+                                maxLines: 1,
                               ),
                             ),
-                          ]),
-                          // 웹에는 푸시가 없다. FCM 등록을 아예 건너뛰므로 토큰이 없고,
-                          // 여기서 무엇을 켜든 브라우저로는 아무것도 오지 않는다. 켤 수는
-                          // 있는데 오지 않는 스위치는 고장으로 읽힌다 — 그래서 통째로
-                          // 감춘다. 설정 자체는 계정에 남아 있어서, 앱을 깔면 그 기기에서
-                          // 예전에 정해 둔 대로 동작한다.
-                          if (!kIsWeb) ...[
-                            const SizedBox(height: 12),
-                            _buildSection(l10n.settingsNotificationsSection, [
-                              _buildRow(
-                                icon: Icons.notifications,
-                                iconColor: const Color(0xFF64B5F6),
-                                title: l10n.settingsPushNotifications,
-                                subtitle: l10n.settingsPushNotificationsDesc,
-                                trailing: Switch(
-                                  value: game.pushEnabled,
-                                  onChanged: (v) => game.setPushEnabled(v),
-                                ),
-                              ),
-                              const Divider(
-                                height: 1,
-                                color: Color(0xFFEAE2DE),
-                              ),
-                              // Separate from the switch above on purpose. That
-                              // one is "notify me at all"; this one is consent to
-                              // advertising, which is a legal record and has to
-                              // be withdrawable on its own.
-                              //
-                              // With notifications off it goes inactive rather
-                              // than off. The server already requires both
-                              // (getMarketingAudience), so an enabled-looking
-                              // switch here promised something that could not
-                              // happen. Turning it off instead would be worse:
-                              // that is a withdrawal of consent, and it would
-                              // silently come back when notifications were
-                              // re-enabled — consent nobody gave a second time.
-                              _buildRow(
-                                icon: Icons.campaign_outlined,
-                                iconColor: game.pushEnabled
-                                    ? const Color(0xFFE08A1E)
-                                    : const Color(0xFFC9BFB9),
-                                title: l10n.settingsMarketingPush,
-                                subtitle: game.pushEnabled
-                                    ? l10n.settingsMarketingPushHint
-                                    : l10n.settingsMarketingPushBlocked,
-                                enabled: game.pushEnabled,
-                                trailing: Switch(
-                                  value:
-                                      game.marketingPushEnabled &&
-                                      game.pushEnabled,
-                                  onChanged: game.pushEnabled
-                                      ? (v) => game.setMarketingConsent(v)
-                                      : null,
-                                ),
-                              ),
-                              const Divider(
-                                height: 1,
-                                color: Color(0xFFEAE2DE),
-                              ),
-                              // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
-                              // 알림도 무료 재화를 받으라는 권유라 광고성으로
-                              // 보는 게 안전하고, 그래서 같은 동의 아래 둔다.
-                              //
-                              // 그러면서도 따로 끌 수 있어야 한다 — 매일 오는
-                              // 게 성가시다는 이유로 마케팅 동의 자체를
-                              // 철회하면 되돌리는 데 다시 동의를 받아야 한다.
-                              _buildRow(
-                                icon: Icons.event_available_outlined,
-                                iconColor: attendancePushActive
-                                    ? const Color(0xFF66A15E)
-                                    : const Color(0xFFC9BFB9),
-                                title: l10n.settingsAttendancePush,
-                                subtitle: attendancePushActive
-                                    ? l10n.settingsAttendancePushHint
-                                    : l10n.settingsAttendancePushBlocked,
-                                enabled: attendancePushActive,
-                                trailing: Switch(
-                                  value:
-                                      game.pushAttendanceEnabled &&
-                                      attendancePushActive,
-                                  onChanged: attendancePushActive
-                                      ? (v) => game.setPushAttendanceEnabled(v)
-                                      : null,
-                                ),
-                              ),
-                              if (game.isAdminUser) ...[
-                                const Divider(
-                                  height: 1,
-                                  color: Color(0xFFEAE2DE),
-                                ),
-                                _buildRow(
-                                  icon: Icons.support_agent,
-                                  iconColor: const Color(0xFFAB47BC),
-                                  title: l10n.settingsInquiryNotifications,
-                                  subtitle:
-                                      l10n.settingsInquiryNotificationsDesc,
-                                  trailing: Switch(
-                                    value: game.pushAdminInquiryEnabled,
-                                    onChanged: (v) =>
-                                        game.setAdminAlertPush(inquiry: v),
-                                  ),
-                                ),
-                                const Divider(
-                                  height: 1,
-                                  color: Color(0xFFEAE2DE),
-                                ),
-                                _buildRow(
-                                  icon: Icons.report_gmailerrorred,
-                                  iconColor: const Color(0xFFEF5350),
-                                  title: l10n.settingsReportNotifications,
-                                  subtitle:
-                                      l10n.settingsReportNotificationsDesc,
-                                  trailing: Switch(
-                                    value: game.pushAdminReportEnabled,
-                                    onChanged: (v) =>
-                                        game.setAdminAlertPush(report: v),
-                                  ),
-                                ),
-                                const Divider(
-                                  height: 1,
-                                  color: Color(0xFFEAE2DE),
-                                ),
-                                _buildRow(
-                                  icon: Icons.payments_outlined,
-                                  iconColor: const Color(0xFF26A69A),
-                                  title: l10n.settingsPaymentNotifications,
-                                  subtitle:
-                                      l10n.settingsPaymentNotificationsDesc,
-                                  trailing: Switch(
-                                    value: game.pushAdminPaymentEnabled,
-                                    onChanged: (v) =>
-                                        game.setAdminAlertPush(payment: v),
-                                  ),
-                                ),
-                              ],
-                            ]),
                           ],
-                          const SizedBox(height: 12),
-                          _buildSection(l10n.settingsCardViewPolicy, [
-                            _buildRow(
-                              icon: Icons.visibility_outlined,
-                              iconColor: const Color(0xFF6A6090),
-                              title: l10n.settingsCardViewPolicy,
-                              subtitle: _cardViewPrefLabel(
-                                l10n,
-                                game.cardViewPref,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.only(
+                          bottom: 24 + MediaQuery.viewPaddingOf(context).bottom,
+                        ),
+                        child: Column(
+                          children: [
+                            _buildSection(l10n.settingsAccountSection, [
+                              // Avatar, nickname and level as the first row of the
+                              // account section — it says who this account is,
+                              // which is what a "닉네임" row was doing with less.
+                              _buildProfileRow(context, game),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
                               ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                              onTap: () =>
-                                  _showCardViewPrefDialog(context, game, l10n),
-                            ),
-                          ]),
-                          if (game.isAdminUser) ...[
-                            const SizedBox(height: 12),
-                            _buildSection(l10n.settingsAdminSection, [
                               _buildRow(
-                                icon: Icons.admin_panel_settings_outlined,
+                                icon: Icons.link,
                                 iconColor: const Color(0xFF7E57C2),
-                                title: l10n.settingsAdminCenter,
-                                subtitle: l10n.settingsAdminCenterDesc,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AdminCenterScreen(),
-                                    ),
-                                  );
-                                },
+                                title: l10n.settingsSocialLink,
+                                subtitle: game.authProvider != 'local'
+                                    ? l10n.settingsSocialLinked(
+                                        game.authProvider.toUpperCase(),
+                                      )
+                                    : (game.linkedSocialProvider != null &&
+                                          game.linkedSocialProvider != 'local')
+                                    ? l10n.settingsSocialLinked(
+                                        game.linkedSocialProvider!
+                                            .toUpperCase(),
+                                      )
+                                    : l10n.settingsNoLinkedAccount,
+                                trailing:
+                                    game.authProvider == 'local' &&
+                                        (game.linkedSocialProvider == null ||
+                                            game.linkedSocialProvider ==
+                                                'local')
+                                    ? TextButton(
+                                        onPressed: () => _showLinkDialog(),
+                                        child: Text(
+                                          l10n.commonLink,
+                                          style: const TextStyle(
+                                            color: Color(0xFF7E57C2),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      )
+                                    : null,
                               ),
                             ]),
-                          ],
-                          const SizedBox(height: 12),
-                          const SizedBox(height: 12),
-                          Builder(
-                            builder: (context) {
-                              final l10n = L10n.of(context);
-                              final localeService = context
-                                  .watch<LocaleService>();
-                              final currentLabel =
-                                  localeService.userSelectedLocale == null
-                                  ? l10n.languageAuto
-                                  : _localeDisplayName(
-                                      l10n,
-                                      localeService.userSelectedLocale!,
-                                    );
-                              return _buildSection(l10n.settingsLanguage, [
-                                _buildRow(
-                                  icon: Icons.language,
-                                  iconColor: const Color(0xFF42A5F5),
-                                  title: l10n.settingsLanguage,
-                                  subtitle: currentLabel,
-                                  onTap: () => _showLanguageDialog(
-                                    context,
-                                    localeService,
-                                    l10n,
-                                  ),
-                                  trailing: const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ),
-                              ]);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          Builder(
-                            builder: (context) {
-                              final l10n = L10n.of(context);
-                              return _buildSection(l10n.settingsAppInfo, [
-                                Builder(
-                                  builder: (context) {
-                                    final outdated = _isOutdated(
-                                      game.latestVersion,
-                                    );
-                                    return _buildRow(
-                                      icon: Icons.info_outline,
-                                      iconColor: outdated
-                                          ? const Color(0xFFE53935)
-                                          : const Color(0xFF7E57C2),
-                                      // "앱 버전" is wrong in a browser — there
-                                      // is no app to have a version, just the
-                                      // build being served.
-                                      title: kIsWeb
-                                          ? l10n.settingsCurrentVersion
-                                          : l10n.settingsAppVersion,
-                                      subtitle: _appVersion.isEmpty
-                                          ? '-'
-                                          : (outdated
-                                                ? '$_appVersion · ${l10n.settingsNotLatestVersion}'
-                                                : _appVersion),
-                                      trailing: outdated
-                                          ? ElevatedButton(
-                                              onPressed: _openStore,
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(
-                                                  0xFFE53935,
-                                                ),
-                                                foregroundColor: Colors.white,
-                                                elevation: 0,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 14,
-                                                      vertical: 6,
-                                                    ),
-                                                minimumSize: const Size(0, 32),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize
-                                                        .shrinkWrap,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                l10n.settingsUpdate,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            )
-                                          : null,
-                                    );
-                                  },
-                                ),
-                                const Divider(
-                                  height: 1,
-                                  color: Color(0xFFEAE2DE),
-                                ),
-                                _buildRow(
-                                  icon: Icons.description_outlined,
-                                  iconColor: const Color(0xFF8A7A72),
-                                  title: l10n.settingsTermsOfService,
-                                  onTap: () => _showTextViewDialog(
-                                    l10n.settingsTermsOfService,
-                                    game.eulaContent,
-                                    isTermsOfService: true,
-                                  ),
-                                  trailing: const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ),
-                                const Divider(
-                                  height: 1,
-                                  color: Color(0xFFEAE2DE),
-                                ),
-                                _buildRow(
-                                  icon: Icons.privacy_tip_outlined,
-                                  iconColor: const Color(0xFF8A7A72),
-                                  title: l10n.settingsPrivacyPolicy,
-                                  onTap: () => _showTextViewDialog(
-                                    l10n.settingsPrivacyPolicy,
-                                    game.privacyPolicy,
-                                  ),
-                                  trailing: const Icon(
-                                    Icons.chevron_right,
-                                    color: Color(0xFFB0A8A4),
-                                  ),
-                                ),
-                              ]);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          // Moved here from the lobby header. The rulebook is
-                          // read once when a game is new to you and then never
-                          // again, so it does not earn a permanent slot next
-                          // to the lobby's everyday actions — the profile
-                          // button took that spot.
-                          _buildSection(L10n.of(context).rulesTitle, [
-                            _buildRow(
-                              icon: Icons.menu_book_rounded,
-                              iconColor: const Color(0xFFFF8A65),
-                              title: L10n.of(context).rulesTitle,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const RulesScreen(),
-                                ),
-                              ),
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                          _buildSection(l10n.settingsInquirySection, [
-                            // Coupons sit with the support rows because that is
-                            // where someone goes when they have a code and no
-                            // idea what to do with it. Absent on the iOS app —
-                            // see couponRedeemAllowed.
-                            if (couponRedeemAllowed) ...[
+                            const SizedBox(height: 12),
+                            _buildSection(L10n.of(context).settingsNotices, [
                               _buildRow(
-                                icon: Icons.confirmation_number_outlined,
-                                iconColor: const Color(0xFFB07B2E),
-                                leading: couponIcon(size: 22),
-                                title: l10n.couponRedeemTitle,
-                                onTap: () => showCouponRedeemDialog(context),
-                                trailing: const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFFB0A8A4),
-                                ),
-                              ),
-                              const Divider(
-                                height: 1,
-                                color: Color(0xFFEAE2DE),
-                              ),
-                            ],
-                            _buildRow(
-                              icon: Icons.help_outline,
-                              iconColor: const Color(0xFFBA68C8),
-                              title: l10n.settingsSubmitInquiry,
-                              onTap: _showInquiryDialog,
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                            ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            _buildRow(
-                              icon: Icons.mark_email_read,
-                              iconColor: const Color(0xFF1E88E5),
-                              title: l10n.settingsInquiryHistory,
-                              onTap: _showInquiryHistoryDialog,
-                              trailing: Consumer<GameService>(
-                                builder: (_, g, _) => Row(
+                                icon: Icons.campaign,
+                                iconColor: const Color(0xFF42A5F5),
+                                title: L10n.of(context).settingsNotices,
+                                onTap: _openNoticesPage,
+                                trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (g.unreadInquiryReplyCount > 0)
+                                    if (game.unreadNoticeCount > 0)
                                       Container(
-                                        width: 8,
-                                        height: 8,
-                                        margin: const EdgeInsets.only(right: 6),
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
                                         decoration: const BoxDecoration(
                                           color: Color(0xFFE53935),
-                                          shape: BoxShape.circle,
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(999),
+                                          ),
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 18,
+                                          minHeight: 18,
+                                        ),
+                                        child: Text(
+                                          game.unreadNoticeCount > 9
+                                              ? '9+'
+                                              : '${game.unreadNoticeCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     const Icon(
-                                      Icons.chevron_right,
-                                      color: Color(0xFFB0A8A4),
+                                      Icons.chevron_right_rounded,
+                                      color: Cartoon.ink,
+                                      size: 26,
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                          _buildSection(l10n.settingsAccountManagement, [
-                            _buildRow(
-                              icon: Icons.logout,
-                              iconColor: const Color(0xFF8A7A72),
-                              title: l10n.settingsLogout,
-                              onTap: _logout,
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
                               ),
-                            ),
-                            const Divider(height: 1, color: Color(0xFFEAE2DE)),
-                            _buildRow(
-                              icon: Icons.delete_forever,
-                              iconColor: const Color(0xFFC62828),
-                              title: l10n.settingsDeleteAccount,
-                              onTap: _showDeleteAccountDialog,
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                color: Color(0xFFB0A8A4),
-                              ),
-                            ),
-                          ]),
-                          const SizedBox(height: 12),
-                          if (_bannerAd != null && _bannerAdLoaded)
-                            Center(
-                              child: SizedBox(
-                                height: _bannerAd!.size.height.toDouble(),
-                                width: _bannerAd!.size.width.toDouble(),
-                                child: AdWidget(
-                                  ad: _bannerAd!,
-                                  key: ValueKey(_bannerAd!.hashCode),
+                              // 운영자 우편함. Sits with notices rather than with
+                              // support: both are things the team sent that are
+                              // waiting to be read, and a player looking for
+                              // "did they get back to me" checks the same place.
+                              _buildRow(
+                                icon: Icons.mark_email_unread,
+                                iconColor: const Color(0xFFEF6C00),
+                                title: L10n.of(context).mailboxTitle,
+                                onTap: _openMailbox,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (game.unreadMailCount > 0)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFE53935),
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(999),
+                                          ),
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 18,
+                                          minHeight: 18,
+                                        ),
+                                        child: Text(
+                                          game.unreadMailCount > 9
+                                              ? '9+'
+                                              : '${game.unreadMailCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Cartoon.ink,
+                                      size: 26,
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ]),
+                            // 웹에는 푸시가 없다. FCM 등록을 아예 건너뛰므로 토큰이 없고,
+                            // 여기서 무엇을 켜든 브라우저로는 아무것도 오지 않는다. 켤 수는
+                            // 있는데 오지 않는 스위치는 고장으로 읽힌다 — 그래서 통째로
+                            // 감춘다. 설정 자체는 계정에 남아 있어서, 앱을 깔면 그 기기에서
+                            // 예전에 정해 둔 대로 동작한다.
+                            if (!kIsWeb) ...[
+                              const SizedBox(height: 12),
+                              _buildSection(l10n.settingsNotificationsSection, [
+                                _buildRow(
+                                  icon: Icons.notifications,
+                                  iconColor: const Color(0xFF64B5F6),
+                                  title: l10n.settingsPushNotifications,
+                                  subtitle: l10n.settingsPushNotificationsDesc,
+                                  trailing: Switch(
+                                    value: game.pushEnabled,
+                                    onChanged: (v) => game.setPushEnabled(v),
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                // Separate from the switch above on purpose. That
+                                // one is "notify me at all"; this one is consent to
+                                // advertising, which is a legal record and has to
+                                // be withdrawable on its own.
+                                //
+                                // With notifications off it goes inactive rather
+                                // than off. The server already requires both
+                                // (getMarketingAudience), so an enabled-looking
+                                // switch here promised something that could not
+                                // happen. Turning it off instead would be worse:
+                                // that is a withdrawal of consent, and it would
+                                // silently come back when notifications were
+                                // re-enabled — consent nobody gave a second time.
+                                _buildRow(
+                                  icon: Icons.campaign_outlined,
+                                  iconColor: game.pushEnabled
+                                      ? const Color(0xFFE08A1E)
+                                      : const Color(0xFFC9BFB9),
+                                  title: l10n.settingsMarketingPush,
+                                  subtitle: game.pushEnabled
+                                      ? l10n.settingsMarketingPushHint
+                                      : l10n.settingsMarketingPushBlocked,
+                                  enabled: game.pushEnabled,
+                                  trailing: Switch(
+                                    value:
+                                        game.marketingPushEnabled &&
+                                        game.pushEnabled,
+                                    onChanged: game.pushEnabled
+                                        ? (v) => game.setMarketingConsent(v)
+                                        : null,
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                                // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
+                                // 알림도 무료 재화를 받으라는 권유라 광고성으로
+                                // 보는 게 안전하고, 그래서 같은 동의 아래 둔다.
+                                //
+                                // 그러면서도 따로 끌 수 있어야 한다 — 매일 오는
+                                // 게 성가시다는 이유로 마케팅 동의 자체를
+                                // 철회하면 되돌리는 데 다시 동의를 받아야 한다.
+                                _buildRow(
+                                  icon: Icons.event_available_outlined,
+                                  iconColor: attendancePushActive
+                                      ? const Color(0xFF66A15E)
+                                      : const Color(0xFFC9BFB9),
+                                  title: l10n.settingsAttendancePush,
+                                  subtitle: attendancePushActive
+                                      ? l10n.settingsAttendancePushHint
+                                      : l10n.settingsAttendancePushBlocked,
+                                  enabled: attendancePushActive,
+                                  trailing: Switch(
+                                    value:
+                                        game.pushAttendanceEnabled &&
+                                        attendancePushActive,
+                                    onChanged: attendancePushActive
+                                        ? (v) =>
+                                              game.setPushAttendanceEnabled(v)
+                                        : null,
+                                  ),
+                                ),
+                                if (game.isAdminUser) ...[
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFEAE2DE),
+                                  ),
+                                  _buildRow(
+                                    icon: Icons.support_agent,
+                                    iconColor: const Color(0xFFAB47BC),
+                                    title: l10n.settingsInquiryNotifications,
+                                    subtitle:
+                                        l10n.settingsInquiryNotificationsDesc,
+                                    trailing: Switch(
+                                      value: game.pushAdminInquiryEnabled,
+                                      onChanged: (v) =>
+                                          game.setAdminAlertPush(inquiry: v),
+                                    ),
+                                  ),
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFEAE2DE),
+                                  ),
+                                  _buildRow(
+                                    icon: Icons.report_gmailerrorred,
+                                    iconColor: const Color(0xFFEF5350),
+                                    title: l10n.settingsReportNotifications,
+                                    subtitle:
+                                        l10n.settingsReportNotificationsDesc,
+                                    trailing: Switch(
+                                      value: game.pushAdminReportEnabled,
+                                      onChanged: (v) =>
+                                          game.setAdminAlertPush(report: v),
+                                    ),
+                                  ),
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFEAE2DE),
+                                  ),
+                                  _buildRow(
+                                    icon: Icons.payments_outlined,
+                                    iconColor: const Color(0xFF26A69A),
+                                    title: l10n.settingsPaymentNotifications,
+                                    subtitle:
+                                        l10n.settingsPaymentNotificationsDesc,
+                                    trailing: Switch(
+                                      value: game.pushAdminPaymentEnabled,
+                                      onChanged: (v) =>
+                                          game.setAdminAlertPush(payment: v),
+                                    ),
+                                  ),
+                                ],
+                              ]),
+                            ],
+                            const SizedBox(height: 12),
+                            _buildSection(l10n.settingsCardViewPolicy, [
+                              _buildRow(
+                                icon: Icons.visibility_outlined,
+                                iconColor: const Color(0xFF6A6090),
+                                title: l10n.settingsCardViewPolicy,
+                                subtitle: _cardViewPrefLabel(
+                                  l10n,
+                                  game.cardViewPref,
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Cartoon.ink,
+                                  size: 26,
+                                ),
+                                onTap: () => _showCardViewPrefDialog(
+                                  context,
+                                  game,
+                                  l10n,
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            Builder(
+                              builder: (context) {
+                                final l10n = L10n.of(context);
+                                final localeService = context
+                                    .watch<LocaleService>();
+                                final currentLabel =
+                                    localeService.userSelectedLocale == null
+                                    ? l10n.languageAuto
+                                    : _localeDisplayName(
+                                        l10n,
+                                        localeService.userSelectedLocale!,
+                                      );
+                                return _buildSection(l10n.settingsLanguage, [
+                                  _buildRow(
+                                    icon: Icons.language,
+                                    iconColor: const Color(0xFF42A5F5),
+                                    title: l10n.settingsLanguage,
+                                    subtitle: currentLabel,
+                                    onTap: () => _showLanguageDialog(
+                                      context,
+                                      localeService,
+                                      l10n,
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Cartoon.ink,
+                                      size: 26,
+                                    ),
+                                  ),
+                                ]);
+                              },
                             ),
-                        ],
+                            const SizedBox(height: 12),
+                            // Moved here from the lobby header. The rulebook is
+                            // read once when a game is new to you and then never
+                            // again, so it does not earn a permanent slot next
+                            // to the lobby's everyday actions — the profile
+                            // button took that spot.
+                            _buildSection(L10n.of(context).rulesTitle, [
+                              _buildRow(
+                                icon: Icons.menu_book_rounded,
+                                iconColor: const Color(0xFFFF8A65),
+                                title: L10n.of(context).rulesTitle,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RulesScreen(),
+                                  ),
+                                ),
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Cartoon.ink,
+                                  size: 26,
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            _buildSection(l10n.settingsInquirySection, [
+                              // Coupons sit with the support rows because that is
+                              // where someone goes when they have a code and no
+                              // idea what to do with it. Absent on the iOS app —
+                              // see couponRedeemAllowed.
+                              if (couponRedeemAllowed) ...[
+                                _buildRow(
+                                  icon: Icons.confirmation_number_outlined,
+                                  iconColor: const Color(0xFFB07B2E),
+                                  leading: couponIcon(size: 22),
+                                  title: l10n.couponRedeemTitle,
+                                  onTap: () => showCouponRedeemDialog(context),
+                                  trailing: const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Cartoon.ink,
+                                    size: 26,
+                                  ),
+                                ),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFEAE2DE),
+                                ),
+                              ],
+                              _buildRow(
+                                icon: Icons.help_outline,
+                                iconColor: const Color(0xFFBA68C8),
+                                title: l10n.settingsSubmitInquiry,
+                                onTap: _showInquiryDialog,
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Cartoon.ink,
+                                  size: 26,
+                                ),
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
+                              _buildRow(
+                                icon: Icons.mark_email_read,
+                                iconColor: const Color(0xFF1E88E5),
+                                title: l10n.settingsInquiryHistory,
+                                onTap: _showInquiryHistoryDialog,
+                                trailing: Consumer<GameService>(
+                                  builder: (_, g, _) => Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (g.unreadInquiryReplyCount > 0)
+                                        Container(
+                                          width: 8,
+                                          height: 8,
+                                          margin: const EdgeInsets.only(
+                                            right: 6,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE53935),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: Cartoon.ink,
+                                        size: 26,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            Builder(
+                              builder: (context) {
+                                final l10n = L10n.of(context);
+                                return _buildSection(l10n.settingsAppInfo, [
+                                  Builder(
+                                    builder: (context) {
+                                      final outdated = _isOutdated(
+                                        game.latestVersion,
+                                      );
+                                      return _buildRow(
+                                        icon: Icons.info_outline,
+                                        iconColor: outdated
+                                            ? const Color(0xFFE53935)
+                                            : const Color(0xFF7E57C2),
+                                        // "앱 버전" is wrong in a browser — there
+                                        // is no app to have a version, just the
+                                        // build being served.
+                                        title: kIsWeb
+                                            ? l10n.settingsCurrentVersion
+                                            : l10n.settingsAppVersion,
+                                        subtitle: _appVersion.isEmpty
+                                            ? '-'
+                                            : (outdated
+                                                  ? '$_appVersion · ${l10n.settingsNotLatestVersion}'
+                                                  : _appVersion),
+                                        trailing: outdated
+                                            ? ElevatedButton(
+                                                onPressed: _openStore,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(
+                                                    0xFFE53935,
+                                                  ),
+                                                  foregroundColor: Colors.white,
+                                                  elevation: 0,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 14,
+                                                        vertical: 6,
+                                                      ),
+                                                  minimumSize: const Size(
+                                                    0,
+                                                    32,
+                                                  ),
+                                                  tapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  l10n.settingsUpdate,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              )
+                                            : null,
+                                      );
+                                    },
+                                  ),
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFEAE2DE),
+                                  ),
+                                  _buildRow(
+                                    icon: Icons.description_outlined,
+                                    iconColor: const Color(0xFF8A7A72),
+                                    title: l10n.settingsTermsOfService,
+                                    onTap: () => _showTextViewDialog(
+                                      l10n.settingsTermsOfService,
+                                      game.eulaContent,
+                                      isTermsOfService: true,
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Cartoon.ink,
+                                      size: 26,
+                                    ),
+                                  ),
+                                  const Divider(
+                                    height: 1,
+                                    color: Color(0xFFEAE2DE),
+                                  ),
+                                  _buildRow(
+                                    icon: Icons.privacy_tip_outlined,
+                                    iconColor: const Color(0xFF8A7A72),
+                                    title: l10n.settingsPrivacyPolicy,
+                                    onTap: () => _showTextViewDialog(
+                                      l10n.settingsPrivacyPolicy,
+                                      game.privacyPolicy,
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Cartoon.ink,
+                                      size: 26,
+                                    ),
+                                  ),
+                                ]);
+                              },
+                            ),
+                            if (game.isAdminUser) ...[
+                              const SizedBox(height: 12),
+                              _buildSection(l10n.settingsAdminSection, [
+                                _buildRow(
+                                  icon: Icons.admin_panel_settings_outlined,
+                                  iconColor: const Color(0xFF7E57C2),
+                                  title: l10n.settingsAdminCenter,
+                                  subtitle: l10n.settingsAdminCenterDesc,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AdminCenterScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ]),
+                            ],
+                            const SizedBox(height: 12),
+                            _buildSection(l10n.settingsAccountManagement, [
+                              _buildRow(
+                                icon: Icons.logout,
+                                iconColor: const Color(0xFF8A7A72),
+                                title: l10n.settingsLogout,
+                                onTap: _logout,
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Cartoon.ink,
+                                  size: 26,
+                                ),
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEAE2DE),
+                              ),
+                              _buildRow(
+                                icon: Icons.delete_forever,
+                                iconColor: const Color(0xFFC62828),
+                                title: l10n.settingsDeleteAccount,
+                                onTap: _showDeleteAccountDialog,
+                                trailing: const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: Cartoon.ink,
+                                  size: 26,
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            if (_bannerAd != null && _bannerAdLoaded)
+                              Center(
+                                child: SizedBox(
+                                  height: _bannerAd!.size.height.toDouble(),
+                                  width: _bannerAd!.size.width.toDouble(),
+                                  child: AdWidget(
+                                    ad: _bannerAd!,
+                                    key: ValueKey(_bannerAd!.hashCode),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../theme/cartoon.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -82,7 +83,7 @@ class PlayerProfileHeader extends StatelessWidget {
 
   /// The photo is the one thing in this popup people look at first, and at 38
   /// it was smaller than the avatar in the room list it was opened from.
-  static const double _avatarSize = 60;
+  static const double _avatarSize = 68;
 
   bool get _isMe => nickname == game.playerName;
 
@@ -149,8 +150,8 @@ class PlayerProfileHeader extends StatelessWidget {
                   Text(
                     nickname,
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
                       color: nameColor,
                       // The title sits directly above with no gap of its own.
                       // At the default line height the font's own leading put
@@ -249,8 +250,28 @@ class PlayerProfileHeader extends StatelessWidget {
       // Bots never have a photo, so the shared placeholder left every bot popup
       // opening on the same anonymous person icon. Rounded square to match the
       // human avatars beside it.
-      return BotAvatar(size: _avatarSize, name: nickname, borderRadius: 14);
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Cartoon.ink, width: 3),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(17),
+          child: BotAvatar(size: _avatarSize, name: nickname, borderRadius: 0),
+        ),
+      );
     }
+    Widget framed(Widget child) => Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Cartoon.ink, width: 3),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(17), child: child),
+    );
     final avatar = ProfileAvatar(
       photoUrl: resolved,
       size: _avatarSize,
@@ -276,7 +297,7 @@ class PlayerProfileHeader extends StatelessWidget {
     // Nothing to tap when there is neither a photo to enlarge nor a right to
     // replace one — a dead tap target reads as a broken button.
     final showsPhoto = resolved != null && !blocked;
-    if (!showsPhoto && !editable) return avatar;
+    if (!showsPhoto && !editable) return framed(avatar);
 
     return GestureDetector(
       onTap: () {
@@ -294,7 +315,7 @@ class PlayerProfileHeader extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          avatar,
+          framed(avatar),
           Positioned(
             right: -3,
             bottom: -3,
@@ -305,7 +326,7 @@ class PlayerProfileHeader extends StatelessWidget {
                     ? const Color(0xFF6C63FF)
                     : Colors.black.withValues(alpha: 0.55),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(color: Cartoon.ink, width: 2),
               ),
               child: Icon(
                 editable ? Icons.edit : Icons.zoom_in,
@@ -406,41 +427,35 @@ class PlayerProfileHeader extends StatelessWidget {
     required VoidCallback onTap,
     bool onBanner = false,
   }) {
-    return Material(
-      // A 13% tint of the button's own colour is what makes these read as
-      // buttons on white. Over a banner it reads as nothing at all — on a dark
-      // gradient it is invisible, on a saturated one it fights the fill. A
-      // near-opaque white plate gives them the same white background they were
-      // designed against, whatever is behind it.
-      color: onBanner
-          ? Colors.white.withValues(alpha: 0.92)
-          : color.withValues(alpha: 0.13),
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 15, color: color),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  tooltip,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
+    return CartoonPressable(
+      scale: 0.93,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: onBanner ? Colors.white : Cartoon.paper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 17, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                tooltip,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.text(size: 14, color: Cartoon.ink),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1178,24 +1193,37 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
   final p = LevelCurve.progress(level, expTotal);
   return Row(
     children: [
-      Text(
-        'Lv.$level',
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: ink ?? const Color(0xFF5A4038),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: Cartoon.yellow,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Cartoon.ink, width: 2),
+        ),
+        child: Text(
+          'Lv.$level',
+          style: Cartoon.text(size: 14, color: Cartoon.ink),
         ),
       ),
       const SizedBox(width: 8),
       Expanded(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: p.fraction,
-            minHeight: 5,
-            backgroundColor:
-                ink?.withValues(alpha: 0.28) ?? const Color(0xFFEFE7E3),
-            valueColor: AlwaysStoppedAnimation(ink ?? Colors.black),
+        child: Container(
+          height: 12,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Cartoon.ink, width: 2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          alignment: Alignment.centerLeft,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: p.fraction.clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => FractionallySizedBox(
+              widthFactor: v,
+              child: Container(color: Cartoon.green),
+            ),
           ),
         ),
       ),
@@ -1204,7 +1232,9 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
         '${p.expInLevel}/${p.expToNext}',
         style: TextStyle(
           fontSize: 11,
-          color: ink?.withValues(alpha: 0.75) ?? const Color(0xFF9A8E8A),
+          color:
+              ink?.withValues(alpha: 0.75) ??
+              Cartoon.ink.withValues(alpha: 0.6),
         ),
       ),
     ],

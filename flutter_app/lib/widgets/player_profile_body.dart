@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../theme/cartoon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -171,156 +172,83 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           leaveCount: leaveCount as int,
         ),
         const SizedBox(height: 10),
-        // Game selector button
-        Builder(
-          builder: (_) {
-            // One palette with the room-creation picker: that is where people
-            // learn which colour means which game.
-            final isAllTab = selectedTab == kProfileAllGamesTab;
-            final gameLabel = isAllTab
-                ? l10n.profileAllGames
-                : gameTypeLabel(l10n, selectedTab);
-            final gameBgColor = isAllTab
-                ? const Color(0xFF5A4038)
-                : gameTypeColor(selectedTab);
-            final gameFgColor = isAllTab
-                ? Colors.white
-                : gameTypeOnColor(selectedTab);
-            final gameIcon = isAllTab
-                ? const Icon(Icons.apps_rounded, size: 20, color: Colors.white)
-                : gameTypeSymbol(selectedTab, size: 22);
-            return InkWell(
-              onTap: () {
-                showModalBottomSheet(
-                  context: dialogContext,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  builder: (bCtx) => SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 8),
-                        Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
+        // 게임 선택: 드롭다운 + 하단 시트 대신 한 줄 칩. 한 번에 바로 전환.
+        SizedBox(
+          height: 46,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (final key in const [
+                kProfileAllGamesTab,
+                'tichu',
+                'mighty',
+                'skull_king',
+                'love_letter',
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8, bottom: 3),
+                  child: Builder(
+                    builder: (_) {
+                      final on = selectedTab == key;
+                      final isAllKey = key == kProfileAllGamesTab;
+                      final color = isAllKey ? Cartoon.ink : gameTypeColor(key);
+                      final label = isAllKey
+                          ? l10n.profileAllGames
+                          : gameTypeLabel(l10n, key);
+                      return CartoonPressable(
+                        onTap: () => onTabChanged(key),
+                        child: AnimatedScale(
+                          scale: on ? 1.05 : 1.0,
+                          duration: const Duration(milliseconds: 380),
+                          curve: Curves.elasticOut,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: on ? color : Cartoon.paper,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, on ? 3 : 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isAllKey)
+                                  Icon(
+                                    Icons.apps_rounded,
+                                    size: 20,
+                                    color: on ? Colors.white : Cartoon.ink,
+                                  )
+                                else
+                                  gameTypeSymbol(key, size: 22),
+                                const SizedBox(width: 6),
+                                Text(
+                                  label,
+                                  style: Cartoon.text(
+                                    size: 14.5,
+                                    color: on ? Colors.white : Cartoon.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        ListTile(
-                          leading: const Icon(
-                            Icons.apps_rounded,
-                            size: 20,
-                            color: Color(0xFF5A4038),
-                          ),
-                          title: Text(l10n.profileAllGames),
-                          trailing: selectedTab == kProfileAllGamesTab
-                              ? const Icon(
-                                  Icons.check,
-                                  color: Color(0xFF5A4038),
-                                )
-                              : null,
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            onTabChanged(kProfileAllGamesTab);
-                          },
-                        ),
-                        const Divider(height: 1, indent: 16, endIndent: 16),
-                        ListTile(
-                          leading: gameTypeSymbol('tichu', size: 24),
-                          title: Text(l10n.lobbyTichu),
-                          trailing: selectedTab == 'tichu'
-                              ? Icon(Icons.check, color: gameTypeColor('tichu'))
-                              : null,
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            onTabChanged('tichu');
-                          },
-                        ),
-                        ListTile(
-                          leading: gameTypeSymbol('skull_king', size: 24),
-                          title: Text(l10n.lobbySkullKing),
-                          trailing: selectedTab == 'skull_king'
-                              ? Icon(
-                                  Icons.check,
-                                  color: gameTypeColor('skull_king'),
-                                )
-                              : null,
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            onTabChanged('skull_king');
-                          },
-                        ),
-                        ListTile(
-                          leading: gameTypeSymbol('mighty', size: 24),
-                          title: Text(l10n.rankingMighty),
-                          trailing: selectedTab == 'mighty'
-                              ? Icon(
-                                  Icons.check,
-                                  color: gameTypeColor('mighty'),
-                                )
-                              : null,
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            onTabChanged('mighty');
-                          },
-                        ),
-                        ListTile(
-                          leading: gameTypeSymbol('love_letter', size: 24),
-                          title: Text(l10n.lobbyLoveLetter),
-                          trailing: selectedTab == 'love_letter'
-                              ? Icon(
-                                  Icons.check,
-                                  color: gameTypeColor('love_letter'),
-                                )
-                              : null,
-                          onTap: () {
-                            Navigator.pop(bCtx);
-                            onTabChanged('love_letter');
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
                 ),
-                decoration: BoxDecoration(
-                  color: gameBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    gameIcon,
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        gameLabel,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: gameFgColor,
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.arrow_drop_down, color: gameFgColor),
-                  ],
-                ),
-              ),
-            );
-          },
+            ],
+          ),
         ),
         const SizedBox(height: 10),
         if (isAll) ...[
@@ -541,68 +469,95 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     // A game they have never played is still worth a line: "0전" is the answer
     // to "do they play Skull King", and a missing row is not.
     final faded = t.games == 0;
+    final color = gameTypeColor(t.key);
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      // Its own game's colour, washed out. Four rows of the same text on the
-      // same white ran together; the tint gives each one an edge and says which
-      // game it is a second time, in the colour the rest of the app uses.
+      margin: const EdgeInsets.fromLTRB(0, 4, 0, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: faded ? const Color(0xFFF6F4F3) : _cardTint(t.key),
-        borderRadius: BorderRadius.circular(10),
+        color: faded ? const Color(0xFFF1EEEC) : _cardTint(t.key),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: faded ? Cartoon.ink.withValues(alpha: 0.35) : Cartoon.ink,
+          width: 2,
+        ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // A game they have never played is dimmed rather than dropped, and
-          // the artwork cannot be tinted grey the way the glyph could — so it
-          // fades instead.
-          Opacity(
-            opacity: faded ? 0.35 : 1,
-            child: gameTypeSymbol(t.key, size: 20),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 66,
-            child: Text(
-              t.label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: faded
-                    ? const Color(0xFFA79E99)
-                    : const Color(0xFF5A4038),
+          Row(
+            children: [
+              // 한 번도 안 한 게임은 지우지 않고 흐리게 둔다.
+              Opacity(
+                opacity: faded ? 0.35 : 1,
+                child: gameTypeSymbol(t.key, size: 24),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              l10n.lobbyRecordFormat(t.games, t.wins, t.losses),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 13,
-                color: faded
-                    ? const Color(0xFFA79E99)
-                    : const Color(0xFF6A5A52),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  t.label,
+                  style: Cartoon.text(
+                    size: 14.5,
+                    color: faded
+                        ? Cartoon.ink.withValues(alpha: 0.4)
+                        : Cartoon.ink,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+              Expanded(
+                child: Text(
+                  l10n.lobbyRecordFormat(t.games, t.wins, t.losses),
+                  textAlign: TextAlign.right,
+                  style: Cartoon.userText(
+                    size: 12.5,
+                    weight: FontWeight.w600,
+                    color: Cartoon.ink.withValues(alpha: faded ? 0.35 : 0.7),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 46,
+                child: Text(
+                  faded ? '-' : '${t.winRate}%',
+                  textAlign: TextAlign.right,
+                  style: Cartoon.text(
+                    size: 15,
+                    color: faded
+                        ? Cartoon.ink.withValues(alpha: 0.35)
+                        : Cartoon.ink,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 42,
-            child: Text(
-              faded ? '-' : '${t.winRate}%',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: faded
-                    ? const Color(0xFFA79E99)
-                    : const Color(0xFF5A4038),
+          if (!faded) ...[
+            const SizedBox(height: 6),
+            // 승률 막대: 승률만큼 게임 색이 차오른다.
+            Container(
+              height: 9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Cartoon.ink, width: 1.6),
+              ),
+              clipBehavior: Clip.antiAlias,
+              alignment: Alignment.centerLeft,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(
+                  begin: 0,
+                  end: (t.winRate / 100).clamp(0.0, 1.0).toDouble(),
+                ),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                builder: (context, v, _) => FractionallySizedBox(
+                  widthFactor: v,
+                  child: Container(color: color),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -619,9 +574,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final icon = _mannerIcon(manner);
     final compact = MediaQuery.of(context).size.width < 400;
     final boxDeco = BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE0D8D4)),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Cartoon.ink, width: 2.2),
+      boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
     );
     return Row(
       children: [
@@ -787,36 +743,39 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     required String mainText,
     required List<Widget> chips,
   }) {
+    // 시즌 레이팅처럼 정수면 0 에서 올라가며 센다.
+    final number = int.tryParse(mainText);
     return Container(
+      margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(icon, color: iconColor, size: 18),
+              Icon(icon, color: iconColor, size: 22),
               const SizedBox(width: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: accent,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
+              Expanded(child: Text(title, style: Cartoon.text(size: 15.5))),
               if (mainText.isNotEmpty)
-                Text(
-                  mainText,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
-                ),
+                number != null
+                    ? TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: number),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => Text(
+                          '$v',
+                          style: Cartoon.text(size: 28, color: accent),
+                        ),
+                      )
+                    : Text(
+                        mainText,
+                        style: Cartoon.text(size: 28, color: accent),
+                      ),
             ],
           ),
           const SizedBox(height: 8),
@@ -833,28 +792,25 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   Widget _buildStatChip(String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+            style: Cartoon.userText(
+              size: 12,
+              weight: FontWeight.w600,
+              color: Cartoon.ink.withValues(alpha: 0.6),
             ),
           ),
+          const SizedBox(width: 6),
+          Text(value, style: Cartoon.text(size: 15)),
         ],
       ),
     );
@@ -876,7 +832,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             children: [
               Text(
                 L10n.of(context).lobbyRecentMatches(_recentMatchesShown),
-                style: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A)),
+                style: Cartoon.text(size: 15.5),
               ),
               const Spacer(),
               if (recentMatches.length > _recentMatchesShown)
@@ -941,10 +897,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       padding: const EdgeInsets.fromLTRB(11, 9, 12, 9),
       decoration: BoxDecoration(
         color: _outcomeTint(outcome, 0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _outcomeColor(outcome).withValues(alpha: 0.3),
-        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: _buildMatchRow(match, profileNickname, padded: false),
     );

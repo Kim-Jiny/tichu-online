@@ -48,183 +48,198 @@ void showPlayerProfileDialog(
   showDialog(
     context: context,
     builder: (ctx) {
-      return Consumer<GameService>(
-        builder: (ctx, game, _) {
-          if (dismissWhen?.call(game) == true) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!ctx.mounted) return;
-              final route = ModalRoute.of(ctx);
-              if (route != null && route.isCurrent) Navigator.of(ctx).pop();
-            });
-          }
-          final profile = game.profileFor(nickname);
-          // Someone else's profile may still be in the store from a previous
-          // look-up; wait for this one rather than showing theirs.
-          final isLoading =
-              !isBot && (profile == null || profile['nickname'] != nickname);
+      // 호출한 화면에 카툰 테마가 없어도(게임 화면 등) 팝업과 그 안에서 여는
+      // 시트·대화상자는 같은 결이 되도록 여기서 씌운다.
+      return Theme(
+        data: cartoonTheme(Theme.of(ctx)),
+        child: Consumer<GameService>(
+          builder: (ctx, game, _) {
+            if (dismissWhen?.call(game) == true) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!ctx.mounted) return;
+                final route = ModalRoute.of(ctx);
+                if (route != null && route.isCurrent) Navigator.of(ctx).pop();
+              });
+            }
+            final profile = game.profileFor(nickname);
+            // Someone else's profile may still be in the store from a previous
+            // look-up; wait for this one rather than showing theirs.
+            final isLoading =
+                !isBot && (profile == null || profile['nickname'] != nickname);
 
-          // Take the width the screen has instead of letting the dialog shrink
-          // to whatever the widest chip happened to be. 480 is where the stat
-          // cards stop gaining anything from more room; +32 for the padding
-          // that sits either side of them.
-          final media = MediaQuery.of(ctx).size;
-          final dialogWidth = math.max(
-            272.0,
-            math.min(media.width - 32, 512.0),
-          );
-          // Header, actions and inset come off the top before the records get
-          // their share.
-          final available = (media.height - 190).clamp(220.0, 680.0);
-          final contentMaxHeight = maxHeight == null
-              ? available
-              : math.min(maxHeight, available);
+            // Take the width the screen has instead of letting the dialog shrink
+            // to whatever the widest chip happened to be. 480 is where the stat
+            // cards stop gaining anything from more room; +32 for the padding
+            // that sits either side of them.
+            final media = MediaQuery.of(ctx).size;
+            final dialogWidth = math.max(
+              272.0,
+              math.min(media.width - 32, 512.0),
+            );
+            // Header, actions and inset come off the top before the records get
+            // their share.
+            final available = (media.height - 190).clamp(220.0, 680.0);
+            final contentMaxHeight = maxHeight == null
+                ? available
+                : math.min(maxHeight, available);
 
-          // The banner they equipped, as the popup's background. It is already
-          // the fill behind their seat in the lobby and in all four games; the
-          // popup was the one place their own banner never showed up. The
-          // gradient comes from the server's visual catalog, so an admin
-          // editing a banner's stops changes this too.
-          final inner = profile?['profile'] as Map?;
-          final bannerKey = isBot ? null : inner?['bannerKey'] as String?;
-          final banner = game.bannerGradient(bannerKey);
-          final ink = banner == null
-              ? null
-              : profileBannerInk(banner, game.bannerTextColor(bannerKey));
+            // The banner they equipped, as the popup's background. It is already
+            // the fill behind their seat in the lobby and in all four games; the
+            // popup was the one place their own banner never showed up. The
+            // gradient comes from the server's visual catalog, so an admin
+            // editing a banner's stops changes this too.
+            final inner = profile?['profile'] as Map?;
+            final bannerKey = isBot ? null : inner?['bannerKey'] as String?;
+            final banner = game.bannerGradient(bannerKey);
+            final ink = banner == null
+                ? null
+                : profileBannerInk(banner, game.bannerTextColor(bannerKey));
 
-          // On a banner the records move onto their own near-opaque sheet.
-          // Stat cards, chips and match rows are all built for a light
-          // background and there are far too many of them to recolour per
-          // banner; the sheet lets the banner be the background — visible as
-          // the header and as a frame around the records — without any of that
-          // having to change.
-          final sheetInset = banner == null
-              ? EdgeInsets.zero
-              : const EdgeInsets.fromLTRB(8, 0, 8, 8);
-          final sheetPadding = banner == null
-              ? const EdgeInsets.fromLTRB(16, 0, 16, 0)
-              : const EdgeInsets.fromLTRB(8, 8, 8, 4);
+            // On a banner the records move onto their own near-opaque sheet.
+            // Stat cards, chips and match rows are all built for a light
+            // background and there are far too many of them to recolour per
+            // banner; the sheet lets the banner be the background — visible as
+            // the header and as a frame around the records — without any of that
+            // having to change.
+            final sheetInset = banner == null
+                ? EdgeInsets.zero
+                : const EdgeInsets.fromLTRB(8, 0, 8, 8);
+            final sheetPadding = banner == null
+                ? const EdgeInsets.fromLTRB(16, 0, 16, 0)
+                : const EdgeInsets.fromLTRB(8, 8, 8, 4);
 
-          return Dialog(
-            // Narrower inset than Material's default 40: at 40 a phone leaves
-            // about 216dp of usable width, which is not enough for the three
-            // action buttons to sit on one line.
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 24,
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            child: Container(
-              width: dialogWidth,
-              decoration: BoxDecoration(
-                gradient: banner,
-                color: banner == null ? Cartoon.paper : null,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: Cartoon.ink, width: 3),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 5)),
-                ],
+            return Dialog(
+              // Narrower inset than Material's default 40: at 40 a phone leaves
+              // about 216dp of usable width, which is not enough for the three
+              // action buttons to sit on one line.
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                    // The header sits on the dialog itself. It used to be a
-                    // bordered card inside the dialog — a frame drawn inside a
-                    // frame, costing 28dp of width for no information.
-                    child: PlayerProfileHeader(
-                      nickname: nickname,
-                      profile: profile,
-                      game: game,
-                      subtitle: subtitle ?? l10n.lobbyPlayerProfile,
-                      // A private profile sends no level, and the strip's
-                      // fallback ("Lv.1 0/100") reads as a real level rather
-                      // than as a blank.
-                      subtitleBuilder: (p) => p?['level'] == null
-                          ? Text(
-                              subtitle ?? l10n.lobbyPlayerProfile,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color:
-                                    ink?.withValues(alpha: 0.78) ??
-                                    const Color(0xFF84766E),
-                              ),
-                            )
-                          : profileLevelStrip(
-                              p!['level'] as int,
-                              (p['expTotal'] as int?) ?? 0,
-                              ink: ink,
-                            ),
-                      isBot: isBot,
-                      onCloseDialog: () => Navigator.pop(ctx),
-                      placeholderBackground: placeholderBackground,
-                      placeholderForeground: placeholderForeground,
-                      ink: ink,
-                    ),
-                  ),
-                  Flexible(
-                    child: Container(
-                      margin: sheetInset,
-                      padding: sheetPadding,
-                      decoration: BoxDecoration(
-                        color: banner == null
-                            ? null
-                            : Colors.white.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Without a banner there is no sheet edge to separate
-                          // the header from the records, so the hairline that
-                          // used to do it stays.
-                          if (banner == null) ...[
-                            Container(
-                              height: 1,
-                              color: const Color(0xFFEFE6E1),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                          if (isBot)
-                            botProfileBody(ctx)
-                          else if (isLoading)
-                            const SizedBox(
-                              height: 140,
-                              child: Center(child: CircularProgressIndicator()),
-                            )
-                          else
-                            Flexible(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxHeight: contentMaxHeight,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                width: dialogWidth,
+                decoration: BoxDecoration(
+                  gradient: banner,
+                  color: banner == null ? Cartoon.paper : null,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: Cartoon.ink, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 5)),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      // The header sits on the dialog itself. It used to be a
+                      // bordered card inside the dialog — a frame drawn inside a
+                      // frame, costing 28dp of width for no information.
+                      child: PlayerProfileHeader(
+                        nickname: nickname,
+                        profile: profile,
+                        game: game,
+                        subtitle: subtitle ?? l10n.lobbyPlayerProfile,
+                        // A private profile sends no level, and the strip's
+                        // fallback ("Lv.1 0/100") reads as a real level rather
+                        // than as a blank.
+                        subtitleBuilder: (p) => p?['level'] == null
+                            ? Text(
+                                subtitle ?? l10n.lobbyPlayerProfile,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color:
+                                      ink?.withValues(alpha: 0.78) ??
+                                      const Color(0xFF84766E),
                                 ),
-                                child: SingleChildScrollView(
-                                  child: PlayerProfileBody(
-                                    data: profile!,
-                                    game: game,
-                                    initialGame:
-                                        initialGame ?? kProfileAllGamesTab,
+                              )
+                            : profileLevelStrip(
+                                p!['level'] as int,
+                                (p['expTotal'] as int?) ?? 0,
+                                ink: ink,
+                              ),
+                        isBot: isBot,
+                        onCloseDialog: () => Navigator.pop(ctx),
+                        placeholderBackground: placeholderBackground,
+                        placeholderForeground: placeholderForeground,
+                        ink: ink,
+                      ),
+                    ),
+                    Flexible(
+                      child: Container(
+                        margin: sheetInset,
+                        padding: sheetPadding,
+                        decoration: BoxDecoration(
+                          color: banner == null
+                              ? null
+                              : Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Without a banner there is no sheet edge to separate
+                            // the header from the records, so the hairline that
+                            // used to do it stays.
+                            if (banner == null) ...[
+                              Container(
+                                height: 2,
+                                color: Cartoon.ink.withValues(alpha: 0.12),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            if (isBot)
+                              botProfileBody(ctx)
+                            else if (isLoading)
+                              const SizedBox(
+                                height: 140,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: Cartoon.orange,
+                                    strokeWidth: 4,
+                                  ),
+                                ),
+                              )
+                            else
+                              Flexible(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight: contentMaxHeight,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: PlayerProfileBody(
+                                      data: profile!,
+                                      game: game,
+                                      initialGame:
+                                          initialGame ?? kProfileAllGamesTab,
+                                    ),
                                   ),
                                 ),
                               ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+                              child: CartoonButton(
+                                height: 48,
+                                color: Cartoon.orange,
+                                onPressed: () => Navigator.pop(ctx),
+                                child: CartoonButton.label(
+                                  l10n.commonClose,
+                                  size: 17,
+                                ),
+                              ),
                             ),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.commonClose),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       );
     },
   );

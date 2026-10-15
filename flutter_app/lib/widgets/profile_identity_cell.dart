@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
@@ -94,14 +95,25 @@ class ProfileIdentityCell extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          margin: const EdgeInsets.only(bottom: 3),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             gradient: gradient,
+            // 불투명해야 한다: 반투명 바탕 위 단색 그림자는 비쳐서 칸이 어두워진다.
             color: gradient == null
-                ? Colors.white.withValues(alpha: away ? 0.6 : 0.85)
+                ? (away ? const Color(0xFFF1EEEC) : Cartoon.paper)
                 : null,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE6DDD8)),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: away ? Cartoon.ink.withValues(alpha: 0.45) : Cartoon.ink,
+              width: 2.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: away ? Cartoon.ink.withValues(alpha: 0.45) : Cartoon.ink,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -110,13 +122,12 @@ class ProfileIdentityCell extends StatelessWidget {
               // already taken by the level badge.
               if (isOnline != null) ...[
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 12,
+                  height: 12,
                   decoration: BoxDecoration(
-                    color: isOnline!
-                        ? const Color(0xFF4CAF50)
-                        : const Color(0xFFC4BAB4),
+                    color: isOnline! ? Cartoon.green : const Color(0xFFC4BAB4),
                     shape: BoxShape.circle,
+                    border: Border.all(color: Cartoon.ink, width: 2),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -127,10 +138,23 @@ class ProfileIdentityCell extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    ProfileAvatar(
-                      photoUrl: photo,
-                      size: avatarSize,
-                      fallback: DefaultAvatar(size: avatarSize),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          avatarCornerRadius(avatarSize) + 2,
+                        ),
+                        border: Border.all(color: Cartoon.ink, width: 2.2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          avatarCornerRadius(avatarSize),
+                        ),
+                        child: ProfileAvatar(
+                          photoUrl: photo,
+                          size: avatarSize - 4.4,
+                          fallback: DefaultAvatar(size: avatarSize - 4.4),
+                        ),
+                      ),
                     ),
                     // A private account has no level to show, so the corner
                     // stays empty rather than claiming level 1.
@@ -141,7 +165,7 @@ class ProfileIdentityCell extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.2),
+                            border: Border.all(color: Cartoon.ink, width: 1.8),
                           ),
                           child: LevelBadge(level: level, size: 15),
                         ),
@@ -174,9 +198,9 @@ class ProfileIdentityCell extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: textColor ?? const Color(0xFF5A4038),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: textColor ?? Cartoon.ink,
                             ),
                           ),
                         ),

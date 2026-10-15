@@ -8,6 +8,7 @@ import '../utils/friend_order.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
+import '../theme/cartoon.dart';
 import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -144,181 +145,249 @@ class _FriendsScreenState extends State<FriendsScreen>
     final themeColors = context.watch<GameService>().themeGradient;
 
     if (_dmChatPartner != null) {
-      return _buildDmChatView(themeColors);
+      return Theme(
+        data: cartoonTheme(Theme.of(context)),
+        child: _buildDmChatView(themeColors),
+      );
     }
 
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              _buildTabBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildFriendsTab(),
-                    _buildSearchTab(),
-                    _buildRequestsTab(),
-                  ],
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _buildAppBar(),
+                _buildTabBar(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildFriendsTab(),
+                      _buildSearchTab(),
+                      _buildRequestsTab(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _headerChip({
+    required IconData icon,
+    required VoidCallback onTap,
+    Color color = Cartoon.ink,
+  }) {
+    return CartoonPressable(
+      scale: 0.88,
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
+        ),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }
 
   Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 20,
-                color: Color(0xFF5A4038),
+    return CartoonEntrance(
+      from: const Offset(0, -30),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Row(
+          children: [
+            _headerChip(
+              icon: Icons.arrow_back_rounded,
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Cartoon.outlinedText(
+                L10n.of(context).friendsTitle,
+                size: 28,
+                maxLines: 1,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            L10n.of(context).friendsTitle,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
-            ),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: _refreshFriends,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.refresh,
-                size: 20,
-                color: Color(0xFF8A7A72),
-              ),
-            ),
-          ),
-        ],
+            const Spacer(),
+            _headerChip(icon: Icons.refresh_rounded, onTap: _refreshFriends),
+          ],
+        ),
       ),
     );
   }
 
+  /// 친구 · 검색 · 요청 — 알약 세 칸 토글. 안 읽은 DM / 받은 요청 수는 칸 안 배지로.
   Widget _buildTabBar() {
     return Consumer<GameService>(
       builder: (context, game, _) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            labelColor: const Color(0xFF7E57C2),
-            unselectedLabelColor: const Color(0xFF8A7A72),
-            indicatorColor: const Color(0xFF7E57C2),
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 13),
-            tabs: [
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(L10n.of(context).friendsTabFriends),
-                    if (game.totalUnreadDmCount > 0) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE53935),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${game.totalUnreadDmCount}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+        final l10n = L10n.of(context);
+        return AnimatedBuilder(
+          animation: _tabController.animation ?? _tabController,
+          builder: (context, _) {
+            Widget seg(int i, String label, IconData icon, int badge) {
+              final on = _tabController.index == i;
+              return Expanded(
+                child: CartoonPressable(
+                  scale: 0.95,
+                  onTap: () => _tabController.animateTo(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: on ? Cartoon.orange : Colors.transparent,
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: on ? Cartoon.ink : Colors.transparent,
+                        width: 2.5,
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 19,
+                          color: on ? Colors.white : Cartoon.ink,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: on
+                              ? Cartoon.outlinedText(
+                                  label,
+                                  size: 15,
+                                  maxLines: 1,
+                                )
+                              : Text(
+                                  label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Cartoon.text(size: 15),
+                                ),
+                        ),
+                        if (badge > 0) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Cartoon.red,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 1.8,
+                              ),
+                            ),
+                            child: Text(
+                              badge > 99 ? '99+' : '$badge',
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                ),
+                child: Row(
+                  children: [
+                    seg(
+                      0,
+                      l10n.friendsTabFriends,
+                      Icons.people_rounded,
+                      game.totalUnreadDmCount,
+                    ),
+                    const SizedBox(width: 3),
+                    seg(1, l10n.friendsTabSearch, Icons.search_rounded, 0),
+                    const SizedBox(width: 3),
+                    seg(
+                      2,
+                      l10n.friendsTabRequests,
+                      Icons.mail_rounded,
+                      game.pendingFriendRequestCount,
+                    ),
                   ],
                 ),
               ),
-              Tab(text: L10n.of(context).friendsTabSearch),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(L10n.of(context).friendsTabRequests),
-                    if (game.pendingFriendRequestCount > 0) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE53935),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${game.pendingFriendRequestCount}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  /// 빈 화면: 졸고 있는 마스코트 + 한 줄 안내.
+  Widget _emptyState(String text) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CartoonFloat(
+          amplitude: 8,
+          child: Image.asset(
+            'assets/dragonIcon.webp',
+            width: 88,
+            height: 88,
+            color: Colors.white.withValues(alpha: 0.35),
+            colorBlendMode: BlendMode.modulate,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: Cartoon.userText(
+              size: 15,
+              color: Cartoon.ink.withValues(alpha: 0.7),
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -345,44 +414,69 @@ class _FriendsScreenState extends State<FriendsScreen>
           return RefreshIndicator(
             onRefresh: onRefresh,
             child: _fillScrollable(
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.people_outline,
-                    size: 48,
-                    color: Color(0xFFBDBDBD),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    L10n.of(context).friendsEmptyList,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF9A8E8A),
-                    ),
-                  ),
-                ],
-              ),
+              _emptyState(L10n.of(context).friendsEmptyList),
             ),
           );
         }
 
+        // 접속 중 / 오프라인 머리글. 정렬은 이미 "답장 대기 → 접속 중 → 최근
+        // 접속" 이라, 접속 여부가 바뀌는 지점에 글머리만 끼워 넣는다.
+        final l10n = L10n.of(context);
+        final onlineCount = sorted.where((f) => f['isOnline'] == true).length;
+        final rows = <Object>[];
+        bool? lastOnline;
+        for (final f in sorted) {
+          final online = f['isOnline'] == true;
+          if (online != lastOnline) {
+            rows.add(
+              online
+                  ? '${l10n.friendsStatusOnline} · $onlineCount'
+                  : '${l10n.friendsStatusOffline} · ${sorted.length - onlineCount}',
+            );
+            lastOnline = online;
+          }
+          rows.add(f);
+        }
+
         return RefreshIndicator(
           onRefresh: onRefresh,
-          child: ListView.separated(
+          child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            itemCount: sorted.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            padding: EdgeInsets.fromLTRB(
+              14,
+              4,
+              14,
+              24 + MediaQuery.viewPaddingOf(context).bottom,
+            ),
+            itemCount: rows.length,
             itemBuilder: (context, index) {
-              final friend = sorted[index];
+              final row = rows[index];
+              if (row is String) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(2, 8, 0, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Cartoon.cream,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Cartoon.ink, width: 2),
+                      ),
+                      child: Text(row, style: Cartoon.text(size: 14)),
+                    ),
+                  ),
+                );
+              }
+              final friend = row as Map<String, dynamic>;
               final nickname = friend['nickname'] as String? ?? '';
               final isOnline = friend['isOnline'] == true;
               final roomName = friend['roomName'] as String?;
               final unread = unreadMap[nickname] ?? 0;
 
-              final l10n = L10n.of(context);
               String statusText;
               if (isOnline && roomName != null && roomName.isNotEmpty) {
                 statusText = l10n.friendsStatusPlayingInRoom(roomName);
@@ -396,145 +490,201 @@ class _FriendsScreenState extends State<FriendsScreen>
                     l10n.friendsStatusOffline;
               }
 
-              return ProfileIdentityCell(
-                game: game,
-                nickname: nickname,
-                photoUrl: friend['photoUrl'] as String?,
-                bannerKey: friend['bannerKey'] as String?,
-                titleKey: friend['titleKey'] as String?,
-                titleName: friend['titleName'] as String?,
-                level: friend['level'] as int?,
-                isOnline: isOnline,
-                subtitle: statusText,
-                subtitleColor: isOnline
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFF9A8E8A),
-                // Tapping the row opens who they are. Talking to them is a
-                // button — a whole row that means "chat" gives the profile no
-                // way in except a small icon, and looking someone up is the
-                // more common reason to be here.
-                onTap: () => showPlayerProfileDialog(context, nickname, game),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!widget.allowDmChat)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E0),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            l10n.friendsRestrictedDuringGame,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFFE65100),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (isOnline &&
-                        friend['roomId'] == null &&
-                        game.isInWaitingRoom)
-                      game.isRoomInvitePending(nickname)
-                          ? _buildActionChip(
-                              l10n.friendsInvited,
-                              Icons.schedule,
-                              const Color(0xFF8A8A8A),
-                              const Color(0xFFF1F1F1),
-                              () {},
-                            )
-                          : _buildActionChip(
-                              l10n.friendsInvite,
-                              Icons.send,
-                              const Color(0xFF1976D2),
-                              const Color(0xFFE3F2FD),
-                              () {
-                                game.inviteToRoom(nickname);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      l10n.friendsInviteSent(nickname),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    if (friend['roomId'] != null && game.currentRoomId.isEmpty)
-                      _buildRoomActionChip(friend, game),
-                    _iconTapTarget(
-                      onTap: () => _openDmChat(nickname),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEDE7F6),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.chat_bubble,
-                              size: 14,
-                              color: Color(0xFF7E57C2),
-                            ),
-                          ),
-                          // On the button it belongs to, not adrift in the
-                          // row: the count is about messages, and messages
-                          // are what that button opens.
-                          if (unread > 0)
-                            Positioned(
-                              right: -5,
-                              top: -5,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1,
+              return CartoonEntrance(
+                key: ValueKey('friend-$nickname'),
+                delay: Duration(milliseconds: 35 * index.clamp(0, 7)),
+                from: const Offset(0, 16),
+                pop: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: ProfileIdentityCell(
+                    game: game,
+                    nickname: nickname,
+                    photoUrl: friend['photoUrl'] as String?,
+                    bannerKey: friend['bannerKey'] as String?,
+                    titleKey: friend['titleKey'] as String?,
+                    titleName: friend['titleName'] as String?,
+                    level: friend['level'] as int?,
+                    isOnline: isOnline,
+                    subtitle: statusText,
+                    subtitleColor: isOnline
+                        ? const Color(0xFF2E8B57)
+                        : Cartoon.ink.withValues(alpha: 0.5),
+                    // Tapping the row opens who they are. Talking to them is a
+                    // button — a whole row that means "chat" gives the profile
+                    // no way in except a small icon, and looking someone up is
+                    // the more common reason to be here.
+                    onTap: () =>
+                        showPlayerProfileDialog(context, nickname, game),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!widget.allowDmChat)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFE9B8),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 1.8,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE53935),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Text(
-                                  unread > 99 ? '99+' : '$unread',
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              ),
+                              child: Text(
+                                l10n.friendsRestrictedDuringGame,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFFB45309),
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    _iconTapTarget(
-                      onTap: () =>
-                          _showRemoveFriendConfirmation(nickname, game),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          borderRadius: BorderRadius.circular(8),
+                          ),
+                        if (isOnline &&
+                            friend['roomId'] == null &&
+                            game.isInWaitingRoom)
+                          game.isRoomInvitePending(nickname)
+                              ? _buildActionChip(
+                                  l10n.friendsInvited,
+                                  Icons.schedule_rounded,
+                                  const Color(0xFF8A8A8A),
+                                  const Color(0xFFF1F1F1),
+                                  () {},
+                                )
+                              : _buildActionChip(
+                                  l10n.friendsInvite,
+                                  Icons.send_rounded,
+                                  Colors.white,
+                                  Cartoon.blue,
+                                  () {
+                                    game.inviteToRoom(nickname);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.friendsInviteSent(nickname),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                        if (friend['roomId'] != null &&
+                            game.currentRoomId.isEmpty)
+                          _buildRoomActionChip(friend, game),
+                        // 채팅: 가장 자주 쓰는 동작이라 눈에 띄는 노란 칩.
+                        _iconTapTarget(
+                          onTap: () => _openDmChat(nickname),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: Cartoon.yellow,
+                                  borderRadius: BorderRadius.circular(11),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 2.2,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Cartoon.ink,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.chat_bubble_rounded,
+                                  size: 17,
+                                  color: Cartoon.ink,
+                                ),
+                              ),
+                              // On the button it belongs to, not adrift in the
+                              // row: the count is about messages, and messages
+                              // are what that button opens.
+                              if (unread > 0)
+                                Positioned(
+                                  right: -6,
+                                  top: -7,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Cartoon.red,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Cartoon.ink,
+                                        width: 1.8,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      unread > 99 ? '99+' : '$unread',
+                                      style: const TextStyle(
+                                        fontSize: 9.5,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.person_remove,
-                          size: 14,
-                          color: Color(0xFFE57373),
+                        // 친구 삭제는 줄에 늘 떠 있던 빨간 아이콘이 아니라 ⋯ 메뉴
+                        // 뒤로 — 채팅 옆에 있어서 잘못 누르기 쉬웠다.
+                        PopupMenuButton<String>(
+                          tooltip: '',
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.more_vert_rounded,
+                            color: Cartoon.ink,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(
+                              color: Cartoon.ink,
+                              width: 2.5,
+                            ),
+                          ),
+                          color: Cartoon.paper,
+                          onSelected: (v) {
+                            if (v == 'remove') {
+                              _showRemoveFriendConfirmation(nickname, game);
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'remove',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person_remove_rounded,
+                                    color: Color(0xFFE5484D),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.friendsRemoveTitle,
+                                    style: Cartoon.text(
+                                      size: 15,
+                                      color: const Color(0xFFE5484D),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -604,27 +754,26 @@ class _FriendsScreenState extends State<FriendsScreen>
   ) {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
+      child: CartoonPressable(
+        scale: 0.92,
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          margin: const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: Cartoon.ink, width: 2.2),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 12, color: color),
+              Icon(icon, size: 15, color: color),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
+              Text(label, style: Cartoon.text(size: 13, color: color)),
             ],
           ),
         ),
@@ -642,9 +791,9 @@ class _FriendsScreenState extends State<FriendsScreen>
     final l10n = L10n.of(context);
     return _buildActionChip(
       canJoin ? l10n.friendsJoinRoom : l10n.friendsSpectateRoom,
-      canJoin ? Icons.login : Icons.visibility,
-      canJoin ? const Color(0xFF388E3C) : const Color(0xFFE65100),
-      canJoin ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+      canJoin ? Icons.login_rounded : Icons.visibility_rounded,
+      Colors.white,
+      canJoin ? Cartoon.green : Cartoon.orange,
       () {
         Navigator.pop(context);
         if (canJoin) {
@@ -663,59 +812,46 @@ class _FriendsScreenState extends State<FriendsScreen>
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
               child: TextField(
                 controller: _searchController,
                 onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: L10n.of(context).friendsSearchHint,
-                  hintStyle: const TextStyle(
-                    color: Color(0xFFBDBDBD),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Color(0xFF8A7A72),
-                  ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            game.clearSearchResults();
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.85),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
+                style: Cartoon.userText(size: 16),
+                decoration:
+                    Cartoon.inputDecoration(
+                      hint: L10n.of(context).friendsSearchHint,
+                      icon: Icons.search_rounded,
+                    ).copyWith(
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                game.clearSearchResults();
+                              },
+                            )
+                          : null,
+                    ),
               ),
             ),
             Expanded(
               child: game.searchResults.isEmpty
                   ? Center(
-                      child: Text(
+                      child: _emptyState(
                         _searchController.text.isEmpty
                             ? L10n.of(context).friendsSearchPrompt
                             : L10n.of(context).friendsSearchNoResults,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF9A8E8A),
-                        ),
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.fromLTRB(
+                        14,
+                        2,
+                        14,
+                        24 + MediaQuery.viewPaddingOf(context).bottom,
+                      ),
                       itemCount: game.searchResults.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 9),
                       itemBuilder: (context, index) {
                         final user = game.searchResults[index];
                         final nickname = user['nickname'] as String? ?? '';
@@ -776,16 +912,21 @@ class _FriendsScreenState extends State<FriendsScreen>
       VoidCallback? onTap,
     }) {
       final body = Container(
+        margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: onTap == null
+              ? null
+              : const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 14, color: fg),
+              Icon(icon, size: 15, color: fg),
               const SizedBox(width: 4),
             ],
             Flexible(
@@ -793,9 +934,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                 text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                style: Cartoon.userText(
+                  size: 13,
+                  weight: FontWeight.w900,
                   color: fg,
                 ),
               ),
@@ -803,30 +944,32 @@ class _FriendsScreenState extends State<FriendsScreen>
           ],
         ),
       );
-      return onTap == null ? body : GestureDetector(onTap: onTap, child: body);
+      return onTap == null
+          ? body
+          : CartoonPressable(scale: 0.92, onTap: onTap, child: body);
     }
 
     switch (status) {
       case 'friend':
         return chip(
-          Icons.check,
+          Icons.check_rounded,
           l10n.friendsStatusFriend,
-          const Color(0xFF4CAF50),
-          const Color(0xFFE8F5E9),
+          const Color(0xFF2E8B57),
+          const Color(0xFFD8F5DF),
         );
       case 'pending_incoming':
         return chip(
           null,
           l10n.friendsStatusReceivedShort,
-          const Color(0xFFE65100),
-          const Color(0xFFFFF3E0),
+          const Color(0xFFB45309),
+          const Color(0xFFFFE9B8),
         );
       case 'pending_outgoing':
         return chip(
-          Icons.close,
+          Icons.close_rounded,
           l10n.friendsStatusPendingShort,
-          const Color(0xFF1976D2),
-          const Color(0xFFE3F2FD),
+          const Color(0xFF1E6FD0),
+          const Color(0xFFDCEBFF),
           onTap: () {
             game.cancelFriendRequestAction(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -836,10 +979,10 @@ class _FriendsScreenState extends State<FriendsScreen>
         );
       default:
         return chip(
-          Icons.person_add,
+          Icons.person_add_rounded,
           l10n.gameAddFriend,
           Colors.white,
-          const Color(0xFF7E57C2),
+          Cartoon.green,
           onTap: () {
             game.addFriendAction(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -859,26 +1002,7 @@ class _FriendsScreenState extends State<FriendsScreen>
         final received = game.pendingFriendRequests;
         final sent = game.sentFriendRequestsDetailed;
         if (received.isEmpty && sent.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.mail_outline,
-                  size: 48,
-                  color: Color(0xFFBDBDBD),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  L10n.of(context).friendsNoRequests,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF9A8E8A),
-                  ),
-                ),
-              ],
-            ),
-          );
+          return Center(child: _emptyState(L10n.of(context).friendsNoRequests));
         }
 
         final l10n = L10n.of(context);
@@ -887,13 +1011,19 @@ class _FriendsScreenState extends State<FriendsScreen>
         // layout already read fine and a header would be pure clutter.
         final showLabels = received.isNotEmpty && sent.isNotEmpty;
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            14,
+            4,
+            14,
+            24 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
           children: [
             if (received.isNotEmpty) ...[
-              if (showLabels) _buildRequestsSectionLabel(l10n.friendsReceivedSection),
+              if (showLabels)
+                _buildRequestsSectionLabel(l10n.friendsReceivedSection),
               for (final nickname in received) ...[
                 _buildReceivedRequestCard(context, game, nickname),
-                const SizedBox(height: 8),
+                const SizedBox(height: 9),
               ],
             ],
             if (sent.isNotEmpty) ...[
@@ -915,12 +1045,16 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _buildRequestsSectionLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 2),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF9A8E8A),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+          decoration: BoxDecoration(
+            color: Cartoon.cream,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Cartoon.ink, width: 2),
+          ),
+          child: Text(text, style: Cartoon.text(size: 14)),
         ),
       ),
     );
@@ -929,24 +1063,22 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _requestActionButton(String label, Color color, VoidCallback onTap) {
     // Its own tap target, deliberately not the row's — the row opens the
     // profile (same as everywhere else a person is listed); this is the one
-    // thing on the row that does something else, so it needs a boundary
-    // InkWell's own ripple won't blur into a "the whole card did that" feel.
-    return GestureDetector(
+    // thing on the row that does something else.
+    return CartoonPressable(
+      scale: 0.92,
       onTap: onTap,
       child: Container(
+        margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+          ],
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        child: Text(label, style: Cartoon.text(size: 14, color: Colors.white)),
       ),
     );
   }
@@ -956,7 +1088,10 @@ class _FriendsScreenState extends State<FriendsScreen>
   /// fetch can lag a beat behind the plain list (e.g. right after a live
   /// friend_request_received push) and the row should still render rather
   /// than disappear or throw.
-  Map<String, dynamic> _requestDetail(List<Map<String, dynamic>> detailed, String nickname) {
+  Map<String, dynamic> _requestDetail(
+    List<Map<String, dynamic>> detailed,
+    String nickname,
+  ) {
     return detailed.firstWhere(
       (r) => r['nickname'] == nickname,
       orElse: () => {'nickname': nickname},
@@ -982,18 +1117,18 @@ class _FriendsScreenState extends State<FriendsScreen>
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _requestActionButton(l10n.friendsAccept, const Color(0xFF81C784), () {
+          _requestActionButton(l10n.friendsAccept, Cartoon.green, () {
             game.acceptFriendRequest(nickname);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.friendsAccepted(nickname))),
             );
           }),
           const SizedBox(width: 6),
-          _requestActionButton(l10n.friendsReject, const Color(0xFFE57373), () {
+          _requestActionButton(l10n.friendsReject, Cartoon.red, () {
             game.rejectFriendRequest(nickname);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.friendsRejected)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.friendsRejected)));
           }),
         ],
       ),
@@ -1035,12 +1170,16 @@ class _FriendsScreenState extends State<FriendsScreen>
       level: request['level'] as int?,
       subtitle: agoText.isEmpty ? null : agoText,
       onTap: () => showPlayerProfileDialog(context, nickname, game),
-      trailing: _requestActionButton(l10n.friendsCancelRequest, const Color(0xFF90A4AE), () {
-        game.cancelFriendRequestAction(nickname);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
-        );
-      }),
+      trailing: _requestActionButton(
+        l10n.friendsCancelRequest,
+        const Color(0xFF90A4AE),
+        () {
+          game.cancelFriendRequestAction(nickname);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.gameFriendRequestCancelled)),
+          );
+        },
+      ),
     );
   }
 
@@ -1062,41 +1201,49 @@ class _FriendsScreenState extends State<FriendsScreen>
           ),
         ),
         child: SafeArea(
+          bottom: false,
           child: Column(
             children: [
-              // DM header
+              // DM header: 뒤로 칩 + 상대 이름
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                 child: Row(
                   children: [
-                    GestureDetector(
+                    _headerChip(
+                      icon: Icons.arrow_back_rounded,
                       onTap: _closeDmChat,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          size: 20,
-                          color: Color(0xFF5A4038),
-                        ),
-                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        _dmChatPartner ?? '',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A4038),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 9,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        decoration: Cartoon.panelDecoration(
+                          radius: 16,
+                          shadowOffset: 3,
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.chat_bubble_rounded,
+                              size: 20,
+                              color: Cartoon.orangeDeep,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _dmChatPartner ?? '',
+                                style: Cartoon.userText(
+                                  size: 19,
+                                  weight: FontWeight.w900,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1109,14 +1256,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                     final messages = game.dmMessages[_dmChatPartner] ?? [];
                     if (messages.isEmpty) {
                       return Center(
-                        child: Text(
-                          L10n.of(context).friendsDmEmpty,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF9A8E8A),
-                          ),
-                        ),
+                        child: _emptyState(L10n.of(context).friendsDmEmpty),
                       );
                     }
                     return ListView.builder(
@@ -1135,7 +1275,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth: 3,
+                                  color: Cartoon.orange,
                                 ),
                               ),
                             ),
@@ -1162,15 +1303,20 @@ class _FriendsScreenState extends State<FriendsScreen>
               ),
               // Input
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                padding: EdgeInsets.fromLTRB(
+                  12,
+                  10,
+                  12,
+                  10 + MediaQuery.viewPaddingOf(context).bottom,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                decoration: const BoxDecoration(
+                  color: Cartoon.paper,
+                  border: Border(
+                    top: BorderSide(color: Cartoon.ink, width: 2.5),
+                  ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
                       child: TextField(
@@ -1178,39 +1324,36 @@ class _FriendsScreenState extends State<FriendsScreen>
                         maxLength: 500,
                         maxLines: 3,
                         minLines: 1,
-                        decoration: InputDecoration(
-                          hintText: L10n.of(context).friendsDmInputHint,
-                          hintStyle: const TextStyle(
-                            color: Color(0xFFBDBDBD),
-                            fontSize: 14,
-                          ),
-                          counterText: '',
-                          filled: true,
-                          fillColor: const Color(0xFFF5F0ED),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
+                        style: Cartoon.userText(
+                          size: 15,
+                          weight: FontWeight.w500,
                         ),
+                        decoration: Cartoon.inputDecoration(
+                          hint: L10n.of(context).friendsDmInputHint,
+                          radius: 20,
+                        ).copyWith(counterText: ''),
                         onSubmitted: (_) => _sendDm(),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
+                    const SizedBox(width: 10),
+                    CartoonPressable(
+                      scale: 0.88,
                       onTap: _sendDm,
                       child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF7E57C2),
+                        width: 50,
+                        height: 50,
+                        margin: const EdgeInsets.only(bottom: 3),
+                        decoration: BoxDecoration(
+                          color: Cartoon.orange,
                           shape: BoxShape.circle,
+                          border: Border.all(color: Cartoon.ink, width: 2.5),
+                          boxShadow: const [
+                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                          ],
                         ),
                         child: const Icon(
-                          Icons.send,
-                          size: 18,
+                          Icons.send_rounded,
+                          size: 22,
                           color: Colors.white,
                         ),
                       ),
@@ -1248,19 +1391,30 @@ class _FriendsScreenState extends State<FriendsScreen>
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: Color(0xFFE6DDD8), height: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF9A8E8A),
-              ),
+          Expanded(
+            child: Divider(
+              color: Cartoon.ink.withValues(alpha: 0.18),
+              thickness: 1.5,
+              height: 1,
             ),
           ),
-          const Expanded(child: Divider(color: Color(0xFFE6DDD8), height: 1)),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+            decoration: BoxDecoration(
+              color: Cartoon.cream,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Cartoon.ink, width: 2),
+            ),
+            child: Text(label, style: Cartoon.text(size: 12.5)),
+          ),
+          Expanded(
+            child: Divider(
+              color: Cartoon.ink.withValues(alpha: 0.18),
+              thickness: 1.5,
+              height: 1,
+            ),
+          ),
         ],
       ),
     );
@@ -1287,37 +1441,40 @@ class _FriendsScreenState extends State<FriendsScreen>
               padding: const EdgeInsets.only(right: 4, bottom: 2),
               child: Text(
                 timeStr,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: Cartoon.ink.withValues(alpha: 0.5),
+                ),
               ),
             ),
           Flexible(
             child: Container(
+              margin: const EdgeInsets.only(bottom: 3),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMine ? const Color(0xFF7E57C2) : Colors.white,
+                color: isMine ? Cartoon.orange : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
+                  topLeft: const Radius.circular(18),
+                  topRight: const Radius.circular(18),
                   bottomLeft: isMine
-                      ? const Radius.circular(16)
+                      ? const Radius.circular(18)
                       : const Radius.circular(4),
                   bottomRight: isMine
                       ? const Radius.circular(4)
-                      : const Radius.circular(16),
+                      : const Radius.circular(18),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                border: Border.all(color: Cartoon.ink, width: 2.2),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),
               child: Text(
                 message,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isMine ? Colors.white : const Color(0xFF5A4038),
+                style: Cartoon.userText(
+                  size: 15,
+                  weight: FontWeight.w600,
+                  color: isMine ? Colors.white : Cartoon.ink,
+                  height: 1.35,
                 ),
               ),
             ),
@@ -1327,7 +1484,10 @@ class _FriendsScreenState extends State<FriendsScreen>
               padding: const EdgeInsets.only(left: 4, bottom: 2),
               child: Text(
                 timeStr,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF9A8E8A)),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: Cartoon.ink.withValues(alpha: 0.5),
+                ),
               ),
             ),
         ],
@@ -1340,7 +1500,6 @@ class _FriendsScreenState extends State<FriendsScreen>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(l10n.friendsRemoveTitle),
         content: Text(l10n.friendsRemoveConfirm(nickname)),
         actions: [

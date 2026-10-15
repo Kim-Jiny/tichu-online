@@ -2747,9 +2747,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // "게임 중" chip. The state belongs to the room, not to one corner of
       // it, and saying it with the surface costs no width — which is what the
       // row had run out of.
-      color: isInProgress
-          ? const Color(0xFFE9E4DF)
-          : (room.isPrivate ? const Color(0xFFFFF0C4) : Cartoon.paper),
+      color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2774,9 +2772,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           decoration: BoxDecoration(
             // 색이 반드시 있어야 한다: 번지지 않는 단색 그림자는 투명한 상자
             // 안쪽까지 비쳐서, 색 없는 상자가 통째로 먹색이 된다.
-            color: isInProgress
-                ? const Color(0xFFE9E4DF)
-                : (room.isPrivate ? const Color(0xFFFFF0C4) : Cartoon.paper),
+            color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Cartoon.ink, width: 2.5),
             boxShadow: const [

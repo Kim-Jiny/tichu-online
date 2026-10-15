@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../widgets/game_type_icon.dart';
 import '../widgets/playing_card.dart';
 
 /// Rules / "게임설명" screen — accessible from the lobby header.
@@ -78,11 +79,7 @@ class _RulesScreenState extends State<RulesScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          _gameIcon(_selectedGame),
-                          color: _gameColor(_selectedGame),
-                          size: 20,
-                        ),
+                        gameTypeSymbol(_selectedGame, size: 28),
                         const SizedBox(width: 10),
                         Text(
                           _gameLabel(_selectedGame),
@@ -127,21 +124,7 @@ class _RulesScreenState extends State<RulesScreen> {
 
   static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty'];
 
-  IconData _gameIcon(String key) => switch (key) {
-    'tichu' => Icons.style,
-    'skull_king' => Icons.anchor,
-    'love_letter' => Icons.favorite,
-    'mighty' => Icons.military_tech,
-    _ => Icons.style,
-  };
-
-  Color _gameColor(String key) => switch (key) {
-    'tichu' => const Color(0xFF6C63FF),
-    'skull_king' => const Color(0xFF2D2D3D),
-    'love_letter' => const Color(0xFFE91E63),
-    'mighty' => const Color(0xFF1565C0),
-    _ => const Color(0xFF6C63FF),
-  };
+  Color _gameColor(String key) => gameTypeColor(key);
 
   String _gameLabel(String key) => switch (key) {
     'tichu' => L10n.of(context).rulesTabTichu,
@@ -176,7 +159,7 @@ class _RulesScreenState extends State<RulesScreen> {
               const SizedBox(height: 16),
               for (final key in _games)
                 _GamePickerTile(
-                  icon: _gameIcon(key),
+                  gameKey: key,
                   color: _gameColor(key),
                   label: _gameLabel(key),
                   selected: key == _selectedGame,
@@ -204,12 +187,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuGoalTitle,
+          art: 'assets/cards/dragon.webp',
           child: _RuleText(L10n.of(context).rulesTichuGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuCardCompositionTitle,
+          art: 'assets/icons/tichuSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -253,12 +238,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuSpecialTitle,
+          art: 'assets/cards/phoenix.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SpecialRule(
                 emoji: '🐦',
                 title: L10n.of(context).rulesTichuSpecialMahjongTitle,
+                leadingAsset: 'assets/cards/bird.webp',
                 lines: [
                   L10n.of(context).rulesTichuSpecialMahjongLine1,
                   L10n.of(context).rulesTichuSpecialMahjongLine2,
@@ -268,6 +255,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '🐶',
                 title: L10n.of(context).rulesTichuSpecialDogTitle,
+                leadingAsset: 'assets/cards/dog.webp',
                 lines: [
                   L10n.of(context).rulesTichuSpecialDogLine1,
                   L10n.of(context).rulesTichuSpecialDogLine2,
@@ -277,6 +265,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '🔥',
                 title: L10n.of(context).rulesTichuSpecialPhoenixTitle,
+                leadingAsset: 'assets/cards/phoenix.webp',
                 lines: [
                   L10n.of(context).rulesTichuSpecialPhoenixLine1,
                   L10n.of(context).rulesTichuSpecialPhoenixLine2,
@@ -287,6 +276,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '🐉',
                 title: L10n.of(context).rulesTichuSpecialDragonTitle,
+                leadingAsset: 'assets/cards/dragon.webp',
                 lines: [
                   L10n.of(context).rulesTichuSpecialDragonLine1,
                   L10n.of(context).rulesTichuSpecialDragonLine2,
@@ -299,6 +289,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.campaign,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuDeclarationTitle,
+          art: 'assets/cards/bird.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -326,6 +317,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuFlowTitle,
+          art: 'assets/cards/dog.webp',
           child: _RuleText(L10n.of(context).rulesTichuFlowBody),
         ),
         _section(
@@ -414,6 +406,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.emoji_events,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuWinTitle,
+          art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesTichuWinBody),
         ),
       ],
@@ -431,12 +424,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkGoalTitle,
+          art: 'assets/cards/sk_skull_king.webp',
           child: _RuleText(L10n.of(context).rulesSkGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkCardCompositionTitle,
+          art: 'assets/cards/sk_card_back.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -531,12 +526,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkSpecialTitle,
+          art: 'assets/cards/sk_pirate.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SpecialRule(
                 emoji: '🏳️',
                 title: L10n.of(context).rulesSkSpecialEscapeTitle,
+                leadingAsset: 'assets/cards/sk_escape.webp',
                 lines: [
                   L10n.of(context).rulesSkSpecialEscapeLine1,
                   L10n.of(context).rulesSkSpecialEscapeLine2,
@@ -546,6 +543,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '⚔️',
                 title: L10n.of(context).rulesSkSpecialPirateTitle,
+                leadingAsset: 'assets/cards/sk_pirate.webp',
                 lines: [
                   L10n.of(context).rulesSkSpecialPirateLine1,
                   L10n.of(context).rulesSkSpecialPirateLine2,
@@ -555,6 +553,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '🧜\u200d♀️',
                 title: L10n.of(context).rulesSkSpecialMermaidTitle,
+                leadingAsset: 'assets/cards/sk_mermaid.webp',
                 lines: [
                   L10n.of(context).rulesSkSpecialMermaidLine1,
                   L10n.of(context).rulesSkSpecialMermaidLine2,
@@ -565,6 +564,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '☠️',
                 title: L10n.of(context).rulesSkSpecialSkullKingTitle,
+                leadingAsset: 'assets/cards/sk_skull_king.webp',
                 lines: [
                   L10n.of(context).rulesSkSpecialSkullKingLine1,
                   L10n.of(context).rulesSkSpecialSkullKingLine2,
@@ -574,6 +574,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '🐯',
                 title: L10n.of(context).rulesSkSpecialTigressTitle,
+                leadingAsset: 'assets/cards/sk_tigress.webp',
                 lines: [
                   L10n.of(context).rulesSkSpecialTigressLine1,
                   L10n.of(context).rulesSkSpecialTigressLine2,
@@ -589,12 +590,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkFlowTitle,
+          art: 'assets/cards/sk_escape.webp',
           child: _RuleText(L10n.of(context).rulesSkFlowBody),
         ),
         _section(
           icon: Icons.visibility,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkLeadDemoTitle,
+          art: 'assets/cards/sk_tigress.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -695,12 +698,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.emoji_events,
           iconColor: const Color(0xFF2D2D3D),
           title: L10n.of(context).rulesSkWinTitle,
+          art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesSkWinBody),
         ),
         _section(
           icon: Icons.extension,
           iconColor: const Color(0xFFFF8A65),
           title: L10n.of(context).rulesSkExpansionTitle,
+          art: 'assets/cards/sk_kraken.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -747,12 +752,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlGoalTitle,
+          art: 'assets/cards/ll_Princess.webp',
           child: _RuleText(L10n.of(context).rulesLlGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlCardCompositionTitle,
+          art: 'assets/icons/llSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -818,12 +825,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.auto_awesome,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlCardEffectsTitle,
+          art: 'assets/cards/ll_Prince.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SpecialRule(
                 emoji: '\u{1F6E1}\u{FE0F}',
                 title: L10n.of(context).rulesLlEffectGuardTitle,
+                leadingAsset: 'assets/cards/ll_Guard.webp',
                 lines: [
                   L10n.of(context).rulesLlEffectGuardLine1,
                   L10n.of(context).rulesLlEffectGuardLine2,
@@ -833,12 +842,14 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F50D}',
                 title: L10n.of(context).rulesLlEffectSpyTitle,
+                leadingAsset: 'assets/cards/ll_Spy.webp',
                 lines: [L10n.of(context).rulesLlEffectSpyLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
                 emoji: '\u{2694}\u{FE0F}',
                 title: L10n.of(context).rulesLlEffectBaronTitle,
+                leadingAsset: 'assets/cards/ll_Baron.webp',
                 lines: [
                   L10n.of(context).rulesLlEffectBaronLine1,
                   L10n.of(context).rulesLlEffectBaronLine2,
@@ -848,12 +859,14 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F9D1}\u{200D}\u{1F91D}\u{200D}\u{1F9D1}',
                 title: L10n.of(context).rulesLlEffectHandmaidTitle,
+                leadingAsset: 'assets/cards/ll_Handmaid.webp',
                 lines: [L10n.of(context).rulesLlEffectHandmaidLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
                 emoji: '\u{1F451}',
                 title: L10n.of(context).rulesLlEffectPrinceTitle,
+                leadingAsset: 'assets/cards/ll_Prince.webp',
                 lines: [
                   L10n.of(context).rulesLlEffectPrinceLine1,
                   L10n.of(context).rulesLlEffectPrinceLine2,
@@ -863,12 +876,14 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F934}',
                 title: L10n.of(context).rulesLlEffectKingTitle,
+                leadingAsset: 'assets/cards/ll_King.webp',
                 lines: [L10n.of(context).rulesLlEffectKingLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
                 emoji: '\u{1F483}',
                 title: L10n.of(context).rulesLlEffectCountessTitle,
+                leadingAsset: 'assets/cards/ll_Countess.webp',
                 lines: [
                   L10n.of(context).rulesLlEffectCountessLine1,
                   L10n.of(context).rulesLlEffectCountessLine2,
@@ -878,6 +893,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F478}',
                 title: L10n.of(context).rulesLlEffectPrincessTitle,
+                leadingAsset: 'assets/cards/ll_Princess.webp',
                 lines: [L10n.of(context).rulesLlEffectPrincessLine1],
               ),
             ],
@@ -887,12 +903,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlFlowTitle,
+          art: 'assets/cards/ll_Handmaid.webp',
           child: _RuleText(L10n.of(context).rulesLlFlowBody),
         ),
         _section(
           icon: Icons.emoji_events,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlWinTitle,
+          art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesLlWinBody),
         ),
       ],
@@ -910,12 +928,14 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtGoalTitle,
+          art: 'assets/icons/mtSymbol.webp',
           child: _RuleText(L10n.of(context).rulesMtGoalBody),
         ),
         _section(
           icon: Icons.style,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtCardCompositionTitle,
+          art: 'assets/icons/mtSymbol.webp',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1023,6 +1043,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.emoji_events,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtWinTitle,
+          art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesMtWinBody),
         ),
       ],
@@ -1036,6 +1057,7 @@ class _RulesScreenState extends State<RulesScreen> {
     required Color iconColor,
     required String title,
     required Widget child,
+    String? art,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -1051,8 +1073,10 @@ class _RulesScreenState extends State<RulesScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: iconColor, size: 22),
-                const SizedBox(width: 8),
+                art != null
+                    ? _SectionArt(art)
+                    : _SectionBadge(icon: icon, color: iconColor),
+                const SizedBox(width: 10),
                 Text(
                   title,
                   style: const TextStyle(
@@ -1158,10 +1182,10 @@ class _RulesScreenState extends State<RulesScreen> {
       borderRadius: BorderRadius.circular(4),
       child: Image.asset(
         path,
-        width: 28,
-        height: 38,
+        width: 44,
+        height: 60,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const SizedBox(width: 28, height: 38),
+        errorBuilder: (_, _, _) => const SizedBox(width: 44, height: 60),
       ),
     );
   }
@@ -1318,7 +1342,11 @@ class _SpecialRule extends StatelessWidget {
   final IconData? badgeIcon;
   final Color? badgeColor;
 
+  /// 실제 카드 그림. 주어지면 이모지 대신 왼쪽에 크게 보여 준다.
+  final String? leadingAsset;
+
   const _SpecialRule({
+    this.leadingAsset,
     required this.emoji,
     required this.title,
     required this.lines,
@@ -1723,14 +1751,14 @@ class _TichuDeclarationRow extends StatelessWidget {
 // ─── Bottom-sheet game picker tile ────────────────────────────────────────────
 
 class _GamePickerTile extends StatelessWidget {
-  final IconData icon;
+  final String gameKey;
   final Color color;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const _GamePickerTile({
-    required this.icon,
+    required this.gameKey,
     required this.color,
     required this.label,
     required this.selected,
@@ -1746,7 +1774,7 @@ class _GamePickerTile extends StatelessWidget {
         color: selected ? color.withValues(alpha: 0.08) : null,
         child: Row(
           children: [
-            Icon(icon, color: color, size: 22),
+            gameTypeSymbol(gameKey, size: 34),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
@@ -2131,6 +2159,65 @@ class _FlowDemo extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 섹션 제목 앞의 그림: 그 게임의 실제 카드(또는 게임 심볼·왕관).
+class _SectionArt extends StatelessWidget {
+  const _SectionArt(this.asset);
+
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCard = asset.contains('/cards/');
+    final image = Image.asset(
+      asset,
+      width: isCard ? 28 : 34,
+      height: isCard ? 39 : 34,
+      fit: isCard ? BoxFit.cover : BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => const SizedBox(width: 28, height: 39),
+    );
+    if (!isCard) return image;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 3,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(4), child: image),
+    );
+  }
+}
+
+/// 카드 그림이 마땅치 않은 섹션(점수, 폭탄 등)의 아이콘: 색 입힌 둥근 배지.
+class _SectionBadge extends StatelessWidget {
+  const _SectionBadge({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color, Color.lerp(color, Colors.black, 0.25)!],
+        ),
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
     );
   }
 }

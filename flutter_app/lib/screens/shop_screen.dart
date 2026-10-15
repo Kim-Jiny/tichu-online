@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -4321,181 +4323,268 @@ class _ShopScreenState extends State<ShopScreen> {
               const [50, 50, 50, 50, 50, 50, 1000];
           final resetClock = _formatResetClock(s['resetAtUtc'] as String?);
 
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-              side: const BorderSide(color: Cartoon.ink, width: 3),
-            ),
-            // Capped, not free-sizing. Dialog lets its child take whatever
-            // width is on offer, and the rows inside are Expanded — so on a
-            // desktop browser the seven-day strip stretched across the whole
-            // window. A phone is narrower than this cap, so nothing about the
-            // app layout changes.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.event_available,
-                          color: Color(0xFFFFA000),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            l.attendanceDialogTitle,
-                            style: Cartoon.text(size: 22),
+          return _AttendanceFx(
+            claimedToday: claimedToday,
+            reward: (s['todayRewardGold'] as int?) ?? 50,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+                side: const BorderSide(color: Cartoon.ink, width: 3),
+              ),
+              // Capped, not free-sizing. Dialog lets its child take whatever
+              // width is on offer, and the rows inside are Expanded — so on a
+              // desktop browser the seven-day strip stretched across the whole
+              // window. A phone is narrower than this cap, so nothing about the
+              // app layout changes.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Cartoon.yellow,
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.event_available_rounded,
+                              color: Cartoon.ink,
+                              size: 26,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(dialogCtx),
-                          icon: const Icon(Icons.close),
-                          color: const Color(0xFF8A7A72),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l.attendanceResetInfo(resetClock),
-                      style: Cartoon.userText(
-                        size: 12.5,
-                        weight: FontWeight.w600,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // 7-day grid (4 + 3)
-                    GridView.count(
-                      crossAxisCount: 4,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 0.82,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      children: List.generate(7, (i) {
-                        final day = i + 1;
-                        final reward = rewards.length > i ? rewards[i] : 50;
-                        final isClaimed = day <= cycleClaimed;
-                        final isToday = !claimedToday && day == todayDay;
-                        final isFinale = day == 7;
-                        return _attendanceDayCell(
-                          day,
-                          reward,
-                          isClaimed,
-                          isToday,
-                          isFinale,
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 16),
-                    if (claimedToday)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD8F5DF),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Cartoon.ink, width: 2.5),
-                        ),
-                        child: Text(
-                          l.attendanceDoneToday,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF2E7D32),
-                            fontWeight: FontWeight.w800,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              l.attendanceDialogTitle,
+                              style: Cartoon.text(size: 22),
+                            ),
                           ),
-                        ),
-                      )
-                    else if (kIsWeb)
-                      // Everything above is the same as in the app — which day,
-                      // what today pays, the week's rewards. Only the action
-                      // changes, because claiming happens in the app.
-                      CartoonButton(
-                        height: 52,
-                        color: Cartoon.orange,
-                        onPressed: () => openStoreUrl(
-                          storeChoicesFor(defaultTargetPlatform).first.url,
-                        ),
-                        child: CartoonButton.label(
-                          l.attendanceAppOnlyCta,
-                          size: 17,
-                        ),
-                      )
-                    else
-                      // Reacts to the attendance ad becoming ready (ValueNotifier)
-                      // so the button stays DISABLED — showing a loading state —
-                      // until the rewarded ad has loaded, then enables. Avoids the
-                      // old "tap → ad not ready" dead-end.
-                      ValueListenableBuilder<bool>(
-                        valueListenable: _attendanceAdReady,
-                        builder: (context, adReady, _) {
-                          // Disable on: claim in flight, state refresh in flight
-                          // (avoid wasting the ad on a stale claimedToday about to
-                          // flip), already claimed, or the ad not yet loaded.
-                          final busy =
-                              g.attendanceClaiming || g.attendanceLoading;
-                          final claimed =
-                              g.attendanceState?['claimedToday'] == true;
-                          final enabled = adReady && !busy && !claimed;
-                          return CartoonButton(
-                            height: 54,
-                            color: Cartoon.orange,
-                            onPressed: enabled
-                                ? () => _attendanceClaim(g)
-                                : null,
-                            child: busy || !adReady
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (!adReady && !busy && !claimed) ...[
-                                        const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                      ],
-                                      Flexible(
-                                        child: CartoonButton.label(
-                                          busy
-                                              ? l.attendanceClaiming
-                                              : l.attendanceAdLoading,
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.play_circle_fill_rounded,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: CartoonButton.label(
-                                          l.attendanceWatchAdAndClaim(
-                                            (s['todayRewardGold'] as int?) ??
-                                                50,
-                                          ),
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ],
+                          CartoonPressable(
+                            scale: 0.88,
+                            onTap: () => Navigator.pop(dialogCtx),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Cartoon.paper,
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 2.5,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Cartoon.ink,
+                                    offset: Offset(0, 3),
                                   ),
-                          );
-                        },
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: Cartoon.ink,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        l.attendanceResetInfo(resetClock),
+                        style: Cartoon.userText(
+                          size: 12.5,
+                          weight: FontWeight.w600,
+                          color: Cartoon.ink.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // 이번 주 진행: 칸이 차오르는 막대
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: 0,
+                          end: (cycleClaimed / 7).clamp(0.0, 1.0),
+                        ),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(9),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 2.2,
+                                  ),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                alignment: Alignment.centerLeft,
+                                child: FractionallySizedBox(
+                                  widthFactor: v,
+                                  child: Container(color: Cartoon.green),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              l.attendanceProgress(cycleClaimed),
+                              style: Cartoon.text(size: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      // 7-day grid (4 + 3)
+                      GridView.count(
+                        crossAxisCount: 4,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        childAspectRatio: 0.82,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        children: List.generate(7, (i) {
+                          final day = i + 1;
+                          final reward = rewards.length > i ? rewards[i] : 50;
+                          final isClaimed = day <= cycleClaimed;
+                          final isToday = !claimedToday && day == todayDay;
+                          final isFinale = day == 7;
+                          return CartoonEntrance(
+                            key: ValueKey('att-$day'),
+                            delay: Duration(milliseconds: 60 * i),
+                            from: const Offset(0, 16),
+                            child: _attendanceDayCell(
+                              day,
+                              reward,
+                              isClaimed,
+                              isToday,
+                              isFinale,
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      if (claimedToday)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD8F5DF),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Cartoon.ink, width: 2.5),
+                          ),
+                          child: Text(
+                            l.attendanceDoneToday,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Color(0xFF2E7D32),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        )
+                      else if (kIsWeb)
+                        // Everything above is the same as in the app — which day,
+                        // what today pays, the week's rewards. Only the action
+                        // changes, because claiming happens in the app.
+                        CartoonButton(
+                          height: 52,
+                          color: Cartoon.orange,
+                          onPressed: () => openStoreUrl(
+                            storeChoicesFor(defaultTargetPlatform).first.url,
+                          ),
+                          child: CartoonButton.label(
+                            l.attendanceAppOnlyCta,
+                            size: 17,
+                          ),
+                        )
+                      else
+                        // Reacts to the attendance ad becoming ready (ValueNotifier)
+                        // so the button stays DISABLED — showing a loading state —
+                        // until the rewarded ad has loaded, then enables. Avoids the
+                        // old "tap → ad not ready" dead-end.
+                        ValueListenableBuilder<bool>(
+                          valueListenable: _attendanceAdReady,
+                          builder: (context, adReady, _) {
+                            // Disable on: claim in flight, state refresh in flight
+                            // (avoid wasting the ad on a stale claimedToday about to
+                            // flip), already claimed, or the ad not yet loaded.
+                            final busy =
+                                g.attendanceClaiming || g.attendanceLoading;
+                            final claimed =
+                                g.attendanceState?['claimedToday'] == true;
+                            final enabled = adReady && !busy && !claimed;
+                            return CartoonButton(
+                              height: 54,
+                              color: Cartoon.orange,
+                              onPressed: enabled
+                                  ? () => _attendanceClaim(g)
+                                  : null,
+                              child: busy || !adReady
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (!adReady && !busy && !claimed) ...[
+                                          const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        Flexible(
+                                          child: CartoonButton.label(
+                                            busy
+                                                ? l.attendanceClaiming
+                                                : l.attendanceAdLoading,
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.play_circle_fill_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Flexible(
+                                          child: CartoonButton.label(
+                                            l.attendanceWatchAdAndClaim(
+                                              (s['todayRewardGold'] as int?) ??
+                                                  50,
+                                            ),
+                                            size: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            );
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -4541,12 +4630,13 @@ class _ShopScreenState extends State<ShopScreen> {
             Text('Day $day', style: Cartoon.text(size: 13)),
             const SizedBox(height: 4),
             claimed
-                ? Icon(
-                    Icons.check_circle_rounded,
-                    color: Cartoon.green,
-                    size: finale ? 26 : 22,
-                  )
-                : GoldIcon(size: finale ? 26 : 22, amount: reward),
+                ? _StampCheck(size: finale ? 26 : 22, delay: 120 * day)
+                : (finale
+                      ? CartoonFloat(
+                          amplitude: 2.5,
+                          child: GoldIcon(size: 26, amount: reward),
+                        )
+                      : GoldIcon(size: 22, amount: reward)),
             const SizedBox(height: 4),
             Text(
               '$reward',
@@ -4683,6 +4773,160 @@ class _ShopScreenState extends State<ShopScreen> {
         content: Text(displayMsg),
         backgroundColor: success ? Colors.green : Colors.red,
       ),
+    );
+  }
+}
+
+/// 출석 도장: 크게 떨어져 "쾅" 찍힌다. 칸이 처음 그려질 때(이미 받은 날) 차례로,
+/// 방금 받은 오늘 칸은 바뀌는 순간 한 번 찍힌다.
+class _StampCheck extends StatefulWidget {
+  const _StampCheck({required this.size, this.delay = 0});
+
+  final double size;
+  final int delay;
+
+  @override
+  State<_StampCheck> createState() => _StampCheckState();
+}
+
+class _StampCheckState extends State<_StampCheck>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 520),
+  );
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(Duration(milliseconds: 250 + widget.delay), () {
+      if (mounted) _c.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        // 2.4배에서 1배로 내리꽂힌 뒤 살짝 튕긴다.
+        final drop = Curves.easeIn.transform((t / 0.55).clamp(0.0, 1.0));
+        final settle = ((t - 0.55) / 0.45).clamp(0.0, 1.0);
+        final scale =
+            2.4 - 1.4 * drop + 0.12 * math.sin(settle * math.pi) * (1 - settle);
+        return Opacity(
+          opacity: (t / 0.2).clamp(0.0, 1.0),
+          child: Transform.rotate(
+            angle: -0.35 * (1 - drop) - 0.1 * drop,
+            child: Transform.scale(
+              scale: scale,
+              child: Icon(
+                Icons.check_circle_rounded,
+                color: Cartoon.green,
+                size: widget.size,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 출석을 받는 순간(claimedToday 가 false → true) 색종이와 "+골드" 가 터진다.
+/// 팝업이 열리자마자 이미 받은 상태면 아무것도 하지 않는다.
+class _AttendanceFx extends StatefulWidget {
+  const _AttendanceFx({
+    required this.claimedToday,
+    required this.reward,
+    required this.child,
+  });
+
+  final bool claimedToday;
+  final int reward;
+  final Widget child;
+
+  @override
+  State<_AttendanceFx> createState() => _AttendanceFxState();
+}
+
+class _AttendanceFxState extends State<_AttendanceFx>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1900),
+  );
+  int _burst = 0;
+
+  @override
+  void didUpdateWidget(_AttendanceFx old) {
+    super.didUpdateWidget(old);
+    if (!old.claimedToday && widget.claimedToday) {
+      _burst++;
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        widget.child,
+        if (_burst > 0) ...[
+          Positioned.fill(
+            child: CartoonConfetti(key: ValueKey('att-$_burst'), seed: _burst),
+          ),
+          IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) {
+                final t = _c.value;
+                final pop = Curves.elasticOut.transform(
+                  (t / 0.35).clamp(0.0, 1.0),
+                );
+                final fade = 1 - ((t - 0.7) / 0.3).clamp(0.0, 1.0);
+                return Opacity(
+                  opacity: fade,
+                  child: Transform.translate(
+                    offset: Offset(0, -70 * t),
+                    child: Transform.scale(
+                      scale: 0.4 + 0.6 * pop,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GoldIcon(size: 44, amount: widget.reward),
+                          const SizedBox(width: 8),
+                          Cartoon.outlinedText(
+                            '+${widget.reward}',
+                            size: 52,
+                            fill: Cartoon.yellow,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

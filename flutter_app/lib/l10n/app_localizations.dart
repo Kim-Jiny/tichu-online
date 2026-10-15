@@ -9260,6 +9260,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Yesterday'**
   String get goldDateYesterday;
+
+  /// No description provided for @attendanceProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done}/7 days'**
+  String attendanceProgress(int done);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

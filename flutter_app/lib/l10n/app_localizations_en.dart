@@ -5246,4 +5246,9 @@ class L10nEn extends L10n {
 
   @override
   String get goldDateYesterday => 'Yesterday';
+
+  @override
+  String attendanceProgress(int done) {
+    return '$done/7 days';
+  }
 }

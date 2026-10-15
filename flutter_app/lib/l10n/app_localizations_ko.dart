@@ -5128,4 +5128,9 @@ class L10nKo extends L10n {
 
   @override
   String get goldDateYesterday => '어제';
+
+  @override
+  String attendanceProgress(int done) {
+    return '$done/7일 출석';
+  }
 }

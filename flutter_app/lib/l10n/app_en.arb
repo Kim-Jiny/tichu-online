@@ -3054,5 +3054,7 @@
   "goldSummaryRecent": "Last {count} entries",
   "@goldSummaryRecent": {"placeholders": {"count": {"type": "int"}}},
   "goldDateToday": "Today",
-  "goldDateYesterday": "Yesterday"
+  "goldDateYesterday": "Yesterday",
+  "attendanceProgress": "{done}/7 days",
+  "@attendanceProgress": {"placeholders": {"done": {"type": "int"}}}
 }

@@ -1809,5 +1809,6 @@
   "goldFilterSpend": "Ausgegeben",
   "goldSummaryRecent": "Letzte {count} Einträge",
   "goldDateToday": "Heute",
-  "goldDateYesterday": "Gestern"
+  "goldDateYesterday": "Gestern",
+  "attendanceProgress": "{done}/7 Tage"
 }

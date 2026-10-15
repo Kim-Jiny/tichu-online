@@ -1809,5 +1809,6 @@
   "goldFilterSpend": "사용",
   "goldSummaryRecent": "최근 {count}건 기준",
   "goldDateToday": "오늘",
-  "goldDateYesterday": "어제"
+  "goldDateYesterday": "어제",
+  "attendanceProgress": "{done}/7일 출석"
 }

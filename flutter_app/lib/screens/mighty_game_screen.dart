@@ -87,6 +87,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // a new trick starts (lead suit changes).
   int _lastTrickCount = -1;
 
+  // 마이티·조커·조커콜이 나오거나 프렌드가 드러나는 순간의 색종이 연출.
+  // 이미 나온 패(재접속 직후의 첫 동기화 등)로는 터지지 않게 본 것을 기억한다.
+  final Set<String> _fxSeenPlays = {};
+  int _fxRound = -1;
+  bool _fxFriendSeen = false;
+  bool _fxReady = false;
+  int _fxSeq = 0;
+
   // Deal-miss reveal: user can dismiss; keyed by "round-playerId" so a new event re-shows
   String? _dismissedDealMissKey;
 
@@ -511,6 +519,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           }
         }
 
+        _detectFx(state);
+
         return Stack(
           children: [
             Column(
@@ -519,6 +529,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 Expanded(child: _buildActiveBoardStage(state, game)),
               ],
             ),
+            if (_fxSeq > 0)
+              Positioned.fill(
+                child: CartoonConfetti(
+                  key: ValueKey('fx-$_fxSeq'),
+                  seed: _fxSeq,
+                  count: 34,
+                ),
+              ),
             if (_moreOpen) _buildMoreMenu(game),
             if (_viewersOpen) _buildViewersPanel(game),
             if (_soundPanelOpen) _buildSoundPanel(game),
@@ -550,6 +568,35 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         );
       },
     );
+  }
+
+  /// 상태가 바뀐 순간을 연출로 바꾼다. build 안에서 불리므로 setState 는 다음
+  /// 프레임으로 미룬다.
+  void _detectFx(MightyGameStateData state) {
+    if (state.round != _fxRound) {
+      _fxRound = state.round;
+      _fxSeenPlays.clear();
+      _fxFriendSeen = state.friendRevealed;
+    }
+    var burst = false;
+    if (state.friendRevealed && !_fxFriendSeen) burst = true;
+    _fxFriendSeen = state.friendRevealed;
+    for (final play in state.currentTrick) {
+      final key = '${state.round}-${play.playerId}-${play.cardId}';
+      if (!_fxSeenPlays.add(key)) continue;
+      // 처음 받은 상태(재접속 등)에 이미 깔려 있던 패는 지나간 일이다.
+      if (!_fxReady) continue;
+      final isMighty = play.cardId == state.mightyCard;
+      final isJoker = play.cardId == 'mighty_joker';
+      final isJokerCall =
+          state.jokerCallActive && play.cardId == state.jokerCallCard;
+      if (isMighty || isJoker || isJokerCall) burst = true;
+    }
+    _fxReady = true;
+    if (!burst) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _fxSeq++);
+    });
   }
 
   Widget _buildEndPhaseOverlay(BuildContext context, GameService game) {
@@ -782,17 +829,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Container(
         width: 210,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -800,27 +837,23 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Row(
               children: [
                 const Icon(
-                  Icons.visibility,
-                  size: 16,
-                  color: Color(0xFF5A4038),
+                  Icons.visibility_rounded,
+                  size: 18,
+                  color: Cartoon.ink,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameViewingMyCards,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A4038),
-                    ),
+                    style: Cartoon.text(size: 15),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
                   child: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: Color(0xFF999999),
+                    Icons.close_rounded,
+                    size: 20,
+                    color: Cartoon.ink,
                   ),
                 ),
               ],
@@ -829,7 +862,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             if (game.cardViewers.isEmpty)
               Text(
                 L10n.of(context).skGameNoViewers,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                style: Cartoon.text(
+                  size: 13,
+                  color: Cartoon.ink.withValues(alpha: 0.5),
+                ),
               )
             else
               ...game.cardViewers.map((viewer) {
@@ -839,16 +875,16 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.person,
-                        size: 16,
-                        color: Color(0xFF888888),
+                      Icon(
+                        Icons.person_rounded,
+                        size: 17,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           nickname,
-                          style: const TextStyle(fontSize: 13),
+                          style: Cartoon.userText(size: 14),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -856,14 +892,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         onTap: () => game.revokeCardView(spectatorId),
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFEBEE),
-                            borderRadius: BorderRadius.circular(8),
+                          decoration: gamePillDecoration(
+                            radius: 8,
+                            color: const Color(0xFFFFD9D6),
                           ),
                           child: const Icon(
-                            Icons.close,
+                            Icons.close_rounded,
                             size: 14,
-                            color: Color(0xFFE53935),
+                            color: Cartoon.red,
                           ),
                         ),
                       ),
@@ -871,7 +907,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                 );
               }),
-            const Divider(height: 16, color: Color(0xFFEDE5E0)),
+            Container(
+              height: 2,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              color: Cartoon.ink.withValues(alpha: 0.15),
+            ),
             _buildCardViewPrefSection(game),
           ],
         ),
@@ -893,35 +933,36 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected
-                ? color.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? color : const Color(0xFFE6DCE8),
-              width: selected ? 1.5 : 1,
-            ),
-          ),
+          decoration:
+              gamePillDecoration(
+                radius: 12,
+                color: selected
+                    ? Color.lerp(color, Colors.white, 0.8)
+                    : Cartoon.cream,
+              ).copyWith(
+                border: Border.all(
+                  color: selected ? color : Cartoon.ink.withValues(alpha: 0.35),
+                  width: selected ? 2.4 : 1.6,
+                ),
+              ),
           child: Row(
             children: [
               Icon(
                 icon,
-                size: 14,
-                color: selected ? color : const Color(0xFF999999),
+                size: 16,
+                color: selected ? color : Cartoon.ink.withValues(alpha: 0.5),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    color: selected ? color : const Color(0xFF5A4038),
+                  style: Cartoon.text(
+                    size: 13,
+                    color: selected ? color : Cartoon.ink,
                   ),
                 ),
               ),
-              if (selected) Icon(Icons.check, size: 14, color: color),
+              if (selected) Icon(Icons.check_rounded, size: 16, color: color),
             ],
           ),
         ),
@@ -932,32 +973,25 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          l10n.gameCardViewPolicyTitle,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF5A4038),
-          ),
-        ),
+        Text(l10n.gameCardViewPolicyTitle, style: Cartoon.text(size: 14)),
         const SizedBox(height: 6),
         radio(
           value: 'ask',
           label: l10n.gameCardViewPolicyAsk,
           icon: Icons.help_outline,
-          color: const Color(0xFF6A6090),
+          color: Cartoon.blue,
         ),
         radio(
           value: 'always_allow',
           label: l10n.gameCardViewPolicyAllow,
-          icon: Icons.check_circle,
-          color: const Color(0xFF4CAF50),
+          icon: Icons.check_circle_rounded,
+          color: Cartoon.green,
         ),
         radio(
           value: 'always_deny',
           label: l10n.gameCardViewPolicyDeny,
-          icon: Icons.block,
-          color: const Color(0xFFE53935),
+          icon: Icons.block_rounded,
+          color: Cartoon.red,
         ),
       ],
     );
@@ -973,17 +1007,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         // the card-view button is hidden and the menu is narrower.
         width: game.isSpectator ? 158 : 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1033,7 +1057,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             _buildTopActionButton(
               icon: Icons.exit_to_app,
               active: false,
-              iconColor: const Color(0xFFE53935),
+              iconColor: Cartoon.red,
               onTap: () {
                 setState(() {
                   _moreOpen = false;
@@ -1331,9 +1355,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 5, 10, 5),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F3F1),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
+      decoration: BoxDecoration(
+        color: Cartoon.cream,
+        border: Border(
+          bottom: BorderSide(
+            color: Cartoon.ink.withValues(alpha: 0.25),
+            width: 1.6,
+          ),
+        ),
       ),
       child: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -1342,12 +1371,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             padding: const EdgeInsets.only(right: 6),
             child: Text(
               L10n.of(context).lobbySpectatorLabel,
-              style: const TextStyle(
-                fontSize: 11.5,
-                height: 1.35,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFA1887F),
-              ),
+              style: Cartoon.text(
+                size: 12.5,
+                color: Cartoon.ink.withValues(alpha: 0.55),
+              ).copyWith(height: 1.35),
             ),
           ),
           for (var i = 0; i < shown.length; i++)
@@ -1357,10 +1384,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   _showPlayerProfileDialog(shown[i], game, isBot: false),
               child: Text(
                 '${shown[i]}${i < shown.length - 1 || hidden > 0 ? ', ' : ''}',
-                style: const TextStyle(
-                  fontSize: 11.5,
+                style: Cartoon.userText(
+                  size: 12.5,
+                  color: Cartoon.ink.withValues(alpha: 0.65),
                   height: 1.35,
-                  color: Color(0xFF8A7A72),
                 ),
               ),
             ),
@@ -1370,12 +1397,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               onTap: () => showSpectatorListDialog(context, game),
               child: Text(
                 L10n.of(context).lobbySpectatorMore(hidden),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  height: 1.35,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF7E57C2),
-                ),
+                style: Cartoon.text(
+                  size: 12.5,
+                  color: Cartoon.blue,
+                ).copyWith(height: 1.35),
               ),
             ),
         ],
@@ -2407,36 +2432,48 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     required double height,
     required bool isWinner,
   }) {
-    return Container(
-      decoration: isWinner
-          ? BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.green, offset: Offset(0, 4)),
-              ],
-            )
-          : null,
-      child: PlayingCard(
-        cardId: _displayCardId(trickPlay.cardId),
-        width: width,
-        height: height,
-        isInteractive: false,
-        borderColor:
-            (state.trumpSuit != null &&
-                state.trumpSuit != 'no_trump' &&
-                _getCardSuit(trickPlay.cardId) == state.trumpSuit)
-            ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+    final special =
+        trickPlay.cardId == state.mightyCard ||
+        trickPlay.cardId == 'mighty_joker' ||
+        (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard);
+    return CartoonEntrance(
+      key: ValueKey(
+        'pc-${state.round}-${trickPlay.playerId}-${trickPlay.cardId}',
+      ),
+      from: Offset(0, special ? -36 : -16),
+      child: Container(
+        decoration: isWinner
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.green, offset: Offset(0, 4)),
+                ],
+              )
             : null,
-        badgeIcon: trickPlay.cardId == state.mightyCard
-            ? Icons.star
-            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard)
-            ? Icons.gps_fixed
-            : null,
-        badgeColor: trickPlay.cardId == state.mightyCard
-            ? const Color(0xFFFFB300)
-            : (state.jokerCallActive && trickPlay.cardId == state.jokerCallCard)
-            ? const Color(0xFFE53935)
-            : null,
+        child: PlayingCard(
+          cardId: _displayCardId(trickPlay.cardId),
+          width: width,
+          height: height,
+          isInteractive: false,
+          borderColor:
+              (state.trumpSuit != null &&
+                  state.trumpSuit != 'no_trump' &&
+                  _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+              ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+              : null,
+          badgeIcon: trickPlay.cardId == state.mightyCard
+              ? Icons.star
+              : (state.jokerCallActive &&
+                    trickPlay.cardId == state.jokerCallCard)
+              ? Icons.gps_fixed
+              : null,
+          badgeColor: trickPlay.cardId == state.mightyCard
+              ? const Color(0xFFFFB300)
+              : (state.jokerCallActive &&
+                    trickPlay.cardId == state.jokerCallCard)
+              ? const Color(0xFFE53935)
+              : null,
+        ),
       ),
     );
   }
@@ -2766,16 +2803,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           height: 22,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFF5A4038),
+            color: Cartoon.ink,
             borderRadius: BorderRadius.circular(3),
           ),
           child: Text(
             '+$extra',
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
+            style: Cartoon.text(size: 10, color: Colors.white),
           ),
         ),
     ];

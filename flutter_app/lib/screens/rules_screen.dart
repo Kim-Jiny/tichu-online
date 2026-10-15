@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import '../widgets/game_type_icon.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/sk_number_card.dart';
@@ -20,104 +21,206 @@ class RulesScreen extends StatefulWidget {
 class _RulesScreenState extends State<RulesScreen> {
   String _selectedGame = 'tichu';
 
+  /// 이번 빌드에서 만들어진 섹션들 — 목차 칩이 여기서 만들어진다.
+  /// 본문을 먼저 빌드한 뒤 목차를 그리므로, 섹션이 스스로를 등록한다.
+  final List<({String title, GlobalKey key})> _toc = [];
+  final Map<String, GlobalKey> _sectionKeys = {};
+  int _sectionIndex = 0;
+
+  void _jumpTo(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+      alignment: 0.02,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    // 본문부터 빌드해서 섹션 목록(목차)을 모은다.
+    _toc.clear();
+    _sectionIndex = 0;
+    final body = switch (_selectedGame) {
+      'tichu' => _buildTichuRules(),
+      'skull_king' => _buildSkullKingRules(),
+      'love_letter' => _buildLoveLetterRules(),
+      'mighty' => _buildMightyRules(),
+      _ => _buildTichuRules(),
+    };
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header with back button and title
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF8A7A72),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      L10n.of(context).rulesTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Game selector chip — tapping opens a bottom sheet
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GestureDetector(
-                  onTap: () => _showGamePicker(),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE0D8D4)),
-                    ),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                CartoonEntrance(
+                  from: const Offset(0, -30),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                     child: Row(
                       children: [
-                        gameTypeSymbol(_selectedGame, size: 28),
-                        const SizedBox(width: 10),
-                        Text(
-                          _gameLabel(_selectedGame),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: _gameColor(_selectedGame),
+                        CartoonPressable(
+                          scale: 0.88,
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Cartoon.paper,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Cartoon.ink,
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: Color(0xFF8A7A72),
-                          size: 22,
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Cartoon.outlinedText(
+                            L10n.of(context).rulesTitle,
+                            size: 28,
+                            maxLines: 1,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: SingleChildScrollView(
-                  // 게임을 바꾸면 새 스크롤로 시작해서 항상 맨 위부터 보여 준다.
-                  key: ValueKey(_selectedGame),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: switch (_selectedGame) {
-                    'tichu' => _buildTichuRules(),
-                    'skull_king' => _buildSkullKingRules(),
-                    'love_letter' => _buildLoveLetterRules(),
-                    'mighty' => _buildMightyRules(),
-                    _ => _buildTichuRules(),
-                  },
+                // 게임 선택: 드롭다운 대신 네 게임을 한눈에 — 한 번 눌러 바로 전환.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: Row(
+                    children: [
+                      for (final (i, g) in _games.indexed) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        Expanded(child: _gameTile(g)),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                // 목차: 이 게임의 섹션으로 바로 점프.
+                SizedBox(
+                  height: 46,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+                    children: [
+                      for (final e in _toc)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: CartoonPressable(
+                            scale: 0.92,
+                            onTap: () => _jumpTo(e.key),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Cartoon.paper,
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 2.2,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Cartoon.ink,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                e.title,
+                                style: Cartoon.text(size: 14),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    // 게임을 바꾸면 새 스크롤로 시작해서 항상 맨 위부터 보여 준다.
+                    key: ValueKey(_selectedGame),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      6,
+                      16,
+                      24 + MediaQuery.viewPaddingOf(context).bottom,
+                    ),
+                    child: body,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _gameTile(String key) {
+    final selected = key == _selectedGame;
+    return CartoonPressable(
+      onTap: () => setState(() => _selectedGame = key),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        decoration: BoxDecoration(
+          color: selected ? gameTypeColor(key) : Cartoon.paper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, selected ? 4 : 2)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedScale(
+              scale: selected ? 1.15 : 1.0,
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.elasticOut,
+              child: gameTypeSymbol(key, size: 30),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _gameLabel(key),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Cartoon.text(
+                size: 13.5,
+                color: selected ? Colors.white : Cartoon.ink,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -127,8 +230,6 @@ class _RulesScreenState extends State<RulesScreen> {
 
   static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty'];
 
-  Color _gameColor(String key) => gameTypeColor(key);
-
   String _gameLabel(String key) => switch (key) {
     'tichu' => L10n.of(context).rulesTabTichu,
     'skull_king' => L10n.of(context).rulesTabSkullKing,
@@ -136,48 +237,6 @@ class _RulesScreenState extends State<RulesScreen> {
     'mighty' => L10n.of(context).rulesTabMighty,
     _ => '',
   };
-
-  void _showGamePicker() {
-    showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD0C8C4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              for (final key in _games)
-                _GamePickerTile(
-                  gameKey: key,
-                  color: _gameColor(key),
-                  label: _gameLabel(key),
-                  selected: key == _selectedGame,
-                  onTap: () {
-                    Navigator.pop(ctx, key);
-                    setState(() => _selectedGame = key);
-                  },
-                ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // ─── TICHU ─────────────────────────────────────────────────────────────────
 
@@ -932,37 +991,39 @@ class _RulesScreenState extends State<RulesScreen> {
     required Widget child,
     String? art,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                art != null
-                    ? _SectionArt(art)
-                    : _SectionBadge(icon: icon, color: iconColor),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF3E312A),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
+    final key = _sectionKeys.putIfAbsent(
+      '$_selectedGame/$title',
+      () => GlobalKey(),
+    );
+    _toc.add((title: title, key: key));
+    final index = _sectionIndex++;
+    return CartoonEntrance(
+      key: ValueKey('rules-$_selectedGame-$title'),
+      delay: Duration(milliseconds: 45 * index.clamp(0, 6)),
+      from: const Offset(0, 18),
+      pop: false,
+      child: Padding(
+        key: key,
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  art != null
+                      ? _SectionArt(art)
+                      : _SectionBadge(icon: icon, color: iconColor),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(title, style: Cartoon.text(size: 20))),
+                ],
+              ),
+              const SizedBox(height: 12),
+              child,
+            ],
+          ),
         ),
       ),
     );
@@ -1029,9 +1090,9 @@ class _SpecialRule extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4F1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8DDD8)),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1258,8 +1319,8 @@ class _ExampleBlock extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1340,8 +1401,8 @@ class _TichuDeclarationRow extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1407,50 +1468,6 @@ class _TichuDeclarationRow extends StatelessWidget {
 
 // ─── Bottom-sheet game picker tile ────────────────────────────────────────────
 
-class _GamePickerTile extends StatelessWidget {
-  final String gameKey;
-  final Color color;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _GamePickerTile({
-    required this.gameKey,
-    required this.color,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        color: selected ? color.withValues(alpha: 0.08) : null,
-        child: Row(
-          children: [
-            gameTypeSymbol(gameKey, size: 34),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                  color: selected ? color : const Color(0xFF5A4038),
-                ),
-              ),
-            ),
-            if (selected) Icon(Icons.check_rounded, color: color, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Small horizontal strip showing a sample of the Mighty deck: one Ace per
 /// suit plus the joker. Purely decorative — helps the rulebook reader
 /// visualise what "52 suited + joker" looks like.
@@ -1465,9 +1482,9 @@ class _MightyDeckPreview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4F1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8DDD8)),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1741,9 +1758,9 @@ class _FlowDemo extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4F1),
+        color: Cartoon.cream,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8DDD8)),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1842,7 +1859,8 @@ class _SectionBadge extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1987,9 +2005,9 @@ class _CardGuide extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F4F1),
+        color: Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8DDD8)),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

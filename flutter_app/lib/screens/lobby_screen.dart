@@ -777,19 +777,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// kind of thing you cannot unsee once noticed.
   Widget _buildMyProfileButton(GameService game, double box) {
     const accent = Color(0xFFFF8A65);
-    return GestureDetector(
+    final r = _headerRadiusFor(box);
+    // 다른 하단 탭 아이콘과 같은 틀: 불투명 바탕 + 진한 테두리 + 단색 그림자.
+    // (바탕이 반투명이면 단색 그림자가 비쳐 어두워지니 꼭 불투명으로.)
+    return CartoonPressable(
       onTap: () => _showUserProfileDialog(game.playerName, game),
-      child: ProfileAvatar(
-        photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
-        size: box,
-        borderRadius: _headerRadiusFor(box),
-        fallback: Container(
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
+      scale: 0.86,
+      child: Container(
+        width: box,
+        height: box,
+        decoration: BoxDecoration(
+          color: Color.lerp(accent, Colors.white, 0.55),
+          borderRadius: BorderRadius.circular(r),
+          border: Border.all(color: Cartoon.ink, width: 2.5),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(r - 1),
+          child: ProfileAvatar(
+            photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
+            size: box - 5,
+            borderRadius: 0,
+            fallback: Icon(
+              Icons.person_rounded,
+              color: Cartoon.ink,
+              size: _headerGlyphFor(box),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Icon(Icons.person, color: accent, size: _headerGlyphFor(box)),
         ),
       ),
     );

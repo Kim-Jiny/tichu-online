@@ -4476,7 +4476,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final trick = state.currentTrick;
     if (hand.isEmpty) return const <String>{};
     if (trick.isEmpty) return hand.toSet();
-    // Determine lead suit from the first actual number card in the trick.
+    // Mirrors SkullKingGame.getLeadSuit.
     // Tigress counts as pirate or escape based on the player's choice, so
     // it never sets the lead suit.
     String? leadSuit;
@@ -4486,10 +4486,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
       if (type == 'tigress') {
         type = play.tigressChoice == 'pirate' ? 'pirate' : 'escape';
       }
-      if (type == 'number') {
-        leadSuit = info.suit;
-        break;
-      }
+      // 탈출·약탈은 투명하다 — 다음 숫자 카드가 리드 색을 정한다. 해적·인어·
+      // 스컬킹·크라켄·흰고래가 먼저 나왔다면 리드 색은 없고, 그 뒤의 숫자도
+      // 리드를 만들지 못한다.
+      if (type == 'escape' || type == 'loot') continue;
+      if (type == 'number') leadSuit = info.suit;
+      break;
     }
     if (leadSuit == null) return hand.toSet();
     final hasLeadSuit = hand.any((c) {

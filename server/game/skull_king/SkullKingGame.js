@@ -35,6 +35,7 @@ class SkullKingGame {
     this.bids = {};           // playerId -> number | null
     this.tricks = {};         // playerId -> trick count won this round
     this.bonuses = {};        // playerId -> accumulated bonus this round
+    this.lootAlliances = [];  // [{winnerId, looterId}] — settled at round end
     this.currentTrick = [];   // [{playerId, cardId, tigressChoice?}]
     this.trickStarter = null; // playerId who leads the trick
     this.currentPlayer = null;
@@ -81,6 +82,7 @@ class SkullKingGame {
     this.bids = {};
     this.tricks = {};
     this.bonuses = {};
+    this.lootAlliances = [];
 
     for (let i = 0; i < this.playerCount; i++) {
       const pid = this.playerIds[i];
@@ -246,9 +248,9 @@ class SkullKingGame {
       this.tricks[result.winnerId]++;
       this.bonuses[result.winnerId] += result.bonus;
 
-      // Loot bonus: +20 per Loot card in the trick to the trick winner, plus
-      // +20 to each player who played a Loot card. Both subject to bid-met
-      // rule at round end (handled by SkullKingScoreCalc via this.bonuses).
+      // Loot: the player who played it and the trick winner form an alliance.
+      // Each gets +20 per Loot card, but only if BOTH made their bid exactly —
+      // so nothing is added to this.bonuses here; endRound settles alliances.
       const lootPlayers = [];
       for (const play of this.currentTrick) {
         const info = getCardInfo(play.cardId);
@@ -258,9 +260,8 @@ class SkullKingGame {
       }
       if (lootPlayers.length > 0) {
         const winnerLoot = LOOT_BONUS_POINTS * lootPlayers.length;
-        this.bonuses[result.winnerId] += winnerLoot;
         for (const lootPid of lootPlayers) {
-          this.bonuses[lootPid] += LOOT_BONUS_POINTS;
+          this.lootAlliances.push({ winnerId: result.winnerId, looterId: lootPid });
         }
         this.lastTrickBonus += winnerLoot;
         this.lastTrickBonusDetail.push({
@@ -290,13 +291,28 @@ class SkullKingGame {
     this.startTrick();
   }
 
+  _bidMet(pid) {
+    const bid = this.bids[pid];
+    return bid === 0 ? this.tricks[pid] === 0 : this.tricks[pid] === bid;
+  }
+
   endRound() {
+    // Settle Loot alliances: each member gets +20 only when both met their bid.
+    // (Winner who played their own Loot is an alliance of one: +20 once.)
+    const lootBonus = {};
+    for (const pid of this.playerIds) lootBonus[pid] = 0;
+    for (const { winnerId, looterId } of this.lootAlliances || []) {
+      if (!this._bidMet(winnerId) || !this._bidMet(looterId)) continue;
+      lootBonus[winnerId] += LOOT_BONUS_POINTS;
+      if (looterId !== winnerId) lootBonus[looterId] += LOOT_BONUS_POINTS;
+    }
+
     // Calculate scores
     const roundScoreData = {};
     for (const pid of this.playerIds) {
       const bid = this.bids[pid];
       const tricksWon = this.tricks[pid];
-      const bonus = this.bonuses[pid];
+      const bonus = this.bonuses[pid] + lootBonus[pid];
       const roundScore = calculateRoundScore(bid, tricksWon, this.round, bonus);
 
       this.totalScores[pid] += roundScore;
@@ -394,6 +410,26 @@ class SkullKingGame {
     this.startNextRound();
   }
 
+  /**
+   * Lead suit of the current trick. Escape / Loot / Tigress-as-escape are
+   * transparent: the next number card sets the suit. Any other special
+   * (Pirate, Mermaid, Skull King, Kraken, White Whale, Tigress-as-pirate)
+   * played before a number means there is NO lead suit, and numbers played
+   * after it do not create one.
+   */
+  getLeadSuit() {
+    for (const play of this.currentTrick) {
+      const info = getCardInfo(play.cardId);
+      let type = info.type;
+      if (type === CARD_TYPE.TIGRESS) {
+        type = play.tigressChoice === 'pirate' ? CARD_TYPE.PIRATE : CARD_TYPE.ESCAPE;
+      }
+      if (type === CARD_TYPE.ESCAPE || type === CARD_TYPE.LOOT) continue;
+      return type === CARD_TYPE.NUMBER ? info.suit : null;
+    }
+    return null;
+  }
+
   getLegalCards(playerId) {
     const hand = this.hands[playerId];
     if (!hand || hand.length === 0) return [];
@@ -401,21 +437,10 @@ class SkullKingGame {
     // If leading or no number cards played yet, all cards are legal
     if (this.currentTrick.length === 0) return [...hand];
 
-    // Determine lead suit (first numbered card in trick)
-    let leadSuit = null;
-    for (const play of this.currentTrick) {
-      const info = getCardInfo(play.cardId);
-      let effectiveType = info.type;
-      if (info.type === CARD_TYPE.TIGRESS) {
-        effectiveType = play.tigressChoice === 'pirate' ? CARD_TYPE.PIRATE : CARD_TYPE.ESCAPE;
-      }
-      if (effectiveType === CARD_TYPE.NUMBER) {
-        leadSuit = info.suit;
-        break;
-      }
-    }
+    const leadSuit = this.getLeadSuit();
 
-    // If no lead suit determined (all special cards so far), any card is legal
+    // No lead suit (only escapes so far, or a pirate/mermaid/SK/Kraken/Whale
+    // came first) — any card is legal
     if (!leadSuit) return [...hand];
 
     // Must follow lead suit if possible (special cards are always legal)
@@ -601,6 +626,12 @@ class SkullKingGame {
     if (this.tricks.hasOwnProperty(oldPlayerId)) {
       this.tricks[newPlayerId] = this.tricks[oldPlayerId];
       delete this.tricks[oldPlayerId];
+    }
+
+    // Update loot alliances
+    for (const a of this.lootAlliances || []) {
+      if (a.winnerId === oldPlayerId) a.winnerId = newPlayerId;
+      if (a.looterId === oldPlayerId) a.looterId = newPlayerId;
     }
 
     // Update bonuses

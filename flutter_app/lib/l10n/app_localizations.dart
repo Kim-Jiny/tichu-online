@@ -9212,6 +9212,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Try it out now?'**
   String get shopTapToPlay;
+
+  /// No description provided for @goldTabHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get goldTabHistory;
+
+  /// No description provided for @goldTabEarn.
+  ///
+  /// In en, this message translates to:
+  /// **'How to earn'**
+  String get goldTabEarn;
+
+  /// No description provided for @goldFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get goldFilterAll;
+
+  /// No description provided for @goldFilterGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned'**
+  String get goldFilterGain;
+
+  /// No description provided for @goldFilterSpend.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent'**
+  String get goldFilterSpend;
+
+  /// No description provided for @goldSummaryRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {count} entries'**
+  String goldSummaryRecent(int count);
+
+  /// No description provided for @goldDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get goldDateToday;
+
+  /// No description provided for @goldDateYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get goldDateYesterday;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

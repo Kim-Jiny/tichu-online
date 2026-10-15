@@ -5102,4 +5102,30 @@ class L10nKo extends L10n {
 
   @override
   String get shopTapToPlay => '지금 바로 써 볼까요?';
+
+  @override
+  String get goldTabHistory => '내역';
+
+  @override
+  String get goldTabEarn => '얻는 법';
+
+  @override
+  String get goldFilterAll => '전체';
+
+  @override
+  String get goldFilterGain => '획득';
+
+  @override
+  String get goldFilterSpend => '사용';
+
+  @override
+  String goldSummaryRecent(int count) {
+    return '최근 $count건 기준';
+  }
+
+  @override
+  String get goldDateToday => '오늘';
+
+  @override
+  String get goldDateYesterday => '어제';
 }

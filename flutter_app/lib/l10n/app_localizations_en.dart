@@ -5220,4 +5220,30 @@ class L10nEn extends L10n {
 
   @override
   String get shopTapToPlay => 'Try it out now?';
+
+  @override
+  String get goldTabHistory => 'History';
+
+  @override
+  String get goldTabEarn => 'How to earn';
+
+  @override
+  String get goldFilterAll => 'All';
+
+  @override
+  String get goldFilterGain => 'Earned';
+
+  @override
+  String get goldFilterSpend => 'Spent';
+
+  @override
+  String goldSummaryRecent(int count) {
+    return 'Last $count entries';
+  }
+
+  @override
+  String get goldDateToday => 'Today';
+
+  @override
+  String get goldDateYesterday => 'Yesterday';
 }

@@ -1801,5 +1801,13 @@
   "rulesSkCardGuideTitle": "카드 구성 및 효과 (기본 총 65장)",
   "rulesLlCardGuideTitle": "카드 구성 및 효과 (총 16장)",
   "shopNeedMoreGold": "골드가 {amount} 부족해요",
-  "shopTapToPlay": "지금 바로 써 볼까요?"
+  "shopTapToPlay": "지금 바로 써 볼까요?",
+  "goldTabHistory": "내역",
+  "goldTabEarn": "얻는 법",
+  "goldFilterAll": "전체",
+  "goldFilterGain": "획득",
+  "goldFilterSpend": "사용",
+  "goldSummaryRecent": "최근 {count}건 기준",
+  "goldDateToday": "오늘",
+  "goldDateYesterday": "어제"
 }

@@ -71,248 +71,25 @@ Widget _goldDialogHeader(
   );
 }
 
-void showGoldHistoryDialog(BuildContext context, GameService game) {
+/// 골드 내역 + 얻는 법을 한 팝업의 두 탭으로. (예전엔 내역 팝업 위에 안내 팝업이
+/// 한 겹 더 쌓였다.) [earnTab] 이 true 면 "얻는 법" 탭으로 바로 연다.
+void showGoldHistoryDialog(
+  BuildContext context,
+  GameService game, {
+  bool earnTab = false,
+}) {
   game.requestGoldHistory();
   showDialog(
     context: context,
     builder: (dialogContext) => Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 620),
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 640),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              final l10n = L10n.of(context);
-              Widget status(String text, {bool sleepy = false}) => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (sleepy)
-                      CartoonFloat(
-                        amplitude: 6,
-                        child: Image.asset(
-                          'assets/dragonIcon.webp',
-                          width: 72,
-                          height: 72,
-                          color: Colors.white.withValues(alpha: 0.35),
-                          colorBlendMode: BlendMode.modulate,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Text(
-                      text,
-                      textAlign: TextAlign.center,
-                      style: Cartoon.userText(
-                        size: 15,
-                        color: Cartoon.ink.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _goldDialogHeader(
-                    dialogContext,
-                    title: l10n.shopGoldHistory,
-                    subtitle: l10n.shopGoldCurrent(game.gold),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.shopGoldHistoryDesc,
-                    style: Cartoon.userText(
-                      size: 12.5,
-                      weight: FontWeight.w500,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Expanded(
-                    child: Builder(
-                      builder: (context) {
-                        if (game.goldHistoryLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: Cartoon.orange,
-                              strokeWidth: 4,
-                            ),
-                          );
-                        }
-                        if (game.goldHistoryError != null) {
-                          return status(
-                            localizeServiceMessage(
-                              game.goldHistoryError!,
-                              l10n,
-                            ),
-                          );
-                        }
-                        if (game.goldHistory.isEmpty) {
-                          return status(
-                            l10n.shopGoldHistoryEmpty,
-                            sleepy: true,
-                          );
-                        }
-                        return ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          itemCount: game.goldHistory.length,
-                          itemBuilder: (context, index) {
-                            final item = game.goldHistory[index];
-                            final delta =
-                                (item['goldDelta'] as num?)?.toInt() ?? 0;
-                            final positive = delta >= 0;
-                            final tone = positive
-                                ? const Color(0xFF2E9E4F)
-                                : const Color(0xFFE5791A);
-                            return CartoonEntrance(
-                              key: ValueKey('gh-$index'),
-                              delay: Duration(
-                                milliseconds: 35 * index.clamp(0, 8),
-                              ),
-                              from: const Offset(0, 14),
-                              pop: false,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.fromLTRB(
-                                  10,
-                                  9,
-                                  10,
-                                  9,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Cartoon.ink,
-                                    width: 2.2,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Cartoon.ink,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: tone.withValues(alpha: 0.18),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Cartoon.ink,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        positive
-                                            ? Icons.south_west_rounded
-                                            : Icons.north_east_rounded,
-                                        size: 18,
-                                        color: tone,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            localizeGoldTitle(
-                                              item['title']?.toString(),
-                                              item['source']?.toString(),
-                                              l10n,
-                                              Localizations.localeOf(
-                                                context,
-                                              ).languageCode,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Cartoon.userText(
-                                              size: 14.5,
-                                              weight: FontWeight.w800,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${localizeGoldDescription(item['description']?.toString(), item['source']?.toString(), l10n)}'
-                                            ' · ${_formatHistoryDate(item['createdAt'])}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Cartoon.userText(
-                                              size: 11.5,
-                                              weight: FontWeight.w500,
-                                              color: Cartoon.ink.withValues(
-                                                alpha: 0.55,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: tone,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Cartoon.ink,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '${positive ? '+' : ''}${formatGold(delta)}',
-                                        style: Cartoon.text(
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  CartoonButton(
-                    height: 50,
-                    color: Cartoon.orange,
-                    onPressed: () => _showGoldGuideDialog(dialogContext),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.lightbulb_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: CartoonButton.label(
-                            l10n.shopHowToEarn,
-                            size: 17,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
+          child: _GoldDialogBody(
+            dialogContext: dialogContext,
+            initialTab: earnTab ? 1 : 0,
           ),
         ),
       ),
@@ -320,99 +97,462 @@ void showGoldHistoryDialog(BuildContext context, GameService game) {
   );
 }
 
-void _showGoldGuideDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (dialogContext) => LayoutBuilder(
-      builder: (context, constraints) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 3),
+class _GoldDialogBody extends StatefulWidget {
+  const _GoldDialogBody({
+    required this.dialogContext,
+    required this.initialTab,
+  });
+
+  final BuildContext dialogContext;
+  final int initialTab;
+
+  @override
+  State<_GoldDialogBody> createState() => _GoldDialogBodyState();
+}
+
+class _GoldDialogBodyState extends State<_GoldDialogBody> {
+  late int _tab = widget.initialTab;
+  // 0 전체, 1 획득, 2 사용
+  int _filter = 0;
+
+  static int _delta(Map<String, dynamic> e) =>
+      (e['goldDelta'] as num?)?.toInt() ?? 0;
+
+  /// 오늘 / 어제 / 날짜. 로컬 날짜 기준.
+  String _dayLabel(L10n l10n, dynamic value) {
+    final dt = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    if (dt == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(dt.year, dt.month, dt.day);
+    final diff = today.difference(day).inDays;
+    if (diff == 0) return l10n.goldDateToday;
+    if (diff == 1) return l10n.goldDateYesterday;
+    return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final game = context.watch<GameService>();
+    final l10n = L10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _goldDialogHeader(
+          widget.dialogContext,
+          title: l10n.shopGoldHistory,
+          subtitle: l10n.shopGoldCurrent(game.gold),
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 420,
-            maxHeight: constraints.maxHeight * 0.8,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _goldDialogHeader(
-                    dialogContext,
-                    title: L10n.of(context).shopGoldGuideTitle,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    L10n.of(context).shopGoldGuideDesc,
-                    style: Cartoon.userText(
-                      size: 13,
-                      weight: FontWeight.w500,
-                      color: Cartoon.ink.withValues(alpha: 0.65),
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideNormalWin,
-                    value: L10n.of(context).shopGuideNormalWinValue,
-                    description: L10n.of(context).shopGuideNormalWinDesc,
-                    color: const Color(0xFFE8F5E9),
-                    accent: const Color(0xFF43A047),
-                    icon: Icons.emoji_events_outlined,
-                  ),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideNormalLoss,
-                    value: L10n.of(context).shopGuideNormalLossValue,
-                    description: L10n.of(context).shopGuideNormalLossDesc,
-                    color: const Color(0xFFE3F2FD),
-                    accent: const Color(0xFF1E88E5),
-                    icon: Icons.sports_esports_outlined,
-                  ),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideRankedWin,
-                    value: L10n.of(context).shopGuideRankedWinValue,
-                    description: L10n.of(context).shopGuideRankedWinDesc,
-                    color: const Color(0xFFFFF8E1),
-                    accent: const Color(0xFFF9A825),
-                    icon: Icons.military_tech_outlined,
-                  ),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideRankedLoss,
-                    value: L10n.of(context).shopGuideRankedLossValue,
-                    description: L10n.of(context).shopGuideRankedLossDesc,
-                    color: const Color(0xFFFFF3E0),
-                    accent: const Color(0xFFEF6C00),
-                    icon: Icons.shield_outlined,
-                  ),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideAdReward,
-                    value: L10n.of(context).shopGuideAdRewardValue,
-                    description: L10n.of(context).shopGuideAdRewardDesc,
-                    color: const Color(0xFFFFF3E0),
-                    accent: const Color(0xFFFB8C00),
-                    icon: Icons.ondemand_video_outlined,
-                  ),
-                  _buildGoldGuideItem(
-                    title: L10n.of(context).shopGuideSeasonReward,
-                    value: L10n.of(context).shopGuideSeasonRewardValue,
-                    description: L10n.of(context).shopGuideSeasonRewardDesc,
-                    color: const Color(0xFFF3E5F5),
-                    accent: const Color(0xFF8E24AA),
-                    icon: Icons.workspace_premium_outlined,
-                  ),
-                ],
+        const SizedBox(height: 14),
+        _tabToggle(l10n),
+        const SizedBox(height: 12),
+        Expanded(child: _tab == 0 ? _historyTab(game, l10n) : _earnTab(l10n)),
+      ],
+    );
+  }
+
+  Widget _tabToggle(L10n l10n) {
+    Widget seg(int i, String label, IconData icon) {
+      final on = _tab == i;
+      return Expanded(
+        child: CartoonPressable(
+          scale: 0.95,
+          onTap: () => setState(() => _tab = i),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 42,
+            decoration: BoxDecoration(
+              color: on ? Cartoon.orange : Colors.transparent,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: on ? Cartoon.ink : Colors.transparent,
+                width: 2.5,
               ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20, color: on ? Colors.white : Cartoon.ink),
+                const SizedBox(width: 6),
+                on
+                    ? Cartoon.outlinedText(label, size: 17)
+                    : Text(label, style: Cartoon.text(size: 17)),
+              ],
             ),
           ),
         ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 2.5),
       ),
-    ),
-  );
+      child: Row(
+        children: [
+          seg(0, l10n.goldTabHistory, Icons.receipt_long_rounded),
+          const SizedBox(width: 4),
+          seg(1, l10n.goldTabEarn, Icons.lightbulb_rounded),
+        ],
+      ),
+    );
+  }
+
+  // ───────────────────────── 내역 탭 ─────────────────────────
+
+  Widget _historyTab(GameService game, L10n l10n) {
+    Widget status(String text, {bool sleepy = false}) => Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (sleepy)
+            CartoonFloat(
+              amplitude: 6,
+              child: Image.asset(
+                'assets/dragonIcon.webp',
+                width: 72,
+                height: 72,
+                color: Colors.white.withValues(alpha: 0.35),
+                colorBlendMode: BlendMode.modulate,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: Cartoon.userText(
+              size: 15,
+              color: Cartoon.ink.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (game.goldHistoryLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Cartoon.orange, strokeWidth: 4),
+      );
+    }
+    if (game.goldHistoryError != null) {
+      return status(localizeServiceMessage(game.goldHistoryError!, l10n));
+    }
+    final all = game.goldHistory;
+    if (all.isEmpty) return status(l10n.shopGoldHistoryEmpty, sleepy: true);
+
+    var gain = 0;
+    var spend = 0;
+    for (final e in all) {
+      final d = _delta(e);
+      if (d >= 0) {
+        gain += d;
+      } else {
+        spend += -d;
+      }
+    }
+    final shown = all.where((e) {
+      final d = _delta(e);
+      return _filter == 0 || (_filter == 1 ? d >= 0 : d < 0);
+    }).toList();
+
+    // 날짜 머리글을 끼워 넣은 한 줄 목록.
+    final rows = <Object>[];
+    String? lastDay;
+    for (final e in shown) {
+      final day = _dayLabel(l10n, e['createdAt']);
+      if (day != lastDay) {
+        rows.add(day);
+        lastDay = day;
+      }
+      rows.add(e);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _statChip(
+                label: l10n.goldFilterGain,
+                value: '+${formatGold(gain)}',
+                color: const Color(0xFF2E9E4F),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _statChip(
+                label: l10n.goldFilterSpend,
+                value: '-${formatGold(spend)}',
+                color: const Color(0xFFE5791A),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.goldSummaryRecent(all.length),
+          style: Cartoon.userText(
+            size: 11.5,
+            weight: FontWeight.w500,
+            color: Cartoon.ink.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (final (i, label) in [
+              l10n.goldFilterAll,
+              l10n.goldFilterGain,
+              l10n.goldFilterSpend,
+            ].indexed) ...[
+              if (i > 0) const SizedBox(width: 8),
+              _filterChip(label, i),
+            ],
+          ],
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: shown.isEmpty
+              ? status(l10n.shopGoldHistoryEmpty, sleepy: true)
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  itemCount: rows.length,
+                  itemBuilder: (context, i) {
+                    final row = rows[i];
+                    if (row is String) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 6, 0, 8),
+                        child: Text(row, style: Cartoon.text(size: 15)),
+                      );
+                    }
+                    return CartoonEntrance(
+                      key: ValueKey('gh-${row.hashCode}'),
+                      delay: Duration(milliseconds: 30 * i.clamp(0, 8)),
+                      from: const Offset(0, 12),
+                      pop: false,
+                      child: _historyCard(
+                        context,
+                        l10n,
+                        row as Map<String, dynamic>,
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statChip({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+      ),
+      child: Row(
+        children: [
+          Text(label, style: Cartoon.text(size: 14)),
+          const Spacer(),
+          Text(value, style: Cartoon.text(size: 19, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterChip(String label, int i) {
+    final on = _filter == i;
+    return CartoonPressable(
+      onTap: () => setState(() => _filter = i),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: on ? Cartoon.blue : Cartoon.paper,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, on ? 3 : 2)),
+          ],
+        ),
+        child: Text(
+          label,
+          style: Cartoon.text(size: 14, color: on ? Colors.white : Cartoon.ink),
+        ),
+      ),
+    );
+  }
+
+  Widget _historyCard(
+    BuildContext context,
+    L10n l10n,
+    Map<String, dynamic> item,
+  ) {
+    final delta = _delta(item);
+    final positive = delta >= 0;
+    final tone = positive ? const Color(0xFF2E9E4F) : const Color(0xFFE5791A);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: tone.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+              border: Border.all(color: Cartoon.ink, width: 2),
+            ),
+            child: Icon(
+              positive ? Icons.south_west_rounded : Icons.north_east_rounded,
+              size: 18,
+              color: tone,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  localizeGoldTitle(
+                    item['title']?.toString(),
+                    item['source']?.toString(),
+                    l10n,
+                    Localizations.localeOf(context).languageCode,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Cartoon.userText(size: 14.5, weight: FontWeight.w800),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${localizeGoldDescription(item['description']?.toString(), item['source']?.toString(), l10n)}'
+                  ' · ${_formatHistoryDate(item['createdAt'])}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Cartoon.userText(
+                    size: 11.5,
+                    weight: FontWeight.w500,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: tone,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Cartoon.ink, width: 2),
+            ),
+            child: Text(
+              '${positive ? '+' : ''}${formatGold(delta)}',
+              style: Cartoon.text(size: 16, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ───────────────────────── 얻는 법 탭 ─────────────────────────
+
+  Widget _earnTab(L10n l10n) {
+    final items = <Widget>[
+      _buildGoldGuideItem(
+        title: l10n.shopGuideNormalWin,
+        value: l10n.shopGuideNormalWinValue,
+        description: l10n.shopGuideNormalWinDesc,
+        color: const Color(0xFFE8F5E9),
+        accent: const Color(0xFF43A047),
+        icon: Icons.emoji_events_outlined,
+      ),
+      _buildGoldGuideItem(
+        title: l10n.shopGuideNormalLoss,
+        value: l10n.shopGuideNormalLossValue,
+        description: l10n.shopGuideNormalLossDesc,
+        color: const Color(0xFFE3F2FD),
+        accent: const Color(0xFF1E88E5),
+        icon: Icons.sports_esports_outlined,
+      ),
+      _buildGoldGuideItem(
+        title: l10n.shopGuideRankedWin,
+        value: l10n.shopGuideRankedWinValue,
+        description: l10n.shopGuideRankedWinDesc,
+        color: const Color(0xFFFFF8E1),
+        accent: const Color(0xFFF9A825),
+        icon: Icons.military_tech_outlined,
+      ),
+      _buildGoldGuideItem(
+        title: l10n.shopGuideRankedLoss,
+        value: l10n.shopGuideRankedLossValue,
+        description: l10n.shopGuideRankedLossDesc,
+        color: const Color(0xFFFFF3E0),
+        accent: const Color(0xFFEF6C00),
+        icon: Icons.shield_outlined,
+      ),
+      _buildGoldGuideItem(
+        title: l10n.shopGuideAdReward,
+        value: l10n.shopGuideAdRewardValue,
+        description: l10n.shopGuideAdRewardDesc,
+        color: const Color(0xFFFFF3E0),
+        accent: const Color(0xFFFB8C00),
+        icon: Icons.ondemand_video_outlined,
+      ),
+      _buildGoldGuideItem(
+        title: l10n.shopGuideSeasonReward,
+        value: l10n.shopGuideSeasonRewardValue,
+        description: l10n.shopGuideSeasonRewardDesc,
+        color: const Color(0xFFF3E5F5),
+        accent: const Color(0xFF8E24AA),
+        icon: Icons.workspace_premium_outlined,
+      ),
+    ];
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 6),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            l10n.shopGoldGuideDesc,
+            style: Cartoon.userText(
+              size: 13,
+              weight: FontWeight.w500,
+              color: Cartoon.ink.withValues(alpha: 0.65),
+              height: 1.45,
+            ),
+          ),
+        ),
+        for (final (i, w) in items.indexed)
+          CartoonEntrance(
+            delay: Duration(milliseconds: 40 * i),
+            from: const Offset(0, 14),
+            pop: false,
+            child: w,
+          ),
+      ],
+    );
+  }
 }
 
 /// One way to earn gold: what it is, how much, and the condition.

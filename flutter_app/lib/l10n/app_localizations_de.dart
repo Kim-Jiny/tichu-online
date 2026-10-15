@@ -5256,4 +5256,30 @@ class L10nDe extends L10n {
 
   @override
   String get shopTapToPlay => 'Gleich ausprobieren?';
+
+  @override
+  String get goldTabHistory => 'Verlauf';
+
+  @override
+  String get goldTabEarn => 'So verdienst du';
+
+  @override
+  String get goldFilterAll => 'Alle';
+
+  @override
+  String get goldFilterGain => 'Erhalten';
+
+  @override
+  String get goldFilterSpend => 'Ausgegeben';
+
+  @override
+  String goldSummaryRecent(int count) {
+    return 'Letzte $count Einträge';
+  }
+
+  @override
+  String get goldDateToday => 'Heute';
+
+  @override
+  String get goldDateYesterday => 'Gestern';
 }

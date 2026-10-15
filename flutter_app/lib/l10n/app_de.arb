@@ -1801,5 +1801,13 @@
   "rulesSkCardGuideTitle": "Karten & Effekte (65 im Basisspiel)",
   "rulesLlCardGuideTitle": "Karten & Effekte (insgesamt 16)",
   "shopNeedMoreGold": "Dir fehlen {amount} Gold",
-  "shopTapToPlay": "Gleich ausprobieren?"
+  "shopTapToPlay": "Gleich ausprobieren?",
+  "goldTabHistory": "Verlauf",
+  "goldTabEarn": "So verdienst du",
+  "goldFilterAll": "Alle",
+  "goldFilterGain": "Erhalten",
+  "goldFilterSpend": "Ausgegeben",
+  "goldSummaryRecent": "Letzte {count} Einträge",
+  "goldDateToday": "Heute",
+  "goldDateYesterday": "Gestern"
 }

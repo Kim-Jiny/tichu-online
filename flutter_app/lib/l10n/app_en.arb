@@ -3045,5 +3045,14 @@
   "rulesLlCardGuideTitle": "Cards & Effects (16 total)",
   "shopNeedMoreGold": "You need {amount} more gold",
   "@shopNeedMoreGold": {"placeholders": {"amount": {"type": "String"}}},
-  "shopTapToPlay": "Try it out now?"
+  "shopTapToPlay": "Try it out now?",
+  "goldTabHistory": "History",
+  "goldTabEarn": "How to earn",
+  "goldFilterAll": "All",
+  "goldFilterGain": "Earned",
+  "goldFilterSpend": "Spent",
+  "goldSummaryRecent": "Last {count} entries",
+  "@goldSummaryRecent": {"placeholders": {"count": {"type": "int"}}},
+  "goldDateToday": "Today",
+  "goldDateYesterday": "Yesterday"
 }

@@ -855,8 +855,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // 44 square (26 glyph + 9 either side). The header keeps its width by
     // giving back what the box padding and the gaps between buttons were
     // using — a tap target that reads as a button beats air around it.
-    return GestureDetector(
+    return CartoonPressable(
       onTap: onTap,
+      scale: 0.86,
       child: Container(
         width: box,
         height: box,
@@ -1967,79 +1968,82 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildLobbyHeader(GameService game, {required bool isLandscape}) {
-    return Container(
-      // Same both ways round now. Landscape used to be roomier horizontally
-      // and tighter vertically for no reason that survived the buttons
-      // growing; a ternary that returns the same number twice only reads as
-      // an intention nobody has.
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
-      margin: EdgeInsets.fromLTRB(
-        isLandscape ? 12 : 16,
-        isLandscape ? 12 : 16,
-        isLandscape ? 12 : 16,
-        isLandscape ? 16 : 20,
-      ),
-      clipBehavior: Clip.none,
-      // The row is measured before it is built. Five buttons at a fixed size
-      // fit a normal phone and nothing else: narrower and they wrap onto a
-      // second line, wider (a fold, a browser) and there is no reason for them
-      // to keep growing — a 60px store icon is not easier to hit.
-      //
-      // The buttons are served first and the logo takes what is left, because
-      // the buttons are what the header is FOR. Reversed, a wide logo pushed
-      // them onto their own line on a 320px phone.
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const gaps = _headerButtonGap * (_headerButtonCount - 1);
-          final forButtons =
-              constraints.maxWidth -
-              _headerLogoMinWidth -
-              _headerLogoGap -
-              gaps;
-          final box = (forButtons / _headerButtonCount).clamp(
-            _headerButtonMin,
-            _headerButtonMax,
-          );
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    // Capped so it does not sprawl on a wide window, and
-                    // free to shrink below that on a narrow one.
-                    constraints: BoxConstraints(
-                      maxHeight: isLandscape ? 36 : _headerButtonMax,
-                      maxWidth: _headerLogoMaxWidth,
-                    ),
-                    child: Image.asset(
-                      'assets/logo2.webp',
-                      fit: BoxFit.contain,
+    return CartoonEntrance(
+      from: const Offset(0, -40),
+      child: Container(
+        // Same both ways round now. Landscape used to be roomier horizontally
+        // and tighter vertically for no reason that survived the buttons
+        // growing; a ternary that returns the same number twice only reads as
+        // an intention nobody has.
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
+        margin: EdgeInsets.fromLTRB(
+          isLandscape ? 12 : 16,
+          isLandscape ? 12 : 16,
+          isLandscape ? 12 : 16,
+          isLandscape ? 16 : 20,
+        ),
+        clipBehavior: Clip.none,
+        // The row is measured before it is built. Five buttons at a fixed size
+        // fit a normal phone and nothing else: narrower and they wrap onto a
+        // second line, wider (a fold, a browser) and there is no reason for them
+        // to keep growing — a 60px store icon is not easier to hit.
+        //
+        // The buttons are served first and the logo takes what is left, because
+        // the buttons are what the header is FOR. Reversed, a wide logo pushed
+        // them onto their own line on a 320px phone.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const gaps = _headerButtonGap * (_headerButtonCount - 1);
+            final forButtons =
+                constraints.maxWidth -
+                _headerLogoMinWidth -
+                _headerLogoGap -
+                gaps;
+            final box = (forButtons / _headerButtonCount).clamp(
+              _headerButtonMin,
+              _headerButtonMax,
+            );
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ConstrainedBox(
+                      // Capped so it does not sprawl on a wide window, and
+                      // free to shrink below that on a narrow one.
+                      constraints: BoxConstraints(
+                        maxHeight: isLandscape ? 36 : _headerButtonMax,
+                        maxWidth: _headerLogoMaxWidth,
+                      ),
+                      child: Image.asset(
+                        'assets/logo2.webp',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: _headerLogoGap),
-              // A Row, not a Wrap: the size above is chosen so they fit, and a
-              // Wrap would quietly hide a miscalculation by growing a second
-              // line instead of showing it.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final (i, button) in _buildLobbyActionButtons(
-                    game,
-                    box,
-                  ).indexed) ...[
-                    if (i > 0) const SizedBox(width: _headerButtonGap),
-                    button,
+                const SizedBox(width: _headerLogoGap),
+                // A Row, not a Wrap: the size above is chosen so they fit, and a
+                // Wrap would quietly hide a miscalculation by growing a second
+                // line instead of showing it.
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final (i, button) in _buildLobbyActionButtons(
+                      game,
+                      box,
+                    ).indexed) ...[
+                      if (i > 0) const SizedBox(width: _headerButtonGap),
+                      button,
+                    ],
                   ],
-                ],
-              ),
-            ],
-          );
-        },
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -2403,11 +2407,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          CartoonButton(
-            height: 54,
-            color: Cartoon.green,
-            onPressed: _showCreateRoomDialog,
-            child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
+          CartoonPulse(
+            child: CartoonButton(
+              height: 54,
+              color: Cartoon.green,
+              onPressed: _showCreateRoomDialog,
+              child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
+            ),
           ),
         ],
       ),
@@ -2485,32 +2491,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
       for (final (type, label, color) in chips)
         Padding(
           padding: const EdgeInsets.only(right: 6),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          child: CartoonPressable(
             // Tapping the selected game again goes back to 전체, so getting out
             // of a filter never needs you to find the 전체 chip.
             onTap: () => setState(
               () => _roomGameFilter = _roomGameFilter == type ? null : type,
             ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              margin: const EdgeInsets.only(bottom: 3),
-              decoration: BoxDecoration(
-                color: _roomGameFilter == type ? color : Cartoon.paper,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
-                boxShadow: _roomGameFilter == type
-                    ? null
-                    : const [
-                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
-                      ],
-              ),
-              child: Text(
-                label,
-                style: Cartoon.text(
-                  size: 14,
-                  color: _roomGameFilter == type ? Colors.white : Cartoon.ink,
+            child: AnimatedScale(
+              scale: _roomGameFilter == type ? 1.08 : 1.0,
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.elasticOut,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                margin: const EdgeInsets.only(bottom: 3),
+                decoration: BoxDecoration(
+                  color: _roomGameFilter == type ? color : Cartoon.paper,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  boxShadow: _roomGameFilter == type
+                      ? null
+                      : const [
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                        ],
+                ),
+                child: Text(
+                  label,
+                  style: Cartoon.text(
+                    size: 14,
+                    color: _roomGameFilter == type ? Colors.white : Cartoon.ink,
+                  ),
                 ),
               ),
             ),
@@ -2544,10 +2557,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: sorted.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 6),
+      separatorBuilder: (_, _) => const SizedBox(height: 9),
       itemBuilder: (context, index) {
         final room = sorted[index];
-        return _buildRoomItem(room);
+        // 새로 나타난 방만 통통 등장한다 (id 로 구분). 처음 목록이 뜰 때는
+        // 위에서부터 차례로.
+        return CartoonEntrance(
+          key: ValueKey('room-${room.id}'),
+          delay: Duration(milliseconds: 45 * index.clamp(0, 6)),
+          from: const Offset(0, 22),
+          child: _buildRoomItem(room),
+        );
       },
     );
   }

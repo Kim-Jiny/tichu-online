@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -302,6 +303,157 @@ class _CartoonFloatState extends State<CartoonFloat>
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// 처음 나타날 때 통통 튀어 들어온다. [delay] 로 여러 개를 차례로 띄울 수 있다.
+///
+/// 한 번 재생하고 끝이다 — 같은 State 가 살아 있는 동안 다시 빌드돼도 반복하지
+/// 않으니, 목록 항목은 안정적인 key 를 붙여 새로 생긴 것만 등장하게 한다.
+class CartoonEntrance extends StatefulWidget {
+  const CartoonEntrance({
+    super.key,
+    required this.child,
+    this.delay = Duration.zero,
+    this.from = const Offset(0, 24),
+    this.pop = true,
+  });
+
+  final Widget child;
+  final Duration delay;
+
+  /// 시작 위치(최종 위치 기준 px).
+  final Offset from;
+
+  /// true 면 살짝 커졌다 자리잡는 탄성, false 면 부드럽게만.
+  final bool pop;
+
+  @override
+  State<CartoonEntrance> createState() => _CartoonEntranceState();
+}
+
+class _CartoonEntranceState extends State<CartoonEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.delay == Duration.zero) {
+      _c.forward();
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _c.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) {
+        final t = _c.value;
+        final move = Curves.easeOutCubic.transform((t / 0.7).clamp(0.0, 1.0));
+        final scale = widget.pop
+            ? 0.82 + 0.18 * Curves.elasticOut.transform(t)
+            : 1.0;
+        return Opacity(
+          opacity: (t / 0.35).clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: widget.from * (1 - move),
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 누르는 동안 눌려 들어가고, 떼면 탄성 있게 되돌아온다.
+class CartoonPressable extends StatefulWidget {
+  const CartoonPressable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = 0.92,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+
+  @override
+  State<CartoonPressable> createState() => _CartoonPressableState();
+}
+
+class _CartoonPressableState extends State<CartoonPressable> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _down = true),
+      onTapCancel: () => setState(() => _down = false),
+      onTapUp: (_) => setState(() => _down = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? widget.scale : 1.0,
+        duration: Duration(milliseconds: _down ? 70 : 380),
+        curve: _down ? Curves.easeOut : Curves.elasticOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// 숨 쉬듯 아주 살짝 커졌다 작아진다 — "여기를 눌러" 라는 신호.
+class CartoonPulse extends StatefulWidget {
+  const CartoonPulse({super.key, required this.child, this.amount = 0.035});
+
+  final Widget child;
+  final double amount;
+
+  @override
+  State<CartoonPulse> createState() => _CartoonPulseState();
+}
+
+class _CartoonPulseState extends State<CartoonPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) => Transform.scale(
+        scale: 1 + widget.amount * Curves.easeInOut.transform(_c.value),
+        child: child,
+      ),
     );
   }
 }

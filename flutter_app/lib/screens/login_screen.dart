@@ -439,25 +439,50 @@ class _LoginScreenState extends State<LoginScreen> {
           ? CrossAxisAlignment.start
           : CrossAxisAlignment.center,
       children: [
-        CartoonFloat(
-          child: Image.asset(
-            'assets/dragonIcon.webp',
-            width: compact ? 88 : 104,
-            height: compact ? 88 : 104,
+        // 로고는 위에서 떨어져 들어와 둥둥 떠다니고, 제목은 이어서 내려앉고,
+        // 부제는 살며시 떠오른다.
+        CartoonEntrance(
+          from: const Offset(0, -70),
+          child: CartoonFloat(
+            child: Image.asset(
+              'assets/dragonIcon.webp',
+              width: compact ? 88 : 104,
+              height: compact ? 88 : 104,
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        Cartoon.outlinedText(
-          'TICHU',
-          size: compact ? 46 : 56,
-          fill: Cartoon.yellow,
-          letterSpacing: compact ? 3 : 5,
+        CartoonEntrance(
+          delay: const Duration(milliseconds: 180),
+          from: const Offset(0, -34),
+          child: Cartoon.outlinedText(
+            'TICHU',
+            size: compact ? 46 : 56,
+            fill: Cartoon.yellow,
+            letterSpacing: compact ? 3 : 5,
+          ),
         ),
         const SizedBox(height: 6),
-        Text(l10n.loginSubtitle, style: Cartoon.text(size: compact ? 17 : 18)),
+        CartoonEntrance(
+          delay: const Duration(milliseconds: 380),
+          from: const Offset(0, 10),
+          pop: false,
+          child: Text(
+            l10n.loginSubtitle,
+            style: Cartoon.text(size: compact ? 17 : 18),
+          ),
+        ),
         if (compact) ...[
           const SizedBox(height: 16),
-          Text(l10n.loginTagline, style: Cartoon.text(size: 15, height: 1.5)),
+          CartoonEntrance(
+            delay: const Duration(milliseconds: 480),
+            from: const Offset(0, 10),
+            pop: false,
+            child: Text(
+              l10n.loginTagline,
+              style: Cartoon.text(size: 15, height: 1.5),
+            ),
+          ),
         ],
       ],
     );
@@ -469,186 +494,190 @@ class _LoginScreenState extends State<LoginScreen> {
     final socialSpacing = compact ? 12.0 : 16.0;
     final loginButtonHeight = compact ? 52.0 : 56.0;
 
-    return CartoonPanel(
-      padding: EdgeInsets.all(cardPadding),
-      child: Column(
-        children: [
-          _buildTextField(
-            controller: _usernameController,
-            hint: l10n.loginUsernameHint,
-            icon: Icons.person_outline,
-            fontSize: compact ? 16 : 18,
-          ),
-          const SizedBox(height: 12),
-          _buildTextField(
-            controller: _passwordController,
-            hint: l10n.loginPasswordHint,
-            icon: Icons.lock_outline,
-            obscure: true,
-            fontSize: compact ? 16 : 18,
-          ),
-          if (!_isConnecting && session.hasRestoreError) ...[
-            const SizedBox(height: 16),
-            _buildAutoLoginNotice(session),
-          ],
-          const SizedBox(height: 20),
-          CartoonButton(
-            height: loginButtonHeight,
-            onPressed: _isConnecting ? null : _login,
-            child: CartoonButton.label(
-              l10n.loginButton,
-              size: compact ? 20 : 22,
+    return CartoonEntrance(
+      delay: const Duration(milliseconds: 320),
+      from: const Offset(0, 70),
+      child: CartoonPanel(
+        padding: EdgeInsets.all(cardPadding),
+        child: Column(
+          children: [
+            _buildTextField(
+              controller: _usernameController,
+              hint: l10n.loginUsernameHint,
+              icon: Icons.person_outline,
+              fontSize: compact ? 16 : 18,
             ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: _showRegisterDialog,
-            child: Text(
-              l10n.loginRegisterButton,
-              style: Cartoon.text(size: 17),
+            const SizedBox(height: 12),
+            _buildTextField(
+              controller: _passwordController,
+              hint: l10n.loginPasswordHint,
+              icon: Icons.lock_outline,
+              obscure: true,
+              fontSize: compact ? 16 : 18,
             ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            if (context.read<GameService>().loginErrorReason == 'maintenance')
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFB74D)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.construction,
-                      color: Color(0xFFE65100),
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(
-                          color: Color(0xFFE65100),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+            if (!_isConnecting && session.hasRestoreError) ...[
+              const SizedBox(height: 16),
+              _buildAutoLoginNotice(session),
+            ],
+            const SizedBox(height: 20),
+            CartoonButton(
+              height: loginButtonHeight,
+              onPressed: _isConnecting ? null : _login,
+              child: CartoonButton.label(
+                l10n.loginButton,
+                size: compact ? 20 : 22,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: _showRegisterDialog,
+              child: Text(
+                l10n.loginRegisterButton,
+                style: Cartoon.text(size: 17),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              if (context.read<GameService>().loginErrorReason == 'maintenance')
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFB74D)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.construction,
+                        color: Color(0xFFE65100),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                            color: Color(0xFFE65100),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.red, fontSize: 14),
+                  textAlign: TextAlign.center,
                 ),
-              )
-            else
-              Text(
-                _error!,
-                style: const TextStyle(color: Colors.red, fontSize: 14),
-                textAlign: TextAlign.center,
+            ],
+            // "간편 로그인" heads a row that can now be empty — a build with no
+            // provider keys would otherwise show a divider labelling nothing.
+            if (SocialConfig.anyEnabled) ...[
+              SizedBox(height: compact ? 20 : 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      l10n.loginQuickLogin,
+                      style: const TextStyle(
+                        color: Color(0xFFAA9A92),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 16),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: socialSpacing,
+                runSpacing: socialSpacing,
+                // A provider only appears when this build can actually complete
+                // it. Google and Kakao used to be unconditional, so on the web
+                // they rendered, threw on tap and left the user staring at a
+                // button that did nothing. SocialConfig answers off the same
+                // keys main() initialises with, so the two can't drift.
+                children: [
+                  if (SocialConfig.googleEnabled)
+                    _buildSocialButton(
+                      onTap: () => _handleSocialSignIn('google'),
+                      backgroundColor: Colors.white,
+                      borderColor: const Color(0xFFDADADA),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset('assets/icons/google_logo.webp'),
+                      ),
+                    ),
+                  // Native Apple sign-in needs the iOS system sheet; on the web it
+                  // is an ordinary OAuth popup, so the browser gets it everywhere.
+                  if (SocialConfig.appleEnabled)
+                    _buildSocialButton(
+                      onTap: () => _handleSocialSignIn('apple'),
+                      backgroundColor: Colors.black,
+                      child: const Icon(
+                        Icons.apple,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                  if (SocialConfig.kakaoEnabled)
+                    _buildSocialButton(
+                      onTap: () => _handleSocialSignIn('kakao'),
+                      backgroundColor: const Color(0xFFFEE500),
+                      child: CustomPaint(
+                        size: const Size(24, 24),
+                        painter: _KakaoLogoPainter(),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            // Store links, web only. The site root used to be a marketing page
+            // whose whole job was pointing at the stores; the web client took
+            // that spot, so the install path lives here now. Safari also draws
+            // its own Smart App Banner (see web/index.html) — this covers
+            // Android and desktop, where no such banner exists.
+            if (kIsWeb) ...[
+              SizedBox(height: compact ? 18 : 24),
+              Text(
+                l10n.loginGetTheApp,
+                style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStoreButton(
+                    label: 'Google Play',
+                    url:
+                        'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
+                  ),
+                  _buildStoreButton(
+                    label: 'App Store',
+                    url: 'https://apps.apple.com/app/tichu-online/id6759035151',
+                  ),
+                ],
+              ),
+            ],
           ],
-          // "간편 로그인" heads a row that can now be empty — a build with no
-          // provider keys would otherwise show a divider labelling nothing.
-          if (SocialConfig.anyEnabled) ...[
-            SizedBox(height: compact ? 20 : 24),
-            Row(
-              children: [
-                Expanded(
-                  child: Divider(
-                    color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    l10n.loginQuickLogin,
-                    style: const TextStyle(
-                      color: Color(0xFFAA9A92),
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Divider(
-                    color: const Color(0xFFD9CCC8).withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: socialSpacing,
-              runSpacing: socialSpacing,
-              // A provider only appears when this build can actually complete
-              // it. Google and Kakao used to be unconditional, so on the web
-              // they rendered, threw on tap and left the user staring at a
-              // button that did nothing. SocialConfig answers off the same
-              // keys main() initialises with, so the two can't drift.
-              children: [
-                if (SocialConfig.googleEnabled)
-                  _buildSocialButton(
-                    onTap: () => _handleSocialSignIn('google'),
-                    backgroundColor: Colors.white,
-                    borderColor: const Color(0xFFDADADA),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Image.asset('assets/icons/google_logo.webp'),
-                    ),
-                  ),
-                // Native Apple sign-in needs the iOS system sheet; on the web it
-                // is an ordinary OAuth popup, so the browser gets it everywhere.
-                if (SocialConfig.appleEnabled)
-                  _buildSocialButton(
-                    onTap: () => _handleSocialSignIn('apple'),
-                    backgroundColor: Colors.black,
-                    child: const Icon(
-                      Icons.apple,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                if (SocialConfig.kakaoEnabled)
-                  _buildSocialButton(
-                    onTap: () => _handleSocialSignIn('kakao'),
-                    backgroundColor: const Color(0xFFFEE500),
-                    child: CustomPaint(
-                      size: const Size(24, 24),
-                      painter: _KakaoLogoPainter(),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-          // Store links, web only. The site root used to be a marketing page
-          // whose whole job was pointing at the stores; the web client took
-          // that spot, so the install path lives here now. Safari also draws
-          // its own Smart App Banner (see web/index.html) — this covers
-          // Android and desktop, where no such banner exists.
-          if (kIsWeb) ...[
-            SizedBox(height: compact ? 18 : 24),
-            Text(
-              l10n.loginGetTheApp,
-              style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 12),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildStoreButton(
-                  label: 'Google Play',
-                  url:
-                      'https://play.google.com/store/apps/details?id=com.jiny.tichuOnline',
-                ),
-                _buildStoreButton(
-                  label: 'App Store',
-                  url: 'https://apps.apple.com/app/tichu-online/id6759035151',
-                ),
-              ],
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -690,7 +719,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Color? borderColor,
     required Widget child,
   }) {
-    return GestureDetector(
+    return CartoonPressable(
       onTap: _isConnecting ? null : onTap,
       // Dim while connecting so the disabled state is visible (matches the main
       // login button), preventing confused repeat taps during the handshake.

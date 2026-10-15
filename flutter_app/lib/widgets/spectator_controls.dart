@@ -3,6 +3,8 @@ import '../l10n/app_localizations.dart';
 import '../models/ll_game_state.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
+import 'cartoon_icons.dart';
 import 'mid_game_join.dart';
 import 'player_profile_dialog.dart';
 import 'profile_avatar.dart';
@@ -199,29 +201,35 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
         builder: (ctx, gs, _) {
           final spectators = gs.spectators;
           return AlertDialog(
+            backgroundColor: Cartoon.paper,
+            surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(26),
+              side: const BorderSide(color: Cartoon.ink, width: 2.5),
             ),
-            titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-            contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            contentPadding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
             title: Row(
               children: [
-                const Icon(
-                  Icons.visibility,
-                  size: 20,
-                  color: Color(0xFF4A4080),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Cartoon.blue,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: Cartoon.ink, width: 2),
+                  ),
+                  child: const EyeIcon(width: 26, height: 20),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Flexible(
                   child: Text(
                     spectators.isEmpty
                         ? l10n.spectatorListTitle
                         : '${l10n.spectatorListTitle} ${spectators.length}',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: Cartoon.text(size: 22),
                   ),
                 ),
               ],
@@ -229,13 +237,13 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
             content: spectators.isEmpty
                 ? SizedBox(
                     width: 260,
-                    height: 72,
+                    height: 80,
                     child: Center(
                       child: Text(
                         l10n.spectatorNoSpectators,
-                        style: const TextStyle(
-                          color: Color(0xFF9A8E8A),
-                          fontSize: 13,
+                        style: Cartoon.text(
+                          size: 16,
+                          color: Cartoon.ink.withValues(alpha: 0.55),
                         ),
                       ),
                     ),
@@ -244,11 +252,15 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
                     width: 280,
                     // Grows with the list up to five rows, then scrolls — a fixed
                     // 220 left a lot of white space under a single watcher.
-                    height: (spectators.length.clamp(1, 5)) * 52.0,
+                    height: (spectators.length.clamp(1, 5)) * 56.0,
                     child: ListView.separated(
                       padding: EdgeInsets.zero,
                       itemCount: spectators.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 4),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        thickness: 1.5,
+                        color: Cartoon.ink.withValues(alpha: 0.12),
+                      ),
                       itemBuilder: (_, i) {
                         final sp = spectators[i];
                         return _SpectatorRow(
@@ -262,7 +274,14 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.spectatorClose),
+                style: TextButton.styleFrom(
+                  foregroundColor: Cartoon.ink,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                ),
+                child: Text(l10n.spectatorClose, style: Cartoon.text(size: 17)),
               ),
             ],
           );
@@ -286,66 +305,47 @@ class _SpectatorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = nickname.isEmpty ? '?' : nickname.characters.first;
-    return Material(
-      color: const Color(0xFFF7F5FB),
+    return InkWell(
       borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: nickname.isEmpty
-            ? null
-            // The spectator list only exists inside a match, so the popup opens
-            // on that match's game rather than on the combined record.
-            : () => showPlayerProfileDialog(
-                context,
+      onTap: nickname.isEmpty
+          ? null
+          // The spectator list only exists inside a match, so the popup opens
+          // on that match's game rather than on the combined record.
+          : () => showPlayerProfileDialog(
+              context,
+              nickname,
+              game,
+              initialGame: game.currentGameType,
+            ),
+      child: SizedBox(
+        height: 55,
+        child: Row(
+          children: [
+            ProfileAvatar(
+              photoUrl: photoUrl.isEmpty
+                  ? null
+                  : game.resolvePhotoUrl(photoUrl),
+              size: 36,
+              fallback: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Cartoon.yellow,
+                  borderRadius: BorderRadius.circular(avatarCornerRadius(36)),
+                ),
+                child: Text(initial, style: Cartoon.userText(size: 16)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
                 nickname,
-                game,
-                initialGame: game.currentGameType,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.userText(size: 16),
               ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            children: [
-              ProfileAvatar(
-                photoUrl: photoUrl.isEmpty
-                    ? null
-                    : game.resolvePhotoUrl(photoUrl),
-                size: 30,
-                fallback: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0D8F5),
-                    borderRadius: BorderRadius.circular(avatarCornerRadius(30)),
-                  ),
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF4A4080),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _kTextPrimary,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                size: 18,
-                color: Color(0xFFB5A9A3),
-              ),
-            ],
-          ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
+          ],
         ),
       ),
     );

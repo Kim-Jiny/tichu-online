@@ -89,8 +89,26 @@ class Cartoon {
     double size = 16,
     Color color = ink,
     double? height,
-  }) =>
-      TextStyle(fontFamily: font, fontSize: size, color: color, height: height);
+  }) => TextStyle(
+    fontFamily: font,
+    fontFamilyFallback: fontFallback,
+    fontSize: size,
+    color: color,
+    height: height,
+  );
+
+  /// 사용자가 입력하거나 서버가 내려준 글자용: Jua 없이 기본 글꼴, 같은 색.
+  static TextStyle userText({
+    double size = 16,
+    Color color = ink,
+    FontWeight weight = FontWeight.w700,
+    double? height,
+  }) => TextStyle(
+    fontSize: size,
+    color: color,
+    fontWeight: weight,
+    height: height,
+  );
 
   static BoxDecoration panelDecoration({
     Color color = paper,

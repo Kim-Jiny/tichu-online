@@ -306,7 +306,6 @@ class _ShopScreenState extends State<ShopScreen> {
                     return Column(
                       children: [
                         _buildTopBar(context, game),
-                        _buildRewardStrip(game),
                         Expanded(child: _buildContentSheet(game)),
                       ],
                     );
@@ -723,24 +722,62 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
+  /// 로딩·오류·빈 목록 자리: 카툰 로더 또는 아이콘 칩 + 한 줄 글.
+  Widget _stateMessage({
+    bool loading = false,
+    IconData icon = Icons.info_outline_rounded,
+    String text = '',
+    Color color = Cartoon.ink,
+  }) {
+    if (loading) return const Center(child: CartoonLoader());
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Cartoon.cream,
+                shape: BoxShape.circle,
+                border: Border.all(color: Cartoon.ink, width: 2),
+              ),
+              child: Icon(icon, size: 32, color: color),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: Cartoon.userText(
+                size: 15,
+                color: color == Cartoon.ink
+                    ? Cartoon.ink.withValues(alpha: 0.6)
+                    : color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildShopTab(GameService game) {
     if (game.shopLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _stateMessage(loading: true);
     }
     if (game.shopError != null) {
-      return Center(
-        child: Text(
-          localizeServiceMessage(game.shopError!, L10n.of(context)),
-          style: const TextStyle(color: Color(0xFFCC6666)),
-        ),
+      return _stateMessage(
+        icon: Icons.error_outline_rounded,
+        color: Cartoon.red,
+        text: localizeServiceMessage(game.shopError!, L10n.of(context)),
       );
     }
     if (game.shopItems.isEmpty) {
-      return Center(
-        child: Text(
-          L10n.of(context).shopNoItems,
-          style: const TextStyle(color: Color(0xFF9A8E8A)),
-        ),
+      return _stateMessage(
+        icon: Icons.storefront_rounded,
+        text: L10n.of(context).shopNoItems,
       );
     }
 
@@ -790,11 +827,9 @@ class _ShopScreenState extends State<ShopScreen> {
     List<Map<String, dynamic>> items,
   ) {
     if (items.isEmpty) {
-      return Center(
-        child: Text(
-          L10n.of(context).shopItemEmpty,
-          style: const TextStyle(color: Color(0xFF9A8E8A)),
-        ),
+      return _stateMessage(
+        icon: Icons.inbox_rounded,
+        text: L10n.of(context).shopItemEmpty,
       );
     }
     // Group duration tiers of one feature (same effect_type) into a single
@@ -909,7 +944,9 @@ class _ShopScreenState extends State<ShopScreen> {
             top: 6,
             bottom: 28 + MediaQuery.viewPaddingOf(context).bottom,
           ),
-          children: rows,
+          // 일일 보상은 고정 영역에서 빼 목록 맨 위에 둔다 — 스크롤하면 같이 올라가
+          // 상품이 보이는 높이를 돌려준다.
+          children: [_buildRewardStrip(game), ...rows],
         );
       },
     );
@@ -1583,22 +1620,19 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildInventoryTab(GameService game) {
     if (game.inventoryLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return _stateMessage(loading: true);
     }
     if (game.inventoryError != null) {
-      return Center(
-        child: Text(
-          localizeServiceMessage(game.inventoryError!, L10n.of(context)),
-          style: const TextStyle(color: Color(0xFFCC6666)),
-        ),
+      return _stateMessage(
+        icon: Icons.error_outline_rounded,
+        color: Cartoon.red,
+        text: localizeServiceMessage(game.inventoryError!, L10n.of(context)),
       );
     }
     if (game.inventoryItems.isEmpty) {
-      return Center(
-        child: Text(
-          L10n.of(context).shopNoInventoryItems,
-          style: const TextStyle(color: Color(0xFF9A8E8A)),
-        ),
+      return _stateMessage(
+        icon: Icons.backpack_rounded,
+        text: L10n.of(context).shopNoInventoryItems,
       );
     }
 
@@ -1655,11 +1689,9 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildInventoryList(List<Map<String, dynamic>> items) {
     if (items.isEmpty) {
-      return Center(
-        child: Text(
-          L10n.of(context).shopItemEmpty,
-          style: const TextStyle(color: Color(0xFF9A8E8A)),
-        ),
+      return _stateMessage(
+        icon: Icons.inbox_rounded,
+        text: L10n.of(context).shopItemEmpty,
       );
     }
     return Center(
@@ -4094,21 +4126,30 @@ class _ShopScreenState extends State<ShopScreen> {
         return AnimatedBuilder(
           animation: controller.animation ?? controller,
           builder: (context, _) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-              child: Row(
-                children: [
-                  for (var i = 0; i < labels.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    _buildCategoryChip(
-                      labels[i],
-                      selected: controller.index == i,
-                      badge: badges != null && badges[i],
-                      onTap: () => controller.animateTo(i),
-                    ),
+            // 칩이 넘치면 오른쪽 끝이 옅어져 더 있다는 걸 알린다. 안 넘치면 오른쪽
+            // 여백(20) 안에서만 옅어지니 칩은 영향이 없다.
+            return ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (rect) => LinearGradient(
+                colors: const [Colors.black, Colors.black, Colors.transparent],
+                stops: [0, (rect.width - 18) / rect.width, 1],
+              ).createShader(rect),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(14, 10, 20, 8),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < labels.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 5),
+                      _buildCategoryChip(
+                        labels[i],
+                        selected: controller.index == i,
+                        badge: badges != null && badges[i],
+                        onTap: () => controller.animateTo(i),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
           },
@@ -4131,7 +4172,7 @@ class _ShopScreenState extends State<ShopScreen> {
         curve: Curves.elasticOut,
         child: Container(
           margin: const EdgeInsets.only(bottom: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
           decoration: BoxDecoration(
             color: selected ? Cartoon.blue : Cartoon.paper,
             borderRadius: BorderRadius.circular(14),
@@ -4149,7 +4190,7 @@ class _ShopScreenState extends State<ShopScreen> {
               Text(
                 label,
                 style: Cartoon.text(
-                  size: 15,
+                  size: 14,
                   color: selected ? Colors.white : Cartoon.ink,
                 ),
               ),

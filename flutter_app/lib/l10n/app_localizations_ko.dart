@@ -5036,4 +5036,53 @@ class L10nKo extends L10n {
   String lobbySpectatorMore(int count) {
     return '외 $count명';
   }
+
+  @override
+  String get rulesTichuComboSingle => '싱글 (1장)';
+
+  @override
+  String get rulesTichuComboPair => '페어 (같은 숫자 2장)';
+
+  @override
+  String get rulesTichuComboTriple => '트리플 (같은 숫자 3장)';
+
+  @override
+  String get rulesTichuComboFullHouse => '풀하우스 (트리플 + 페어)';
+
+  @override
+  String get rulesTichuComboStraight => '스트레이트 (연속 5장 이상)';
+
+  @override
+  String get rulesTichuComboPairSeq => '연속 페어 (연속된 2쌍 이상)';
+
+  @override
+  String get rulesTichuComboBombFour => '포카드 폭탄 (같은 숫자 4장)';
+
+  @override
+  String get rulesTichuComboBombStraightFlush =>
+      '스트레이트 플러시 폭탄 (같은 문양 연속 5장 이상)';
+
+  @override
+  String get rulesSkLeadDemoTitle => '리드 수트 예시';
+
+  @override
+  String get rulesSkLeadDemoEscape =>
+      '도주가 먼저 나와도 다음에 나온 숫자 카드가 리드 수트를 정합니다. 보라 카드가 있다면 따라 내야 합니다.';
+
+  @override
+  String get rulesSkLeadDemoEscapeTag => '리드 수트: 보라';
+
+  @override
+  String get rulesSkLeadDemoPirate =>
+      '해적·인어·스컬킹·크라켄·흰고래가 숫자 카드보다 먼저 나오면 리드 수트가 없습니다. 이후에는 자유롭게 낼 수 있습니다.';
+
+  @override
+  String get rulesSkLeadDemoPirateTag => '리드 수트 없음 · 자유롭게';
+
+  @override
+  String get rulesSkLootDemo =>
+      '보물을 낸 사람과 그 트릭을 이긴 사람이 동맹이 됩니다. 라운드가 끝났을 때 두 사람 모두 비드에 성공해야 각자 보물 1장당 +20점을 얻습니다.';
+
+  @override
+  String get rulesSkLootDemoTag => '둘 다 비드 성공 → 각 +20';
 }

@@ -5189,4 +5189,54 @@ class L10nDe extends L10n {
   String lobbySpectatorMore(int count) {
     return '+$count weitere';
   }
+
+  @override
+  String get rulesTichuComboSingle => 'Einzelkarte (1 Karte)';
+
+  @override
+  String get rulesTichuComboPair => 'Paar (2 gleiche Werte)';
+
+  @override
+  String get rulesTichuComboTriple => 'Drilling (3 gleiche Werte)';
+
+  @override
+  String get rulesTichuComboFullHouse => 'Full House (Drilling + Paar)';
+
+  @override
+  String get rulesTichuComboStraight => 'Straße (5+ aufeinanderfolgend)';
+
+  @override
+  String get rulesTichuComboPairSeq =>
+      'Paarfolge (2+ aufeinanderfolgende Paare)';
+
+  @override
+  String get rulesTichuComboBombFour => 'Vierling-Bombe';
+
+  @override
+  String get rulesTichuComboBombStraightFlush =>
+      'Straight-Flush-Bombe (5+ aufeinanderfolgend, gleiche Farbe)';
+
+  @override
+  String get rulesSkLeadDemoTitle => 'Beispiele zur geführten Farbe';
+
+  @override
+  String get rulesSkLeadDemoEscape =>
+      'Auch wenn zuerst ein Escape gespielt wird, bestimmt die nächste Zahlenkarte die geführte Farbe. Wer Lila hat, muss folgen.';
+
+  @override
+  String get rulesSkLeadDemoEscapeTag => 'Geführte Farbe: Lila';
+
+  @override
+  String get rulesSkLeadDemoPirate =>
+      'Wird ein Pirat, eine Meerjungfrau, der Skull King, der Kraken oder der Weiße Wal vor einer Zahlenkarte gespielt, gibt es keine geführte Farbe. Alle danach spielen frei.';
+
+  @override
+  String get rulesSkLeadDemoPirateTag => 'Keine geführte Farbe · frei spielen';
+
+  @override
+  String get rulesSkLootDemo =>
+      'Der Spieler, der Loot spielt, und der Stichgewinner bilden eine Allianz. Nur wenn beide am Rundenende ihr Gebot erfüllt haben, erhält jeder +20 pro Loot-Karte.';
+
+  @override
+  String get rulesSkLootDemoTag => 'Beide erfüllt → je +20';
 }

@@ -3024,5 +3024,20 @@
         "type": "int"
       }
     }
-  }
+  },
+  "rulesTichuComboSingle": "Single (1 card)",
+  "rulesTichuComboPair": "Pair (2 of the same rank)",
+  "rulesTichuComboTriple": "Triple (3 of the same rank)",
+  "rulesTichuComboFullHouse": "Full House (triple + pair)",
+  "rulesTichuComboStraight": "Straight (5+ consecutive)",
+  "rulesTichuComboPairSeq": "Pair Sequence (2+ consecutive pairs)",
+  "rulesTichuComboBombFour": "Four-of-a-kind Bomb",
+  "rulesTichuComboBombStraightFlush": "Straight Flush Bomb (5+ consecutive, same suit)",
+  "rulesSkLeadDemoTitle": "Lead Suit Examples",
+  "rulesSkLeadDemoEscape": "Even if an Escape is played first, the next number card sets the lead suit. If you hold purple, you must follow it.",
+  "rulesSkLeadDemoEscapeTag": "Lead suit: purple",
+  "rulesSkLeadDemoPirate": "If a Pirate, Mermaid, Skull King, Kraken or White Whale is played before any number card, there is no lead suit. Everyone after may play freely.",
+  "rulesSkLeadDemoPirateTag": "No lead suit · play freely",
+  "rulesSkLootDemo": "The player who played Loot and the player who wins the trick form an alliance. Only if both make their bids by the end of the round does each earn +20 per Loot card.",
+  "rulesSkLootDemoTag": "Both bids made → +20 each"
 }

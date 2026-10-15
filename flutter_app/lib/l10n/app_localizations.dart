@@ -9092,6 +9092,96 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'+{count} more'**
   String lobbySpectatorMore(int count);
+
+  /// No description provided for @rulesTichuComboSingle.
+  ///
+  /// In en, this message translates to:
+  /// **'Single (1 card)'**
+  String get rulesTichuComboSingle;
+
+  /// No description provided for @rulesTichuComboPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair (2 of the same rank)'**
+  String get rulesTichuComboPair;
+
+  /// No description provided for @rulesTichuComboTriple.
+  ///
+  /// In en, this message translates to:
+  /// **'Triple (3 of the same rank)'**
+  String get rulesTichuComboTriple;
+
+  /// No description provided for @rulesTichuComboFullHouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Full House (triple + pair)'**
+  String get rulesTichuComboFullHouse;
+
+  /// No description provided for @rulesTichuComboStraight.
+  ///
+  /// In en, this message translates to:
+  /// **'Straight (5+ consecutive)'**
+  String get rulesTichuComboStraight;
+
+  /// No description provided for @rulesTichuComboPairSeq.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair Sequence (2+ consecutive pairs)'**
+  String get rulesTichuComboPairSeq;
+
+  /// No description provided for @rulesTichuComboBombFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Four-of-a-kind Bomb'**
+  String get rulesTichuComboBombFour;
+
+  /// No description provided for @rulesTichuComboBombStraightFlush.
+  ///
+  /// In en, this message translates to:
+  /// **'Straight Flush Bomb (5+ consecutive, same suit)'**
+  String get rulesTichuComboBombStraightFlush;
+
+  /// No description provided for @rulesSkLeadDemoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead Suit Examples'**
+  String get rulesSkLeadDemoTitle;
+
+  /// No description provided for @rulesSkLeadDemoEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Even if an Escape is played first, the next number card sets the lead suit. If you hold purple, you must follow it.'**
+  String get rulesSkLeadDemoEscape;
+
+  /// No description provided for @rulesSkLeadDemoEscapeTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead suit: purple'**
+  String get rulesSkLeadDemoEscapeTag;
+
+  /// No description provided for @rulesSkLeadDemoPirate.
+  ///
+  /// In en, this message translates to:
+  /// **'If a Pirate, Mermaid, Skull King, Kraken or White Whale is played before any number card, there is no lead suit. Everyone after may play freely.'**
+  String get rulesSkLeadDemoPirate;
+
+  /// No description provided for @rulesSkLeadDemoPirateTag.
+  ///
+  /// In en, this message translates to:
+  /// **'No lead suit · play freely'**
+  String get rulesSkLeadDemoPirateTag;
+
+  /// No description provided for @rulesSkLootDemo.
+  ///
+  /// In en, this message translates to:
+  /// **'The player who played Loot and the player who wins the trick form an alliance. Only if both make their bids by the end of the round does each earn +20 per Loot card.'**
+  String get rulesSkLootDemo;
+
+  /// No description provided for @rulesSkLootDemoTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Both bids made → +20 each'**
+  String get rulesSkLootDemoTag;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

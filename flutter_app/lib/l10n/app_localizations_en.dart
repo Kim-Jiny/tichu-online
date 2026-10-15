@@ -5154,4 +5154,53 @@ class L10nEn extends L10n {
   String lobbySpectatorMore(int count) {
     return '+$count more';
   }
+
+  @override
+  String get rulesTichuComboSingle => 'Single (1 card)';
+
+  @override
+  String get rulesTichuComboPair => 'Pair (2 of the same rank)';
+
+  @override
+  String get rulesTichuComboTriple => 'Triple (3 of the same rank)';
+
+  @override
+  String get rulesTichuComboFullHouse => 'Full House (triple + pair)';
+
+  @override
+  String get rulesTichuComboStraight => 'Straight (5+ consecutive)';
+
+  @override
+  String get rulesTichuComboPairSeq => 'Pair Sequence (2+ consecutive pairs)';
+
+  @override
+  String get rulesTichuComboBombFour => 'Four-of-a-kind Bomb';
+
+  @override
+  String get rulesTichuComboBombStraightFlush =>
+      'Straight Flush Bomb (5+ consecutive, same suit)';
+
+  @override
+  String get rulesSkLeadDemoTitle => 'Lead Suit Examples';
+
+  @override
+  String get rulesSkLeadDemoEscape =>
+      'Even if an Escape is played first, the next number card sets the lead suit. If you hold purple, you must follow it.';
+
+  @override
+  String get rulesSkLeadDemoEscapeTag => 'Lead suit: purple';
+
+  @override
+  String get rulesSkLeadDemoPirate =>
+      'If a Pirate, Mermaid, Skull King, Kraken or White Whale is played before any number card, there is no lead suit. Everyone after may play freely.';
+
+  @override
+  String get rulesSkLeadDemoPirateTag => 'No lead suit · play freely';
+
+  @override
+  String get rulesSkLootDemo =>
+      'The player who played Loot and the player who wins the trick form an alliance. Only if both make their bids by the end of the round does each earn +20 per Loot card.';
+
+  @override
+  String get rulesSkLootDemoTag => 'Both bids made → +20 each';
 }

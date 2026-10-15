@@ -67,7 +67,10 @@ class _RulesScreenState extends State<RulesScreen> {
                   onTap: () => _showGamePicker(),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(14),
@@ -125,28 +128,28 @@ class _RulesScreenState extends State<RulesScreen> {
   static const _games = ['tichu', 'skull_king', 'love_letter', 'mighty'];
 
   IconData _gameIcon(String key) => switch (key) {
-        'tichu' => Icons.style,
-        'skull_king' => Icons.anchor,
-        'love_letter' => Icons.favorite,
-        'mighty' => Icons.military_tech,
-        _ => Icons.style,
-      };
+    'tichu' => Icons.style,
+    'skull_king' => Icons.anchor,
+    'love_letter' => Icons.favorite,
+    'mighty' => Icons.military_tech,
+    _ => Icons.style,
+  };
 
   Color _gameColor(String key) => switch (key) {
-        'tichu' => const Color(0xFF6C63FF),
-        'skull_king' => const Color(0xFF2D2D3D),
-        'love_letter' => const Color(0xFFE91E63),
-        'mighty' => const Color(0xFF1565C0),
-        _ => const Color(0xFF6C63FF),
-      };
+    'tichu' => const Color(0xFF6C63FF),
+    'skull_king' => const Color(0xFF2D2D3D),
+    'love_letter' => const Color(0xFFE91E63),
+    'mighty' => const Color(0xFF1565C0),
+    _ => const Color(0xFF6C63FF),
+  };
 
   String _gameLabel(String key) => switch (key) {
-        'tichu' => L10n.of(context).rulesTabTichu,
-        'skull_king' => L10n.of(context).rulesTabSkullKing,
-        'love_letter' => L10n.of(context).rulesTabLoveLetter,
-        'mighty' => L10n.of(context).rulesTabMighty,
-        _ => '',
-      };
+    'tichu' => L10n.of(context).rulesTabTichu,
+    'skull_king' => L10n.of(context).rulesTabSkullKing,
+    'love_letter' => L10n.of(context).rulesTabLoveLetter,
+    'mighty' => L10n.of(context).rulesTabMighty,
+    _ => '',
+  };
 
   void _showGamePicker() {
     showModalBottomSheet<String>(
@@ -201,10 +204,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuGoalTitle,
-          child: Text(
-            L10n.of(context).rulesTichuGoalBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesTichuGoalBody),
         ),
         _section(
           icon: Icons.style,
@@ -302,10 +302,7 @@ class _RulesScreenState extends State<RulesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                L10n.of(context).rulesTichuDeclarationBody,
-                style: _bodyStyle,
-              ),
+              _RuleText(L10n.of(context).rulesTichuDeclarationBody),
               const SizedBox(height: 10),
               _TichuDeclarationRow(
                 title: L10n.of(context).rulesTichuLargeTichu,
@@ -329,46 +326,95 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuFlowTitle,
-          child: Text(
-            L10n.of(context).rulesTichuFlowBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesTichuFlowBody),
         ),
         _section(
           icon: Icons.layers,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuPlayTitle,
-          child: Text(
-            L10n.of(context).rulesTichuPlayBody,
-            style: _bodyStyle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _RuleText(L10n.of(context).rulesTichuPlayBody),
+              const SizedBox(height: 14),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboSingle,
+                cards: const ['heart_K'],
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboPair,
+                cards: const ['spade_9', 'heart_9'],
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboTriple,
+                cards: const ['spade_6', 'heart_6', 'club_6'],
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboFullHouse,
+                cards: const [
+                  'spade_J',
+                  'heart_J',
+                  'club_J',
+                  'spade_4',
+                  'heart_4',
+                ],
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboStraight,
+                cards: const [
+                  'spade_5',
+                  'heart_6',
+                  'club_7',
+                  'diamond_8',
+                  'spade_9',
+                ],
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboPairSeq,
+                cards: const ['spade_7', 'heart_7', 'spade_8', 'club_8'],
+              ),
+            ],
           ),
         ),
         _section(
           icon: Icons.local_fire_department,
           iconColor: const Color(0xFFE53935),
           title: L10n.of(context).rulesTichuBombTitle,
-          child: Text(
-            L10n.of(context).rulesTichuBombBody,
-            style: _bodyStyle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboBombFour,
+                cards: const ['spade_10', 'heart_10', 'diamond_10', 'club_10'],
+                accent: const Color(0xFFE53935),
+              ),
+              _ComboRow(
+                label: L10n.of(context).rulesTichuComboBombStraightFlush,
+                cards: const [
+                  'spade_5',
+                  'spade_6',
+                  'spade_7',
+                  'spade_8',
+                  'spade_9',
+                ],
+                accent: const Color(0xFFE53935),
+              ),
+              const SizedBox(height: 4),
+              _RuleText(L10n.of(context).rulesTichuBombBody),
+            ],
           ),
         ),
         _section(
           icon: Icons.calculate,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuScoringTitle,
-          child: Text(
-            L10n.of(context).rulesTichuScoringBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesTichuScoringBody),
         ),
         _section(
           icon: Icons.emoji_events,
           iconColor: tichuAccent,
           title: L10n.of(context).rulesTichuWinTitle,
-          child: Text(
-            L10n.of(context).rulesTichuWinBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesTichuWinBody),
         ),
       ],
     );
@@ -385,10 +431,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkGoalTitle,
-          child: Text(
-            L10n.of(context).rulesSkGoalBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesSkGoalBody),
         ),
         _section(
           icon: Icons.style,
@@ -461,7 +504,7 @@ class _RulesScreenState extends State<RulesScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             height: 1.5,
                             color: Color(0xFF3E312A),
                           ),
@@ -473,9 +516,7 @@ class _RulesScreenState extends State<RulesScreen> {
                                 color: Color(0xFF212121),
                               ),
                             ),
-                            TextSpan(
-                              text: L10n.of(context).rulesSkTrumpBody,
-                            ),
+                            TextSpan(text: L10n.of(context).rulesSkTrumpBody),
                           ],
                         ),
                       ),
@@ -548,9 +589,47 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: skAccent,
           title: L10n.of(context).rulesSkFlowTitle,
-          child: Text(
-            L10n.of(context).rulesSkFlowBody,
-            style: _bodyStyle,
+          child: _RuleText(L10n.of(context).rulesSkFlowBody),
+        ),
+        _section(
+          icon: Icons.visibility,
+          iconColor: skAccent,
+          title: L10n.of(context).rulesSkLeadDemoTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _FlowDemo(
+                cards: const [
+                  _SkMini.special('escape'),
+                  _SkMini.number('purple', '5'),
+                  _SkMini.next(),
+                ],
+                caption: L10n.of(context).rulesSkLeadDemoEscape,
+                tag: L10n.of(context).rulesSkLeadDemoEscapeTag,
+                tagColor: const Color(0xFF6A1B9A),
+              ),
+              const SizedBox(height: 10),
+              _FlowDemo(
+                cards: const [
+                  _SkMini.special('pirate'),
+                  _SkMini.number('purple', '5'),
+                  _SkMini.next(),
+                ],
+                caption: L10n.of(context).rulesSkLeadDemoPirate,
+                tag: L10n.of(context).rulesSkLeadDemoPirateTag,
+                tagColor: const Color(0xFF455A64),
+              ),
+              const SizedBox(height: 10),
+              _FlowDemo(
+                cards: const [
+                  _SkMini.special('loot'),
+                  _SkMini.number('purple', '9'),
+                ],
+                caption: L10n.of(context).rulesSkLootDemo,
+                tag: L10n.of(context).rulesSkLootDemoTag,
+                tagColor: const Color(0xFF2E7D32),
+              ),
+            ],
           ),
         ),
         _section(
@@ -560,10 +639,7 @@ class _RulesScreenState extends State<RulesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                L10n.of(context).rulesSkScoringBody,
-                style: _bodyStyle,
-              ),
+              _RuleText(L10n.of(context).rulesSkScoringBody),
               const SizedBox(height: 12),
               _ExampleBlock(
                 title: L10n.of(context).rulesSkExample1Title,
@@ -619,10 +695,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.emoji_events,
           iconColor: const Color(0xFF2D2D3D),
           title: L10n.of(context).rulesSkWinTitle,
-          child: Text(
-            L10n.of(context).rulesSkWinBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesSkWinBody),
         ),
         _section(
           icon: Icons.extension,
@@ -631,10 +704,7 @@ class _RulesScreenState extends State<RulesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                L10n.of(context).rulesSkExpansionBody,
-                style: _bodyStyle,
-              ),
+              _RuleText(L10n.of(context).rulesSkExpansionBody),
               const SizedBox(height: 12),
               _expansionCard(
                 assetPath: 'assets/cards/sk_kraken.webp',
@@ -677,10 +747,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlGoalTitle,
-          child: Text(
-            L10n.of(context).rulesLlGoalBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesLlGoalBody),
         ),
         _section(
           icon: Icons.style,
@@ -766,9 +833,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F50D}',
                 title: L10n.of(context).rulesLlEffectSpyTitle,
-                lines: [
-                  L10n.of(context).rulesLlEffectSpyLine1,
-                ],
+                lines: [L10n.of(context).rulesLlEffectSpyLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -783,9 +848,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F9D1}\u{200D}\u{1F91D}\u{200D}\u{1F9D1}',
                 title: L10n.of(context).rulesLlEffectHandmaidTitle,
-                lines: [
-                  L10n.of(context).rulesLlEffectHandmaidLine1,
-                ],
+                lines: [L10n.of(context).rulesLlEffectHandmaidLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -800,9 +863,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F934}',
                 title: L10n.of(context).rulesLlEffectKingTitle,
-                lines: [
-                  L10n.of(context).rulesLlEffectKingLine1,
-                ],
+                lines: [L10n.of(context).rulesLlEffectKingLine1],
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -817,9 +878,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _SpecialRule(
                 emoji: '\u{1F478}',
                 title: L10n.of(context).rulesLlEffectPrincessTitle,
-                lines: [
-                  L10n.of(context).rulesLlEffectPrincessLine1,
-                ],
+                lines: [L10n.of(context).rulesLlEffectPrincessLine1],
               ),
             ],
           ),
@@ -828,19 +887,13 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.format_list_numbered,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlFlowTitle,
-          child: Text(
-            L10n.of(context).rulesLlFlowBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesLlFlowBody),
         ),
         _section(
           icon: Icons.emoji_events,
           iconColor: llAccent,
           title: L10n.of(context).rulesLlWinTitle,
-          child: Text(
-            L10n.of(context).rulesLlWinBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesLlWinBody),
         ),
       ],
     );
@@ -857,10 +910,7 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.flag,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtGoalTitle,
-          child: Text(
-            L10n.of(context).rulesMtGoalBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtGoalBody),
         ),
         _section(
           icon: Icons.style,
@@ -871,10 +921,7 @@ class _RulesScreenState extends State<RulesScreen> {
             children: [
               const _MightyDeckPreview(),
               const SizedBox(height: 8),
-              Text(
-                L10n.of(context).rulesMtCardCompositionBody,
-                style: _bodyStyle,
-              ),
+              _RuleText(L10n.of(context).rulesMtCardCompositionBody),
             ],
           ),
         ),
@@ -934,73 +981,49 @@ class _RulesScreenState extends State<RulesScreen> {
           icon: Icons.gavel,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtBiddingTitle,
-          child: Text(
-            L10n.of(context).rulesMtBiddingBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtBiddingBody),
         ),
         _section(
           icon: Icons.block,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtDealMissTitle,
-          child: Text(
-            L10n.of(context).rulesMtDealMissBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtDealMissBody),
         ),
         _section(
           icon: Icons.gps_fixed,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtKillTitle,
-          child: Text(
-            L10n.of(context).rulesMtKillBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtKillBody),
         ),
         _section(
           icon: Icons.people,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtFriendTitle,
-          child: Text(
-            L10n.of(context).rulesMtFriendBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtFriendBody),
         ),
         _section(
           icon: Icons.swap_horiz,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtKittyTitle,
-          child: Text(
-            L10n.of(context).rulesMtKittyBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtKittyBody),
         ),
         _section(
           icon: Icons.format_list_numbered,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtTrickTitle,
-          child: Text(
-            L10n.of(context).rulesMtTrickBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtTrickBody),
         ),
         _section(
           icon: Icons.calculate,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtScoringTitle,
-          child: Text(
-            L10n.of(context).rulesMtScoringBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtScoringBody),
         ),
         _section(
           icon: Icons.emoji_events,
           iconColor: mtAccent,
           title: L10n.of(context).rulesMtWinTitle,
-          child: Text(
-            L10n.of(context).rulesMtWinBody,
-            style: _bodyStyle,
-          ),
+          child: _RuleText(L10n.of(context).rulesMtWinBody),
         ),
       ],
     );
@@ -1028,19 +1051,19 @@ class _RulesScreenState extends State<RulesScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: iconColor, size: 18),
+                Icon(icon, color: iconColor, size: 22),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF3E312A),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             child,
           ],
         ),
@@ -1072,11 +1095,8 @@ class _RulesScreenState extends State<RulesScreen> {
               width: 44,
               height: 60,
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                width: 44,
-                height: 60,
-                color: color,
-              ),
+              errorBuilder: (_, _, _) =>
+                  Container(width: 44, height: 60, color: color),
             ),
           ),
           const SizedBox(width: 12),
@@ -1108,7 +1128,7 @@ class _RulesScreenState extends State<RulesScreen> {
                       child: Text(
                         L10n.of(context).rulesSkCardCount(count),
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -1120,7 +1140,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 Text(
                   description,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     height: 1.45,
                     color: Color(0xFF5A4038),
                   ),
@@ -1147,8 +1167,8 @@ class _RulesScreenState extends State<RulesScreen> {
   }
 
   static const _bodyStyle = TextStyle(
-    fontSize: 13,
-    height: 1.55,
+    fontSize: 15,
+    height: 1.6,
     color: Color(0xFF5A4038),
   );
 }
@@ -1177,10 +1197,7 @@ class _CardCountRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(width: 10),
-          ],
+          if (leading != null) ...[leading!, const SizedBox(width: 10)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1191,7 +1208,7 @@ class _CardCountRow extends StatelessWidget {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: highlight
                               ? const Color(0xFFE65100)
@@ -1214,7 +1231,7 @@ class _CardCountRow extends StatelessWidget {
                         child: Text(
                           L10n.of(context).rulesSkIncludedByDefault,
                           style: const TextStyle(
-                            fontSize: 9,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFFE65100),
                           ),
@@ -1227,7 +1244,7 @@ class _CardCountRow extends StatelessWidget {
                 Text(
                   sub,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     color: Color(0xFF8A7A72),
                     height: 1.35,
                   ),
@@ -1246,7 +1263,7 @@ class _CardCountRow extends StatelessWidget {
             child: Text(
               L10n.of(context).rulesSkCardCount(count),
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF5A4038),
               ),
@@ -1277,6 +1294,7 @@ class _SpecialRule extends StatelessWidget {
   final String title;
   final List<String> lines;
   final Widget? extra;
+
   /// Optional card ID rendered as a small [PlayingCard] thumbnail at the
   /// right of the rule. When provided, takes visual priority over the
   /// [emoji] badge on the left (the emoji still shows for flavour).
@@ -1284,13 +1302,16 @@ class _SpecialRule extends StatelessWidget {
   /// IDs — the Mighty prefix is stripped before passing to [PlayingCard]
   /// so the correct artwork renders.
   final String? cardId;
+
   /// Alternate card shown side-by-side with [cardId] — used for the
   /// Mighty rule to show both the default ♠A and the ♦A fallback when
   /// spade is the chosen trump.
   final String? altCardId;
+
   /// Short caption rendered under the [altCardId] preview (e.g. a
   /// "when trump = ♠" footnote).
   final String? altCardLabel;
+
   /// Optional in-game corner badge (top-right of the card preview) so
   /// readers can tell at a glance that the Mighty / joker-call badge
   /// they see in play corresponds to this rule.
@@ -1341,7 +1362,7 @@ class _SpecialRule extends StatelessWidget {
                       child: Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF3E312A),
                         ),
@@ -1356,7 +1377,7 @@ class _SpecialRule extends StatelessWidget {
                     child: Text(
                       '• $line',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         height: 1.5,
                         color: Color(0xFF5A4038),
                       ),
@@ -1397,7 +1418,7 @@ class _SpecialRule extends StatelessWidget {
                         altCardLabel!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           height: 1.2,
                           color: Color(0xFF8A7A72),
                         ),
@@ -1435,7 +1456,7 @@ class _TigressDisplayPreview extends StatelessWidget {
           Text(
             L10n.of(context).rulesSkTigressPreviewTitle,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: Color(0xFF4A327E),
             ),
@@ -1513,7 +1534,7 @@ class _TigressChoiceCard extends StatelessWidget {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Color(0xFF5A4038),
             ),
@@ -1564,7 +1585,7 @@ class _ExampleBlock extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF3E312A),
                   ),
@@ -1579,7 +1600,7 @@ class _ExampleBlock extends StatelessWidget {
                 child: Text(
                   result,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -1591,7 +1612,7 @@ class _ExampleBlock extends StatelessWidget {
           Text(
             setup,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               height: 1.4,
               color: Color(0xFF5A4038),
             ),
@@ -1600,7 +1621,7 @@ class _ExampleBlock extends StatelessWidget {
           Text(
             '→ $calc',
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               height: 1.4,
               fontWeight: FontWeight.w600,
               color: Color(0xFF6D615B),
@@ -1645,7 +1666,7 @@ class _TichuDeclarationRow extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: accent,
                 ),
@@ -1660,7 +1681,7 @@ class _TichuDeclarationRow extends StatelessWidget {
                 child: Text(
                   L10n.of(context).rulesTichuDeclSuccess(success),
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -1676,7 +1697,7 @@ class _TichuDeclarationRow extends StatelessWidget {
                 child: Text(
                   L10n.of(context).rulesTichuDeclFail(fail),
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -1688,7 +1709,7 @@ class _TichuDeclarationRow extends StatelessWidget {
           Text(
             when,
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               height: 1.45,
               color: Color(0xFF5A4038),
             ),
@@ -1737,8 +1758,7 @@ class _GamePickerTile extends StatelessWidget {
                 ),
               ),
             ),
-            if (selected)
-              Icon(Icons.check_rounded, color: color, size: 20),
+            if (selected) Icon(Icons.check_rounded, color: color, size: 20),
           ],
         ),
       ),
@@ -1756,13 +1776,7 @@ class _MightyDeckPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     // PlayingCard expects Tichu-style IDs ("spade_A", "joker"); the Mighty
     // prefix would otherwise be parsed as the suit.
-    const cardIds = [
-      'spade_A',
-      'heart_A',
-      'diamond_A',
-      'club_A',
-      'joker',
-    ];
+    const cardIds = ['spade_A', 'heart_A', 'diamond_A', 'club_A', 'joker'];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
@@ -1774,7 +1788,347 @@ class _MightyDeckPreview extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           for (final id in cardIds)
-            PlayingCard(cardId: id, width: 40, height: 56, isInteractive: false),
+            PlayingCard(
+              cardId: id,
+              width: 40,
+              height: 56,
+              isInteractive: false,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Readable body text ──────────────────────────────────────────────────────
+
+/// 줄글 규칙 본문을 보기 좋게 풀어 그린다. 문자열은 그대로 두고 모양만 바꾼다:
+/// 번호 줄은 동그란 번호 뱃지, "•"/"-" 줄은 들여쓴 글머리표, ":" 로 끝나는 줄은
+/// 소제목, 빈 줄은 문단 간격.
+class _RuleText extends StatelessWidget {
+  const _RuleText(this.text);
+
+  final String text;
+
+  static const _ink = Color(0xFF5A4038);
+  static const _strong = Color(0xFF3E312A);
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (final raw in text.split('\n')) {
+      final line = raw.trimRight();
+      if (line.trim().isEmpty) {
+        rows.add(const SizedBox(height: 8));
+        continue;
+      }
+      final indent = line.length - line.trimLeft().length;
+      final t = line.trim();
+      final num = RegExp(r'^(\d+)\.\s+(.*)$').firstMatch(t);
+      if (num != null) {
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  margin: const EdgeInsets.only(top: 1, right: 10),
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEDE7F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    num.group(1)!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF5E35B1),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    num.group(2)!,
+                    style: _RulesScreenState._bodyStyle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+      final bullet = RegExp(r'^[•\-]\s*(.*)$').firstMatch(t);
+      if (bullet != null) {
+        final deep = indent >= 2;
+        rows.add(
+          Padding(
+            padding: EdgeInsets.only(left: deep ? 22 : 4, top: 3, bottom: 3),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 9, right: 10),
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: deep
+                          ? const Color(0xFFB8A9A2)
+                          : const Color(0xFF8A7A72),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    bullet.group(1)!,
+                    style: _RulesScreenState._bodyStyle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+      if (t.endsWith(':') || t.endsWith('：')) {
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Text(
+              t,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                fontWeight: FontWeight.w800,
+                color: _strong,
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(
+            left: indent >= 2 ? 22 : 0,
+            top: 2,
+            bottom: 2,
+          ),
+          child: Text(
+            t,
+            style: const TextStyle(fontSize: 15, height: 1.6, color: _ink),
+          ),
+        ),
+      );
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+  }
+}
+
+// ─── Visual examples ─────────────────────────────────────────────────────────
+
+/// 조합 이름 + 실제 카드 그림.
+class _ComboRow extends StatelessWidget {
+  const _ComboRow({
+    required this.label,
+    required this.cards,
+    this.accent = const Color(0xFF6C63FF),
+  });
+
+  final String label;
+  final List<String> cards;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              for (final c in cards)
+                PlayingCard(
+                  cardId: c,
+                  width: 44,
+                  height: 62,
+                  isInteractive: false,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 스컬킹 예시용 작은 카드. 숫자 카드는 문양 색 + 숫자, 특수 카드는 실제 그림.
+class _SkMini extends StatelessWidget {
+  const _SkMini.number(this.suit, this.rank) : special = null, next = false;
+  const _SkMini.special(this.special) : suit = null, rank = null, next = false;
+  const _SkMini.next() : suit = null, rank = null, special = null, next = true;
+
+  final String? suit;
+  final String? rank;
+  final String? special;
+  final bool next;
+
+  static const _suitColors = {
+    'yellow': Color(0xFFD4A017),
+    'green': Color(0xFF2E7D32),
+    'purple': Color(0xFF6A1B9A),
+    'black': Color(0xFF212121),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    const w = 52.0, h = 73.0;
+    if (special != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Image.asset(
+          'assets/cards/sk_$special.webp',
+          width: w,
+          height: h,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const SizedBox(width: w, height: h),
+        ),
+      );
+    }
+    if (next) {
+      return Container(
+        width: w,
+        height: h,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFB8A9A2), width: 1.5),
+        ),
+        child: const Text(
+          '?',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFFB8A9A2),
+          ),
+        ),
+      );
+    }
+    final color = _suitColors[suit] ?? const Color(0xFF212121);
+    return Container(
+      width: w,
+      height: h,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color, width: 2),
+      ),
+      child: Text(
+        rank!,
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w900,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// 카드 몇 장이 순서대로 나오는 장면 + 설명 + 결과 태그.
+class _FlowDemo extends StatelessWidget {
+  const _FlowDemo({
+    required this.cards,
+    required this.caption,
+    required this.tag,
+    required this.tagColor,
+  });
+
+  final List<Widget> cards;
+  final String caption;
+  final String tag;
+  final Color tagColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4F1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8DDD8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 20,
+                      color: Color(0xFFB8A9A2),
+                    ),
+                  ),
+                cards[i],
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: tagColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              tag,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            caption,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.55,
+              color: Color(0xFF5A4038),
+            ),
+          ),
         ],
       ),
     );

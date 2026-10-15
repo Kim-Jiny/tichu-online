@@ -857,8 +857,11 @@ class _LLGameScreenState extends State<LLGameScreen> {
             // out at 0.88, so on a narrow board the piles stayed full size
             // while the seats shrank around them and each pile ended up
             // covering the neighbouring player's photo.
-            final discardCardHeight = (baseDiscardH * cardScale * boardScale)
-                .clamp(52.0, 108.0);
+            final discardCardHeight =
+                (baseDiscardH * cardScale * boardScale * 0.9).clamp(
+                  48.0,
+                  100.0,
+                );
             seatLayouts.add(
               _LLSeatLayout(
                 player: player,
@@ -1248,36 +1251,44 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             game: _gameService,
                             nickname: player.name,
                             avatarSize: avatarDiameter,
-                            child: ProfileAvatar(
-                              photoUrl: _gameService?.resolvePhotoUrl(
-                                player.photoUrl,
+                            child: _withProtectBadge(
+                              player,
+                              avatarDiameter,
+                              ProfileAvatar(
+                                photoUrl: _gameService?.resolvePhotoUrl(
+                                  player.photoUrl,
+                                ),
+                                size: avatarDiameter,
+                                blocked:
+                                    _gameService?.blockedUsers.contains(
+                                      player.name,
+                                    ) ??
+                                    false,
+                                border: Border.all(
+                                  color:
+                                      (isCurrent || highlighted) &&
+                                          !player.eliminated
+                                      ? (highlighted
+                                            ? Cartoon.blue
+                                            : Cartoon.yellow)
+                                      : (player.protected && !player.eliminated)
+                                      ? Cartoon.blue
+                                      : Cartoon.ink,
+                                  width:
+                                      ((isCurrent || highlighted) &&
+                                              !player.eliminated) ||
+                                          (player.protected &&
+                                              !player.eliminated)
+                                      ? 3.5
+                                      : 2.0,
+                                ),
+                                fallback: player.isBot
+                                    ? BotAvatar(
+                                        size: avatarDiameter,
+                                        name: player.name,
+                                      )
+                                    : DefaultAvatar(size: avatarDiameter),
                               ),
-                              size: avatarDiameter,
-                              blocked:
-                                  _gameService?.blockedUsers.contains(
-                                    player.name,
-                                  ) ??
-                                  false,
-                              border: Border.all(
-                                color:
-                                    (isCurrent || highlighted) &&
-                                        !player.eliminated
-                                    ? (highlighted
-                                          ? Cartoon.blue
-                                          : Cartoon.yellow)
-                                    : Cartoon.ink,
-                                width:
-                                    (isCurrent || highlighted) &&
-                                        !player.eliminated
-                                    ? 3.5
-                                    : 2.0,
-                              ),
-                              fallback: player.isBot
-                                  ? BotAvatar(
-                                      size: avatarDiameter,
-                                      name: player.name,
-                                    )
-                                  : DefaultAvatar(size: avatarDiameter),
                             ),
                           ),
                         ),
@@ -1434,6 +1445,54 @@ class _LLGameScreenState extends State<LLGameScreen> {
     );
   }
 
+  /// 시녀로 보호받는 사람의 사진 모서리에 붙는 방패. 이름 옆 작은 아이콘만으로는
+  /// 누구에게 카드를 못 쓰는지 한눈에 안 들어온다.
+  Widget _withProtectBadge(LLPlayer player, double d, Widget avatar) {
+    if (!player.protected || player.eliminated) return avatar;
+    final badge = (d * 0.36).clamp(16.0, 30.0);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          left: -badge * 0.25,
+          bottom: -badge * 0.15,
+          child: Container(
+            width: badge,
+            height: badge,
+            decoration: BoxDecoration(
+              color: Cartoon.blue,
+              shape: BoxShape.circle,
+              border: Border.all(color: Cartoon.ink, width: 1.8),
+            ),
+            child: Icon(
+              Icons.shield_rounded,
+              size: badge * 0.62,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 대상 선택에 보여 줄 사람들: 고를 수 있는 사람 + 시녀로 보호 중이라 못 고르는
+  /// 사람(흐리게). 서버가 보호 중인 사람을 validTargets 에서 빼므로 그대로 두면
+  /// "왜 그 사람이 없지?"가 된다.
+  List<({LLPlayer player, bool enabled})> _targetCandidates(
+    LLGameStateData state,
+    LLPendingEffect effect,
+  ) {
+    final valid = effect.validTargets.toSet();
+    return [
+      for (final p in state.players)
+        if (valid.contains(p.id))
+          (player: p, enabled: true)
+        else if (p.protected && !p.eliminated && p.id != effect.playerId)
+          (player: p, enabled: false),
+    ];
+  }
+
   Widget _buildSeatDiscardPreview({
     required BuildContext context,
     required String playerName,
@@ -1494,7 +1553,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
     final previewWidthScale = seat.width < 112 ? 1.05 : 1.25;
     final previewWidth = seat.width * previewWidthScale;
     final previewLeft = seat.left - (previewWidth - seat.width) / 2;
-    final gap = seat.compact ? -10.0 : -14.0;
+    // 아래 하트 줄을 덮지 않도록 좌석 바로 밑에서 시작한다.
+    const gap = 2.0;
     final top = seat.top + seat.height + gap;
     return Rect.fromLTWH(
       previewLeft,
@@ -1744,36 +1804,52 @@ class _LLGameScreenState extends State<LLGameScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 6,
-              children: effect.validTargets.map((targetId) {
-                final player = state.players.firstWhere(
-                  (p) => p.id == targetId,
-                  orElse: () => LLPlayer(id: targetId, name: targetId),
-                );
-                final isSelected = _selectedTarget == targetId;
+              children: _targetCandidates(state, effect).map((c) {
+                final player = c.player;
+                final targetId = player.id;
+                final isSelected = c.enabled && _selectedTarget == targetId;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedTarget = targetId),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 7,
-                    ),
-                    decoration:
-                        gamePillDecoration(
-                          radius: 20,
-                          color: isSelected ? Cartoon.yellow : Cartoon.cream,
-                        ).copyWith(
-                          border: Border.all(
-                            color: isSelected
-                                ? Cartoon.ink
-                                : Cartoon.ink.withValues(alpha: 0.4),
-                            width: isSelected ? 2.6 : 1.8,
+                  onTap: c.enabled
+                      ? () => setState(() => _selectedTarget = targetId)
+                      : null,
+                  child: Opacity(
+                    opacity: c.enabled ? 1.0 : 0.45,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration:
+                          gamePillDecoration(
+                            radius: 20,
+                            color: isSelected ? Cartoon.yellow : Cartoon.cream,
+                          ).copyWith(
+                            border: Border.all(
+                              color: isSelected
+                                  ? Cartoon.ink
+                                  : Cartoon.ink.withValues(alpha: 0.4),
+                              width: isSelected ? 2.6 : 1.8,
+                            ),
                           ),
-                        ),
-                    child: Text(
-                      player.name,
-                      style: Cartoon.userText(
-                        size: 14,
-                        weight: FontWeight.w800,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!c.enabled) ...[
+                            const Icon(
+                              Icons.shield_rounded,
+                              size: 15,
+                              color: Cartoon.blue,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            player.name,
+                            style: Cartoon.userText(
+                              size: 14,
+                              weight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -2003,26 +2079,44 @@ class _LLGameScreenState extends State<LLGameScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: effect.validTargets.map((targetId) {
-              final player = state.players.firstWhere(
-                (p) => p.id == targetId,
-                orElse: () => LLPlayer(id: targetId, name: targetId),
-              );
-              return CartoonButton(
+            children: _targetCandidates(state, effect).map((c) {
+              final player = c.player;
+              final button = CartoonButton(
                 expand: false,
                 height: 46,
-                color: Cartoon.red,
-                onPressed: () => gs.llSelectTarget(targetId),
+                color: c.enabled ? Cartoon.red : const Color(0xFF9A8F86),
+                onPressed: c.enabled
+                    ? () => gs.llSelectTarget(player.id)
+                    : null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Text(
-                    player.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Cartoon.userText(size: 16, color: Colors.white),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!c.enabled) ...[
+                        const Icon(
+                          Icons.shield_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(
+                          player.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Cartoon.userText(
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
+              return c.enabled ? button : Opacity(opacity: 0.6, child: button);
             }).toList(),
           ),
         ],

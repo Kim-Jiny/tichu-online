@@ -1706,6 +1706,69 @@ class _LLGameScreenState extends State<LLGameScreen> {
     else if (isMyEffect && effect.type == 'guard' && effect.needsGuess) {
       content = _buildGuardGuessOnly(context, gs, state, effect);
     }
+    // Nothing to choose: a Handmaid play (or a play that fizzled against one)
+    // resolves by itself and the server moves on after a moment. Say what
+    // happened and why — a spinner there only suggested the game was waiting.
+    else if (effect.resolved) {
+      final isBlocked = effect.type == 'blocked';
+      final title = isBlocked
+          ? l10n.llBlockedByHandmaid(
+              actorName,
+              _getCardTypeName(effect.originalType ?? '', l10n),
+            )
+          : _getEffectDescription(effect.type, actorName, l10n);
+      // The card guide line reads "4 · 시녀: 다음 턴까지 …" — keep the part after
+      // the label, which is the reason the card matters.
+      final reason = isBlocked
+          ? l10n.llDescHandmaid
+          : (effect.type == 'handmaid' ? l10n.llDescHandmaid : null);
+      final reasonText = reason?.replaceFirst(RegExp(r'^[^:：]*[:：]\s*'), '');
+      content = Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
+        decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Cartoon.blue,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Cartoon.ink, width: 1.8),
+              ),
+              child: const Icon(
+                Icons.shield_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: Cartoon.userText(size: 15)),
+                  if (reasonText != null && reasonText.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      reasonText,
+                      style: Cartoon.userText(
+                        size: 13,
+                        color: Cartoon.ink.withValues(alpha: 0.65),
+                        weight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     // Waiting for action
     else {
       content = Container(

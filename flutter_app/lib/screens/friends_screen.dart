@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/chat_day.dart';
@@ -9,6 +10,7 @@ import '../utils/last_seen.dart';
 import '../services/game_service.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../theme/cartoon.dart';
+import '../widgets/profile_avatar.dart';
 import '../widgets/profile_identity_cell.dart';
 
 class FriendsScreen extends StatefulWidget {
@@ -30,6 +32,7 @@ class _FriendsScreenState extends State<FriendsScreen>
   // DM chat state
   String? _dmChatPartner;
   final TextEditingController _dmInputController = TextEditingController();
+  final FocusNode _dmFocus = FocusNode();
   final ScrollController _dmScrollController = ScrollController();
   bool _dmLoadingMore = false;
   DateTime? _lastBlockedDmNoticeAt;
@@ -57,6 +60,7 @@ class _FriendsScreenState extends State<FriendsScreen>
     _searchController.dispose();
     _searchDebounce?.cancel();
     _dmInputController.dispose();
+    _dmFocus.dispose();
     _dmScrollController.removeListener(_onDmScroll);
     _dmScrollController.dispose();
     super.dispose();
@@ -123,11 +127,45 @@ class _FriendsScreenState extends State<FriendsScreen>
     });
   }
 
+  /// 상대 프로필 사진(친구 목록에 온 값). 없으면 null → 기본 아바타.
+  String? _partnerPhoto(GameService game) {
+    final partner = _dmChatPartner;
+    if (partner == null) return null;
+    for (final f in game.friendsData) {
+      if (f['nickname'] == partner) {
+        return game.resolvePhotoUrl(f['photoUrl'] as String?);
+      }
+    }
+    return null;
+  }
+
+  /// 테두리 있는 작은 아바타.
+  Widget _smallAvatar(String? photo, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.34),
+        border: Border.all(color: Cartoon.ink, width: 2),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.3),
+        child: ProfileAvatar(
+          photoUrl: photo,
+          size: size - 4,
+          fallback: DefaultAvatar(size: size - 4),
+        ),
+      ),
+    );
+  }
+
   void _sendDm() {
     final text = _dmInputController.text.trim();
     if (text.isEmpty || _dmChatPartner == null) return;
     context.read<GameService>().sendDm(_dmChatPartner!, text);
     _dmInputController.clear();
+    // 보낸 뒤에도 입력창에 커서를 두어 바로 다음 말을 이어 칠 수 있게.
+    _dmFocus.requestFocus();
     // Scroll to bottom after send
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_dmScrollController.hasClients) {
@@ -1226,12 +1264,11 @@ class _FriendsScreenState extends State<FriendsScreen>
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.chat_bubble_rounded,
-                              size: 20,
-                              color: Cartoon.orangeDeep,
+                            Consumer<GameService>(
+                              builder: (_, g, _) =>
+                                  _smallAvatar(_partnerPhoto(g), 36),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _dmChatPartner ?? '',
@@ -1285,7 +1322,21 @@ class _FriendsScreenState extends State<FriendsScreen>
                         final msgIndex = _dmLoadingMore ? index - 1 : index;
                         final msg = messages[msgIndex];
                         final isMine = msg['sender'] == game.playerName;
-                        final bubble = _buildMessageBubble(msg, isMine);
+                        // 상대 말풍선은 연속된 말의 첫 줄(또는 날짜가 바뀐 첫 줄)에만
+                        // 프로필 사진을 붙인다.
+                        final prev = msgIndex > 0
+                            ? messages[msgIndex - 1]
+                            : null;
+                        final firstOfRun =
+                            prev == null ||
+                            prev['sender'] != msg['sender'] ||
+                            needsDayDivider(messages, msgIndex, _dmSentAt);
+                        final bubble = _buildMessageBubble(
+                          msg,
+                          isMine,
+                          avatarUrl: _partnerPhoto(game),
+                          showAvatar: !isMine && firstOfRun,
+                        );
                         // Bubbles carry a clock time and nothing else, so a
                         // conversation spread over weeks read as one long
                         // afternoon. The divider is what says which day you
@@ -1319,20 +1370,46 @@ class _FriendsScreenState extends State<FriendsScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _dmInputController,
-                        maxLength: 500,
-                        maxLines: 3,
-                        minLines: 1,
-                        style: Cartoon.userText(
-                          size: 15,
-                          weight: FontWeight.w500,
+                      // 엔터로 보내기. 줄바꿈은 Shift+엔터. 한글 조합 중의 엔터는
+                      // 글자를 확정하는 키라 보내지 않는다 (마지막 글자가 빠진다).
+                      child: Focus(
+                        onKeyEvent: (node, event) {
+                          if (event is! KeyDownEvent) {
+                            return KeyEventResult.ignored;
+                          }
+                          final isEnter =
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey ==
+                                  LogicalKeyboardKey.numpadEnter;
+                          if (!isEnter ||
+                              HardwareKeyboard.instance.isShiftPressed) {
+                            return KeyEventResult.ignored;
+                          }
+                          final composing = _dmInputController.value.composing;
+                          if (composing.isValid && !composing.isCollapsed) {
+                            return KeyEventResult.ignored;
+                          }
+                          _sendDm();
+                          return KeyEventResult.handled;
+                        },
+                        child: TextField(
+                          controller: _dmInputController,
+                          focusNode: _dmFocus,
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.send,
+                          maxLength: 500,
+                          maxLines: 3,
+                          minLines: 1,
+                          style: Cartoon.userText(
+                            size: 15,
+                            weight: FontWeight.w500,
+                          ),
+                          decoration: Cartoon.inputDecoration(
+                            hint: L10n.of(context).friendsDmInputHint,
+                            radius: 20,
+                          ).copyWith(counterText: ''),
+                          onSubmitted: (_) => _sendDm(),
                         ),
-                        decoration: Cartoon.inputDecoration(
-                          hint: L10n.of(context).friendsDmInputHint,
-                          radius: 20,
-                        ).copyWith(counterText: ''),
-                        onSubmitted: (_) => _sendDm(),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1420,7 +1497,12 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMine) {
+  Widget _buildMessageBubble(
+    Map<String, dynamic> msg,
+    bool isMine, {
+    String? avatarUrl,
+    bool showAvatar = false,
+  }) {
     final message = msg['message'] as String? ?? '';
     final dt = _dmSentAt(msg);
     final timeStr = dt == null
@@ -1436,6 +1518,16 @@ class _FriendsScreenState extends State<FriendsScreen>
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (!isMine) ...[
+            // 사진이 없는 줄은 같은 폭만 비워 말풍선 줄을 맞춘다.
+            showAvatar
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: _smallAvatar(avatarUrl, 34),
+                  )
+                : const SizedBox(width: 34),
+            const SizedBox(width: 6),
+          ],
           if (isMine && timeStr.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 4, bottom: 2),

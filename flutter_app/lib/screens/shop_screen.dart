@@ -9,6 +9,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart' show gameButton;
 import '../services/ad_service.dart';
 import '../services/inventory_new_tracker.dart';
 import '../utils/gold_format.dart';
@@ -360,6 +361,7 @@ class _ShopScreenState extends State<ShopScreen> {
       required Color color,
       required String tooltip,
       required bool dot,
+      String? badge,
       required VoidCallback? onTap,
     }) {
       return Tooltip(
@@ -374,7 +376,28 @@ class _ShopScreenState extends State<ShopScreen> {
                 child: Icon(icon, size: 26, color: color),
               ),
             ),
-            if (dot) Positioned(right: -2, top: -2, child: _newDot()),
+            if (badge != null)
+              Positioned(
+                right: -4,
+                top: -5,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 18,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Cartoon.red,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: Cartoon.ink, width: 1.4),
+                  ),
+                  child: Text(
+                    badge,
+                    style: Cartoon.text(size: 11, color: Colors.white),
+                  ),
+                ),
+              )
+            else if (dot)
+              Positioned(right: -2, top: -2, child: _newDot()),
           ],
         ),
       );
@@ -439,8 +462,11 @@ class _ShopScreenState extends State<ShopScreen> {
                     tooltip: adCanWatch
                         ? l10n.shopAdWatchTitle
                         : l10n.shopAdRewardDone,
-                    dot: adEnabled,
-                    onTap: adEnabled ? () => _watchRewardedAd(game) : null,
+                    dot: false,
+                    badge: adCanWatch
+                        ? '${AdService.maxDailyRewards - _todayAdCount}'
+                        : null,
+                    onTap: () => _showAdRewardInfo(game),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -862,7 +888,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        final cols = w < 520 ? 2 : (w < 860 ? 3 : 4);
+        final cols = w < 520 ? 1 : (w < 860 ? 2 : 3);
         final rows = <Widget>[];
         final groupOf = <Map<String, dynamic>, List<Map<String, dynamic>>>{};
         var pending = <Map<String, dynamic>>[];
@@ -877,7 +903,7 @@ class _ShopScreenState extends State<ShopScreen> {
               delay: Duration(milliseconds: 40 * rowIndex.clamp(0, 6)),
               from: const Offset(0, 18),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                 child: IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -970,137 +996,136 @@ class _ShopScreenState extends State<ShopScreen> {
       ribbon = _cartoonTag(l10n.shopTagLimited, Cartoon.red);
     }
 
-    return CartoonPressable(
-      scale: 0.96,
-      onTap: () => _showItemDetailSheet(context, item),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: BoxDecoration(
-          // 테두리·그림자 없이 옅은 흰 바탕만 — 상품 그림 하나가 눈에 들어오게.
-          color: Colors.white.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(20),
+    // 작은 한 줄 카드: 썸네일 · 이름/태그 · 오른쪽에 가격(또는 장착). 두 칸짜리
+    // 큰 카드는 상품 하나가 화면을 너무 차지해서 한 번에 몇 개 안 보였다.
+    Widget? trailing;
+    if (canQuickEquip) {
+      trailing = CartoonPressable(
+        scale: 0.92,
+        onTap: _busyItemKeys.contains(itemKey)
+            ? null
+            : () => _runItemAction(
+                itemKey,
+                () => isWorn
+                    ? game.unequipCategory(category)
+                    : game.equipItem(itemKey),
+              ),
+        child: Container(
+          width: 74,
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            color: isWorn ? Cartoon.cream : Cartoon.blue,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            isWorn ? l10n.shopButtonUnequip : l10n.shopButtonEquip,
+            textAlign: TextAlign.center,
+            style: Cartoon.text(
+              size: 15,
+              color: isWorn ? Cartoon.ink : Colors.white,
+            ),
+          ),
         ),
-        child: Column(
+      );
+    } else if (!ownedPermanent) {
+      trailing = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: _buildShopRowVisual(item, 84, isNew: _isNew(item)),
-                ),
-                if (ribbon != null)
-                  Positioned(right: 0, top: -2, child: ribbon),
-              ],
-            ),
-            const SizedBox(height: 8),
+            GoldIcon(size: 18, amount: price is int ? price : null),
+            const SizedBox(width: 4),
             Text(
-              name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Cartoon.userText(size: 14.5, height: 1.2),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _buildItemTag(
-                context,
-                isSeason,
-                isPermanent,
-                durationDays,
-                category,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Cartoon.userText(
-                size: 11.5,
-                weight: FontWeight.w500,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+              formatGold(price),
+              style: Cartoon.text(
+                size: 16,
+                color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
               ),
             ),
-            if (ownedExpiryText != null) ...[
-              const SizedBox(height: 3),
-              Text(
-                ownedExpiryText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Cartoon.userText(
-                  size: 11,
-                  color: const Color(0xFF2E8B57),
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            if (canQuickEquip)
-              CartoonPressable(
-                scale: 0.92,
-                onTap: _busyItemKeys.contains(itemKey)
-                    ? null
-                    : () => _runItemAction(
-                        itemKey,
-                        () => isWorn
-                            ? game.unequipCategory(category)
-                            : game.equipItem(itemKey),
+          ],
+        ),
+      );
+    }
+
+    return CartoonPressable(
+      scale: 0.97,
+      onTap: () => _showItemDetailSheet(context, item),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            _buildShopRowVisual(item, 52, isNew: _isNew(item)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 14.5, height: 1.2),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      if (ribbon != null) ...[ribbon, const SizedBox(width: 6)],
+                      Flexible(
+                        child: Text(
+                          _buildItemTag(
+                            context,
+                            isSeason,
+                            isPermanent,
+                            durationDays,
+                            category,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Cartoon.userText(
+                            size: 11.5,
+                            weight: FontWeight.w500,
+                            color: Cartoon.ink.withValues(alpha: 0.6),
+                          ),
+                        ),
                       ),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  decoration: BoxDecoration(
-                    color: isWorn ? Cartoon.cream : Cartoon.blue,
-                    borderRadius: BorderRadius.circular(14),
+                    ],
                   ),
-                  child: Text(
-                    isWorn ? l10n.shopButtonUnequip : l10n.shopButtonEquip,
-                    textAlign: TextAlign.center,
-                    style: Cartoon.text(
-                      size: 15,
-                      color: isWorn ? Cartoon.ink : Colors.white,
-                    ),
-                  ),
-                ),
-              )
-            else if (!ownedPermanent)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GoldIcon(size: 18, amount: price is int ? price : null),
-                    const SizedBox(width: 5),
+                  if (ownedExpiryText != null)
                     Text(
-                      formatGold(price),
-                      style: Cartoon.text(
-                        size: 16,
-                        color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
+                      ownedExpiryText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Cartoon.userText(
+                        size: 11,
+                        color: const Color(0xFF2E8B57),
                       ),
                     ),
-                  ],
-                ),
+                  if (saleWindow != null)
+                    Text(
+                      saleWindow,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Cartoon.userText(
+                        size: 10.5,
+                        color: onSale
+                            ? const Color(0xFFD32F2F)
+                            : Cartoon.ink.withValues(alpha: 0.5),
+                      ),
+                    ),
+                ],
               ),
-            if (saleWindow != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                saleWindow,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Cartoon.userText(
-                  size: 10.5,
-                  color: onSale
-                      ? const Color(0xFFD32F2F)
-                      : Cartoon.ink.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
+            ),
+            if (trailing != null) ...[const SizedBox(width: 8), trailing],
           ],
         ),
       ),
@@ -1322,63 +1347,63 @@ class _ShopScreenState extends State<ShopScreen> {
         ? _formatExpire(context, ownedExpiry)
         : null;
 
-    // 단일 카드와 같은 칸 크기 — 가격 알약 자리에 기간별 칩이 세로로 들어간다.
+    // 한 줄 카드: 썸네일 · 이름 · 오른쪽에 기간별 칩이 세로로.
     return CartoonPressable(
-      scale: 0.96,
+      scale: 0.97,
       // 카드 어디를 눌러도 같은 시트가 열린다: 두 기간을 한 시트에서 고른다.
       onTap: () => _showItemDetailSheet(context, first, tiers: tiers),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          // 테두리·그림자 없이 옅은 흰 바탕만 — 상품 그림 하나가 눈에 들어오게.
           color: Colors.white.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: _buildShopRowVisual(first, 84, isNew: _isNew(first)),
-                ),
-                if (ownedActive)
-                  Positioned(
-                    right: 0,
-                    top: -2,
-                    child: _cartoonTag(l10n.shopItemOwned, Cartoon.green),
+            _buildShopRowVisual(first, 52, isNew: _isNew(first)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    baseName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 14.5, height: 1.2),
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              baseName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Cartoon.userText(size: 14.5, height: 1.2),
-            ),
-            if (ownedExpiryText != null) ...[
-              const SizedBox(height: 3),
-              Text(
-                ownedExpiryText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Cartoon.userText(
-                  size: 11,
-                  color: const Color(0xFF2E8B57),
-                ),
+                  if (ownedActive) ...[
+                    const SizedBox(height: 3),
+                    _cartoonTag(l10n.shopItemOwned, Cartoon.green),
+                  ],
+                  if (ownedExpiryText != null)
+                    Text(
+                      ownedExpiryText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Cartoon.userText(
+                        size: 11,
+                        color: const Color(0xFF2E8B57),
+                      ),
+                    ),
+                ],
               ),
-            ],
-            const SizedBox(height: 8),
-            for (var i = 0; i < tiers.length; i++) ...[
-              if (i > 0) const SizedBox(height: 5),
-              _buildTierChip(context, tiers[i], tiers),
-            ],
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 124,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < tiers.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 5),
+                    _buildTierChip(context, tiers[i], tiers),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -4685,6 +4710,68 @@ class _ShopScreenState extends State<ShopScreen> {
         // Server is the source of truth; double-claim safe.
         game.claimAttendance();
       },
+    );
+  }
+
+  /// 광고 칩을 누르면 먼저 무엇인지(50골드), 오늘 몇 번 남았는지를 보여 주고
+  /// 거기서 시청한다. 아이콘만으로는 광고 보상인지도 얼마를 주는지도 알 수 없다.
+  void _showAdRewardInfo(GameService game) {
+    final l10n = L10n.of(context);
+    final canWatch = _todayAdCount < AdService.maxDailyRewards;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.play_circle_rounded,
+              size: 30,
+              color: Color(0xFF7E57C2),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
+                style: Cartoon.text(size: 20),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          canWatch
+              ? l10n.shopAdWatchProgress(
+                  _todayAdCount,
+                  AdService.maxDailyRewards,
+                )
+              : l10n.shopAdRewardDoneSubtitle,
+          style: Cartoon.userText(size: 15, weight: FontWeight.w600),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(l10n.commonClose, style: Cartoon.text(size: 17)),
+          ),
+          if (canWatch && !_adLoading && _rewardedAdReady)
+            gameButton(
+              l10n.shopAdWatchForGold(_todayAdCount, AdService.maxDailyRewards),
+              () {
+                Navigator.pop(ctx);
+                _watchRewardedAd(game);
+              },
+              color: const Color(0xFF7E57C2),
+              size: 16,
+              hPad: 14,
+            ),
+        ],
+      ),
     );
   }
 

@@ -352,6 +352,84 @@ class _SpectatorRow extends StatelessWidget {
   }
 }
 
+/// 점수 기록 팝업 공통 틀: 카툰 패널 + 제목 줄(아이콘 칩·제목·오른쪽 보조 글자) + 닫기 버튼.
+Widget _historyShell(
+  BuildContext ctx, {
+  required String title,
+  required String closeLabel,
+  Widget? trailing,
+  required List<Widget> children,
+}) {
+  return Dialog(
+    backgroundColor: Cartoon.paper,
+    surfaceTintColor: Colors.transparent,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(26),
+      side: const BorderSide(color: Cartoon.ink, width: 2.5),
+    ),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360, maxHeight: 560),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Cartoon.yellow,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: Cartoon.ink, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: Cartoon.ink,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(title, style: Cartoon.text(size: 22))),
+                ?trailing,
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...children,
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: Cartoon.ink,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: Text(closeLabel, style: Cartoon.text(size: 17)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _historyRule() => Divider(
+  height: 1,
+  thickness: 1.5,
+  color: Cartoon.ink.withValues(alpha: 0.12),
+);
+
+Widget _historyEmpty(String text) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 28),
+  child: Text(
+    text,
+    textAlign: TextAlign.center,
+    style: Cartoon.text(size: 16, color: Cartoon.ink.withValues(alpha: 0.55)),
+  ),
+);
+
 Widget _tichuScoreTotal({
   required String label,
   required int score,
@@ -361,21 +439,20 @@ Widget _tichuScoreTotal({
   return Column(
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
           color: color,
+          borderRadius: BorderRadius.circular(99),
         ),
+        child: Text(label, style: Cartoon.text(size: 13, color: Colors.white)),
       ),
       const SizedBox(height: 4),
       Text(
         '$score',
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: leading ? color : _kTextPrimary,
+        style: Cartoon.text(
+          size: leading ? 34 : 28,
+          color: leading ? color : Cartoon.ink,
         ),
       ),
     ],
@@ -397,205 +474,132 @@ void showTichuScoreHistoryDialog(
   final enemyTotal = myTeam == 'A' ? totalB : totalA;
   final myLabel = myTeam;
   final enemyLabel = myTeam == 'A' ? 'B' : 'A';
-  const myColor = Color(0xFF4A90D9);
-  const enemyColor = Color(0xFFD24B4B);
+  const myColor = Cartoon.blue;
+  const enemyColor = Cartoon.red;
+  final l10n = L10n.of(context);
 
   showDialog(
     context: context,
-    builder: (ctx) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340, maxHeight: 540),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    builder: (ctx) => _historyShell(
+      ctx,
+      title: l10n.gameScoreHistory,
+      closeLabel: l10n.gameClose,
+      // The finish line belongs here rather than beside the running
+      // score on the board, where it read as "25 / 1000" — a
+      // fraction, not a goal.
+      trailing: targetScore == null
+          ? null
+          : Text(
+              l10n.spectatorTargetScore(targetScore),
+              style: Cartoon.text(
+                size: 14,
+                color: Cartoon.ink.withValues(alpha: 0.6),
+              ),
+            ),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _tichuScoreTotal(
+                label: 'TEAM $myLabel',
+                score: myTotal,
+                color: myColor,
+                leading: myTotal >= enemyTotal,
+              ),
+            ),
+            Expanded(
+              child: _tichuScoreTotal(
+                label: 'TEAM $enemyLabel',
+                score: enemyTotal,
+                color: enemyColor,
+                leading: enemyTotal >= myTotal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (history.isEmpty)
+          _historyEmpty(l10n.gameNoCompletedRounds)
+        else ...[
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.history, size: 20, color: _kTextPrimary),
-                  const SizedBox(width: 8),
-                  Text(
-                    L10n.of(context).gameScoreHistory,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _kTextPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  // The finish line belongs here rather than beside the running
-                  // score on the board, where it read as "25 / 1000" — a
-                  // fraction, not a goal.
-                  if (targetScore != null)
-                    Text(
-                      L10n.of(context).spectatorTargetScore(targetScore),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: _kTextSubtle,
-                      ),
-                    ),
-                ],
+              const SizedBox(width: 40),
+              Expanded(
+                child: Text(
+                  'TEAM $myLabel',
+                  textAlign: TextAlign.right,
+                  style: Cartoon.text(size: 13, color: myColor),
+                ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _tichuScoreTotal(
-                      label: 'TEAM $myLabel',
-                      score: myTotal,
-                      color: myColor,
-                      leading: myTotal >= enemyTotal,
-                    ),
-                  ),
-                  Expanded(
-                    child: _tichuScoreTotal(
-                      label: 'TEAM $enemyLabel',
-                      score: enemyTotal,
-                      color: enemyColor,
-                      leading: enemyTotal >= myTotal,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'TEAM $enemyLabel',
+                  textAlign: TextAlign.right,
+                  style: Cartoon.text(size: 13, color: enemyColor),
+                ),
               ),
-              const SizedBox(height: 14),
-              if (history.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 28),
-                  child: Text(
-                    L10n.of(context).gameNoCompletedRounds,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: _kTextSubtle),
-                  ),
-                )
-              else ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _historyRule(),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: history.length,
+              separatorBuilder: (_, _) => _historyRule(),
+              itemBuilder: (_, i) {
+                final r = history[i];
+                final round = r['round'] ?? i + 1;
+                final rawA = r['teamA'] ?? 0;
+                final rawB = r['teamB'] ?? 0;
+                final rMy = myTeam == 'A' ? rawA : rawB;
+                final rEnemy = myTeam == 'A' ? rawB : rawA;
+                final myWon = rMy > rEnemy;
+                final enemyWon = rEnemy > rMy;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
-                      const SizedBox(
-                        width: 36,
+                      SizedBox(
+                        width: 40,
                         child: Text(
-                          'R',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: _kTextSubtle,
+                          'R$round',
+                          style: Cartoon.text(
+                            size: 15,
+                            color: Cartoon.ink.withValues(alpha: 0.55),
                           ),
                         ),
                       ),
                       Expanded(
                         child: Text(
-                          'TEAM $myLabel',
+                          rMy >= 0 ? '+$rMy' : '$rMy',
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: myColor,
+                          style: Cartoon.text(
+                            size: 18,
+                            color: myWon ? myColor : Cartoon.ink,
                           ),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'TEAM $enemyLabel',
+                          rEnemy >= 0 ? '+$rEnemy' : '$rEnemy',
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: enemyColor,
+                          style: Cartoon.text(
+                            size: 18,
+                            color: enemyWon ? enemyColor : Cartoon.ink,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const Divider(
-                  height: 12,
-                  thickness: 1,
-                  color: Color(0xFFEDE5E0),
-                ),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: history.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFF2EAE5),
-                    ),
-                    itemBuilder: (_, i) {
-                      final r = history[i];
-                      final round = r['round'] ?? i + 1;
-                      final rawA = r['teamA'] ?? 0;
-                      final rawB = r['teamB'] ?? 0;
-                      final rMy = myTeam == 'A' ? rawA : rawB;
-                      final rEnemy = myTeam == 'A' ? rawB : rawA;
-                      final myWon = rMy > rEnemy;
-                      final enemyWon = rEnemy > rMy;
-                      return Container(
-                        color: i.isOdd ? const Color(0xFFF6F8FB) : null,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 36,
-                              child: Text(
-                                'R$round',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: _kTextSubtle,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                rMy >= 0 ? '+$rMy' : '$rMy',
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: myWon ? myColor : _kTextPrimary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                rEnemy >= 0 ? '+$rEnemy' : '$rEnemy',
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: enemyWon ? enemyColor : _kTextPrimary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                child: Text(L10n.of(context).gameClose),
-              ),
-            ],
+                );
+              },
+            ),
           ),
-        ),
-      ),
+        ],
+      ],
     ),
   );
 }
@@ -609,174 +613,117 @@ void showLLScoreHistoryDialog(
   required List<LLPlayer> players,
   required int targetTokens,
 }) {
-  const accent = Color(0xFFD24B7A);
+  const accent = Color(0xFFE0457B);
   final l10n = L10n.of(context);
   final sorted = [...players]..sort((a, b) => b.tokens.compareTo(a.tokens));
   final topTokens = sorted.isNotEmpty ? sorted.first.tokens : 0;
 
   showDialog(
     context: context,
-    builder: (ctx) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340, maxHeight: 540),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.history, size: 20, color: _kTextPrimary),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.gameScoreHistory,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _kTextPrimary,
-                    ),
+    builder: (ctx) => _historyShell(
+      ctx,
+      title: l10n.gameScoreHistory,
+      closeLabel: l10n.gameClose,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.favorite_rounded, size: 18, color: accent),
+          const SizedBox(width: 3),
+          Text('$targetTokens', style: Cartoon.text(size: 17, color: accent)),
+        ],
+      ),
+      children: [
+        // Current token standings.
+        ...sorted.map((p) {
+          final isLeader = topTokens > 0 && p.tokens == topTokens;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    p.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 16),
                   ),
-                  const Spacer(),
-                  const Icon(Icons.favorite, size: 14, color: accent),
-                  const SizedBox(width: 3),
-                  Text(
-                    '$targetTokens',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: accent,
-                    ),
+                ),
+                Icon(
+                  Icons.favorite_rounded,
+                  size: 18,
+                  color: isLeader
+                      ? accent
+                      : Cartoon.ink.withValues(alpha: 0.35),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${p.tokens}',
+                  style: Cartoon.text(
+                    size: 20,
+                    color: isLeader ? accent : Cartoon.ink,
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Current token standings.
-              ...sorted.map((p) {
-                final isLeader = topTokens > 0 && p.tokens == topTokens;
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 6),
+        _historyRule(),
+        if (roundHistory.isEmpty)
+          _historyEmpty(l10n.gameNoCompletedRounds)
+        else
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: roundHistory.length,
+              separatorBuilder: (_, _) => _historyRule(),
+              itemBuilder: (_, i) {
+                final r = roundHistory[i];
+                final names = r.winnerNames.isNotEmpty
+                    ? r.winnerNames.join(', ')
+                    : (r.winnerName ?? '-');
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
-                      Expanded(
+                      SizedBox(
+                        width: 38,
                         child: Text(
-                          p.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: _kTextPrimary,
+                          'R${r.round}',
+                          style: Cartoon.text(
+                            size: 15,
+                            color: Cartoon.ink.withValues(alpha: 0.55),
                           ),
                         ),
                       ),
-                      Icon(
-                        Icons.favorite,
-                        size: 14,
-                        color: isLeader ? accent : _kTextSubtle,
+                      const Icon(
+                        Icons.favorite_rounded,
+                        size: 16,
+                        color: accent,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${p.tokens}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isLeader ? accent : _kTextPrimary,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          names,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Cartoon.userText(size: 15),
                         ),
                       ),
+                      if (r.isShared) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.llRoundSharedWinners,
+                          style: Cartoon.text(size: 12, color: accent),
+                        ),
+                      ],
                     ],
                   ),
                 );
-              }),
-              const SizedBox(height: 4),
-              const Divider(height: 12, thickness: 1, color: Color(0xFFEDE5E0)),
-              if (roundHistory.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    l10n.gameNoCompletedRounds,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13, color: _kTextSubtle),
-                  ),
-                )
-              else
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: roundHistory.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFF2EAE5),
-                    ),
-                    itemBuilder: (_, i) {
-                      final r = roundHistory[i];
-                      final names = r.winnerNames.isNotEmpty
-                          ? r.winnerNames.join(', ')
-                          : (r.winnerName ?? '-');
-                      return Container(
-                        color: i.isOdd ? const Color(0xFFFBF4F7) : null,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 34,
-                              child: Text(
-                                'R${r.round}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: _kTextSubtle,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.favorite, size: 13, color: accent),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                names,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: _kTextPrimary,
-                                ),
-                              ),
-                            ),
-                            if (r.isShared) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                l10n.llRoundSharedWinners,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: accent,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                child: Text(l10n.gameClose),
-              ),
-            ],
+              },
+            ),
           ),
-        ),
-      ),
+      ],
     ),
   );
 }

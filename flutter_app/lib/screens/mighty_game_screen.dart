@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../theme/cartoon.dart';
 import '../services/game_service.dart';
 import '../models/mighty_game_state.dart';
 import '../widgets/afk_kick_badge.dart';
@@ -5002,13 +5003,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => game.mightyReservePass(),
                 icon: Icon(
-                  state.reservedPass
-                      ? Icons.check_circle
-                      : Icons.schedule_send,
+                  state.reservedPass ? Icons.check_circle : Icons.schedule_send,
                   size: 16,
                 ),
                 label: Text(
-                  state.reservedPass ? l10n.mtReservePassed : l10n.mtReservePass,
+                  state.reservedPass
+                      ? l10n.mtReservePassed
+                      : l10n.mtReservePass,
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: state.reservedPass
@@ -7139,8 +7140,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFFFBFCFE),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
         titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
         contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
         title: Row(
@@ -7149,36 +7154,32 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 26,
-                    height: 26,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF2FF),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Cartoon.yellow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Cartoon.ink, width: 2),
                     ),
                     child: const Icon(
-                      Icons.table_chart_rounded,
-                      size: 16,
-                      color: Color(0xFF295EA8),
+                      Icons.emoji_events_rounded,
+                      size: 23,
+                      color: Cartoon.ink,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     L10n.of(context).mtScoreHistory,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF233142),
-                    ),
+                    style: Cartoon.text(size: 22),
                   ),
                   const SizedBox(width: 8),
                   // Spelled out, the same way Tichu's history popup does it:
                   // "/50" beside a running total reads as a fraction.
                   Text(
                     L10n.of(context).spectatorTargetScore(game.roomTargetScore),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6B7A90),
+                    style: Cartoon.text(
+                      size: 14,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
                     ),
                   ),
                 ],
@@ -7186,10 +7187,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             Text(
               '${state.scoreHistory.length}R',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF6B7A90),
+              style: Cartoon.text(
+                size: 15,
+                color: Cartoon.ink.withValues(alpha: 0.55),
               ),
             ),
           ],
@@ -7200,10 +7200,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Text(
                   L10n.of(ctx).gameNoCompletedRounds,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6B7A90),
+                  style: Cartoon.text(
+                    size: 16,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
                   ),
                 ),
               )
@@ -7217,7 +7216,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         String text, {
                         TextAlign align = TextAlign.center,
                         FontWeight fontWeight = FontWeight.w600,
-                        Color color = const Color(0xFF5A4038),
+                        Color color = Cartoon.ink,
                         double fontSize = 12,
                         EdgeInsets padding = const EdgeInsets.symmetric(
                           horizontal: 3,
@@ -7231,10 +7230,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             textAlign: align,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: fontSize,
-                              fontWeight: fontWeight,
+                            style: Cartoon.userText(
+                              size: fontSize + 2,
                               color: color,
+                              weight: fontWeight,
                             ),
                           ),
                         );
@@ -7245,7 +7244,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       Widget bidCell({
                         required String? trumpSuit,
                         required String label,
-                        Color color = const Color(0xFF233142),
+                        Color color = Cartoon.ink,
                         bool dealMiss = false,
                       }) {
                         if (dealMiss || trumpSuit == null) {
@@ -7299,11 +7298,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             TableCellVerticalAlignment.middle,
                         children: [
                           TableRow(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEAF2FF),
+                            decoration: BoxDecoration(
+                              color: Cartoon.cream,
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Color(0xFFC9DCF7),
+                                  color: Cartoon.ink.withValues(alpha: 0.2),
                                   width: 1,
                                 ),
                               ),
@@ -7313,13 +7312,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 'R',
                                 fontWeight: FontWeight.w800,
                                 fontSize: 12,
-                                color: const Color(0xFF295EA8),
+                                color: Cartoon.orangeDeep,
                               ),
                               cell(
                                 L10n.of(context).mtBidShort,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 12,
-                                color: const Color(0xFF295EA8),
+                                color: Cartoon.orangeDeep,
                               ),
                               ...state.players.map(
                                 (p) => cell(
@@ -7329,14 +7328,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   fontWeight: FontWeight.w800,
                                   fontSize: 12,
                                   color: p.position == 'self'
-                                      ? const Color(0xFF355D89)
-                                      : const Color(0xFF295EA8),
+                                      ? Cartoon.blue
+                                      : Cartoon.orangeDeep,
                                 ),
                               ),
                             ],
                           ),
                           ...state.scoreHistory.asMap().entries.map((mapEntry) {
-                            final rowIndex = mapEntry.key;
                             final entry = mapEntry.value;
                             final trump =
                                 suitSymbol[entry.trumpSuit] ??
@@ -7361,22 +7359,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             // Colour the bid cell by outcome so a scan of the column
                             // reads success (green) / fail (red) / deal-miss (amber).
                             final bidColor = entry.dealMiss
-                                ? const Color(0xFFB56A1D)
+                                ? Cartoon.orangeDeep
                                 : entry.success
-                                ? const Color(0xFF2E9E5B)
-                                : const Color(0xFFD04A5B);
+                                ? Cartoon.green
+                                : Cartoon.red;
                             return TableRow(
-                              decoration: BoxDecoration(
-                                color: rowIndex.isOdd
-                                    ? const Color(0xFFF4F8FD)
-                                    : null,
-                              ),
+                              decoration: BoxDecoration(color: null),
                               children: [
                                 cell(
                                   '${entry.round}',
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12,
-                                  color: const Color(0xFF8A92A0),
+                                  color: Cartoon.ink.withValues(alpha: 0.55),
                                 ),
                                 bidCell(
                                   trumpSuit: showSuitIcon ? trumpKey : null,
@@ -7396,8 +7390,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                       : 0;
                                   final base = diff - bonus;
                                   final scoreColor = diff < 0
-                                      ? const Color(0xFFD04A5B)
-                                      : const Color(0xFF233142);
+                                      ? Cartoon.red
+                                      : Cartoon.ink;
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 4,
@@ -7426,7 +7420,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w700,
-                                                  color: Color(0xFFB56A1D),
+                                                  color: Cartoon.orangeDeep,
                                                   height: 1.1,
                                                 ),
                                               ),
@@ -7452,11 +7446,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             );
                           }),
                           TableRow(
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEAF2FF),
+                            decoration: BoxDecoration(
+                              color: Cartoon.cream,
                               border: Border(
                                 top: BorderSide(
-                                  color: Color(0xFFC9DCF7),
+                                  color: Cartoon.ink.withValues(alpha: 0.2),
                                   width: 1.5,
                                 ),
                               ),
@@ -7468,7 +7462,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 align: TextAlign.left,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 12,
-                                color: const Color(0xFF233142),
+                                color: Cartoon.ink,
                               ),
                               ...state.players.map((p) {
                                 final total = cumulativeScores[p.id] ?? 0;
@@ -7476,9 +7470,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   '$total',
                                   fontWeight: FontWeight.w900,
                                   fontSize: 15,
-                                  color: total < 0
-                                      ? const Color(0xFFD04A5B)
-                                      : const Color(0xFF233142),
+                                  color: total < 0 ? Cartoon.red : Cartoon.ink,
                                 );
                               }),
                             ],

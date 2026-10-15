@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../theme/cartoon.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
 import '../models/sk_game_state.dart';
@@ -2699,8 +2700,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFFFCFAF8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
         titlePadding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
         contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
         title: Row(
@@ -2709,36 +2714,32 @@ class _SKGameScreenState extends State<SKGameScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 26,
-                    height: 26,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1EA),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Cartoon.yellow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Cartoon.ink, width: 2),
                     ),
                     child: const Icon(
-                      Icons.table_chart_rounded,
-                      size: 16,
-                      color: Color(0xFFC96E34),
+                      Icons.emoji_events_rounded,
+                      size: 23,
+                      color: Cartoon.ink,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     L10n.of(context).skGameScoreHistory,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF3E312A),
-                    ),
+                    style: Cartoon.text(size: 22),
                   ),
                 ],
               ),
             ),
             Text(
               '${state.scoreHistory.length}R',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF8A7A72),
+              style: Cartoon.text(
+                size: 15,
+                color: Cartoon.ink.withValues(alpha: 0.55),
               ),
             ),
           ],
@@ -2753,7 +2754,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   String text, {
                   TextAlign align = TextAlign.center,
                   FontWeight fontWeight = FontWeight.w600,
-                  Color color = const Color(0xFF5A4038),
+                  Color color = Cartoon.ink,
                   double fontSize = 12,
                   EdgeInsets padding = const EdgeInsets.symmetric(
                     horizontal: 3,
@@ -2767,10 +2768,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       textAlign: align,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: fontWeight,
+                      style: Cartoon.userText(
+                        size: fontSize + 2,
                         color: color,
+                        weight: fontWeight,
                         height: 1.2,
                       ),
                     ),
@@ -2786,11 +2787,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: [
                     TableRow(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF1EA),
+                      decoration: BoxDecoration(
+                        color: Cartoon.cream,
                         border: Border(
                           bottom: BorderSide(
-                            color: Color(0xFFF0D9CB),
+                            color: Cartoon.ink.withValues(alpha: 0.2),
                             width: 1,
                           ),
                         ),
@@ -2800,7 +2801,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           'R',
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
-                          color: const Color(0xFFC96E34),
+                          color: Cartoon.orangeDeep,
                         ),
                         ...state.players.map(
                           (p) => cell(
@@ -2808,14 +2809,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
                             color: p.position == 'self'
-                                ? const Color(0xFF355D89)
-                                : const Color(0xFFC96E34),
+                                ? Cartoon.blue
+                                : Cartoon.orangeDeep,
                           ),
                         ),
                       ],
                     ),
                     ...state.scoreHistory.asMap().entries.map((mapEntry) {
-                      final rowIndex = mapEntry.key;
                       final entry = mapEntry.value;
                       final scores =
                           entry['scores'] as Map<String, dynamic>? ?? {};
@@ -2828,29 +2828,28 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       }
 
                       return TableRow(
-                        decoration: BoxDecoration(
-                          color: rowIndex.isOdd
-                              ? const Color(0xFFFAF4F0)
-                              : null,
-                        ),
+                        decoration: BoxDecoration(color: null),
                         children: [
                           cell(
                             '${entry['round']}',
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
-                            color: const Color(0xFF8A7A72),
+                            color: Cartoon.ink.withValues(alpha: 0.55),
                           ),
                           ...state.players.map((p) {
                             final pScore =
                                 scores[p.id] as Map<String, dynamic>?;
                             if (pScore == null) {
-                              return cell('-', color: const Color(0xFFC9BCB5));
+                              return cell(
+                                '-',
+                                color: Cartoon.ink.withValues(alpha: 0.3),
+                              );
                             }
                             final roundScore =
                                 (pScore['roundScore'] as num?)?.toInt() ?? 0;
                             final scoreColor = roundScore < 0
-                                ? const Color(0xFFC94256)
-                                : const Color(0xFF3E312A);
+                                ? Cartoon.red
+                                : Cartoon.ink;
 
                             return cell(
                               '$roundScore',
@@ -2869,10 +2868,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       );
                     }),
                     TableRow(
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFFF1EA),
+                      decoration: BoxDecoration(
+                        color: Cartoon.cream,
                         border: Border(
-                          top: BorderSide(color: Color(0xFFF0D9CB), width: 1.5),
+                          top: BorderSide(
+                            color: Cartoon.ink.withValues(alpha: 0.2),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       children: [
@@ -2880,7 +2882,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           L10n.of(context).commonTotal,
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
-                          color: const Color(0xFF3E312A),
+                          color: Cartoon.ink,
                         ),
                         ...state.players.map((p) {
                           final total = cumulativeScores[p.id] ?? 0;
@@ -2888,9 +2890,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             '$total',
                             fontWeight: FontWeight.w900,
                             fontSize: 15,
-                            color: total < 0
-                                ? const Color(0xFFC94256)
-                                : const Color(0xFF3E312A),
+                            color: total < 0 ? Cartoon.red : Cartoon.ink,
                           );
                         }),
                       ],
@@ -2904,7 +2904,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).commonClose),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(
+              L10n.of(context).commonClose,
+              style: Cartoon.text(size: 17),
+            ),
           ),
         ],
       ),

@@ -3328,34 +3328,31 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     VoidCallback? onTap,
   }) {
     final isSelected = _bidSuit == suit;
-    final effectiveColor = enabled ? color : const Color(0xFFBDBDBD);
-    return GestureDetector(
+    final on = isSelected && enabled;
+    final effectiveColor = enabled
+        ? color
+        : Cartoon.ink.withValues(alpha: 0.25);
+    return CartoonPressable(
+      scale: 0.92,
       onTap: enabled ? (onTap ?? () => setState(() => _bidSuit = suit)) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected && enabled
-              ? color.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected && enabled ? color : const Color(0xFFE0D8D4),
-            width: isSelected && enabled ? 2 : 1,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration:
+            gamePillDecoration(
+              radius: 14,
+              color: on ? Color.lerp(color, Colors.white, 0.75) : Cartoon.cream,
+            ).copyWith(
+              border: Border.all(
+                color: on
+                    ? color
+                    : Cartoon.ink.withValues(alpha: enabled ? 0.4 : 0.15),
+                width: on ? 2.8 : 1.8,
+              ),
+            ),
         child: suit == 'no_trump'
-            ? Text(
-                label,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: effectiveColor,
-                  fontWeight: isSelected && enabled
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                ),
-              )
-            : SuitIcon(suit: suit, size: 20, color: effectiveColor),
+            ? Text(label, style: Cartoon.text(size: 19, color: effectiveColor))
+            : SuitIcon(suit: suit, size: 22, color: effectiveColor),
       ),
     );
   }
@@ -4700,17 +4697,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
+      decoration: gamePillDecoration(radius: 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Icons.gavel, size: 16, color: Color(0xFF1565C0)),
+              const Icon(Icons.gavel_rounded, size: 18, color: Cartoon.blue),
               const SizedBox(width: 6),
               Expanded(
                 child: currentBidderName == null
@@ -4718,11 +4711,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         L10n.of(context).mtBidInProgress,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF5A4038),
-                        ),
+                        style: Cartoon.text(size: 15),
                       )
                     : Row(
                         mainAxisSize: MainAxisSize.min,
@@ -4735,17 +4724,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF5A4038),
-                              ),
+                              style: Cartoon.text(size: 15),
                             ),
                           ),
                           const SizedBox(width: 5),
                           SuitIcon(
                             suit: state.currentBid['suit']?.toString() ?? '',
-                            size: 13,
+                            size: 15,
                             color: _bidAccentColor(
                               state.currentBid['suit']?.toString(),
                             ),
@@ -4756,12 +4741,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               if (_remainingSeconds > 0)
                 Text(
                   '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+                  style: Cartoon.text(
+                    size: 14,
                     color: _remainingSeconds <= 5
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF8A7A72),
+                        ? Cartoon.red
+                        : Cartoon.ink.withValues(alpha: 0.6),
                   ),
                 ),
             ],
@@ -4787,33 +4771,22 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         children: [
           Text(
             l10n.mtWaitingFor(waitingName),
-            style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+            style: Cartoon.text(
+              size: 14,
+              color: Cartoon.ink.withValues(alpha: 0.6),
+            ),
           ),
           if (state.canReservePass) ...[
             const SizedBox(height: 6),
             Tooltip(
               message: l10n.mtReservePassHint,
-              child: OutlinedButton.icon(
-                onPressed: () => game.mightyReservePass(),
-                icon: Icon(
-                  state.reservedPass ? Icons.check_circle : Icons.schedule_send,
-                  size: 16,
-                ),
-                label: Text(
-                  state.reservedPass
-                      ? l10n.mtReservePassed
-                      : l10n.mtReservePass,
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: state.reservedPass
-                      ? const Color(0xFF4BAA6A)
-                      : const Color(0xFF8A7A72),
-                  side: BorderSide(
-                    color: state.reservedPass
-                        ? const Color(0xFF4BAA6A)
-                        : const Color(0xFFBDBDBD),
-                  ),
-                ),
+              child: gameButton(
+                state.reservedPass ? l10n.mtReservePassed : l10n.mtReservePass,
+                () => game.mightyReservePass(),
+                color: state.reservedPass ? Cartoon.green : Cartoon.blue,
+                height: 40,
+                size: 15,
+                hPad: 16,
               ),
             ),
           ],
@@ -4877,14 +4850,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       children: [
         Row(
           children: [
-            Text(
-              L10n.of(context).mtPoints,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF5A4038),
-              ),
-            ),
+            Text(L10n.of(context).mtPoints, style: Cartoon.text(size: 14)),
             if (minBid >= 20)
               const Spacer()
             else
@@ -4900,17 +4866,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _bidAccentColor(_bidSuit).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+              decoration: gamePillDecoration(
+                radius: 10,
+                color: _bidAccentColor(_bidSuit),
               ),
               child: Text(
                 '${_bidPoints.clamp(minBid, 20)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: _bidAccentColor(_bidSuit),
-                ),
+                style: Cartoon.text(size: 17, color: Colors.white),
               ),
             ),
           ],
@@ -4964,38 +4926,30 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            FilledButton(
-              onPressed: canBid
-                  ? () => game.mightySubmitBid(_bidPoints, _bidSuit)
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: _bidAccentColor(_bidSuit),
-                disabledBackgroundColor: const Color(0xFFBDBDBD),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(L10n.of(context).mtBidPoints(_bidPoints)),
-                  const SizedBox(width: 5),
-                  SuitIcon(suit: _bidSuit, size: 14, color: Colors.white),
-                ],
-              ),
+            gameButton(
+              L10n.of(context).mtBidPoints(_bidPoints),
+              canBid ? () => game.mightySubmitBid(_bidPoints, _bidSuit) : null,
+              color: _bidAccentColor(_bidSuit),
+              height: 44,
+              size: 16,
+              hPad: 18,
             ),
-            OutlinedButton(
-              onPressed: () => game.mightyPass(),
-              child: Text(L10n.of(context).mtPass),
+            gameButton(
+              L10n.of(context).mtPass,
+              () => game.mightyPass(),
+              color: const Color(0xFF9A8F86),
+              height: 44,
+              size: 16,
+              hPad: 18,
             ),
             if (state.canDeclareDealMiss)
-              OutlinedButton(
-                onPressed: () => _confirmDealMiss(game),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFD84315),
-                  side: const BorderSide(color: Color(0xFFFF7043)),
-                ),
-                child: Text(L10n.of(context).mtDealMiss),
+              gameButton(
+                L10n.of(context).mtDealMiss,
+                () => _confirmDealMiss(game),
+                color: Cartoon.red,
+                height: 44,
+                size: 16,
+                hPad: 18,
               ),
           ],
         ),
@@ -5035,11 +4989,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
+        decoration: gamePillDecoration(radius: 18),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -5048,23 +4998,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               child: Text(
                 l10n.mtKillPhaseWait(declarerName),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF5A4038),
-                ),
+                style: Cartoon.text(size: 15),
               ),
             ),
             if (_remainingSeconds > 0) ...[
               const SizedBox(width: 8),
               Text(
                 '${_remainingSeconds}s',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
+                style: Cartoon.text(
+                  size: 14,
                   color: _remainingSeconds <= 5
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFF8A7A72),
+                      ? Cartoon.red
+                      : Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -5076,37 +5021,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
+      decoration: gamePillDecoration(radius: 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              const Icon(Icons.gps_fixed, size: 16, color: Color(0xFFD84315)),
+              const Icon(Icons.gps_fixed_rounded, size: 18, color: Cartoon.red),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   l10n.mtKillPhasePrompt,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFFD84315),
-                  ),
+                  style: Cartoon.text(size: 15, color: Cartoon.red),
                 ),
               ),
               if (_remainingSeconds > 0)
                 Text(
                   '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+                  style: Cartoon.text(
+                    size: 14,
                     color: _remainingSeconds <= 5
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF8A7A72),
+                        ? Cartoon.red
+                        : Cartoon.ink.withValues(alpha: 0.6),
                   ),
                 ),
             ],
@@ -5123,22 +5059,26 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     onTap: () => setState(() => _killSuitTab = suit),
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _killSuitTab == suit
-                            ? (PlayingCard.suitColors[suit] ??
-                                      const Color(0xFF5A4038))
-                                  .withValues(alpha: 0.12)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _killSuitTab == suit
-                              ? (PlayingCard.suitColors[suit] ??
-                                    const Color(0xFF5A4038))
-                              : const Color(0xFFE0D8D4),
-                          width: _killSuitTab == suit ? 2 : 1,
-                        ),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration:
+                          gamePillDecoration(
+                            radius: 12,
+                            color: _killSuitTab == suit
+                                ? Color.lerp(
+                                    PlayingCard.suitColors[suit] ?? Cartoon.ink,
+                                    Colors.white,
+                                    0.78,
+                                  )
+                                : Cartoon.cream,
+                          ).copyWith(
+                            border: Border.all(
+                              color: _killSuitTab == suit
+                                  ? (PlayingCard.suitColors[suit] ??
+                                        Cartoon.ink)
+                                  : Cartoon.ink.withValues(alpha: 0.4),
+                              width: _killSuitTab == suit ? 2.8 : 1.8,
+                            ),
+                          ),
                       child: Center(child: SuitIcon(suit: suit, size: 20)),
                     ),
                   ),
@@ -5157,21 +5097,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          FilledButton(
-            onPressed: _selectedKillCard == null
+          gameButton(
+            l10n.mtKillConfirm,
+            _selectedKillCard == null
                 ? null
                 : () {
                     game.mightyDeclareKill(_selectedKillCard!);
                     setState(() => _selectedKillCard = null);
                   },
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFD84315),
-              disabledBackgroundColor: const Color(0xFFBDBDBD),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(l10n.mtKillConfirm),
+            color: Cartoon.red,
+            height: 46,
+            size: 17,
+            expand: true,
           ),
         ],
       ),

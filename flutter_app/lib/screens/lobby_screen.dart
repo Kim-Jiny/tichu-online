@@ -441,6 +441,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: _dialogTitle(
           Icons.mail_rounded,
           Cartoon.blue,
@@ -3142,6 +3143,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         backgroundColor: Cartoon.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),

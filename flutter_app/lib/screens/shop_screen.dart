@@ -4013,6 +4013,7 @@ class _ShopScreenState extends State<ShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(L10n.of(context).shopNicknameChangeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,

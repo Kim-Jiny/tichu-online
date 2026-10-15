@@ -130,6 +130,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
     final l10n = L10n.of(context);
     final done = _success != null;
     return AlertDialog(
+      scrollable: true,
       title: Row(
         children: [
           couponIcon(size: 22),

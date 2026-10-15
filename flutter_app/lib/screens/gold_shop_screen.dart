@@ -101,6 +101,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -581,6 +582,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(
           l10n.goldBankDialogTitle,
           style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038)),

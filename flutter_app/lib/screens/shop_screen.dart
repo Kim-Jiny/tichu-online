@@ -347,14 +347,45 @@ class _ShopScreenState extends State<ShopScreen> {
             color: Cartoon.paper,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Cartoon.ink, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
           ),
           child: child,
         ),
       );
     }
+
+    // 일일 보상(출석·광고)은 줄을 따로 두지 않고 헤더의 작은 칩으로. 받을 게
+    // 남아 있으면 빨간 점이 뜬다.
+    Widget rewardChip({
+      required IconData icon,
+      required Color color,
+      required String tooltip,
+      required bool dot,
+      required VoidCallback? onTap,
+    }) {
+      return Tooltip(
+        message: tooltip,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Opacity(
+              opacity: onTap == null ? 0.55 : 1,
+              child: chip(
+                onTap: onTap ?? () {},
+                child: Icon(icon, size: 26, color: color),
+              ),
+            ),
+            if (dot) Positioned(right: -2, top: -2, child: _newDot()),
+          ],
+        ),
+      );
+    }
+
+    final attendance = _shouldShowAttendanceBanner(game)
+        ? game.attendanceState!
+        : null;
+    final attendanceClaimed = attendance?['claimedToday'] == true;
+    final adCanWatch = _todayAdCount < AdService.maxDailyRewards;
+    final adEnabled = adCanWatch && !_adLoading;
 
     return CartoonEntrance(
       from: const Offset(0, -30),
@@ -373,8 +404,46 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Cartoon.outlinedText(l10n.shopTitle, size: 28),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Cartoon.outlinedText(l10n.shopTitle, size: 28),
+                  ),
+                ),
                 const Spacer(),
+                if (attendance != null) ...[
+                  rewardChip(
+                    icon: attendanceClaimed
+                        ? Icons.event_available_rounded
+                        : Icons.calendar_month_rounded,
+                    color: attendanceClaimed
+                        ? Cartoon.green
+                        : Cartoon.orangeDeep,
+                    tooltip: attendanceClaimed
+                        ? l10n.attendanceBannerCompletedSubtitle
+                        : l10n.attendanceBannerTitle(
+                            (attendance['todayDay'] as int?) ?? 1,
+                          ),
+                    dot: !attendanceClaimed,
+                    onTap: () => _showAttendanceDialog(game),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (_rewardedAdReady || _adLoading) ...[
+                  rewardChip(
+                    icon: Icons.play_circle_rounded,
+                    color: adEnabled
+                        ? const Color(0xFF7E57C2)
+                        : Cartoon.ink.withValues(alpha: 0.4),
+                    tooltip: adCanWatch
+                        ? l10n.shopAdWatchTitle
+                        : l10n.shopAdRewardDone,
+                    dot: adEnabled,
+                    onTap: adEnabled ? () => _watchRewardedAd(game) : null,
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 // 코드를 들고 온 사람은 쓰려고 상점을 연다 — 쿠폰 입구는 여기.
                 // iOS 앱에는 없다 (couponRedeemAllowed).
                 if (couponRedeemAllowed) ...[
@@ -401,9 +470,6 @@ class _ShopScreenState extends State<ShopScreen> {
                         color: Cartoon.cream,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Cartoon.ink, width: 2),
-                        boxShadow: const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                        ],
                       ),
                       child: Row(
                         children: [
@@ -492,9 +558,6 @@ class _ShopScreenState extends State<ShopScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(avatarCornerRadius(40)),
               border: Border.all(color: Cartoon.ink, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-              ],
             ),
             child: ProfileAvatar(
               photoUrl: game.resolvePhotoUrl(game.myPhotoUrl),
@@ -502,89 +565,6 @@ class _ShopScreenState extends State<ShopScreen> {
               fallback: const DefaultAvatar(size: 40),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRewardStrip(GameService game) {
-    final hasAttendance = _shouldShowAttendanceBanner(game);
-    if (!hasAttendance && !_rewardedAdReady) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Row(
-        children: [
-          if (hasAttendance) Expanded(child: _buildAttendanceTile(game)),
-          if (hasAttendance && _rewardedAdReady) const SizedBox(width: 8),
-          if (_rewardedAdReady) Expanded(child: _buildAdRewardTile(game)),
-        ],
-      ),
-    );
-  }
-
-  /// Shared shape for the two reward tiles so they read as one pair.
-  Widget _buildRewardTile({
-    required List<Color> gradient,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback? onTap,
-    Widget? leadingOverride,
-  }) {
-    return CartoonPressable(
-      onTap: onTap,
-      scale: 0.96,
-      child: Container(
-        height: 54,
-        margin: const EdgeInsets.only(bottom: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          children: [
-            leadingOverride ?? Icon(icon, color: Colors.white, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Cartoon.userText(
-                      size: 13.5,
-                      color: Colors.white,
-                      weight: FontWeight.w900,
-                      height: 1.15,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Cartoon.userText(
-                      size: 11.5,
-                      color: Colors.white,
-                      weight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -695,25 +675,17 @@ class _ShopScreenState extends State<ShopScreen> {
 
             return Padding(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Cartoon.cream,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Cartoon.ink, width: 2),
-                ),
-                child: Row(
-                  children: [
-                    segment(0, l10n.shopTabShop, Icons.storefront_rounded),
-                    const SizedBox(width: 4),
-                    segment(
-                      1,
-                      l10n.shopTabInventory,
-                      Icons.backpack_rounded,
-                      dot: inventoryHasNew,
-                    ),
-                  ],
-                ),
+              child: Row(
+                children: [
+                  segment(0, l10n.shopTabShop, Icons.storefront_rounded),
+                  const SizedBox(width: 4),
+                  segment(
+                    1,
+                    l10n.shopTabInventory,
+                    Icons.backpack_rounded,
+                    dot: inventoryHasNew,
+                  ),
+                ],
               ),
             );
           },
@@ -944,9 +916,7 @@ class _ShopScreenState extends State<ShopScreen> {
             top: 6,
             bottom: 28 + MediaQuery.viewPaddingOf(context).bottom,
           ),
-          // 일일 보상은 고정 영역에서 빼 목록 맨 위에 둔다 — 스크롤하면 같이 올라가
-          // 상품이 보이는 높이를 돌려준다.
-          children: [_buildRewardStrip(game), ...rows],
+          children: rows,
         );
       },
     );
@@ -1079,9 +1049,8 @@ class _ShopScreenState extends State<ShopScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 7),
                   decoration: BoxDecoration(
-                    color: isWorn ? Cartoon.paper : Cartoon.blue,
+                    color: isWorn ? Cartoon.cream : Cartoon.blue,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Cartoon.ink, width: 1.6),
                   ),
                   child: Text(
                     isWorn ? l10n.shopButtonUnequip : l10n.shopButtonEquip,
@@ -1102,7 +1071,6 @@ class _ShopScreenState extends State<ShopScreen> {
                 decoration: BoxDecoration(
                   color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 1.6),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -4174,15 +4142,12 @@ class _ShopScreenState extends State<ShopScreen> {
           margin: const EdgeInsets.only(bottom: 3),
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
           decoration: BoxDecoration(
-            color: selected ? Cartoon.blue : Cartoon.paper,
+            color: selected ? Cartoon.blue : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Cartoon.ink, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Cartoon.ink,
-                offset: Offset(0, selected ? 3 : 2),
-              ),
-            ],
+            border: Border.all(
+              color: selected ? Cartoon.ink : Colors.transparent,
+              width: 2,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -4191,7 +4156,9 @@ class _ShopScreenState extends State<ShopScreen> {
                 label,
                 style: Cartoon.text(
                   size: 14,
-                  color: selected ? Colors.white : Cartoon.ink,
+                  color: selected
+                      ? Colors.white
+                      : Cartoon.ink.withValues(alpha: 0.65),
                 ),
               ),
               if (badge) ...[const SizedBox(width: 5), _newDot()],
@@ -4310,30 +4277,6 @@ class _ShopScreenState extends State<ShopScreen> {
   // that and offers the store.
   bool _shouldShowAttendanceBanner(GameService game) =>
       game.attendanceState != null;
-
-  Widget _buildAttendanceTile(GameService game) {
-    final s = game.attendanceState!;
-    final claimed = s['claimedToday'] == true;
-    final reward = (s['todayRewardGold'] as int?) ?? 50;
-    final day = (s['todayDay'] as int?) ?? 1;
-    final isLastDay = day == 7;
-    final l10n = L10n.of(context);
-    return _buildRewardTile(
-      gradient: claimed
-          ? const [Color(0xFF81C784), Color(0xFF4CAF50)]
-          : isLastDay
-          ? const [Color(0xFFFFCA28), Color(0xFFFF8F00)]
-          : const [Color(0xFFFFD180), Color(0xFFFFA726)],
-      icon: claimed ? Icons.check_circle : Icons.event_available,
-      title: claimed
-          ? l10n.attendanceBannerCompletedTitle(day)
-          : l10n.attendanceBannerTitle(day),
-      subtitle: claimed
-          ? l10n.attendanceBannerCompletedSubtitle
-          : l10n.attendanceBannerSubtitle(reward),
-      onTap: () => _showAttendanceDialog(game),
-    );
-  }
 
   String _formatResetClock(String? resetAtUtc) {
     if (resetAtUtc == null) return '';
@@ -4745,66 +4688,38 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildAdRewardTile(GameService game) {
-    final l10n = L10n.of(context);
-    final canWatch = _todayAdCount < AdService.maxDailyRewards;
-    final enabled = canWatch && !_adLoading;
-    return _buildRewardTile(
-      gradient: enabled
-          ? const [Color(0xFF9575CD), Color(0xFF7E57C2)]
-          : const [Color(0xFFBDBDBD), Color(0xFF9E9E9E)],
-      icon: Icons.play_circle_fill,
-      leadingOverride: _adLoading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : null,
-      title: canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
-      subtitle: canWatch
-          ? l10n.shopAdWatchProgress(_todayAdCount, AdService.maxDailyRewards)
-          : l10n.shopAdRewardDoneSubtitle,
-      onTap: enabled
-          ? () {
-              final ad = _rewardedAd;
-              if (ad == null) return;
-              setState(() {
-                _adLoading = true;
-                _rewardedAd = null;
-                _rewardedAdReady = false;
-              });
-              ad.fullScreenContentCallback = FullScreenContentCallback(
-                onAdDismissedFullScreenContent: (ad) {
-                  ad.dispose();
-                  _preloadRewardedAd(); // 다음 광고 미리 로드
-                },
-                onAdFailedToShowFullScreenContent: (ad, error) {
-                  ad.dispose();
-                  if (mounted) {
-                    setState(() => _adLoading = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(L10n.of(context).shopAdCannotShow),
-                      ),
-                    );
-                  }
-                  _preloadRewardedAd();
-                },
-              );
-              ad.show(
-                onUserEarnedReward: (ad, reward) async {
-                  await AdService.incrementRewardCount();
-                  game.claimAdReward();
-                  await _loadAdCount();
-                  if (mounted) setState(() => _adLoading = false);
-                },
-              );
-            }
-          : null,
+  /// 광고 보상 시청(헤더의 광고 칩).
+  void _watchRewardedAd(GameService game) {
+    final ad = _rewardedAd;
+    if (ad == null) return;
+    setState(() {
+      _adLoading = true;
+      _rewardedAd = null;
+      _rewardedAdReady = false;
+    });
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _preloadRewardedAd(); // 다음 광고 미리 로드
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        if (mounted) {
+          setState(() => _adLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(L10n.of(context).shopAdCannotShow)),
+          );
+        }
+        _preloadRewardedAd();
+      },
+    );
+    ad.show(
+      onUserEarnedReward: (ad, reward) async {
+        await AdService.incrementRewardCount();
+        game.claimAdReward();
+        await _loadAdCount();
+        if (mounted) setState(() => _adLoading = false);
+      },
     );
   }
 

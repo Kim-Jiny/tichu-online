@@ -1634,7 +1634,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final scoreFontSize = spectator
         ? (compact ? 15.0 : 17.0) * seatScale
         : (compact ? 15.0 : 17.0) * seatScale;
-    final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
+    final bidHeight = (compact ? 20.0 : 24.0) * seatScale;
     final avatar = kIsWeb
         ? math
               .min(seatHeight * 0.72, seatWidth * 0.74)
@@ -1718,7 +1718,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final seatScale = (constraints.maxWidth / 116.0).clamp(0.9, 1.5);
           final nameFontSize = (compact ? 11.5 : 13.0) * seatScale;
           final scoreFontSize = (compact ? 15.0 : 17.0) * seatScale;
-          final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
+          final bidHeight = (compact ? 20.0 : 24.0) * seatScale;
           final bidFontSize = (compact ? 10.5 : 11.5) * seatScale;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final spacing = compact ? 1.0 : 2.0;
@@ -1977,7 +1977,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final scoreFontSize = isSelf
               ? 18.0
               : (compact ? 15.0 : 17.0) * seatScale;
-          final bidHeight = (compact ? 15.0 : 19.0) * seatScale;
+          final bidHeight = (compact ? 20.0 : 24.0) * seatScale;
           final bidFontSize = (compact ? 10.5 : 11.5) * seatScale;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
           final bidTopMargin = compact ? 1.0 : 2.0;
@@ -2112,7 +2112,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ),
                                 child: Text(
                                   '${p.tricks}/${p.bid}',
-                                  style: Cartoon.text(size: bidFontSize + 2),
+                                  style: Cartoon.text(
+                                    size: bidFontSize + 1.5,
+                                    height: 1.0,
+                                  ),
                                 ),
                               )
                             : p.hasBid && p.bid == null

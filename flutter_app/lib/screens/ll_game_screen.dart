@@ -3411,13 +3411,26 @@ class _LLGameScreenState extends State<LLGameScreen> {
       bottom: 0,
       left: 0,
       right: 0,
-      child: _buildLLEventLog(state, gs, l10n),
+      child: _buildLLEventLog(
+        state,
+        gs,
+        l10n,
+        hidden:
+            state.phase == 'effect_resolve' &&
+            state.pendingEffect != null &&
+            _isEffectInteractive(state.pendingEffect!, gs),
+      ),
     );
   }
 
   // Rolling event-log content (no Positioned). Spectators stack this directly
   // above their hand overlay so it is never hidden behind it.
-  Widget _buildLLEventLog(LLGameStateData state, GameService gs, L10n l10n) {
+  Widget _buildLLEventLog(
+    LLGameStateData state,
+    GameService gs,
+    L10n l10n, {
+    bool hidden = false,
+  }) {
     if (state.round != _llCenterLogRound) {
       _llCenterLog.clear();
       _llCenterLogHashes.clear();
@@ -3436,7 +3449,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
         }
       }
     }
-    if (_llCenterLog.isEmpty) return const SizedBox.shrink();
+    // 내 효과 패널이 같은 자리에 덮여 있는 동안은 같은 내용이 겹쳐 보이니 로그는
+    // 쌓기만 하고 그리지 않는다.
+    if (hidden || _llCenterLog.isEmpty) return const SizedBox.shrink();
     // _llCenterLog is oldest-first; render in natural order so the newest
     // line lands at the bottom (just above the hand).
     final lines = _llCenterLog;

@@ -1796,5 +1796,8 @@
   "rulesSkLeadDemoPirate": "Wird ein Pirat, eine Meerjungfrau, der Skull King, der Kraken oder der Weiße Wal vor einer Zahlenkarte gespielt, gibt es keine geführte Farbe. Alle danach spielen frei.",
   "rulesSkLeadDemoPirateTag": "Keine geführte Farbe · frei spielen",
   "rulesSkLootDemo": "Der Spieler, der Loot spielt, und der Stichgewinner bilden eine Allianz. Nur wenn beide am Rundenende ihr Gebot erfüllt haben, erhält jeder +20 pro Loot-Karte.",
-  "rulesSkLootDemoTag": "Beide erfüllt → je +20"
+  "rulesSkLootDemoTag": "Beide erfüllt → je +20",
+  "rulesTichuCardGuideTitle": "Karten & Effekte (insgesamt 56)",
+  "rulesSkCardGuideTitle": "Karten & Effekte (65 im Basisspiel)",
+  "rulesLlCardGuideTitle": "Karten & Effekte (insgesamt 16)"
 }

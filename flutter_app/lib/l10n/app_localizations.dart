@@ -9182,6 +9182,24 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Both bids made → +20 each'**
   String get rulesSkLootDemoTag;
+
+  /// No description provided for @rulesTichuCardGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards & Effects (56 total)'**
+  String get rulesTichuCardGuideTitle;
+
+  /// No description provided for @rulesSkCardGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards & Effects (65 base)'**
+  String get rulesSkCardGuideTitle;
+
+  /// No description provided for @rulesLlCardGuideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards & Effects (16 total)'**
+  String get rulesLlCardGuideTitle;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

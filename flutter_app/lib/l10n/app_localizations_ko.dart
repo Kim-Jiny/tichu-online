@@ -5085,4 +5085,13 @@ class L10nKo extends L10n {
 
   @override
   String get rulesSkLootDemoTag => '둘 다 비드 성공 → 각 +20';
+
+  @override
+  String get rulesTichuCardGuideTitle => '카드 구성 및 효과 (총 56장)';
+
+  @override
+  String get rulesSkCardGuideTitle => '카드 구성 및 효과 (기본 총 65장)';
+
+  @override
+  String get rulesLlCardGuideTitle => '카드 구성 및 효과 (총 16장)';
 }

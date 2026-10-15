@@ -5239,4 +5239,13 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkLootDemoTag => 'Beide erfüllt → je +20';
+
+  @override
+  String get rulesTichuCardGuideTitle => 'Karten & Effekte (insgesamt 56)';
+
+  @override
+  String get rulesSkCardGuideTitle => 'Karten & Effekte (65 im Basisspiel)';
+
+  @override
+  String get rulesLlCardGuideTitle => 'Karten & Effekte (insgesamt 16)';
 }

@@ -5203,4 +5203,13 @@ class L10nEn extends L10n {
 
   @override
   String get rulesSkLootDemoTag => 'Both bids made → +20 each';
+
+  @override
+  String get rulesTichuCardGuideTitle => 'Cards & Effects (56 total)';
+
+  @override
+  String get rulesSkCardGuideTitle => 'Cards & Effects (65 base)';
+
+  @override
+  String get rulesLlCardGuideTitle => 'Cards & Effects (16 total)';
 }

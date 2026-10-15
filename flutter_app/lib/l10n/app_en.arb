@@ -3039,5 +3039,8 @@
   "rulesSkLeadDemoPirate": "If a Pirate, Mermaid, Skull King, Kraken or White Whale is played before any number card, there is no lead suit. Everyone after may play freely.",
   "rulesSkLeadDemoPirateTag": "No lead suit · play freely",
   "rulesSkLootDemo": "The player who played Loot and the player who wins the trick form an alliance. Only if both make their bids by the end of the round does each earn +20 per Loot card.",
-  "rulesSkLootDemoTag": "Both bids made → +20 each"
+  "rulesSkLootDemoTag": "Both bids made → +20 each",
+  "rulesTichuCardGuideTitle": "Cards & Effects (56 total)",
+  "rulesSkCardGuideTitle": "Cards & Effects (65 base)",
+  "rulesLlCardGuideTitle": "Cards & Effects (16 total)"
 }

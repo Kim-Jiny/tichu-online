@@ -192,77 +192,45 @@ class _RulesScreenState extends State<RulesScreen> {
         _section(
           icon: Icons.style,
           iconColor: tichuAccent,
-          title: L10n.of(context).rulesTichuCardCompositionTitle,
+          title: L10n.of(context).rulesTichuCardGuideTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CardCountRow(
-                label: L10n.of(context).rulesTichuNumberCards,
+              _CardGuide(
+                leading: const _GuideNumberFan(),
+                name: L10n.of(context).rulesTichuNumberCards,
                 sub: L10n.of(context).rulesTichuNumberCardsSub,
                 count: 52,
+                lines: [],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesTichuMahjong,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/bird.webp'),
+                name: L10n.of(context).rulesTichuMahjong,
                 sub: L10n.of(context).rulesTichuMahjongSub,
                 count: 1,
-                leading: _cardAsset('assets/cards/bird.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesTichuDog,
-                sub: L10n.of(context).rulesTichuDogSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/dog.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesTichuPhoenix,
-                sub: L10n.of(context).rulesTichuPhoenixSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/phoenix.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesTichuDragon,
-                sub: L10n.of(context).rulesTichuDragonSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/dragon.webp'),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          icon: Icons.auto_awesome,
-          iconColor: tichuAccent,
-          title: L10n.of(context).rulesTichuSpecialTitle,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SpecialRule(
-                emoji: '🐦',
-                title: L10n.of(context).rulesTichuSpecialMahjongTitle,
-                leadingAsset: 'assets/cards/bird.webp',
                 lines: [
                   L10n.of(context).rulesTichuSpecialMahjongLine1,
                   L10n.of(context).rulesTichuSpecialMahjongLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '🐶',
-                title: L10n.of(context).rulesTichuSpecialDogTitle,
-                leadingAsset: 'assets/cards/dog.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/dog.webp'),
+                name: L10n.of(context).rulesTichuDog,
+                sub: L10n.of(context).rulesTichuDogSub,
+                count: 1,
                 lines: [
                   L10n.of(context).rulesTichuSpecialDogLine1,
                   L10n.of(context).rulesTichuSpecialDogLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '🔥',
-                title: L10n.of(context).rulesTichuSpecialPhoenixTitle,
-                leadingAsset: 'assets/cards/phoenix.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/phoenix.webp'),
+                name: L10n.of(context).rulesTichuPhoenix,
+                sub: L10n.of(context).rulesTichuPhoenixSub,
+                count: 1,
                 lines: [
                   L10n.of(context).rulesTichuSpecialPhoenixLine1,
                   L10n.of(context).rulesTichuSpecialPhoenixLine2,
@@ -270,10 +238,11 @@ class _RulesScreenState extends State<RulesScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '🐉',
-                title: L10n.of(context).rulesTichuSpecialDragonTitle,
-                leadingAsset: 'assets/cards/dragon.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/dragon.webp'),
+                name: L10n.of(context).rulesTichuDragon,
+                sub: L10n.of(context).rulesTichuDragonSub,
+                count: 1,
                 lines: [
                   L10n.of(context).rulesTichuSpecialDragonLine1,
                   L10n.of(context).rulesTichuSpecialDragonLine2,
@@ -424,50 +393,76 @@ class _RulesScreenState extends State<RulesScreen> {
         _section(
           icon: Icons.style,
           iconColor: skAccent,
-          title: L10n.of(context).rulesSkCardCompositionTitle,
+          title: L10n.of(context).rulesSkCardGuideTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CardCountRow(
-                label: L10n.of(context).rulesSkNumberCards,
+              _CardGuide(
+                leading: const _GuideSkNumbers(),
+                name: L10n.of(context).rulesSkNumberCards,
                 sub: L10n.of(context).rulesSkNumberCardsSub,
                 count: 52,
+                lines: [],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesSkEscape,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/sk_escape.webp'),
+                name: L10n.of(context).rulesSkEscape,
                 sub: L10n.of(context).rulesSkEscapeSub,
                 count: 5,
-                leading: _cardAsset('assets/cards/sk_escape.webp'),
+                lines: [
+                  L10n.of(context).rulesSkSpecialEscapeLine1,
+                  L10n.of(context).rulesSkSpecialEscapeLine2,
+                ],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesSkPirate,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/sk_pirate.webp'),
+                name: L10n.of(context).rulesSkPirate,
                 sub: L10n.of(context).rulesSkPirateSub,
                 count: 4,
-                leading: _cardAsset('assets/cards/sk_pirate.webp'),
+                lines: [
+                  L10n.of(context).rulesSkSpecialPirateLine1,
+                  L10n.of(context).rulesSkSpecialPirateLine2,
+                ],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesSkMermaid,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/sk_mermaid.webp'),
+                name: L10n.of(context).rulesSkMermaid,
                 sub: L10n.of(context).rulesSkMermaidSub,
                 count: 2,
-                leading: _cardAsset('assets/cards/sk_mermaid.webp'),
+                lines: [
+                  L10n.of(context).rulesSkSpecialMermaidLine1,
+                  L10n.of(context).rulesSkSpecialMermaidLine2,
+                  L10n.of(context).rulesSkSpecialMermaidLine3,
+                ],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesSkSkullKing,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/sk_skull_king.webp'),
+                name: L10n.of(context).rulesSkSkullKing,
                 sub: L10n.of(context).rulesSkSkullKingSub,
                 count: 1,
-                leading: _cardAsset('assets/cards/sk_skull_king.webp'),
+                lines: [
+                  L10n.of(context).rulesSkSpecialSkullKingLine1,
+                  L10n.of(context).rulesSkSpecialSkullKingLine2,
+                ],
               ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesSkTigress,
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/sk_tigress.webp'),
+                name: L10n.of(context).rulesSkTigress,
                 sub: L10n.of(context).rulesSkTigressSub,
                 count: 1,
-                leading: _cardAsset('assets/cards/sk_tigress.webp'),
                 highlight: true,
+                lines: [
+                  L10n.of(context).rulesSkSpecialTigressLine1,
+                  L10n.of(context).rulesSkSpecialTigressLine2,
+                  L10n.of(context).rulesSkSpecialTigressLine3,
+                  L10n.of(context).rulesSkSpecialTigressLine4,
+                ],
+                extra: const _TigressDisplayPreview(),
               ),
               const SizedBox(height: 12),
               Container(
@@ -511,69 +506,6 @@ class _RulesScreenState extends State<RulesScreen> {
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          icon: Icons.auto_awesome,
-          iconColor: skAccent,
-          title: L10n.of(context).rulesSkSpecialTitle,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SpecialRule(
-                emoji: '🏳️',
-                title: L10n.of(context).rulesSkSpecialEscapeTitle,
-                leadingAsset: 'assets/cards/sk_escape.webp',
-                lines: [
-                  L10n.of(context).rulesSkSpecialEscapeLine1,
-                  L10n.of(context).rulesSkSpecialEscapeLine2,
-                ],
-              ),
-              const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '⚔️',
-                title: L10n.of(context).rulesSkSpecialPirateTitle,
-                leadingAsset: 'assets/cards/sk_pirate.webp',
-                lines: [
-                  L10n.of(context).rulesSkSpecialPirateLine1,
-                  L10n.of(context).rulesSkSpecialPirateLine2,
-                ],
-              ),
-              const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '🧜\u200d♀️',
-                title: L10n.of(context).rulesSkSpecialMermaidTitle,
-                leadingAsset: 'assets/cards/sk_mermaid.webp',
-                lines: [
-                  L10n.of(context).rulesSkSpecialMermaidLine1,
-                  L10n.of(context).rulesSkSpecialMermaidLine2,
-                  L10n.of(context).rulesSkSpecialMermaidLine3,
-                ],
-              ),
-              const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '☠️',
-                title: L10n.of(context).rulesSkSpecialSkullKingTitle,
-                leadingAsset: 'assets/cards/sk_skull_king.webp',
-                lines: [
-                  L10n.of(context).rulesSkSpecialSkullKingLine1,
-                  L10n.of(context).rulesSkSpecialSkullKingLine2,
-                ],
-              ),
-              const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '🐯',
-                title: L10n.of(context).rulesSkSpecialTigressTitle,
-                leadingAsset: 'assets/cards/sk_tigress.webp',
-                lines: [
-                  L10n.of(context).rulesSkSpecialTigressLine1,
-                  L10n.of(context).rulesSkSpecialTigressLine2,
-                  L10n.of(context).rulesSkSpecialTigressLine3,
-                  L10n.of(context).rulesSkSpecialTigressLine4,
-                ],
-                extra: const _TigressDisplayPreview(),
               ),
             ],
           ),
@@ -746,140 +678,83 @@ class _RulesScreenState extends State<RulesScreen> {
         _section(
           icon: Icons.style,
           iconColor: llAccent,
-          title: L10n.of(context).rulesLlCardCompositionTitle,
+          title: L10n.of(context).rulesLlCardGuideTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _CardCountRow(
-                label: L10n.of(context).rulesLlGuard,
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Guard.webp'),
+                name: L10n.of(context).rulesLlGuard,
                 sub: L10n.of(context).rulesLlGuardSub,
                 count: 5,
-                leading: _cardAsset('assets/cards/ll_Guard.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlSpy,
-                sub: L10n.of(context).rulesLlSpySub,
-                count: 2,
-                leading: _cardAsset('assets/cards/ll_Spy.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlBaron,
-                sub: L10n.of(context).rulesLlBaronSub,
-                count: 2,
-                leading: _cardAsset('assets/cards/ll_Baron.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlHandmaid,
-                sub: L10n.of(context).rulesLlHandmaidSub,
-                count: 2,
-                leading: _cardAsset('assets/cards/ll_Handmaid.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlPrince,
-                sub: L10n.of(context).rulesLlPrinceSub,
-                count: 2,
-                leading: _cardAsset('assets/cards/ll_Prince.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlKing,
-                sub: L10n.of(context).rulesLlKingSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/ll_King.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlCountess,
-                sub: L10n.of(context).rulesLlCountessSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/ll_Countess.webp'),
-              ),
-              const _Divider(),
-              _CardCountRow(
-                label: L10n.of(context).rulesLlPrincess,
-                sub: L10n.of(context).rulesLlPrincessSub,
-                count: 1,
-                leading: _cardAsset('assets/cards/ll_Princess.webp'),
-              ),
-            ],
-          ),
-        ),
-        _section(
-          icon: Icons.auto_awesome,
-          iconColor: llAccent,
-          title: L10n.of(context).rulesLlCardEffectsTitle,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SpecialRule(
-                emoji: '\u{1F6E1}\u{FE0F}',
-                title: L10n.of(context).rulesLlEffectGuardTitle,
-                leadingAsset: 'assets/cards/ll_Guard.webp',
                 lines: [
                   L10n.of(context).rulesLlEffectGuardLine1,
                   L10n.of(context).rulesLlEffectGuardLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F50D}',
-                title: L10n.of(context).rulesLlEffectSpyTitle,
-                leadingAsset: 'assets/cards/ll_Spy.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Spy.webp'),
+                name: L10n.of(context).rulesLlSpy,
+                sub: L10n.of(context).rulesLlSpySub,
+                count: 2,
                 lines: [L10n.of(context).rulesLlEffectSpyLine1],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{2694}\u{FE0F}',
-                title: L10n.of(context).rulesLlEffectBaronTitle,
-                leadingAsset: 'assets/cards/ll_Baron.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Baron.webp'),
+                name: L10n.of(context).rulesLlBaron,
+                sub: L10n.of(context).rulesLlBaronSub,
+                count: 2,
                 lines: [
                   L10n.of(context).rulesLlEffectBaronLine1,
                   L10n.of(context).rulesLlEffectBaronLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F9D1}\u{200D}\u{1F91D}\u{200D}\u{1F9D1}',
-                title: L10n.of(context).rulesLlEffectHandmaidTitle,
-                leadingAsset: 'assets/cards/ll_Handmaid.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Handmaid.webp'),
+                name: L10n.of(context).rulesLlHandmaid,
+                sub: L10n.of(context).rulesLlHandmaidSub,
+                count: 2,
                 lines: [L10n.of(context).rulesLlEffectHandmaidLine1],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F451}',
-                title: L10n.of(context).rulesLlEffectPrinceTitle,
-                leadingAsset: 'assets/cards/ll_Prince.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Prince.webp'),
+                name: L10n.of(context).rulesLlPrince,
+                sub: L10n.of(context).rulesLlPrinceSub,
+                count: 2,
                 lines: [
                   L10n.of(context).rulesLlEffectPrinceLine1,
                   L10n.of(context).rulesLlEffectPrinceLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F934}',
-                title: L10n.of(context).rulesLlEffectKingTitle,
-                leadingAsset: 'assets/cards/ll_King.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_King.webp'),
+                name: L10n.of(context).rulesLlKing,
+                sub: L10n.of(context).rulesLlKingSub,
+                count: 1,
                 lines: [L10n.of(context).rulesLlEffectKingLine1],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F483}',
-                title: L10n.of(context).rulesLlEffectCountessTitle,
-                leadingAsset: 'assets/cards/ll_Countess.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Countess.webp'),
+                name: L10n.of(context).rulesLlCountess,
+                sub: L10n.of(context).rulesLlCountessSub,
+                count: 1,
                 lines: [
                   L10n.of(context).rulesLlEffectCountessLine1,
                   L10n.of(context).rulesLlEffectCountessLine2,
                 ],
               ),
               const SizedBox(height: 10),
-              _SpecialRule(
-                emoji: '\u{1F478}',
-                title: L10n.of(context).rulesLlEffectPrincessTitle,
-                leadingAsset: 'assets/cards/ll_Princess.webp',
+              _CardGuide(
+                leading: _GuideCardImage('assets/cards/ll_Princess.webp'),
+                name: L10n.of(context).rulesLlPrincess,
+                sub: L10n.of(context).rulesLlPrincessSub,
+                count: 1,
                 lines: [L10n.of(context).rulesLlEffectPrincessLine1],
               ),
             ],
@@ -1160,138 +1035,11 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
-  static Widget _cardAsset(String path) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Image.asset(
-        path,
-        width: 44,
-        height: 60,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const SizedBox(width: 44, height: 60),
-      ),
-    );
-  }
-
   static const _bodyStyle = TextStyle(
     fontSize: 15,
     height: 1.6,
     color: Color(0xFF5A4038),
   );
-}
-
-// ─── Row widget for card counts ──────────────────────────────────────────────
-
-class _CardCountRow extends StatelessWidget {
-  final String label;
-  final String sub;
-  final int count;
-  final Widget? leading;
-  final bool highlight;
-
-  const _CardCountRow({
-    required this.label,
-    required this.sub,
-    required this.count,
-    this.leading,
-    this.highlight = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 10)],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: highlight
-                              ? const Color(0xFFE65100)
-                              : const Color(0xFF3E312A),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (highlight) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE0B2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          L10n.of(context).rulesSkIncludedByDefault,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  sub,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8A7A72),
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1EDE8),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE0D8D4)),
-            ),
-            child: Text(
-              L10n.of(context).rulesSkCardCount(count),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 2),
-      child: Divider(height: 1, color: Color(0xFFEAE2DE)),
-    );
-  }
 }
 
 // ─── Special card rule block (used in Tichu rules) ───────────────────────────
@@ -1300,7 +1048,6 @@ class _SpecialRule extends StatelessWidget {
   final String emoji;
   final String title;
   final List<String> lines;
-  final Widget? extra;
 
   /// Optional card ID rendered as a small [PlayingCard] thumbnail at the
   /// right of the rule. When provided, takes visual priority over the
@@ -1325,15 +1072,10 @@ class _SpecialRule extends StatelessWidget {
   final IconData? badgeIcon;
   final Color? badgeColor;
 
-  /// 실제 카드 그림. 주어지면 이모지 대신 왼쪽에 크게 보여 준다.
-  final String? leadingAsset;
-
   const _SpecialRule({
-    this.leadingAsset,
     required this.emoji,
     required this.title,
     required this.lines,
-    this.extra,
     this.cardId,
     this.altCardId,
     this.altCardLabel,
@@ -1394,7 +1136,6 @@ class _SpecialRule extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (extra != null) ...[const SizedBox(height: 8), extra!],
               ],
             ),
           ),
@@ -2201,6 +1942,242 @@ class _SectionBadge extends StatelessWidget {
         ),
       ),
       child: Icon(icon, color: Colors.white, size: 20),
+    );
+  }
+}
+
+// ─── Card guide (구성 + 효과를 카드 단위로) ──────────────────────────────────
+
+class _GuideCardImage extends StatelessWidget {
+  const _GuideCardImage(this.asset);
+
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          asset,
+          width: 84,
+          height: 118,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const SizedBox(width: 84, height: 118),
+        ),
+      ),
+    );
+  }
+}
+
+/// 티츄 숫자 카드: 실제 카드 두 장을 겹쳐서.
+class _GuideNumberFan extends StatelessWidget {
+  const _GuideNumberFan();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 84,
+      height: 118,
+      child: Stack(
+        children: const [
+          Positioned(
+            left: 0,
+            top: 14,
+            child: PlayingCard(
+              cardId: 'heart_K',
+              width: 56,
+              height: 80,
+              isInteractive: false,
+            ),
+          ),
+          Positioned(
+            left: 26,
+            top: 0,
+            child: PlayingCard(
+              cardId: 'spade_A',
+              width: 56,
+              height: 80,
+              isInteractive: false,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 스컬킹 숫자 카드: 네 문양 색으로 겹쳐서.
+class _GuideSkNumbers extends StatelessWidget {
+  const _GuideSkNumbers();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 84,
+      height: 118,
+      child: Stack(
+        children: const [
+          Positioned(left: 0, top: 34, child: _SkMini.number('yellow', '7')),
+          Positioned(left: 10, top: 24, child: _SkMini.number('green', '3')),
+          Positioned(left: 20, top: 12, child: _SkMini.number('purple', '9')),
+          Positioned(left: 30, top: 0, child: _SkMini.number('black', '13')),
+        ],
+      ),
+    );
+  }
+}
+
+/// 카드 한 장의 구성과 효과를 한 덩어리로: 큰 카드 그림 + 이름·장수 + 효과 목록.
+class _CardGuide extends StatelessWidget {
+  const _CardGuide({
+    required this.leading,
+    required this.name,
+    required this.sub,
+    required this.count,
+    required this.lines,
+    this.extra,
+    this.highlight = false,
+  });
+
+  final Widget leading;
+  final String name;
+  final String sub;
+  final int count;
+  final List<String> lines;
+  final Widget? extra;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F4F1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8DDD8)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          leading,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 17,
+                          height: 1.25,
+                          fontWeight: FontWeight.w800,
+                          color: highlight
+                              ? const Color(0xFFE65100)
+                              : const Color(0xFF3E312A),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE0D8D4)),
+                      ),
+                      child: Text(
+                        L10n.of(context).rulesSkCardCount(count),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF5A4038),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (highlight) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE0B2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      L10n.of(context).rulesSkIncludedByDefault,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFE65100),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  sub,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF8A7A72),
+                  ),
+                ),
+                if (lines.isNotEmpty) const SizedBox(height: 8),
+                for (final l in lines)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 9, right: 8),
+                          child: CircleAvatar(
+                            radius: 3,
+                            backgroundColor: Color(0xFF8A7A72),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            l,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              height: 1.55,
+                              color: Color(0xFF5A4038),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (extra != null) ...[const SizedBox(height: 8), extra!],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

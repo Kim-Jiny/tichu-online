@@ -107,9 +107,9 @@ class ChatBubble extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(
                     sender,
-                    style: TextStyle(
-                      fontSize: senderFontSize + 1,
-                      fontWeight: FontWeight.w800,
+                    style: Cartoon.userText(
+                      size: senderFontSize + 1,
+                      weight: FontWeight.w800,
                       color: Cartoon.ink.withValues(alpha: 0.6),
                     ),
                   ),
@@ -120,18 +120,18 @@ class ChatBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isMe ? mineColor : Colors.white,
                   borderRadius: BorderRadius.circular(bubbleRadius),
-                  border: isMe
-                      ? null
-                      : Border.all(
-                          color: Cartoon.ink.withValues(alpha: 0.2),
-                          width: 1.2,
-                        ),
+                  border: Border.all(
+                    color: isMe
+                        ? Cartoon.ink
+                        : Cartoon.ink.withValues(alpha: 0.45),
+                    width: isMe ? 1.8 : 1.4,
+                  ),
                 ),
                 child: Text(
                   message,
-                  style: TextStyle(
-                    fontSize: messageFontSize,
-                    fontWeight: FontWeight.w600,
+                  style: Cartoon.userText(
+                    size: messageFontSize,
+                    weight: FontWeight.w600,
                     color: isMe ? Colors.white : Cartoon.ink,
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme/cartoon.dart';
 import 'chat_panel_body.dart';
 
 /// A floating chat panel that the user can drag to reposition and resize,
@@ -321,16 +322,14 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
           opacity: _opacity,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
+              color: Cartoon.paper,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Cartoon.ink, width: 2.2),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
               ],
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 _buildHeader(width, height),
@@ -399,9 +398,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: widget.accentColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
+          border: const Border(
+            bottom: BorderSide(color: Cartoon.ink, width: 2),
           ),
         ),
         child: Row(
@@ -412,11 +410,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
               child: Text(
                 widget.title,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                style: Cartoon.text(size: 17, color: Colors.white),
               ),
             ),
             // Left of the opacity button: both are "how the panel sits", and
@@ -478,12 +472,16 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
       padding: const EdgeInsets.only(left: 12, right: 8),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+          bottom: BorderSide(color: Cartoon.ink.withValues(alpha: 0.15)),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.opacity, size: 15, color: Color(0xFF8A8A8A)),
+          Icon(
+            Icons.opacity,
+            size: 15,
+            color: Cartoon.ink.withValues(alpha: 0.55),
+          ),
           Expanded(
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
@@ -506,7 +504,10 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
             child: Text(
               '${(_opacity * 100).round()}%',
               textAlign: TextAlign.end,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+              style: Cartoon.text(
+                size: 12,
+                color: Cartoon.ink.withValues(alpha: 0.55),
+              ),
             ),
           ),
         ],
@@ -544,7 +545,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
         child: Icon(
           Icons.open_in_full,
           size: 16,
-          color: widget.accentColor.withValues(alpha: 0.6),
+          color: Cartoon.ink.withValues(alpha: 0.45),
         ),
       ),
     );

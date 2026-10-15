@@ -87,11 +87,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // a new trick starts (lead suit changes).
   int _lastTrickCount = -1;
 
-  // 마이티·조커·조커콜이 나오거나 프렌드가 드러나는 순간의 색종이 연출.
+  // 마이티·조커·조커콜이 나오는 순간의 색종이 연출.
   // 이미 나온 패(재접속 직후의 첫 동기화 등)로는 터지지 않게 본 것을 기억한다.
   final Set<String> _fxSeenPlays = {};
   int _fxRound = -1;
-  bool _fxFriendSeen = false;
   bool _fxReady = false;
   int _fxSeq = 0;
 
@@ -576,11 +575,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (state.round != _fxRound) {
       _fxRound = state.round;
       _fxSeenPlays.clear();
-      _fxFriendSeen = state.friendRevealed;
     }
     var burst = false;
-    if (state.friendRevealed && !_fxFriendSeen) burst = true;
-    _fxFriendSeen = state.friendRevealed;
     for (final play in state.currentTrick) {
       final key = '${state.round}-${play.playerId}-${play.cardId}';
       if (!_fxSeenPlays.add(key)) continue;

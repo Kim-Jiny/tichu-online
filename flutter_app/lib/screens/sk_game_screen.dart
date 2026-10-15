@@ -1879,56 +1879,27 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             ),
                             SizedBox(
                               height: bidHeight,
-                              child: p.hasBid && p.bid != null
-                                  ? Container(
-                                      margin: EdgeInsets.only(
-                                        left: compact ? 3 : 4,
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: bidHorizontalPadding,
-                                        vertical: compact ? 0 : 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: p.tricks == p.bid
-                                            ? const Color(0xFFE8F5E9)
-                                            : p.tricks > p.bid!
-                                            ? const Color(0xFFFFF3E0)
-                                            : const Color(0xFFF5F5F5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
+                              child: Center(
+                                child: p.hasBid && p.bid != null
+                                    ? _skBidChip(
                                         '${p.tricks}/${p.bid}',
-                                        style: TextStyle(
-                                          color: p.tricks == p.bid
-                                              ? const Color(0xFF4CAF50)
-                                              : p.tricks > p.bid!
-                                              ? const Color(0xFFE65100)
-                                              : const Color(0xFF8A7A72),
-                                          fontSize: bidFontSize,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                  : p.hasBid && p.bid == null
-                                  ? Container(
-                                      margin: EdgeInsets.only(
-                                        left: compact ? 3 : 4,
-                                      ),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: bidHorizontalPadding,
-                                        vertical: compact ? 0 : 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF0EBF8),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.check,
-                                        size: compact ? 10 : 12,
-                                        color: const Color(0xFF7A6A95),
-                                      ),
-                                    )
-                                  : null,
+                                        p.tricks == p.bid
+                                            ? const Color(0xFFCDEFD6)
+                                            : p.tricks > p.bid!
+                                            ? const Color(0xFFFFE0B8)
+                                            : Cartoon.cream,
+                                        bidFontSize + 1.5,
+                                        bidHorizontalPadding,
+                                      )
+                                    : p.hasBid && p.bid == null
+                                    ? _skBidChip(
+                                        null,
+                                        Cartoon.cream,
+                                        bidFontSize + 1.5,
+                                        bidHorizontalPadding,
+                                      )
+                                    : null,
+                              ),
                             ),
                           ],
                         ),
@@ -1980,7 +1951,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
           final bidHeight = (compact ? 20.0 : 24.0) * seatScale;
           final bidFontSize = (compact ? 10.5 : 11.5) * seatScale;
           final bidHorizontalPadding = compact ? 4.0 : 6.0;
-          final bidTopMargin = compact ? 1.0 : 2.0;
           final spacing = compact ? 1.0 : 2.0;
           // Same source as the board's card placement — see _skSeatMetrics.
           final avatarDiameter = _skSeatMetrics(
@@ -2091,55 +2061,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       ),
                       SizedBox(
                         height: bidHeight,
-                        child: p.hasBid && p.bid != null
-                            ? Container(
-                                margin: EdgeInsets.only(top: bidTopMargin),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: bidHorizontalPadding,
-                                  vertical: compact ? 0 : 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: p.tricks == p.bid
+                        // Center 로 감싸야 칩이 내용 크기로 가운데에 놓인다. 안 감싸면
+                        // SizedBox 의 꽉 찬 높이를 받아 글자가 왼쪽 위로 쏠린다.
+                        child: Center(
+                          child: p.hasBid && p.bid != null
+                              ? _skBidChip(
+                                  '${p.tricks}/${p.bid}',
+                                  p.tricks == p.bid
                                       ? const Color(0xFFCDEFD6)
                                       : p.tricks > p.bid!
                                       ? const Color(0xFFFFE0B8)
                                       : Cartoon.cream,
-                                  borderRadius: BorderRadius.circular(99),
-                                  border: Border.all(
-                                    color: Cartoon.ink,
-                                    width: 1.4,
-                                  ),
-                                ),
-                                child: Text(
-                                  '${p.tricks}/${p.bid}',
-                                  style: Cartoon.text(
-                                    size: bidFontSize + 1.5,
-                                    height: 1.0,
-                                  ),
-                                ),
-                              )
-                            : p.hasBid && p.bid == null
-                            ? Container(
-                                margin: EdgeInsets.only(top: bidTopMargin),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: bidHorizontalPadding,
-                                  vertical: compact ? 0 : 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Cartoon.cream,
-                                  borderRadius: BorderRadius.circular(99),
-                                  border: Border.all(
-                                    color: Cartoon.ink,
-                                    width: 1.4,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.check_rounded,
-                                  size: compact ? 11 : 13,
-                                  color: Cartoon.ink,
-                                ),
-                              )
-                            : null,
+                                  bidFontSize + 1.5,
+                                  bidHorizontalPadding,
+                                )
+                              : p.hasBid && p.bid == null
+                              ? _skBidChip(
+                                  null,
+                                  Cartoon.cream,
+                                  bidFontSize + 1.5,
+                                  bidHorizontalPadding,
+                                )
+                              : null,
+                        ),
                       ),
                     ],
                   ),
@@ -2946,6 +2890,25 @@ class _SKGameScreenState extends State<SKGameScreen> {
           _buildCenterTimerBadge(state),
         ],
       ),
+    );
+  }
+
+  /// 좌석 아래의 "획득/목표" 칩. text 가 null 이면 비드만 마친 상태(체크).
+  Widget _skBidChip(String? text, Color color, double size, double hPad) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 1),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Cartoon.ink, width: 1.4),
+      ),
+      child: text == null
+          ? Icon(Icons.check_rounded, size: size + 2, color: Cartoon.ink)
+          : Text(
+              text,
+              maxLines: 1,
+              style: Cartoon.userText(size: size, weight: FontWeight.w800),
+            ),
     );
   }
 

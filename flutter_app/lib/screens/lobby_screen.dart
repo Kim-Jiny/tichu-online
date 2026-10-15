@@ -2505,6 +2505,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  // 위·아래 여백: 가로 스크롤 영역은 자기 높이 밖을 잘라 낸다. 선택된
+                  // 칩은 1.08배로 커지고 그림자도 아래로 나가서, 여백이 없으면
+                  // 위쪽 테두리가 잘려 보였다.
+                  clipBehavior: Clip.none,
+                  padding: const EdgeInsets.fromLTRB(3, 7, 3, 4),
                   child: Row(children: _buildGameFilterChips()),
                 ),
               ),

@@ -389,6 +389,49 @@ class _LobbyScreenState extends State<LobbyScreen> {
     });
   }
 
+  /// 팝업 제목: 색 칩 + 제목 글자. 팝업마다 같은 머리를 쓴다.
+  Widget _dialogTitle(IconData icon, Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Color.lerp(color, Colors.white, 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: Cartoon.ink, size: 22),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text,
+            style: Cartoon.text(size: 20),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 팝업 아래 주 버튼(작은 카툰 버튼).
+  Widget _dialogPrimary(
+    String label,
+    VoidCallback? onPressed, {
+    Color color = Cartoon.orange,
+  }) {
+    return CartoonButton(
+      expand: false,
+      height: 44,
+      color: color,
+      onPressed: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: CartoonButton.label(label, size: 17),
+      ),
+    );
+  }
+
   void _showRoomInviteDialog(Map<String, dynamic> invite, GameService game) {
     final fromNickname = invite['fromNickname'] as String? ?? '';
     final roomName = invite['roomName'] as String? ?? '';
@@ -398,32 +441,26 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.mail, color: Color(0xFF7E57C2)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                l10n.lobbyRoomInviteTitle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: _dialogTitle(
+          Icons.mail_rounded,
+          Cartoon.blue,
+          l10n.lobbyRoomInviteTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.lobbyRoomInviteMessage(fromNickname),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: Cartoon.userText(size: 16),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(10),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3E5F5),
-                borderRadius: BorderRadius.circular(12),
+                color: Cartoon.cream,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 children: [
@@ -434,43 +471,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       height: 15,
                       fit: BoxFit.contain,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                   ],
                   Expanded(
-                    child: Text(
-                      roomName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
+                    child: Text(roomName, style: Cartoon.userText(size: 16)),
                   ),
                 ],
               ),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.lobbyDecline),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.acceptInvite(invite);
-              setState(() => _inRoom = true);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7E57C2),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(l10n.lobbyJoin),
-          ),
+          _dialogPrimary(l10n.lobbyJoin, () {
+            Navigator.pop(ctx);
+            game.acceptInvite(invite);
+            setState(() => _inRoom = true);
+          }, color: Cartoon.green),
         ],
       ),
     );
@@ -487,73 +508,62 @@ class _LobbyScreenState extends State<LobbyScreen> {
               .where((f) => f['isOnline'] == true && f['roomId'] == null)
               .toList();
           return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: [
-                const Icon(Icons.person_add, color: Color(0xFF7E57C2)),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    l10n.lobbyInviteFriendsTitle,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            title: _dialogTitle(
+              Icons.person_add_rounded,
+              Cartoon.green,
+              l10n.lobbyInviteFriendsTitle,
             ),
             content: onlineFriends.isEmpty
                 ? SizedBox(
-                    height: 60,
+                    height: 70,
                     child: Center(
                       child: Text(
                         l10n.lobbyNoOnlineFriends,
-                        style: const TextStyle(color: Color(0xFF9A8E8A)),
+                        style: Cartoon.text(
+                          size: 16,
+                          color: Cartoon.ink.withValues(alpha: 0.55),
+                        ),
                       ),
                     ),
                   )
                 : SizedBox(
                     width: double.maxFinite,
-                    height: 250,
+                    height: 260,
                     child: ListView.separated(
                       itemCount: onlineFriends.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 6),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        thickness: 1.5,
+                        color: Cartoon.ink.withValues(alpha: 0.12),
+                      ),
                       itemBuilder: (context, index) {
                         final friend = onlineFriends[index];
                         final nickname = friend['nickname'] as String? ?? '';
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F8E9),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFC8E6C9)),
-                          ),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 10,
+                                height: 10,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFF4CAF50),
+                                  color: Cartoon.green,
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   nickname,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF5A4038),
-                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Cartoon.userText(size: 16),
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () {
+                              CartoonButton(
+                                expand: false,
+                                height: 36,
+                                radius: 13,
+                                onPressed: () {
                                   game.inviteToRoom(nickname);
                                   Navigator.pop(ctx);
                                   ScaffoldMessenger.of(
@@ -566,22 +576,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     ),
                                   );
                                 },
-                                child: Container(
+                                child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
+                                    horizontal: 14,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF7E57C2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
+                                  child: CartoonButton.label(
                                     l10n.lobbyInvite,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                    size: 15,
                                   ),
                                 ),
                               ),
@@ -609,12 +610,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _settingsSectionLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0.4,
-        color: Color(0xFF9C8B84),
-      ),
+      style: Cartoon.text(size: 14, color: Cartoon.ink.withValues(alpha: 0.6)),
     );
   }
 
@@ -624,20 +620,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.settings, color: Color(0xFF1E88E5)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                l10n.lobbyRoomSettingsTitle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: _dialogTitle(
+          Icons.tune_rounded,
+          Cartoon.orange,
+          l10n.lobbyRoomSettingsTitle,
         ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+        contentPadding: const EdgeInsets.fromLTRB(24, 14, 24, 4),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         // Consumer, not StatefulBuilder: the switch reflects room state that
         // the SERVER owns, and it only changes when the room_state broadcast
         // comes back. A local setState repainted with the old value, so the
@@ -658,6 +647,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   TextField(
                     controller: controller,
                     maxLength: 20,
+                    style: Cartoon.userText(size: 16),
                     decoration: InputDecoration(
                       isDense: true,
                       // The 0/20 counter added a whole line of chrome under a
@@ -665,11 +655,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       counterText: '',
                       hintText: l10n.lobbyEnterRoomTitle,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        horizontal: 14,
+                        vertical: 13,
                       ),
                     ),
                   ),
@@ -686,9 +673,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
                       decoration: BoxDecoration(
                         color: gs.roomAllowMidGameJoin
-                            ? const Color(0xFFF3EFFC)
-                            : const Color(0xFFF7F5F4),
-                        borderRadius: BorderRadius.circular(12),
+                            ? const Color(0xFFE3F4E8)
+                            : Cartoon.cream,
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
                         children: [
@@ -705,34 +692,31 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               children: [
                                 Text(
                                   l10n.midJoinCreateOption,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF4B3C35),
-                                  ),
+                                  style: Cartoon.text(size: 16),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   l10n.midJoinCreateOptionHint,
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  style: Cartoon.text(
+                                    size: 12.5,
+                                    color: Cartoon.ink.withValues(alpha: 0.65),
                                     height: 1.35,
-                                    color: Color(0xFF8A7A72),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   l10n.lobbyAppliesImmediately,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF9A90BC),
+                                  style: Cartoon.text(
+                                    size: 12,
+                                    color: Cartoon.orangeDeep,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           Switch(
+                            activeThumbColor: Colors.white,
+                            activeTrackColor: Cartoon.green,
                             value: gs.roomAllowMidGameJoin,
                             onChanged: (v) => gs.setMidGameJoin(v),
                           ),
@@ -750,15 +734,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              game.changeRoomName(name);
-              Navigator.pop(ctx);
-            },
-            child: Text(l10n.lobbyChange),
-          ),
+          _dialogPrimary(l10n.lobbyChange, () {
+            final name = controller.text.trim();
+            if (name.isEmpty) return;
+            game.changeRoomName(name);
+            Navigator.pop(ctx);
+          }),
         ],
       ),
     );
@@ -3094,23 +3075,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.lock, color: Color(0xFFF2A65A), size: 22),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                l10n.lobbySocialLinkRequired,
-                style: const TextStyle(fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: _dialogTitle(
+          Icons.lock_rounded,
+          Cartoon.yellow,
+          l10n.lobbySocialLinkRequired,
         ),
         content: Text(
           l10n.lobbySocialLinkRequiredDesc,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF5A4038)),
+          style: Cartoon.text(size: 16, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -3344,9 +3316,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
       builder: (ctx) => SafeArea(
         top: false,
         child: Padding(
@@ -3360,20 +3329,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD8CEC8),
+                    color: Cartoon.ink.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                l10n.lobbyShareSheetTitle,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF4E342E),
-                ),
-              ),
+              Text(l10n.lobbyShareSheetTitle, style: Cartoon.text(size: 21)),
               const SizedBox(height: 8),
               _shareSheetTile(
                 icon: Icons.link,
@@ -3431,19 +3393,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F3F2),
+          color: Cartoon.cream,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(icon, color: const Color(0xFF8A7A72)),
+        child: Icon(icon, color: Cartoon.ink),
       ),
-      title: Text(
-        label,
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF4E342E),
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A7A72)),
+      title: Text(label, style: Cartoon.text(size: 17)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
       onTap: onTap,
     );
   }
@@ -5308,25 +5264,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(l10n.lobbyKick),
-        content: Text(l10n.lobbyKickConfirm(playerName)),
+        title: _dialogTitle(Icons.logout_rounded, Cartoon.red, l10n.lobbyKick),
+        content: Text(
+          l10n.lobbyKickConfirm(playerName),
+          style: Cartoon.userText(size: 16, height: 1.4),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.commonCancel),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.kickPlayer(playerId);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
-            ),
-            child: Text(l10n.lobbyKick),
-          ),
+          _dialogPrimary(l10n.lobbyKick, () {
+            Navigator.pop(ctx);
+            game.kickPlayer(playerId);
+          }, color: Cartoon.red),
         ],
       ),
     );

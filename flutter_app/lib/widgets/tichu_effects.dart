@@ -64,16 +64,16 @@ _FxStyle _styleOf(TichuFxKind kind) {
       return const _FxStyle(
         colors: [Color(0xFF4BA3FF), Color(0xFF1565C0)],
         glow: Color(0xFF4BA3FF),
-        duration: Duration(milliseconds: 1700),
-        titleSize: 34,
+        duration: Duration(milliseconds: 1900),
+        titleSize: 36,
         icon: Icons.bolt,
       );
     case TichuFxKind.declareLarge:
       return const _FxStyle(
         colors: [Color(0xFFFF6B6B), Color(0xFFB71C1C)],
         glow: Color(0xFFFF6B6B),
-        duration: Duration(milliseconds: 2000),
-        titleSize: 38,
+        duration: Duration(milliseconds: 2300),
+        titleSize: 42,
         icon: Icons.local_fire_department,
       );
     case TichuFxKind.tichuSuccess:
@@ -187,6 +187,9 @@ class _FxBannerState extends State<_FxBanner>
     final kind = widget.event.kind;
     final isFail = kind == TichuFxKind.tichuFail;
     final isSuccess = kind == TichuFxKind.tichuSuccess;
+    final isDeclare =
+        kind == TichuFxKind.declareSmall || kind == TichuFxKind.declareLarge;
+    final isLargeDeclare = kind == TichuFxKind.declareLarge;
     final large = widget.event.large;
     return AnimatedBuilder(
       animation: _c,
@@ -206,6 +209,19 @@ class _FxBannerState extends State<_FxBanner>
           offset = Offset(shake, -150 * (1 - slam) + 34 * out);
           scale = 0.9 + 0.1 * slam;
           angle = -0.035 * slam;
+        } else if (isDeclare) {
+          // 도장 찍듯 크게 내리쳐 쾅 하고 박힌 뒤, 여운으로 한 번 출렁인다.
+          // 라지는 박히는 순간 화면이 흔들린다.
+          final hit = Curves.easeInCubic.transform((t / 0.16).clamp(0.0, 1.0));
+          final after = ((t - 0.16) / 0.3).clamp(0.0, 1.0);
+          scale =
+              2.4 -
+              1.4 * hit +
+              0.09 * math.sin(after * math.pi * 3) * (1 - after);
+          final quake = isLargeDeclare && after < 1
+              ? math.sin(after * math.pi * 9) * 9 * (1 - after)
+              : 0.0;
+          offset = Offset(quake, -20 * out);
         } else {
           // 앞 25% 에서 튀어나오고, 뒤 20% 에서 떠오르며 사라진다.
           final pop = Curves.elasticOut.transform((t / 0.25).clamp(0.0, 1.0));
@@ -234,7 +250,7 @@ class _FxBannerState extends State<_FxBanner>
             ),
           ),
         );
-        if (!isSuccess && !isFail) return plate;
+        if (!isSuccess && !isFail && !isDeclare) return plate;
         return Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
@@ -242,7 +258,11 @@ class _FxBannerState extends State<_FxBanner>
             // 캔버스는 잘리지 않으니 글자 상자 밖으로 터져 나가도 그려진다.
             Positioned.fill(
               child: CustomPaint(
-                painter: isSuccess
+                painter: isDeclare
+                    ? (isLargeDeclare
+                          ? _FlamePainter(t: t, seed: widget.event.id)
+                          : _LightningPainter(t: t, seed: widget.event.id))
+                    : isSuccess
                     ? _BurstPainter(
                         t: t,
                         large: large,
@@ -561,4 +581,191 @@ class _GloomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GloomPainter old) => old.t != t;
+}
+
+const double _kDeclareHit = 0.16;
+
+/// 스몰 티츄 선언: 박히는 순간 푸른 번개가 사방으로 튀고 불꽃이 흩어진다.
+class _LightningPainter extends CustomPainter {
+  _LightningPainter({required this.t, required this.seed});
+
+  final double t;
+  final int seed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final life = ((t - _kDeclareHit) / 0.5).clamp(0.0, 1.0);
+
+    // 박히기 전: 가운데로 모이는 빛
+    if (t < _kDeclareHit) {
+      final k = t / _kDeclareHit;
+      canvas.drawCircle(
+        c,
+        120 * (1 - k) + 10,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF4BA3FF).withValues(alpha: 0.5 * k),
+              const Color(0xFF4BA3FF).withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromCircle(center: c, radius: 120)),
+      );
+      return;
+    }
+
+    // 충격파
+    if (life < 1) {
+      canvas.drawCircle(
+        c,
+        24 + 190 * Curves.easeOut.transform(life),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5 * (1 - life) + 1
+          ..color = const Color(
+            0xFF9FD0FF,
+          ).withValues(alpha: 0.85 * (1 - life)),
+      );
+    }
+
+    // 번개: 일정 간격으로 모양이 바뀌어 지지직거린다.
+    if (life < 1) {
+      final frame = (t * 20).floor();
+      const bolts = 8;
+      for (var i = 0; i < bolts; i++) {
+        final rng = math.Random(seed * 31 + frame * 17 + i);
+        final base =
+            i * 2 * math.pi / bolts + math.Random(seed + i).nextDouble() * 0.5;
+        final len =
+            (120 + rng.nextDouble() * 90) *
+            Curves.easeOut.transform((life * 3).clamp(0.0, 1.0));
+        final path = Path()..moveTo(c.dx, c.dy);
+        const seg = 6;
+        for (var k = 1; k <= seg; k++) {
+          final d = len * k / seg;
+          final off = k == seg ? 0.0 : (rng.nextDouble() - 0.5) * 30;
+          final nx = -math.sin(base);
+          final ny = math.cos(base);
+          path.lineTo(
+            c.dx + math.cos(base) * d + nx * off,
+            c.dy + math.sin(base) * d + ny * off,
+          );
+        }
+        final a = (1 - life).clamp(0.0, 1.0);
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 7
+            ..strokeJoin = StrokeJoin.round
+            ..color = const Color(0xFF4BA3FF).withValues(alpha: 0.4 * a)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..strokeJoin = StrokeJoin.round
+            ..color = Colors.white.withValues(alpha: a),
+        );
+      }
+    }
+
+    // 튀는 불꽃
+    final rng = math.Random(seed * 977 + 3);
+    for (var i = 0; i < 22; i++) {
+      final ang = rng.nextDouble() * 2 * math.pi;
+      final sp = 90 + rng.nextDouble() * 180;
+      final p = ((t - _kDeclareHit) / 0.7).clamp(0.0, 1.0);
+      if (p >= 1) break;
+      final d = sp * Curves.easeOut.transform(p);
+      canvas.drawCircle(
+        Offset(c.dx + math.cos(ang) * d, c.dy + math.sin(ang) * d + 40 * p * p),
+        2.4 * (1 - p) + 0.6,
+        Paint()..color = const Color(0xFFE3F2FF).withValues(alpha: 1 - p),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LightningPainter old) => old.t != t;
+}
+
+/// 라지 티츄 선언: 붉은 충격파와 함께 글자 밑에서 불길이 치솟고 불씨가 날린다.
+class _FlamePainter extends CustomPainter {
+  _FlamePainter({required this.t, required this.seed});
+
+  final double t;
+  final int seed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final fadeOut = 1 - ((t - 0.78) / 0.22).clamp(0.0, 1.0);
+
+    // 박히기 전: 아래서 달아오르는 붉은 기운
+    final heat = (t / _kDeclareHit).clamp(0.0, 1.0);
+    canvas.drawCircle(
+      c.translate(0, 30),
+      190,
+      Paint()
+        ..shader =
+            RadialGradient(
+              colors: [
+                const Color(
+                  0xFFFF3D00,
+                ).withValues(alpha: 0.45 * heat * fadeOut),
+                const Color(0xFFB71C1C).withValues(alpha: 0),
+              ],
+            ).createShader(
+              Rect.fromCircle(center: c.translate(0, 30), radius: 190),
+            ),
+    );
+    if (t < _kDeclareHit) return;
+
+    // 충격파 두 겹
+    for (var r = 0; r < 2; r++) {
+      final life = ((t - _kDeclareHit - r * 0.08) / 0.45).clamp(0.0, 1.0);
+      if (life <= 0 || life >= 1) continue;
+      canvas.drawCircle(
+        c,
+        26 + (r == 0 ? 250 : 190) * Curves.easeOut.transform(life),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 7 * (1 - life) + 1
+          ..color = (r == 0 ? const Color(0xFFFF7043) : const Color(0xFFFFD180))
+              .withValues(alpha: 0.85 * (1 - life)),
+      );
+    }
+
+    // 불길·불씨: 글자 아래 폭 전체에서 올라온다. 겹칠수록 밝아지게 plus 합성.
+    final rng = math.Random(seed * 6151 + 11);
+    final glow = Paint()..blendMode = BlendMode.plus;
+    const n = 70;
+    for (var i = 0; i < n; i++) {
+      final x0 = (rng.nextDouble() - 0.5) * 250;
+      final speed = 0.9 + rng.nextDouble() * 0.8;
+      final phase = rng.nextDouble();
+      final wob = rng.nextDouble() * 6.28;
+      final ember = i % 4 == 0; // 일부는 더 높이 날리는 작은 불씨
+      final p = (((t - _kDeclareHit) * speed + phase) % 1.0);
+      final rise = (ember ? 300.0 : 190.0) * p;
+      final x = c.dx + x0 * (1 - 0.35 * p) + math.sin(p * 7 + wob) * 10;
+      final y = c.dy + 46 - rise;
+      final radius = (ember ? 3.0 : 13.0) * (1 - p) + 1;
+      final color = Color.lerp(
+        const Color(0xFFFFF59D),
+        Color.lerp(const Color(0xFFFF9100), const Color(0xFFD50000), p)!,
+        (p * 1.6).clamp(0.0, 1.0),
+      )!;
+      glow.color = color.withValues(
+        alpha: (ember ? 0.9 : 0.4) * (1 - p) * fadeOut,
+      );
+      canvas.drawCircle(Offset(x, y), radius, glow);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FlamePainter old) => old.t != t;
 }

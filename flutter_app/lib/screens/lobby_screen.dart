@@ -33,6 +33,7 @@ import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
 import '../theme/cartoon.dart';
 import '../widgets/gold_history_dialog.dart';
+import '../widgets/gold_icon.dart';
 import '../services/ad_service.dart';
 import '../services/kakao_invite_share_service.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -2089,11 +2090,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/icons/goldIcon.webp',
-                      width: 26,
-                      height: 26,
-                    ),
+                    GoldIcon(size: 28, amount: game.gold),
                     const SizedBox(width: 6),
                     Text(_withCommas(game.gold), style: Cartoon.text(size: 18)),
                   ],

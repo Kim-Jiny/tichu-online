@@ -3833,7 +3833,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 '${roundScore > 0 ? '+' : ''}$roundScore',
                                 style: Cartoon.userText(
                                   size: isLandscape ? 14 : 16,
-                                  color: roundScore,
+                                  color: roundScore >= 0
+                                      ? Cartoon.green
+                                      : Cartoon.red,
                                 ),
                                 textAlign: TextAlign.end,
                                 maxLines: 1,

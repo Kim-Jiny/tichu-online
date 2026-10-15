@@ -2943,9 +2943,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             ),
                                           ),
                                           child: Text(
-                                            '${_skExpansionEmoji(exp)} ${_skExpansionShortLabel(exp, l10n)}',
+                                            _skExpansionEmoji(exp).isEmpty
+                                                ? _skExpansionShortLabel(
+                                                    exp,
+                                                    l10n,
+                                                  )
+                                                : _skExpansionEmoji(exp),
                                             style: Cartoon.userText(
-                                              size: 10.5,
+                                              size: 12,
                                               color: Colors.white,
                                               weight: FontWeight.w800,
                                               height: 1.0,

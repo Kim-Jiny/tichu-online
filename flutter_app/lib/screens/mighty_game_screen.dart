@@ -1501,13 +1501,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // bidding phase. p.bid is either the string 'pass' or a Map {points, suit}.
   Widget? _bidScoreboardBadge(dynamic bid) {
     if (bid == 'pass') {
-      return const Text(
+      return Text(
         'PASS',
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF9E9E9E),
-          letterSpacing: 0.5,
+        style: Cartoon.text(
+          size: 13,
+          color: Cartoon.ink.withValues(alpha: 0.4),
         ),
       );
     }
@@ -1521,14 +1519,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         children: [
           SuitIcon(suit: suit, size: 13, color: accent),
           const SizedBox(width: 3),
-          Text(
-            '$points',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: accent,
-            ),
-          ),
+          Text('$points', style: Cartoon.text(size: 14, color: accent)),
         ],
       );
     }
@@ -1988,55 +1979,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
 
     Widget? roleLabel;
     if (isExcluded) {
-      roleLabel = Text(
-        L10n.of(context).mtKillExcluded,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFFD84315),
-        ),
-      );
+      roleLabel = _rolePill(L10n.of(context).mtKillExcluded, Cartoon.red);
     } else if (isDeclarer && isPartner) {
       // 초구 프렌즈: the declarer won the first trick, so they are BOTH the
       // 주공 and the 프렌드 — surface both roles at once.
-      roleLabel = RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-          children: [
-            TextSpan(
-              text: L10n.of(context).mtDeclarer,
-              style: const TextStyle(color: Color(0xFFFF8A00)),
-            ),
-            const TextSpan(
-              text: '·',
-              style: TextStyle(color: Color(0xFF8A7A72)),
-            ),
-            TextSpan(
-              text: L10n.of(context).mtFriend,
-              style: const TextStyle(color: Color(0xFF4CAF50)),
-            ),
-          ],
-        ),
+      roleLabel = _rolePill(
+        '${L10n.of(context).mtDeclarer}·${L10n.of(context).mtFriend}',
+        Cartoon.orange,
       );
     } else if (isDeclarer) {
-      roleLabel = Text(
-        L10n.of(context).mtDeclarer,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFFFF8A00),
-        ),
-      );
+      roleLabel = _rolePill(L10n.of(context).mtDeclarer, Cartoon.orange);
     } else if (isPartner) {
-      roleLabel = Text(
-        L10n.of(context).mtFriend,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF4CAF50),
-        ),
-      );
+      roleLabel = _rolePill(L10n.of(context).mtFriend, Cartoon.green);
     } else if (state.phase == 'bidding' && player.bid != null) {
       roleLabel = _bidScoreboardBadge(player.bid);
     } else if (state.phase == 'bidding' &&
@@ -2044,10 +1998,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         player.reservedPass) {
       roleLabel = Text(
         L10n.of(context).mtReservePassed,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFFBDBDBD),
+        style: Cartoon.text(
+          size: 12,
+          color: Cartoon.ink.withValues(alpha: 0.4),
         ),
       );
     }
@@ -2181,34 +2134,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                               // 라운드 코너와 정확히 같은 곡률로 감싼다
                                               // — 바깥 Container 로 감쌌더니 shape.circle
                                               // 이 되어 사진 모서리에서 살짝 어긋났다.
-                                              border:
-                                                  (isCurrentTurn ||
-                                                      isDeclarer ||
-                                                      isPartner ||
-                                                      highlighted)
-                                                  ? Border.all(
-                                                      color: isCurrentTurn
-                                                          ? const Color(
-                                                              0xFFE6C86A,
-                                                            )
-                                                          : isDeclarer
-                                                          ? const Color(
-                                                              0xFFFF8A00,
-                                                            )
-                                                          : isPartner
-                                                          ? const Color(
-                                                              0xFF4CAF50,
-                                                            )
-                                                          : const Color(
-                                                              0xFF64B5F6,
-                                                            ),
-                                                      width:
-                                                          (isDeclarer ||
-                                                              isPartner)
-                                                          ? 3.5
-                                                          : 1.5,
-                                                    )
-                                                  : null,
+                                              border: Border.all(
+                                                color: isDeclarer
+                                                    ? Cartoon.orange
+                                                    : isPartner
+                                                    ? Cartoon.green
+                                                    : highlighted
+                                                    ? Cartoon.blue
+                                                    : isCurrentTurn
+                                                    ? Cartoon.yellow
+                                                    : Cartoon.ink,
+                                                width:
+                                                    (isDeclarer ||
+                                                        isPartner ||
+                                                        highlighted ||
+                                                        isCurrentTurn)
+                                                    ? 3.5
+                                                    : 2.0,
+                                              ),
                                               fallback: player.isBot
                                                   ? BotAvatar(
                                                       size: avatarDiameter,
@@ -2228,16 +2171,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                   2,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white,
+                                                  color: Cartoon.cream,
                                                   shape: BoxShape.circle,
                                                   border: Border.all(
-                                                    color: isApproved
-                                                        ? const Color(
-                                                            0xFF64B5F6,
-                                                          )
-                                                        : const Color(
-                                                            0xFFE0D8D4,
-                                                          ),
+                                                    color: Cartoon.ink,
+                                                    width: 1.6,
                                                   ),
                                                 ),
                                                 child: Icon(
@@ -2249,13 +2187,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                             .visibility_outlined,
                                                   size: 12,
                                                   color: isPending
-                                                      ? const Color(0xFFFFB74D)
+                                                      ? Cartoon.orangeDeep
                                                       : isApproved
-                                                      ? const Color(0xFF64B5F6)
-                                                      : const Color(
-                                                          0xFF8A7A72,
-                                                        ).withValues(
-                                                          alpha: 0.6,
+                                                      ? Cartoon.blue
+                                                      : Cartoon.ink.withValues(
+                                                          alpha: 0.55,
                                                         ),
                                                 ),
                                               ),
@@ -2272,25 +2208,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                       horizontal: 6,
                                                       vertical: 2,
                                                     ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(11),
-                                                  border: Border.all(
-                                                    color: const Color(
-                                                      0xFFE53935,
-                                                    ),
-                                                    width: 1.2,
-                                                  ),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withValues(
-                                                            alpha: 0.12,
-                                                          ),
-                                                      blurRadius: 3,
-                                                    ),
-                                                  ],
+                                                decoration: gamePillDecoration(
+                                                  radius: 11,
+                                                  color: Cartoon.cream,
                                                 ),
                                                 child: Row(
                                                   mainAxisSize:
@@ -2298,19 +2218,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                                   children: [
                                                     const Icon(
                                                       Icons.style,
-                                                      size: 10,
-                                                      color: Color(0xFFE53935),
+                                                      size: 11,
+                                                      color: Cartoon.red,
                                                     ),
                                                     const SizedBox(width: 2),
                                                     Text(
                                                       '${player.pointCount}',
-                                                      style: const TextStyle(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.w800,
-                                                        color: Color(
-                                                          0xFFE53935,
-                                                        ),
+                                                      style: Cartoon.text(
+                                                        size: 12,
+                                                        color: Cartoon.red,
                                                       ),
                                                     ),
                                                   ],
@@ -2341,7 +2257,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                               child: Icon(
                                                 Icons.wifi_off,
                                                 size: offlineIconSize,
-                                                color: const Color(0xFFE53935),
+                                                color: Cartoon.red,
                                               ),
                                             ),
                                           Flexible(
@@ -2350,12 +2266,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               textAlign: TextAlign.center,
-                                              style: TextStyle(
+                                              style: Cartoon.userText(
+                                                size: nameFontSize,
                                                 color: player.connected
-                                                    ? const Color(0xFF5A4038)
-                                                    : const Color(0xFFE53935),
-                                                fontSize: nameFontSize,
-                                                fontWeight: FontWeight.w700,
+                                                    ? Cartoon.ink
+                                                    : Cartoon.red,
                                               ),
                                             ),
                                           ),
@@ -2368,11 +2283,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                     opacity: overlayOn ? 1.0 : 0.0,
                                     child: Text(
                                       '${state.scores[player.id] ?? 0}',
-                                      style: TextStyle(
-                                        color: const Color(0xFF5A4038),
-                                        fontSize: scoreFontSize,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                      style: Cartoon.text(size: scoreFontSize),
                                     ),
                                   ),
                                   // Only when there is a count: the always-
@@ -2387,10 +2298,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                         height: timeoutHeight,
                                         child: Text(
                                           '⏱ ${player.timeoutCount}/3',
-                                          style: TextStyle(
-                                            fontSize: metaFontSize,
-                                            fontWeight: FontWeight.w800,
-                                            color: const Color(0xFFE65100),
+                                          style: Cartoon.text(
+                                            size: metaFontSize,
+                                            color: Cartoon.orangeDeep,
                                           ),
                                         ),
                                       ),
@@ -2438,6 +2348,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       return IgnorePointer(child: content);
     }
     return content;
+  }
+
+  /// 좌석 위 역할 표시(주공·프렌드·제외): 색 알약 + 진한 테두리 + 흰 글자.
+  Widget _rolePill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: gamePillDecoration(radius: 10, color: color),
+      child: Text(text, style: Cartoon.text(size: 12, color: Colors.white)),
+    );
   }
 
   void _handleTableSeatTap(
@@ -2492,11 +2411,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       decoration: isWinner
           ? BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.35),
-                  blurRadius: 10,
-                ),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.green, offset: Offset(0, 4)),
               ],
             )
           : null,
@@ -2755,16 +2671,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           height: 21,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFF5A4038),
+            color: Cartoon.ink,
             borderRadius: BorderRadius.circular(3),
           ),
           child: Text(
             '+$extra',
-            style: const TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
+            style: Cartoon.text(size: 9, color: Colors.white),
           ),
         ),
     ];
@@ -2800,7 +2712,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final Color color;
     if (myId == state.declarer) {
       label = L10n.of(context).mtDeclarer;
-      color = const Color(0xFFFF8A00);
+      color = Cartoon.orange;
     } else {
       final fc = state.friendCard;
       final iHoldFriendCard =
@@ -2813,29 +2725,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ((state.friendRevealed && myId == state.partner) || iHoldFriendCard);
       if (!amFriend) return null;
       label = L10n.of(context).mtFriend;
-      color = const Color(0xFF4CAF50);
+      color = Cartoon.green;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.55)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: gamePillDecoration(radius: 12, color: color),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.person, size: 13, color: color),
+          const Icon(Icons.person_rounded, size: 14, color: Colors.white),
           const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
+          Text(label, style: Cartoon.text(size: 13, color: Colors.white)),
         ],
       ),
     );
@@ -2883,28 +2784,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       onTap: () => _showPointCardsDialog(me),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3ECE6),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-        ),
+        decoration: gamePillDecoration(radius: 10),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.workspace_premium,
-              size: 15,
-              color: Color(0xFF8A7A72),
+              Icons.workspace_premium_rounded,
+              size: 16,
+              color: Cartoon.orangeDeep,
             ),
             const SizedBox(width: 3),
-            Text(
-              '${me.pointCount}',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF5A4038),
-              ),
-            ),
+            Text('${me.pointCount}', style: Cartoon.text(size: 13)),
             const SizedBox(width: 6),
             for (var i = 0; i < cardItems.length; i++) ...[
               if (i > 0) const SizedBox(width: 2),
@@ -2922,13 +2812,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       builder: (ctx) {
         final cards = p.pointCards;
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Cartoon.paper,
+          surfaceTintColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 24,
             vertical: 40,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(26),
+            side: const BorderSide(color: Cartoon.ink, width: 2.5),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
@@ -2945,11 +2837,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         p.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF4A3A32),
-                        ),
+                        style: Cartoon.userText(size: 17),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2958,30 +2846,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         horizontal: 8,
                         vertical: 3,
                       ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F0),
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(
-                          color: const Color(0xFFE53935),
-                          width: 1.2,
-                        ),
+                      decoration: gamePillDecoration(
+                        radius: 12,
+                        color: Cartoon.cream,
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
-                            Icons.style,
-                            size: 12,
-                            color: Color(0xFFE53935),
-                          ),
+                          const Icon(Icons.style, size: 13, color: Cartoon.red),
                           const SizedBox(width: 3),
                           Text(
                             '${p.pointCount}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFE53935),
-                            ),
+                            style: Cartoon.text(size: 14, color: Cartoon.red),
                           ),
                         ],
                       ),
@@ -2995,9 +2871,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     child: Center(
                       child: Text(
                         L10n.of(context).mtNoPointCards,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF8A7A72),
+                        style: Cartoon.text(
+                          size: 15,
+                          color: Cartoon.ink.withValues(alpha: 0.55),
                         ),
                       ),
                     ),
@@ -3025,9 +2901,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(L10n.of(context).mtClose),
+                  child: gameButton(
+                    L10n.of(context).mtClose,
+                    () => Navigator.pop(ctx),
+                    height: 42,
+                    size: 16,
                   ),
                 ),
               ],
@@ -3052,27 +2930,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.gavel, size: 20, color: Color(0xFF1565C0)),
+          const Icon(Icons.gavel_rounded, size: 22, color: Cartoon.blue),
           const SizedBox(height: 4),
-          Text(
-            L10n.of(context).mtBidInProgress,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
-            ),
-          ),
+          Text(L10n.of(context).mtBidInProgress, style: Cartoon.text(size: 15)),
           if (_remainingSeconds > 0)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 '${_remainingSeconds}s',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                style: Cartoon.text(
+                  size: 14,
                   color: _remainingSeconds <= 5
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFF8A7A72),
+                      ? Cartoon.red
+                      : Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -3097,7 +2967,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.dangerous, size: 20, color: Color(0xFFD84315)),
+          const Icon(Icons.dangerous_rounded, size: 22, color: Cartoon.red),
           const SizedBox(height: 4),
           SizedBox(
             width: 180,
@@ -3106,11 +2976,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
+              style: Cartoon.text(size: 15),
             ),
           ),
           if (_remainingSeconds > 0)
@@ -3118,12 +2984,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 '${_remainingSeconds}s',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                style: Cartoon.text(
+                  size: 14,
                   color: _remainingSeconds <= 5
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFF8A7A72),
+                      ? Cartoon.red
+                      : Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -3149,8 +3014,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             Icon(
               isKittyWait ? Icons.swap_horiz : Icons.style,
-              size: 20,
-              color: const Color(0xFF8A7A72),
+              size: 22,
+              color: Cartoon.ink.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 4),
             Text(
@@ -3160,10 +3025,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ? L10n.of(context).mtYourTurn
                   : L10n.of(context).mtWaiting,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
+              style: Cartoon.text(
+                size: 15,
+                color: state.isMyTurn ? Cartoon.orangeDeep : Cartoon.ink,
               ),
             ),
             if (_remainingSeconds > 0 && (state.isMyTurn || isKittyWait))
@@ -3171,12 +3035,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   '${_remainingSeconds}s',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                  style: Cartoon.text(
+                    size: 14,
                     color: _remainingSeconds <= 5
-                        ? const Color(0xFFE53935)
-                        : const Color(0xFF8A7A72),
+                        ? Cartoon.red
+                        : Cartoon.ink.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -3192,7 +3055,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     // background watermark so it reads at a glance.
     final accent = leadSuit != null
         ? _bidAccentColor(leadSuit)
-        : const Color(0xFF8A7A72);
+        : Cartoon.ink.withValues(alpha: 0.5);
 
     // Center 감싸면 부모 (Align) 가 자식을 무한 크기로 받아 alignment 가
     // 무효화된다 — 내용만큼만 차지하도록 Container 를 직접 return.
@@ -3241,29 +3104,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     children: [
                       Text(
                         '${L10n.of(context).mtLead} ',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: accent,
-                        ),
+                        style: Cartoon.text(size: 15, color: accent),
                       ),
-                      SuitIcon(suit: leadSuit, size: 18, color: accent),
+                      SuitIcon(suit: leadSuit, size: 20, color: accent),
                     ],
                   )
                 else
-                  const Icon(Icons.style, size: 20, color: Color(0xFF8A7A72)),
+                  Icon(
+                    Icons.style,
+                    size: 22,
+                    color: Cartoon.ink.withValues(alpha: 0.5),
+                  ),
                 // Turn timer
                 if (_remainingSeconds > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '${_remainingSeconds}s',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.text(
+                        size: 14,
                         color: _remainingSeconds <= 5
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFF8A7A72),
+                            ? Cartoon.red
+                            : Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -3288,18 +3150,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              L10n.of(context).mtWins(winnerName),
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF4CAF50),
+          CartoonEntrance(
+            key: ValueKey('trick_end_${state.tricks.length}'),
+            from: const Offset(0, 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: gamePillDecoration(radius: 16, color: Cartoon.green),
+              child: Text(
+                L10n.of(context).mtWins(winnerName),
+                style: Cartoon.userText(size: 16, color: Colors.white),
               ),
             ),
           ),
@@ -3311,52 +3170,32 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   /// Renders a friend card (e.g. selected friend in the kitty UI) as a small
   /// Row of SuitIcon + rank text, falling back to a plain Text widget for
   /// special variants (joker / no-friend / first-trick) where no suit applies.
-  Widget _buildFriendCardInline(
-    String cardId, {
-    double fontSize = 11,
-    FontWeight fontWeight = FontWeight.w600,
-  }) {
+  Widget _buildFriendCardInline(String cardId, {double fontSize = 11}) {
     final l10n = L10n.of(context);
     if (cardId == 'mighty_joker') {
       return Text(
         l10n.mtFriendCardJoker,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: const Color(0xFF7B1FA2),
-        ),
+        style: Cartoon.text(size: fontSize + 1, color: const Color(0xFF7B1FA2)),
       );
     }
     if (cardId == 'no_friend') {
       return Text(
         l10n.mtFriendCardSolo,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: const Color(0xFF8A7A72),
+        style: Cartoon.text(
+          size: fontSize + 1,
+          color: Cartoon.ink.withValues(alpha: 0.6),
         ),
       );
     }
     if (cardId == 'first_trick') {
       return Text(
         l10n.mtFriendCard1st,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: const Color(0xFF1565C0),
-        ),
+        style: Cartoon.text(size: fontSize + 1, color: Cartoon.blue),
       );
     }
     final parts = cardId.replaceFirst('mighty_', '').split('_');
     if (parts.length != 2) {
-      return Text(
-        cardId,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: const Color(0xFF5A4038),
-        ),
-      );
+      return Text(cardId, style: Cartoon.text(size: fontSize + 1));
     }
     final suit = parts[0];
     final rank = parts[1];
@@ -3369,11 +3208,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         const SizedBox(width: 2),
         Text(
           rank,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-            color: accent,
-          ),
+          style: Cartoon.text(size: fontSize + 1, color: accent),
         ),
       ],
     );

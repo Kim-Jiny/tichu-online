@@ -3028,43 +3028,47 @@ class _LLGameScreenState extends State<LLGameScreen> {
           ),
           const SizedBox(height: 8),
           // My discard pile
-          if (selfPlayer.discardPile.isNotEmpty) ...[
+          // 낸 카드 줄의 자리는 처음부터 잡아 둔다. 첫 카드를 내는 순간 줄이 생기면
+          // 아래 영역이 커져서 보드와 이벤트 로그가 위로 밀렸다.
+          ...[
             SizedBox(
               height: 60,
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Text(
-                      L10n.of(context).llPlayed,
-                      style: Cartoon.text(
-                        size: 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
-                      ),
+              child: selfPlayer.discardPile.isEmpty
+                  ? null
+                  : Row(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Text(
+                            L10n.of(context).llPlayed,
+                            style: Cartoon.text(
+                              size: 12,
+                              color: Cartoon.ink.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: selfPlayer.discardPile
+                                  .map(
+                                    (cardId) => Padding(
+                                      padding: const EdgeInsets.only(right: 3),
+                                      child: LoveLetterCard(
+                                        cardId: cardId,
+                                        width: 42,
+                                        height: 60,
+                                        isInteractive: false,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: selfPlayer.discardPile
-                            .map(
-                              (cardId) => Padding(
-                                padding: const EdgeInsets.only(right: 3),
-                                child: LoveLetterCard(
-                                  cardId: cardId,
-                                  width: 42,
-                                  height: 60,
-                                  isInteractive: false,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 8),
           ],

@@ -413,88 +413,102 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final manner = _calcMannerScore(games, leaveCount, reportCount);
     final mannerColor = _mannerColor(manner);
 
-    Widget tile({
+    Widget cell({
       required Widget top,
       required String value,
       required String label,
-      String? sub,
-      Color? tint,
+      required String sub,
+      Color? valueColor,
     }) {
+      // 세 칸 모두 같은 줄 수(아이콘·값·이름·보조)라 높이가 같다.
       return Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-          decoration: BoxDecoration(
-            color: tint ?? Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Cartoon.ink, width: 2.2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
-            ],
-          ),
-          child: Column(
-            children: [
-              top,
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(value, style: Cartoon.text(size: 26)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            top,
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: Cartoon.text(size: 26, color: valueColor ?? Cartoon.ink),
               ),
-              Text(
-                label,
-                style: Cartoon.userText(
-                  size: 12,
-                  weight: FontWeight.w700,
-                  color: Cartoon.ink.withValues(alpha: 0.65),
-                ),
+            ),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Cartoon.userText(
+                size: 12,
+                weight: FontWeight.w800,
+                color: Cartoon.ink.withValues(alpha: 0.7),
               ),
-              if (sub != null)
-                Text(
-                  sub,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Cartoon.userText(
-                    size: 10.5,
-                    weight: FontWeight.w500,
-                    color: Cartoon.ink.withValues(alpha: 0.5),
-                  ),
-                ),
-            ],
-          ),
+            ),
+            Text(
+              sub.isEmpty ? ' ' : sub,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Cartoon.userText(
+                size: 10.5,
+                weight: FontWeight.w500,
+                color: Cartoon.ink.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: Row(
-        spacing: 8,
-        children: [
-          tile(
-            top: const Icon(
-              Icons.emoji_events_rounded,
-              size: 22,
-              color: Color(0xFFF5B301),
+    Widget divider() => Container(
+      width: 2,
+      height: 64,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      color: Cartoon.ink.withValues(alpha: 0.12),
+    );
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      decoration: Cartoon.panelDecoration(
+        color: Colors.white,
+        radius: 20,
+        shadowOffset: 3,
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            cell(
+              top: const Icon(
+                Icons.emoji_events_rounded,
+                size: 22,
+                color: Color(0xFFF5B301),
+              ),
+              value: games == 0 ? '-' : '$winRate%',
+              label: l10n.lobbyStatWinRate,
+              sub: '',
             ),
-            value: games == 0 ? '-' : '$winRate%',
-            label: l10n.lobbyStatWinRate,
-            tint: const Color(0xFFFFF6DD),
-          ),
-          tile(
-            top: const Icon(Icons.style_rounded, size: 22, color: Cartoon.blue),
-            value: '$games',
-            label: l10n.lobbyStatRecord,
-            sub: games == 0
-                ? null
-                : l10n.lobbyRecordFormat(games, wins, losses),
-          ),
-          tile(
-            top: Icon(_mannerIcon(manner), size: 22, color: mannerColor),
-            value: '$manner',
-            label: l10n.rankingMannerScore,
-            sub: l10n.lobbyDesertions(leaveCount),
-            tint: mannerColor.withValues(alpha: 0.10),
-          ),
-        ],
+            divider(),
+            cell(
+              top: const Icon(
+                Icons.style_rounded,
+                size: 22,
+                color: Cartoon.blue,
+              ),
+              value: '$games',
+              label: l10n.lobbyStatRecord,
+              sub: games == 0 ? '' : '$wins/$losses',
+            ),
+            divider(),
+            cell(
+              top: Icon(_mannerIcon(manner), size: 22, color: mannerColor),
+              value: '$manner',
+              label: l10n.rankingMannerScore,
+              sub: l10n.lobbyDesertions(leaveCount),
+              valueColor: mannerColor,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -614,8 +628,28 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           ],
         ),
         const SizedBox(height: 10),
-        Column(
-          children: [for (final t in tallies) _buildGameTallyRow(l10n, t)],
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Cartoon.ink.withValues(alpha: 0.35),
+              width: 1.8,
+            ),
+          ),
+          child: Column(
+            children: [
+              for (final (i, t) in tallies.indexed) ...[
+                if (i > 0)
+                  Divider(
+                    height: 1,
+                    thickness: 1.5,
+                    color: Cartoon.ink.withValues(alpha: 0.1),
+                  ),
+                _buildGameTallyRow(l10n, t),
+              ],
+            ],
+          ),
         ),
       ],
     );
@@ -626,17 +660,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     // to "do they play Skull King", and a missing row is not.
     final faded = t.games == 0;
     final color = gameTypeColor(t.key);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(0, 4, 0, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: faded ? const Color(0xFFF1EEEC) : _cardTint(t.key),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: faded ? Cartoon.ink.withValues(alpha: 0.35) : Cartoon.ink,
-          width: 2,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       child: Column(
         children: [
           Row(
@@ -765,9 +790,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.35),
+          width: 1.8,
+        ),
       ),
       child: Column(
         children: [
@@ -811,7 +838,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

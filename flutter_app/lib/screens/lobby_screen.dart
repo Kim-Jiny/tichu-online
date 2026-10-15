@@ -1219,26 +1219,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                   entry[0],
                                                 );
                                             // 확장팩마다 자기 테마 색: 크라켄 보라,
-                                            // 흰고래 하늘, 약탈 금색. 안 눌렀을 땐 옅은
-                                            // 바탕에 진한 글자, 누르면 진한 색이 찬다.
+                                            // 흰고래 하늘, 약탈 금색. 안 눌렀을 땐 회색,
+                                            // 누르면 그 확장팩의 색이 찬다.
                                             final (
                                               strong,
-                                              pale,
                                               emoji,
                                             ) = switch (entry[0]) {
                                               'kraken' => (
                                                 const Color(0xFF7B3FC4),
-                                                const Color(0xFFF1E5FB),
                                                 '🐙',
                                               ),
                                               'white_whale' => (
                                                 const Color(0xFF1E88D6),
-                                                const Color(0xFFDDF1FD),
                                                 '🐳',
                                               ),
                                               _ => (
                                                 const Color(0xFFE29A00),
-                                                const Color(0xFFFFF0CC),
                                                 '💰',
                                               ),
                                             };
@@ -1267,11 +1263,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 decoration: BoxDecoration(
                                                   color: selected
                                                       ? strong
-                                                      : pale,
+                                                      : const Color(0xFFE6E1DB),
                                                   borderRadius:
                                                       BorderRadius.circular(14),
                                                   border: Border.all(
-                                                    color: Cartoon.ink,
+                                                    color: selected
+                                                        ? Cartoon.ink
+                                                        : Cartoon.ink
+                                                              .withValues(
+                                                                alpha: 0.4,
+                                                              ),
                                                     width: selected ? 2.6 : 1.8,
                                                   ),
                                                 ),
@@ -1287,11 +1288,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                         weight: FontWeight.w800,
                                                         color: selected
                                                             ? Colors.white
-                                                            : Color.lerp(
-                                                                strong,
-                                                                Cartoon.ink,
-                                                                0.35,
-                                                              )!,
+                                                            : Cartoon.ink
+                                                                  .withValues(
+                                                                    alpha: 0.55,
+                                                                  ),
                                                       ),
                                                     ),
                                                     const SizedBox(height: 2),
@@ -1310,7 +1310,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                                   )
                                                             : Cartoon.ink
                                                                   .withValues(
-                                                                    alpha: 0.6,
+                                                                    alpha: 0.45,
                                                                   ),
                                                       ),
                                                     ),

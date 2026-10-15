@@ -17,6 +17,7 @@ import 'ranking_screen.dart';
 import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
+import '../widgets/cartoon_icons.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
 import '../widgets/notice_body.dart';
@@ -466,12 +467,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: Row(
                 children: [
                   if (isRanked) ...[
-                    Image.asset(
-                      'assets/icons/lankIcon.webp',
-                      width: 18,
-                      height: 15,
-                      fit: BoxFit.contain,
-                    ),
+                    RankedIcon(width: 18, height: 15),
                     const SizedBox(width: 6),
                   ],
                   Expanded(
@@ -681,12 +677,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         ),
                         child: Row(
                           children: [
-                            Image.asset(
-                              'assets/icons/allowBotReplacement.webp',
-                              width: 28,
-                              height: 28,
-                              fit: BoxFit.contain,
-                            ),
+                            BotSwapIcon(width: 28, height: 28),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -981,7 +972,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         width: 28,
                         height: 28,
                         child: iconAsset != null
-                            ? Image.asset(iconAsset, fit: BoxFit.contain)
+                            ? (cartoonIconForAsset(iconAsset) ??
+                                  Image.asset(iconAsset, fit: BoxFit.contain))
                             : Icon(
                                 icon,
                                 size: 20,
@@ -2868,12 +2860,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       const SizedBox(width: 6),
                                     ],
                                     if (room.isRanked) ...[
-                                      Image.asset(
-                                        'assets/icons/lankIcon.webp',
-                                        width: 20,
-                                        height: 18,
-                                        fit: BoxFit.contain,
-                                      ),
+                                      RankedIcon(width: 20, height: 18),
                                       const SizedBox(width: 4),
                                     ],
                                     Expanded(
@@ -2970,11 +2957,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             opacity: room.canJoinInProgress
                                                 ? 1.0
                                                 : 0.4,
-                                            child: Image.asset(
-                                              'assets/icons/allowBotReplacement.webp',
+                                            child: BotSwapIcon(
                                               width: 28,
                                               height: 23,
-                                              fit: BoxFit.contain,
                                             ),
                                           ),
                                         ),
@@ -3839,12 +3824,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   // The artwork, not the emoji — same trophy the create
                   // dialog's ranked switch shows, so the room you are sitting
                   // in is recognisably the option you turned on.
-                  Image.asset(
-                    'assets/icons/lankIcon.webp',
-                    width: 20,
-                    height: 17,
-                    fit: BoxFit.contain,
-                  ),
+                  RankedIcon(width: 20, height: 17),
                   const SizedBox(width: 6),
                   Text(
                     game.currentGameType == 'skull_king'
@@ -4488,12 +4468,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(
-            'assets/icons/allowBotReplacement.webp',
-            width: 20,
-            height: 16,
-            fit: BoxFit.contain,
-          ),
+          BotSwapIcon(width: 20, height: 16),
           const SizedBox(width: 5),
           Text(
             L10n.of(context).midJoinRoomBadge,

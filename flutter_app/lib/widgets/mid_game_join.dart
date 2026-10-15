@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'cartoon_icons.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 
@@ -71,12 +72,7 @@ class MidGameJoinButton extends StatelessWidget {
           children: [
             // The artwork, matching the mark on this room's lobby card and
             // the switch that turned the option on.
-            Image.asset(
-              'assets/icons/allowBotReplacement.webp',
-              width: 18,
-              height: 14,
-              fit: BoxFit.contain,
-            ),
+            BotSwapIcon(width: 18, height: 14),
             const SizedBox(width: 5),
             Text(
               l10n.midJoinButton,

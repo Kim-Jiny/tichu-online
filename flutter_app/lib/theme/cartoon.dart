@@ -674,10 +674,10 @@ class _ConfettiPainter extends CustomPainter {
   bool shouldRepaint(_ConfettiPainter old) => old.t != t;
 }
 
-/// 통통 튀는 마스코트 로더. 점프할 때 늘어나고 착지할 때 눌리며, 바닥 그림자가
-/// 높이에 따라 작아졌다 커진다. 밋밋한 회전 스피너 대신 "일하는 중" 을 보여 준다.
+/// 단순한 카툰 링 로더: 진한 테두리 고리 위로 주황 호가 돈다. 그림은 없다 —
+/// 로딩 중이라는 것만 조용히 알린다.
 class CartoonLoader extends StatefulWidget {
-  const CartoonLoader({super.key, this.size = 84});
+  const CartoonLoader({super.key, this.size = 52});
 
   final double size;
 
@@ -689,7 +689,7 @@ class _CartoonLoaderState extends State<CartoonLoader>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 900),
+    duration: const Duration(milliseconds: 1000),
   )..repeat();
 
   @override
@@ -700,51 +700,43 @@ class _CartoonLoaderState extends State<CartoonLoader>
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.size;
-    final jump = s * 0.4;
     return SizedBox(
-      width: s * 1.5,
-      height: s + jump * 0.4,
+      width: widget.size,
+      height: widget.size,
       child: AnimatedBuilder(
         animation: _c,
-        builder: (context, _) {
-          // 0→1→0 : 땅에서 올라갔다 내려온다.
-          final h = math.sin(_c.value * math.pi);
-          final airborne = h.clamp(0.0, 1.0);
-          // 착지 직전·직후에 납작하게(squash), 공중에선 길쭉하게(stretch).
-          final squash = (1 - airborne) * (1 - airborne);
-          final scaleX = 1.0 + 0.14 * squash - 0.05 * airborne;
-          final scaleY = 1.0 - 0.14 * squash + 0.08 * airborne;
-          return Stack(
-            alignment: Alignment.bottomCenter,
-            children: [
-              // 바닥 그림자
-              Container(
-                width: s * (0.7 - 0.22 * airborne),
-                height: s * 0.1,
-                decoration: BoxDecoration(
-                  color: Cartoon.ink.withValues(alpha: 0.28 - 0.14 * airborne),
-                  borderRadius: BorderRadius.circular(s),
-                ),
-              ),
-              Positioned(
-                bottom: s * 0.05 + jump * airborne,
-                child: Transform(
-                  alignment: Alignment.bottomCenter,
-                  transform: Matrix4.diagonal3Values(scaleX, scaleY, 1),
-                  child: Image.asset(
-                    'assets/dragonIcon.webp',
-                    width: s,
-                    height: s,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+        builder: (context, _) =>
+            CustomPaint(painter: _RingLoaderPainter(_c.value)),
       ),
     );
   }
+}
+
+class _RingLoaderPainter extends CustomPainter {
+  _RingLoaderPainter(this.t);
+
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width * 0.17; // 고리 두께
+    final rect = Rect.fromLTWH(w, w, size.width - 2 * w, size.height - 2 * w);
+    // 바탕 고리(연한 크림)에 테두리를 두르고, 그 위로 주황 호가 돈다.
+    Paint ring(double width, Color color) => Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = width
+      ..color = color;
+    canvas.drawArc(rect, 0, math.pi * 2, false, ring(w + 5, Cartoon.ink));
+    canvas.drawArc(rect, 0, math.pi * 2, false, ring(w, Cartoon.cream));
+    final start = t * math.pi * 2;
+    const sweep = math.pi * 0.85;
+    canvas.drawArc(rect, start, sweep, false, ring(w + 5, Cartoon.ink));
+    canvas.drawArc(rect, start, sweep, false, ring(w, Cartoon.orange));
+  }
+
+  @override
+  bool shouldRepaint(_RingLoaderPainter old) => old.t != t;
 }
 
 /// "연결 중" 뒤에 점 세 개가 차례로 튄다.
@@ -818,7 +810,7 @@ class _CartoonDotsTextState extends State<CartoonDotsText>
   }
 }
 
-/// 연결·로그인 중 화면에 올리는 안내 카드: 튀는 마스코트 + 제목(점이 튐) + 부제.
+/// 연결·로그인 중 화면에 올리는 안내 카드: 링 로더 + 제목(점이 튐) + 부제.
 class CartoonLoadingCard extends StatelessWidget {
   const CartoonLoadingCard({
     super.key,

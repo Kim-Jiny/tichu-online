@@ -511,7 +511,7 @@ class L10nKo extends L10n {
   String get lobbyExpKrakenDesc => '트릭 무효화';
 
   @override
-  String get lobbyExpWhiteWhale => '화이트웨일';
+  String get lobbyExpWhiteWhale => '흰고래';
 
   @override
   String get lobbyExpWhiteWhaleDesc => '특수카드 무력화';
@@ -653,7 +653,7 @@ class L10nKo extends L10n {
   String get lobbyExpKrakenShort => '크라켄';
 
   @override
-  String get lobbyExpWhaleShort => '웨일';
+  String get lobbyExpWhaleShort => '흰고래';
 
   @override
   String get lobbyExpLootShort => '보물';
@@ -1192,10 +1192,10 @@ class L10nKo extends L10n {
   String get skGameKrakenActivated => '🐙 크라켄 발동';
 
   @override
-  String get skGameWhiteWhaleActivated => '🐋 화이트웨일 발동';
+  String get skGameWhiteWhaleActivated => '🐋 흰고래 발동';
 
   @override
-  String get skGameWhiteWhaleNullify => '🐋 화이트웨일 · 특수카드 무력화';
+  String get skGameWhiteWhaleNullify => '🐋 흰고래 · 특수카드 무력화';
 
   @override
   String get skGameTrickVoided => '트릭 무효';
@@ -2383,7 +2383,7 @@ class L10nKo extends L10n {
       '크라켄이 포함된 트릭은 무효가 됩니다. 아무도 트릭을 얻지 못하고 보너스도 지급되지 않습니다. 크라켄이 없었다면 이겼을 플레이어가 다음 트릭을 리드합니다.';
 
   @override
-  String get rulesSkExpWhiteWhale => '🐋 화이트웨일';
+  String get rulesSkExpWhiteWhale => '🐋 흰고래';
 
   @override
   String get rulesSkExpWhiteWhaleDesc =>

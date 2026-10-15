@@ -9,6 +9,8 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
+import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
@@ -17,9 +19,9 @@ import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/seat_chat_bubble.dart';
-import '../widgets/mid_game_join.dart';
 import '../widgets/spectator_controls.dart';
 import '../widgets/tichu_effects.dart';
+import '../widgets/turn_name_pill.dart';
 import '../widgets/tichu_fx_events.dart';
 import '../models/tichu_fx_detector.dart';
 
@@ -48,43 +50,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
 
   Widget _buildRecoveryLoading({required String title, String? subtitle}) {
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 320),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Colors.white),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (subtitle != null && subtitle.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+      child: CartoonLoadingCard(title: title, subtitle: subtitle),
     );
   }
 
@@ -120,12 +86,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     super.dispose();
   }
 
-  void _leaveRoom(GameService game) {
-    if (_isLeaving) return;
-    _isLeaving = true;
-    game.leaveRoom();
-  }
-
   /// Board scale, matching game_screen.dart's `_s`. Capped at 1.0 off the web
   /// so phones and tablets render exactly as before; a desktop window has the
   /// room to grow into and looked comically small at 1.0.
@@ -150,15 +110,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Scaffold(
           resizeToAvoidBottomInset: false,
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF8F4F6),
-                  Color(0xFFF0E8F0),
-                  Color(0xFFE8F0F8),
-                ],
+                colors: context.watch<GameService>().themeGradient,
               ),
             ),
             child: SafeArea(
@@ -191,7 +147,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   // the shared waiting room, so this is only the instant
                   // between the two. A spinner, not a second waiting room.
                   if (!game.hasSpectatorGameState || state == null) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: CartoonLoader());
                   }
 
                   return _buildSpectatorView(context, game, state, isLandscape);
@@ -334,10 +290,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   // 관전자용 하단 손패 영역. SK 의 _buildSpectatorHandArea 와 동일한 상태 머신:
   // 대상 없음(안내) / 요청 중 / 승인됨 / 거절.
   Widget _buildSpectatorHandArea(GameService game, List players) {
-    BoxDecoration panelBg() => BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.92),
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      border: const Border(top: BorderSide(color: Color(0xFFE0D8D4))),
+    BoxDecoration panelBg() => const BoxDecoration(
+      color: Cartoon.paper,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
     );
 
     final viewingId = _viewingPlayerId;
@@ -349,10 +305,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         child: Text(
           L10n.of(context).skGameTapToRequestCards,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF8A7A72),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: Cartoon.userText(
+            size: 14,
+            color: Cartoon.ink.withValues(alpha: 0.6),
           ),
         ),
       );
@@ -382,17 +337,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               width: 14,
               height: 14,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFFFFB74D),
+                strokeWidth: 2.4,
+                color: Cartoon.orange,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               L10n.of(context).skGameRequestingCardView(name),
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              style: Cartoon.userText(
+                size: 14,
+                color: Cartoon.ink.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -417,11 +371,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     child: Text(
                       L10n.of(context).skGamePlayerHand(name),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF5A4038),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: Cartoon.userText(size: 14),
                     ),
                   ),
                   SizedBox(
@@ -434,9 +384,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       padding: EdgeInsets.zero,
                       splashRadius: 18,
                       icon: const Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Color(0xFF8A7A72),
+                        Icons.close_rounded,
+                        size: 20,
+                        color: Cartoon.ink,
                       ),
                       onPressed: () => setState(() => _viewingPlayerId = null),
                     ),
@@ -449,9 +399,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   L10n.of(context).skGameNoCards,
-                  style: const TextStyle(
-                    color: Color(0xFF8A7A72),
-                    fontSize: 12,
+                  style: Cartoon.text(
+                    size: 13,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
                   ),
                 ),
               )
@@ -475,10 +425,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             child: Text(
               L10n.of(context).skGameCardViewRejected(name),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF8A7A72),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+              style: Cartoon.userText(
+                size: 14,
+                color: Cartoon.ink.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -489,7 +438,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               padding: EdgeInsets.zero,
               splashRadius: 18,
-              icon: const Icon(Icons.close, size: 18, color: Color(0xFF8A7A72)),
+              icon: const Icon(
+                Icons.close_rounded,
+                size: 20,
+                color: Cartoon.ink,
+              ),
               onPressed: () => setState(() => _viewingPlayerId = null),
             ),
           ),
@@ -504,41 +457,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
       left: 20,
       right: 20,
       child: IgnorePointer(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFEBEE),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE57373)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.info_outline,
-                size: 16,
-                color: Color(0xFFC62828),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  localizeServiceMessage(message, L10n.of(context)),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFFC62828),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        child: GameNoticeBar(
+          icon: Icons.info_outline_rounded,
+          text: localizeServiceMessage(message, L10n.of(context)),
         ),
       ),
     );
@@ -703,10 +624,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         ? l10n.spectatorRedTeamWin
         : l10n.spectatorDraw;
     final winnerColor = aWins
-        ? const Color(0xFF4A90D9)
+        ? Cartoon.blue
         : bWins
-        ? const Color(0xFFD24B4B)
-        : const Color(0xFF6A5A52);
+        ? Cartoon.red
+        : Cartoon.ink;
 
     final teamAPlayers = players
         .where((p) => p is Map && (p['team']?.toString() ?? '') == 'A')
@@ -728,35 +649,22 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 24),
             padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
             constraints: const BoxConstraints(maxWidth: 340),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(26),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.16),
-                  blurRadius: 30,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+            decoration: Cartoon.panelDecoration(radius: 28, shadowOffset: 4),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  aWins || bWins ? Icons.emoji_events : Icons.handshake,
-                  size: 34,
+                  aWins || bWins
+                      ? Icons.emoji_events_rounded
+                      : Icons.handshake_rounded,
+                  size: 38,
                   color: winnerColor,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   winnerText,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: winnerColor,
-                  ),
+                  style: Cartoon.text(size: 24, color: winnerColor),
                 ),
                 const SizedBox(height: 18),
                 // 두 팀을 상자 없이 나란히. 진 쪽은 살짝 덜어내는 것으로
@@ -771,17 +679,20 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                           game: game,
                           teamPlayers: teamAPlayers,
                           score: teamA,
-                          color: const Color(0xFF007AFF),
+                          color: Cartoon.blue,
                           dimmed: bWins,
                         ),
                       ),
-                      Container(width: 1, color: const Color(0xFFE5E5EA)),
+                      Container(
+                        width: 2,
+                        color: Cartoon.ink.withValues(alpha: 0.15),
+                      ),
                       Expanded(
                         child: _gameEndTeamColumn(
                           game: game,
                           teamPlayers: teamBPlayers,
                           score: teamB,
-                          color: const Color(0xFFFF3B30),
+                          color: Cartoon.red,
                           dimmed: aWins,
                         ),
                       ),
@@ -789,14 +700,17 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Container(height: 0.5, color: const Color(0xFFE5E5EA)),
+                Container(
+                  height: 2,
+                  color: Cartoon.ink.withValues(alpha: 0.15),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   l10n.spectatorAutoReturn,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF8E8E93),
+                  style: Cartoon.text(
+                    size: 14,
+                    color: Cartoon.ink.withValues(alpha: 0.55),
                   ),
                 ),
               ],
@@ -837,11 +751,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             const SizedBox(height: 10),
             Text(
               '$score',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -1,
-                color: color,
+              style: Cartoon.text(size: 34, color: color).copyWith(
                 // 자릿수가 달라도 두 칸이 흔들리지 않게.
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -878,11 +788,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             textAlign: TextAlign.center,
             // 이름은 중립색. 팀 색은 아래 점수 하나로 충분하고, 넷이 다
             // 색 글씨면 어느 쪽이 이겼는지가 오히려 안 보인다.
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF3C3C43),
-            ),
+            style: Cartoon.userText(size: 12, weight: FontWeight.w600),
           ),
         ],
       ),
@@ -899,295 +805,48 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     bool isLandscape, {
     int? targetScore,
   }) {
-    // Flat bar, not a floating card. A card here fought with the board's own
-    // cards below it — two levels of elevation stacked in the top 90dp — and the
-    // 12dp margin on every side ate width the room name needed.
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        isLandscape ? 10 : 8,
-        isLandscape ? 6 : 8,
-        isLandscape ? 10 : 12,
-        isLandscape ? 6 : 8,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFDFBFA),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
-      ),
-      child: isLandscape
-          ? Row(
-              children: [
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 32,
-                    height: 32,
-                  ),
-                  onPressed: () => _leaveRoom(game),
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Color(0xFF6A5A52),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8E0F8),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.visibility,
-                        size: 12,
-                        color: Color(0xFF4A4080),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        L10n.of(context).spectatorWatching,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A4080),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'R$round | ${_getPhaseText(phase)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF8A7E78),
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                _buildScoreHistoryTap(
-                  scoreHistory,
-                  scores,
-                  targetScore: targetScore,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildScoreChip(
-                        'A',
-                        scores['teamA'] ?? 0,
-                        const Color(0xFF6A9BD1),
-                        compact: true,
-                      ),
-                      const SizedBox(width: 4),
-                      _buildScoreChip(
-                        'B',
-                        scores['teamB'] ?? 0,
-                        const Color(0xFFF5B8C0),
-                        compact: true,
-                      ),
-                    ],
-                  ),
-                ),
-                // The landscape bar is a single row, so this goes inline —
-                // the portrait branch puts it on its own line instead. It was
-                // only ever added there, which is why a fold (landscape by
-                // default) had no way to break into a match at all.
-                if (game.canJoinInProgress) ...[
-                  const SizedBox(width: 6),
-                  MidGameJoinButton(game: game),
-                ],
-                const SizedBox(width: 6),
-                _buildSpectatorButton(game),
-                const SizedBox(width: 6),
-                _buildSoundButton(game),
-                const SizedBox(width: 6),
-                _buildChatButton(game),
-              ],
-            )
-          : Column(
+    // 다른 게임 관전과 같은 공용 머리글. 방 이름·관전 배지·상태 줄은 틀이 정해
+    // 두고, 이 화면은 상태 문구와 버튼, 점수 칩만 넘긴다.
+    final l10n = L10n.of(context);
+    return SpectatorHeader(
+      game: game,
+      statusLine: 'R$round | ${_getPhaseText(phase)}',
+      statusTrailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (targetScore != null) ...[
+            Text(
+              l10n.spectatorTargetScore(targetScore),
+              style: Cartoon.text(
+                size: 12,
+                color: Cartoon.ink.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          // 점수 자체가 기록 창을 연다 — 점수를 보다가 궁금해지는 바로 그 자리.
+          _buildScoreHistoryTap(
+            scoreHistory,
+            scores,
+            targetScore: targetScore,
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => _leaveRoom(game),
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Color(0xFF6A5A52),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // The room name was nowhere in this bar, while four icon
-                    // buttons sat where it could go. Chat keeps its own button
-                    // because its unread badge is the one that matters live;
-                    // the other three are look-ups and settings.
-                    Expanded(
-                      child: Text(
-                        game.currentRoomName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF4E3A34),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    _buildSpectatorButton(game),
-                    const SizedBox(width: 6),
-                    _buildSoundButton(game),
-                    const SizedBox(width: 6),
-                    _buildChatButton(game),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    // 좁아지면 순서대로 버린다: '관전 중' 글씨 → 목표 점수 →
-                    // (마지막 수단) 라운드·단계 줄임표. 남는 폭을 아는 자리에서
-                    // 실제 글자 폭을 재서 정하므로, 어느 언어든 넘치지 않고
-                    // 무엇이 먼저 사라질지도 정해져 있다.
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, box) {
-                          const watchStyle = TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A4080),
-                          );
-                          const phaseStyle = TextStyle(
-                            color: Color(0xFF8A7E78),
-                            fontSize: 12,
-                          );
-                          const targetStyle = TextStyle(
-                            color: Color(0xFFA89C96),
-                            fontSize: 11,
-                          );
-                          final watchText = L10n.of(context).spectatorWatching;
-                          final phaseText = 'R$round | ${_getPhaseText(phase)}';
-                          final targetText = targetScore == null
-                              ? ''
-                              : L10n.of(
-                                  context,
-                                ).spectatorTargetScore(targetScore);
-
-                          // 칩 = 좌우 여백 16 + 눈 12 + (여백 4 + 글씨)
-                          const chipBase = 16.0 + 12.0;
-                          final watchW = _textWidth(watchText, watchStyle);
-                          final phaseW = _textWidth(phaseText, phaseStyle);
-                          final targetW = targetText.isEmpty
-                              ? 0.0
-                              : _textWidth(targetText, targetStyle);
-                          final avail = box.maxWidth;
-
-                          final wantAll =
-                              chipBase +
-                              4 +
-                              watchW +
-                              8 +
-                              phaseW +
-                              (targetW > 0 ? 6 + targetW : 0);
-                          final showWatchLabel = wantAll <= avail;
-                          final chipW =
-                              chipBase + (showWatchLabel ? 4 + watchW : 0);
-                          final showTarget =
-                              targetW > 0 &&
-                              chipW + 8 + phaseW + 6 + targetW <= avail;
-
-                          return Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8E0F8),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.visibility,
-                                      size: 12,
-                                      color: Color(0xFF4A4080),
-                                    ),
-                                    if (showWatchLabel) ...[
-                                      const SizedBox(width: 4),
-                                      Text(watchText, style: watchStyle),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  phaseText,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false,
-                                  style: phaseStyle,
-                                ),
-                              ),
-                              if (showTarget) ...[
-                                const SizedBox(width: 6),
-                                Text(targetText, style: targetStyle),
-                              ],
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // The score itself opens the history — it is what you are
-                    // already looking at when you wonder how it got there, and
-                    // it saves a slot in the bar.
-                    _buildScoreHistoryTap(
-                      scoreHistory,
-                      scores,
-                      targetScore: targetScore,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildScoreChip(
-                            'A',
-                            scores['teamA'] ?? 0,
-                            const Color(0xFF6A9BD1),
-                          ),
-                          const SizedBox(width: 6),
-                          _buildScoreChip(
-                            'B',
-                            scores['teamB'] ?? 0,
-                            const Color(0xFFF5B8C0),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                // Its own line under the status row, matching SpectatorHeader.
-                // Sharing that row with the badge, the phase text and both
-                // score chips overflowed a narrow phone once the button
-                // carried a label.
-                if (game.canJoinInProgress) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: MidGameJoinButton(game: game),
-                  ),
-                ],
+                _buildScoreChip('A', scores['teamA'] ?? 0, Cartoon.blue),
+                const SizedBox(width: 6),
+                _buildScoreChip('B', scores['teamB'] ?? 0, Cartoon.red),
               ],
             ),
+          ),
+        ],
+      ),
+      actions: [
+        _buildSpectatorButton(game),
+        const SizedBox(width: 6),
+        _buildSoundButton(game),
+        const SizedBox(width: 6),
+        _buildChatButton(game),
+      ],
     );
   }
 
@@ -1225,17 +884,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         horizontal: compact ? 8 : 10,
         vertical: compact ? 3 : 4,
       ),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(compact ? 7 : 8),
-      ),
+      decoration: gamePillDecoration(radius: 99, color: color),
       child: Text(
-        '$label: $score',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: compact ? 11 : 12,
-        ),
+        '$label  $score',
+        style: Cartoon.text(size: compact ? 12 : 13, color: Colors.white),
       ),
     );
   }
@@ -1287,10 +939,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     // Ring 모드에선 배경 상자 자체를 없앤다 (사진이 좌석의 가장자리).
     final team = player['team']?.toString() ?? '';
     final slotBg = team == 'A'
-        ? const Color(0xFFE9F2FB)
+        ? const Color(0xFFDDEEFF)
         : team == 'B'
-        ? const Color(0xFFFBECEF)
-        : Colors.white.withValues(alpha: 0.98);
+        ? const Color(0xFFFFE3E1)
+        : Cartoon.cream;
 
     final isBot = player['isBot'] == true;
     // Web has room to spare and no touch-target minimums to respect, so it
@@ -1337,20 +989,13 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               ? const BoxDecoration()
               : BoxDecoration(
                   color: slotBg,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isCurrentTurn
-                        ? const Color(0xFFF3C97A)
-                        : const Color(0xFFE6DDD8),
-                    width: isCurrentTurn ? 2 : 1,
+                        ? Cartoon.ink
+                        : Cartoon.ink.withValues(alpha: 0.35),
+                    width: isCurrentTurn ? 2.6 : 1.6,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFE5DAD6).withValues(alpha: 0.35),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1369,14 +1014,14 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       ),
                       size: avatarSize,
                       blocked: game.blockedUsers.contains(name),
-                      border: (isCurrentTurn || isViewing)
-                          ? Border.all(
-                              color: isViewing
-                                  ? const Color(0xFF64B5F6)
-                                  : const Color(0xFFE6C86A),
-                              width: 1.5,
-                            )
-                          : null,
+                      border: Border.all(
+                        color: isViewing
+                            ? Cartoon.blue
+                            : isCurrentTurn
+                            ? Cartoon.yellow
+                            : Cartoon.ink,
+                        width: (isCurrentTurn || isViewing) ? 3.5 : 2.0,
+                      ),
                       fallback: isBot
                           // showBadge 없이 봇 아바타만 (봇 마크 제거).
                           ? BotAvatar(size: avatarSize, name: name)
@@ -1389,13 +1034,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Cartoon.cream,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isApproved
-                                ? const Color(0xFF64B5F6)
-                                : const Color(0xFFE0D8D4),
-                          ),
+                          border: Border.all(color: Cartoon.ink, width: 1.6),
                         ),
                         child: Icon(
                           isPending
@@ -1405,10 +1046,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                               : Icons.visibility_outlined,
                           size: 12,
                           color: isPending
-                              ? const Color(0xFFFFB74D)
+                              ? Cartoon.orangeDeep
                               : isApproved
-                              ? const Color(0xFF64B5F6)
-                              : const Color(0xFF8A7A72).withValues(alpha: 0.6),
+                              ? Cartoon.blue
+                              : Cartoon.ink.withValues(alpha: 0.55),
                         ),
                       ),
                     ),
@@ -1416,64 +1057,60 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 ),
               ),
               // Player name and status
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (!connected)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Icon(Icons.wifi_off, size: 12, color: Colors.red),
-                    ),
-                  // Team letter, the same badge the player screen puts before a
-                  // nickname. The slot's background tint alone was too quiet to map
-                  // a name to the "A:" / "B:" score chips at a glance.
-                  if (team == 'A' || team == 'B')
-                    Padding(
-                      padding: EdgeInsets.only(right: compact ? 3 : 4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
+              TurnNamePill(
+                isTurn: isCurrentTurn && !hasFinished,
+                horizontal: compact ? 5 : 7,
+                vertical: 1,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (!connected)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(
+                          Icons.wifi_off,
+                          size: 12,
+                          color: Cartoon.red,
                         ),
-                        decoration: BoxDecoration(
-                          color: team == 'A'
-                              ? const Color(0xFFE3F0FF)
-                              : const Color(0xFFFFE8EC),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: team == 'A'
-                                ? const Color(0xFF4A90D9)
-                                : const Color(0xFFD24B4B),
-                            width: 0.7,
+                      ),
+                    // Team letter, the same badge the player screen puts before a
+                    // nickname.
+                    if (team == 'A' || team == 'B')
+                      Padding(
+                        padding: EdgeInsets.only(right: compact ? 3 : 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 0,
                           ),
-                        ),
-                        child: Text(
-                          team,
-                          style: TextStyle(
-                            fontSize: compact ? 8 : 9,
-                            fontWeight: FontWeight.bold,
-                            color: team == 'A'
-                                ? const Color(0xFF4A90D9)
-                                : const Color(0xFFD24B4B),
+                          decoration: BoxDecoration(
+                            color: team == 'A' ? Cartoon.blue : Cartoon.red,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            team,
+                            style: Cartoon.text(
+                              size: compact ? 10 : 11,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  Flexible(
-                    child: Text(
-                      name,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: connected
-                            ? const Color(0xFF4E3A34)
-                            : Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontSize: compact ? 11 : 12,
+                    Flexible(
+                      child: Text(
+                        name,
+                        overflow: TextOverflow.ellipsis,
+                        style: Cartoon.userText(
+                          size: compact ? 12 : 13,
+                          color: connected
+                              ? Cartoon.ink
+                              : Cartoon.ink.withValues(alpha: 0.4),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               // Badges on their own line. Sharing the name's row meant every badge
               // stole width from it — a finish rank (#1) was enough to ellipsize a
@@ -1494,25 +1131,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                       if (hasLargeTichu)
                         _tichuCallBadge(
                           L10n.of(context).gameBadgeLarge,
-                          const Color(0xFFFF4444),
-                          const Color(0xFFCC0000),
+                          Cartoon.red,
+                          Cartoon.ink,
                         )
                       else if (hasSmallTichu)
                         _tichuCallBadge(
                           L10n.of(context).gameBadgeSmall,
-                          const Color(0xFF2979FF),
-                          const Color(0xFF1565C0),
+                          Cartoon.blue,
+                          Cartoon.ink,
                         ),
                       if (hasFinished && finishPosition > 0) ...[
                         if (hasLargeTichu || hasSmallTichu)
                           const SizedBox(width: 4),
                         Text(
                           '#$finishPosition',
-                          style: const TextStyle(
-                            color: Color(0xFF6BBE7A),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
+                          style: Cartoon.text(size: 12, color: Cartoon.green),
                         ),
                       ],
                     ],
@@ -1534,9 +1167,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     L10n.of(context).spectatorFinished,
-                    style: TextStyle(
-                      color: const Color(0xFF9A8E8A),
-                      fontSize: compact ? 9 : 10,
+                    style: Cartoon.text(
+                      size: compact ? 10 : 11,
+                      color: Cartoon.ink.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -1594,18 +1227,16 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               height: badgeSize,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFF5A4038),
+                color: Cartoon.ink,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1),
+                border: Border.all(color: Cartoon.cream, width: 1.4),
               ),
               child: Text(
                 '$count',
-                style: TextStyle(
-                  fontSize: 11 * scale,
-                  fontWeight: FontWeight.w800,
+                style: Cartoon.text(
+                  size: 12 * scale,
                   color: Colors.white,
-                  height: 1.0,
-                ),
+                ).copyWith(height: 1.0),
               ),
             ),
           ),
@@ -1614,37 +1245,15 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     );
   }
 
-  /// 글자가 실제로 차지할 폭. 상태 줄에서 무엇을 먼저 버릴지 정하는 데
-  /// 쓴다 — Flex 는 남는 자리를 나눠줄 뿐, "이걸 먼저 지워라" 를 모른다.
-  double _textWidth(String text, TextStyle style) {
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-      // 기기 글자 크기 설정을 그대로 태운다. 이걸 빼면 글자를 키워 쓰는
-      // 사람에게는 실제보다 좁게 재서, 넘치지 않게 하려고 만든 계산이
-      // 도로 넘치게 만든다.
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    return tp.width;
-  }
-
   Widget _tichuCallBadge(String label, Color bg, Color border) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: border, width: 1),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: border, width: 1.4),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      child: Text(label, style: Cartoon.text(size: 11, color: Colors.white)),
     );
   }
 
@@ -1822,23 +1431,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     Widget callBadge() {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0x33FF4444),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFF4444), width: 1.2),
+        decoration: gamePillDecoration(
+          radius: 99,
+          color: const Color(0xFFFFD9D6),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🐦', style: TextStyle(fontSize: 11)),
+            const Text('🐦', style: TextStyle(fontSize: 13)),
             const SizedBox(width: 3),
             Text(
               L10n.of(context).gameCall(callRank!),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFFF4444),
-              ),
+              style: Cartoon.text(size: 14, color: Cartoon.red),
             ),
           ],
         ),
@@ -1858,9 +1462,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           children: [
             Text(
               L10n.of(context).spectatorNewTrick,
-              style: TextStyle(
-                color: const Color(0xFF9A8E8A),
-                fontSize: compact ? 12 : 14,
+              style: Cartoon.text(
+                size: compact ? 14 : 16,
+                color: Cartoon.ink.withValues(alpha: 0.55),
               ),
             ),
             if (hasCall) ...[SizedBox(height: compact ? 4 : 6), callBadge()],
@@ -1889,9 +1493,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     }
     final isBlue = lastTeam != 'B';
     // 이름의 팀 색상만 유지, 배경/테두리 상자는 제거 — 게임 화면과 동일 톤.
-    final nameColor = isBlue
-        ? const Color(0xFF4A90D9)
-        : const Color(0xFFD94A5A);
+    final nameColor = isBlue ? Cartoon.blue : Cartoon.red;
 
     // 외곽 Center 제거 — 부모 Align 이 위치를 잡도록.
     return Padding(
@@ -1911,9 +1513,9 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: compact ? 12 : 14,
-              fontWeight: FontWeight.bold,
+            style: Cartoon.userText(
+              size: compact ? 13 : 15,
+              weight: FontWeight.w800,
               color: nameColor,
             ),
           ),
@@ -1969,18 +1571,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             bottom: -4,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFC107),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
+              decoration: gamePillDecoration(radius: 8, color: Cartoon.yellow),
               child: Text(
                 phoenixBeatLabel,
-                style: TextStyle(
-                  fontSize: compact ? 8 : 9,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF5A4038),
-                ),
+                style: Cartoon.text(size: compact ? 9 : 10),
               ),
             ),
           ),

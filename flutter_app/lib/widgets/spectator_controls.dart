@@ -4,6 +4,7 @@ import '../models/ll_game_state.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import 'game_chrome.dart';
 import 'cartoon_icons.dart';
 import 'mid_game_join.dart';
 import 'player_profile_dialog.dart';
@@ -13,8 +14,6 @@ import 'profile_avatar.dart';
 /// screens (Tichu / Skull King / Love Letter / Mighty) so the top-bar
 /// buttons, sound panel, spectator list and score-history dialogs stay
 /// visually and behaviourally consistent.
-
-const Color _kTextSubtle = Color(0xFF8A7A72);
 
 /// A rounded icon action button. Matches the original `_buildTopActionButton`
 /// implementation that SK/LL/Mighty each duplicated, and replaces Tichu's
@@ -741,71 +740,65 @@ class SpectatorHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFDFBFA),
-        border: Border(bottom: BorderSide(color: Color(0xFFEDE4E0))),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              IconButton(
+              CartoonPressable(
+                scale: 0.9,
                 // Spectators leave immediately — there is no game state of
                 // theirs to protect with a confirm.
-                onPressed: () => game.leaveRoom(),
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF6A5A52)),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 36,
+                onTap: () => game.leaveRoom(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Cartoon.paper,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: Cartoon.ink, width: 1.8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Cartoon.ink,
+                    size: 22,
+                  ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   game.currentRoomName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF4E3A34),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Cartoon.userText(size: 15, weight: FontWeight.w800),
                 ),
               ),
               const SizedBox(width: 6),
               ...actions,
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               // The badge lives on the status line, not the title row: four
               // action buttons plus the badge left the room name a few
               // characters ("러...") on Love Letter.
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8E0F8),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: gamePillDecoration(radius: 99),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
-                      Icons.visibility,
-                      size: 12,
-                      color: Color(0xFF4A4080),
+                      Icons.visibility_rounded,
+                      size: 14,
+                      color: Cartoon.ink,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       L10n.of(context).spectatorWatching,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4080),
-                      ),
+                      style: Cartoon.text(size: 12),
                     ),
                   ],
                 ),
@@ -816,9 +809,10 @@ class SpectatorHeader extends StatelessWidget {
                   statusLine,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF8A7E78),
-                    fontSize: 12,
+                  style: Cartoon.userText(
+                    size: 13,
+                    weight: FontWeight.w600,
+                    color: Cartoon.ink.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -864,25 +858,14 @@ class SpectatorStatusChip extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE6DDD8)),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: gamePillDecoration(radius: 99),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 13, color: _kTextSubtle),
+            Icon(icon, size: 14, color: Cartoon.ink),
             const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _kTextSubtle,
-              ),
-            ),
+            Text(label, style: Cartoon.text(size: 12)),
           ],
         ),
       ),

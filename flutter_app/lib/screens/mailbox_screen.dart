@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import '../utils/gold_format.dart';
 import '../utils/mail_status.dart';
 import '../utils/server_time.dart';
@@ -24,6 +25,8 @@ class MailboxScreen extends StatefulWidget {
 
 class _MailboxScreenState extends State<MailboxScreen> {
   int? _claiming;
+  // 보상을 받을 때마다 올려서 색종이를 새로 터뜨린다.
+  int _burst = 0;
 
   @override
   void initState() {
@@ -34,6 +37,25 @@ class _MailboxScreenState extends State<MailboxScreen> {
       if (!mounted) return;
       context.read<GameService>().loadMailbox();
     });
+  }
+
+  /// 받을 보상이 남아 있는 우편인가 (보상 있음 · 아직 안 받음 · 만료 전).
+  bool _canClaim(Map<String, dynamic> mail) {
+    final gold = (mail['reward_gold'] as num?)?.toInt() ?? 0;
+    final hasItem = (mail['reward_item_key'] ?? '').toString().isNotEmpty;
+    if (gold <= 0 && !hasItem) return false;
+    if (mail['claimed_at'] != null) return false;
+    final exp = parseServerUtc(mail['expires_at']);
+    return exp == null || !exp.isBefore(DateTime.now());
+  }
+
+  /// 한꺼번에 받기: 서버에는 한 통씩 차례로 보낸다.
+  Future<void> _claimAll(GameService game, List<int> ids) async {
+    for (final id in ids) {
+      if (!mounted) return;
+      _claim(game, id);
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+    }
   }
 
   void _claim(GameService game, int id) {
@@ -72,6 +94,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
     _claiming = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      setState(() => _burst++);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(L10n.of(context).mailboxClaimedToast),
@@ -144,113 +167,200 @@ class _MailboxScreenState extends State<MailboxScreen> {
     final l10n = L10n.of(context);
     final themeColors = context.watch<GameService>().themeGradient;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF8A7A72),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.mark_email_unread,
-                      color: Color(0xFFEF6C00),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.mailboxTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Consumer<GameService>(
-                  builder: (context, game, _) {
-                    _drainClaimOutcome(game);
-                    if (game.mailboxLoading && game.mailbox.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (game.mailbox.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.mail_outline,
-                              size: 46,
-                              color: Color(0xFFBCAAA4),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              l10n.mailboxEmpty,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF8A7A72),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                CartoonEntrance(
+                  from: const Offset(0, -30),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                    child: Row(
+                      children: [
+                        CartoonPressable(
+                          scale: 0.88,
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Cartoon.paper,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
                               ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              l10n.mailboxEmptyHint,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFFA1887F),
-                              ),
-                              textAlign: TextAlign.center,
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Cartoon.ink,
                             ),
-                          ],
+                          ),
                         ),
-                      );
-                    }
-                    return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                      // +1 for the retention note, which belongs under the
-                      // letters: it is a rule to know, not the first thing to
-                      // read on opening the screen.
-                      itemCount: game.mailbox.length + 1,
-                      itemBuilder: (_, i) => i < game.mailbox.length
-                          ? _letter(game, game.mailbox[i], l10n)
-                          : Padding(
-                              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-                              child: Text(
-                                l10n.mailboxRetention(_retentionDays),
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: Color(0xFFA1887F),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Cartoon.outlinedText(
+                            l10n.mailboxTitle,
+                            size: 28,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Consumer<GameService>(
+                    builder: (context, game, _) {
+                      _drainClaimOutcome(game);
+                      if (game.mailboxLoading && game.mailbox.isEmpty) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Cartoon.orange,
+                            strokeWidth: 4,
+                          ),
+                        );
+                      }
+                      if (game.mailbox.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CartoonFloat(
+                                amplitude: 8,
+                                child: Image.asset(
+                                  'assets/dragonIcon.webp',
+                                  width: 96,
+                                  height: 96,
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  colorBlendMode: BlendMode.modulate,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.mailboxEmpty,
+                                style: Cartoon.text(size: 19),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.mailboxEmptyHint,
+                                style: Cartoon.userText(
+                                  size: 13.5,
+                                  weight: FontWeight.w500,
+                                  color: Cartoon.ink.withValues(alpha: 0.6),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
+                            ],
+                          ),
+                        );
+                      }
+                      final claimable = [
+                        for (final m in game.mailbox)
+                          if (_canClaim(m)) (m['id'] as num).toInt(),
+                      ];
+                      return Stack(
+                        children: [
+                          ListView.builder(
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              0,
+                              16,
+                              24 + MediaQuery.viewPaddingOf(context).bottom,
                             ),
-                    );
-                  },
+                            // 맨 앞은 "모두 받기"(받을 게 둘 이상일 때), 맨 뒤는 보관
+                            // 기간 안내 — 규칙이지 열자마자 읽을 것은 아니다.
+                            itemCount: game.mailbox.length + 2,
+                            itemBuilder: (_, i) {
+                              if (i == 0) {
+                                if (claimable.length < 2) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: CartoonPulse(
+                                    child: CartoonButton(
+                                      height: 52,
+                                      color: Cartoon.orange,
+                                      onPressed: () =>
+                                          _claimAll(game, claimable),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.card_giftcard_rounded,
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          CartoonButton.label(
+                                            '${l10n.mailboxClaimAll} (${claimable.length})',
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              final idx = i - 1;
+                              if (idx < game.mailbox.length) {
+                                final mail = game.mailbox[idx];
+                                return CartoonEntrance(
+                                  key: ValueKey('mail-${mail['id']}'),
+                                  delay: Duration(
+                                    milliseconds: 40 * idx.clamp(0, 7),
+                                  ),
+                                  from: const Offset(0, 18),
+                                  child: _letter(game, mail, l10n),
+                                );
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                                child: Text(
+                                  l10n.mailboxRetention(_retentionDays),
+                                  style: Cartoon.userText(
+                                    size: 12,
+                                    weight: FontWeight.w500,
+                                    color: Cartoon.ink.withValues(alpha: 0.5),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            },
+                          ),
+                          if (_burst > 0)
+                            Positioned.fill(
+                              child: CartoonConfetti(
+                                key: ValueKey('mail-burst-$_burst'),
+                                seed: _burst,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -275,16 +385,20 @@ class _MailboxScreenState extends State<MailboxScreen> {
     // a ListTile paints its highlight and ink splash onto the nearest Material
     // ancestor. A coloured box in between hides them — Flutter asserts about
     // exactly this — so the fill and the border live on the Material itself.
+    final fill = unread ? const Color(0xFFFFF6DD) : Cartoon.paper;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 4))],
+      ),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.96),
+        color: fill,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: unread
-              ? const BorderSide(color: Color(0xFFEF6C00), width: 1.4)
-              : BorderSide.none,
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -309,56 +423,110 @@ class _MailboxScreenState extends State<MailboxScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF6C00),
+                      color: Cartoon.red,
                       borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Cartoon.ink, width: 2),
                     ),
                     // Says which of the two it is: still unopened, or opened
                     // and still holding something.
                     child: Text(
                       unread ? l10n.mailboxUnreadBadge : l10n.mailboxClaim,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Cartoon.text(size: 12, color: Colors.white),
                     ),
                   ),
                 Expanded(
                   child: Text(
                     (mail['title'] ?? '').toString(),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: pending ? FontWeight.w800 : FontWeight.w600,
-                      color: const Color(0xFF5A4038),
+                    style: Cartoon.userText(
+                      size: 16,
+                      weight: pending ? FontWeight.w900 : FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
             subtitle: Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                [
-                  // A letter can name its own sender — an event, a person —
-                  // otherwise it comes from the team, in the reader's language.
-                  sender.isEmpty ? l10n.mailboxFrom : sender,
-                  if (sentAt != null) _shortDate(sentAt),
-                ].join(' · '),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: Color(0xFFA1887F),
-                ),
+              padding: const EdgeInsets.only(top: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      // A letter can name its own sender — an event, a person —
+                      // otherwise it comes from the team, in the reader's language.
+                      sender.isEmpty ? l10n.mailboxFrom : sender,
+                      if (sentAt != null) _shortDate(sentAt),
+                    ].join(' · '),
+                    style: Cartoon.userText(
+                      size: 12,
+                      weight: FontWeight.w500,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  // 보상이 든 편지는 펼치지 않아도 뭐가 들었는지 보인다.
+                  if (hasReward && !claimed && !expired)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Cartoon.yellow,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.card_giftcard_rounded,
+                              size: 15,
+                              color: Cartoon.ink,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                rewardLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Cartoon.userText(
+                                  size: 12.5,
+                                  weight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+            // 한 번에 받기: 펼쳐서 버튼을 찾지 않아도 줄에서 바로.
+            trailing: _canClaim(mail)
+                ? CartoonButton(
+                    expand: false,
+                    height: 40,
+                    radius: 14,
+                    color: Cartoon.orange,
+                    onPressed: _claiming == id ? null : () => _claim(game, id),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: CartoonButton.label(l10n.mailboxClaim, size: 15),
+                    ),
+                  )
+                : null,
             children: [
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   (mail['body'] ?? '').toString(),
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: Cartoon.userText(
+                    size: 14.5,
+                    weight: FontWeight.w500,
                     height: 1.65,
-                    color: Color(0xFF5A4038),
                   ),
                 ),
               ),
@@ -387,15 +555,16 @@ class _MailboxScreenState extends State<MailboxScreen> {
                 Container(
                   padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Cartoon.cream,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Cartoon.ink, width: 2.2),
                   ),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.card_giftcard,
-                        size: 20,
-                        color: Color(0xFFEF6C00),
+                        Icons.card_giftcard_rounded,
+                        size: 24,
+                        color: Cartoon.orangeDeep,
                       ),
                       const SizedBox(width: 9),
                       Expanded(
@@ -404,10 +573,9 @@ class _MailboxScreenState extends State<MailboxScreen> {
                           children: [
                             Text(
                               rewardLabel,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF5A4038),
+                              style: Cartoon.userText(
+                                size: 15,
+                                weight: FontWeight.w900,
                               ),
                             ),
                             if (expiresAt != null && !claimed)
@@ -429,24 +597,20 @@ class _MailboxScreenState extends State<MailboxScreen> {
                       else if (expired)
                         _stateChip(l10n.mailboxExpired, const Color(0xFF8A7A72))
                       else
-                        ElevatedButton(
+                        CartoonButton(
+                          expand: false,
+                          height: 44,
+                          radius: 15,
+                          color: Cartoon.orange,
                           onPressed: _claiming == id
                               ? null
                               : () => _claim(game, id),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEF6C00),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 9,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: CartoonButton.label(
+                              l10n.mailboxClaim,
+                              size: 16,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Text(
-                            l10n.mailboxClaim,
-                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
                     ],
@@ -463,12 +627,10 @@ class _MailboxScreenState extends State<MailboxScreen> {
   Widget _stateChip(String label, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
+      color: color.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: Cartoon.ink, width: 2),
     ),
-    child: Text(
-      label,
-      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color),
-    ),
+    child: Text(label, style: Cartoon.text(size: 13, color: color)),
   );
 }

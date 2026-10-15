@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/notice_body.dart';
 
@@ -44,113 +45,172 @@ class _NoticesScreenState extends State<NoticesScreen> {
     final themeColors = context.watch<GameService>().themeGradient;
     final l10n = L10n.of(context);
 
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF8A7A72),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.campaign, color: Color(0xFF42A5F5)),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.noticeTitle,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Content
-              Expanded(
-                child: Consumer<GameService>(
-                  builder: (context, game, _) {
-                    Widget content;
-                    if (game.noticesLoading) {
-                      content = _fillScrollable(
-                        const CircularProgressIndicator(),
-                      );
-                    } else if (game.noticesError != null) {
-                      content = _fillScrollable(
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              localizeServiceMessage(
-                                game.noticesError!,
-                                L10n.of(context),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Header
+                CartoonEntrance(
+                  from: const Offset(0, -30),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                    child: Row(
+                      children: [
+                        CartoonPressable(
+                          scale: 0.88,
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Cartoon.paper,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
                               ),
-                              style: const TextStyle(color: Color(0xFFCC6666)),
-                              textAlign: TextAlign.center,
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 10),
-                            TextButton(
-                              onPressed: () => game.requestNotices(),
-                              child: Text(l10n.noticeRetry),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Cartoon.ink,
                             ),
-                          ],
+                          ),
                         ),
-                      );
-                    } else if (game.notices.isEmpty) {
-                      content = _fillScrollable(
-                        Text(
-                          l10n.noticeEmpty,
-                          style: const TextStyle(color: Color(0xFF9A8E8A)),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Cartoon.outlinedText(
+                            l10n.noticeTitle,
+                            size: 28,
+                            maxLines: 1,
+                          ),
                         ),
-                      );
-                    } else {
-                      content = ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: game.notices.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final item = game.notices[index];
-                          return _buildNoticeItem(item, l10n);
-                        },
-                      );
-                    }
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        game.requestNotices();
-                        await Future.delayed(const Duration(milliseconds: 500));
-                      },
-                      child: content,
-                    );
-                  },
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                // Content
+                Expanded(
+                  child: Consumer<GameService>(
+                    builder: (context, game, _) {
+                      Widget content;
+                      if (game.noticesLoading) {
+                        content = _fillScrollable(
+                          const CircularProgressIndicator(
+                            color: Cartoon.orange,
+                            strokeWidth: 4,
+                          ),
+                        );
+                      } else if (game.noticesError != null) {
+                        content = _fillScrollable(
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                localizeServiceMessage(
+                                  game.noticesError!,
+                                  L10n.of(context),
+                                ),
+                                style: const TextStyle(
+                                  color: Color(0xFFCC6666),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 10),
+                              TextButton(
+                                onPressed: () => game.requestNotices(),
+                                child: Text(l10n.noticeRetry),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else if (game.notices.isEmpty) {
+                        content = _fillScrollable(
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CartoonFloat(
+                                amplitude: 8,
+                                child: Image.asset(
+                                  'assets/dragonIcon.webp',
+                                  width: 90,
+                                  height: 90,
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  colorBlendMode: BlendMode.modulate,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.noticeEmpty,
+                                style: Cartoon.userText(
+                                  size: 16,
+                                  color: Cartoon.ink.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        content = ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            4,
+                            16,
+                            24 + MediaQuery.viewPaddingOf(context).bottom,
+                          ),
+                          itemCount: game.notices.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final item = game.notices[index];
+                            return CartoonEntrance(
+                              key: ValueKey('notice-${item['id']}'),
+                              delay: Duration(
+                                milliseconds: 40 * index.clamp(0, 7),
+                              ),
+                              from: const Offset(0, 18),
+                              child: _buildNoticeItem(item, l10n),
+                            );
+                          },
+                        );
+                      }
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          game.requestNotices();
+                          await Future.delayed(
+                            const Duration(milliseconds: 500),
+                          );
+                        },
+                        child: content,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -185,7 +245,8 @@ class _NoticesScreenState extends State<NoticesScreen> {
         widget.unreadIds.contains(noticeId) &&
         !_openedThisVisit.contains(noticeId);
 
-    return InkWell(
+    return CartoonPressable(
+      scale: 0.97,
       onTap: () {
         if (noticeId is int) {
           context.read<GameService>().markNoticeRead(noticeId);
@@ -193,17 +254,13 @@ class _NoticesScreenState extends State<NoticesScreen> {
         }
         _showNoticeDetail(item, l10n);
       },
-      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isNew
-              ? Colors.white.withValues(alpha: 0.98)
-              : Colors.white.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isNew ? const Color(0xFFFFCC80) : const Color(0xFFE0D8D4),
-          ),
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: Cartoon.panelDecoration(
+          color: isNew ? const Color(0xFFFFF6DD) : Cartoon.paper,
+          radius: 18,
+          shadowOffset: 4,
         ),
         child: Row(
           children: [
@@ -212,14 +269,15 @@ class _NoticesScreenState extends State<NoticesScreen> {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: BorderRadius.circular(4),
+                  color: Cartoon.red,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                 ),
                 child: const Text(
                   'NEW',
                   style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
                     color: Colors.white,
                   ),
                 ),
@@ -227,7 +285,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
             if (isPinned)
               const Padding(
                 padding: EdgeInsets.only(right: 8),
-                child: Icon(Icons.push_pin, size: 16, color: Color(0xFFFF8F00)),
+                child: Icon(
+                  Icons.push_pin_rounded,
+                  size: 18,
+                  color: Cartoon.orangeDeep,
+                ),
               ),
             // Shown on every platform: knowing which post carries a coupon is
             // worth as much on iOS, where the code itself is withheld and the
@@ -235,19 +297,19 @@ class _NoticesScreenState extends State<NoticesScreen> {
             if (hasCoupon)
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: couponIcon(size: 18),
+                child: couponIcon(size: 20),
               ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
                 color: _categoryBgColor(category),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Cartoon.ink, width: 2),
               ),
               child: Text(
                 _categoryLabel(l10n, category),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                style: Cartoon.text(
+                  size: 12.5,
                   color: _categoryTextColor(category),
                 ),
               ),
@@ -259,12 +321,12 @@ class _NoticesScreenState extends State<NoticesScreen> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: isNew ? FontWeight.w700 : FontWeight.w500,
+                    style: Cartoon.userText(
+                      size: 15,
+                      weight: isNew ? FontWeight.w900 : FontWeight.w700,
                       // 운영자가 고른 색이 있으면 그 색으로. 목록과 상세가
                       // 같아야 눌렀을 때 "다른 글인가" 하지 않는다.
-                      color: titleColor ?? const Color(0xFF5A4038),
+                      color: titleColor ?? Cartoon.ink,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -272,16 +334,21 @@ class _NoticesScreenState extends State<NoticesScreen> {
                   const SizedBox(height: 2),
                   Text(
                     publishedAt,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF9A8E8A),
+                    style: Cartoon.userText(
+                      size: 11.5,
+                      weight: FontWeight.w500,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, size: 18, color: Color(0xFFB0A8A4)),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 26,
+              color: Cartoon.ink,
+            ),
           ],
         ),
       ),
@@ -407,120 +474,142 @@ class _NoticeDetailPage extends StatelessWidget {
         categoryText = const Color(0xFF546E7A);
     }
 
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: const Color(0xFF8A7A72),
-                    ),
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: categoryBg,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        categoryLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: categoryText,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.bold,
-                          // 운영자가 고른 색이 있으면 그 색으로.
-                          color: titleColor ?? const Color(0xFF5A4038),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Content
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        publishedAt,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF9A8E8A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(height: 1),
-                      const SizedBox(height: 14),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // 마크다운 몇 가지를 알아본다 — 운영자가 이미
-                              // **굵게** 를 쓰고 있었는데 별표째로 보였다.
-                              NoticeBody(content: content),
-                              // Below the text, not above it: the post says
-                              // what the coupon is for, and the code is what
-                              // you act on once you have read that.
-                              if (couponCode.isNotEmpty) ...[
-                                const SizedBox(height: 18),
-                                NoticeCouponBlock(code: couponCode),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Header
+                CartoonEntrance(
+                  from: const Offset(0, -30),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                    child: Row(
+                      children: [
+                        CartoonPressable(
+                          scale: 0.88,
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Cartoon.paper,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Cartoon.ink,
+                                  offset: Offset(0, 3),
+                                ),
                               ],
-                            ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Cartoon.ink,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: categoryBg,
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(color: Cartoon.ink, width: 2.2),
+                          ),
+                          child: Text(
+                            categoryLabel,
+                            style: Cartoon.text(size: 14, color: categoryText),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Cartoon.userText(
+                              size: 19,
+                              weight: FontWeight.w900,
+                              color: titleColor ?? Cartoon.ink,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                // Content
+                Expanded(
+                  child: Container(
+                    margin: EdgeInsets.fromLTRB(
+                      16,
+                      0,
+                      16,
+                      20 + MediaQuery.viewPaddingOf(context).bottom,
+                    ),
+                    padding: const EdgeInsets.all(18),
+                    decoration: Cartoon.panelDecoration(radius: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          publishedAt,
+                          style: Cartoon.text(
+                            size: 14,
+                            color: Cartoon.ink.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 마크다운 몇 가지를 알아본다 — 운영자가 이미
+                                // **굵게** 를 쓰고 있었는데 별표째로 보였다.
+                                NoticeBody(content: content),
+                                // Below the text, not above it: the post says
+                                // what the coupon is for, and the code is what
+                                // you act on once you have read that.
+                                if (couponCode.isNotEmpty) ...[
+                                  const SizedBox(height: 18),
+                                  NoticeCouponBlock(code: couponCode),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

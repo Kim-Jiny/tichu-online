@@ -9278,6 +9278,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Type your nickname'**
   String get settingsDeleteNicknameHint;
+
+  /// No description provided for @mailboxClaimAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim all'**
+  String get mailboxClaimAll;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

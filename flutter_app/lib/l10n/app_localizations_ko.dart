@@ -5141,4 +5141,7 @@ class L10nKo extends L10n {
 
   @override
   String get settingsDeleteNicknameHint => '닉네임 입력';
+
+  @override
+  String get mailboxClaimAll => '모두 받기';
 }

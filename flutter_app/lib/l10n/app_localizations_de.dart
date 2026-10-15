@@ -5295,4 +5295,7 @@ class L10nDe extends L10n {
 
   @override
   String get settingsDeleteNicknameHint => 'Spitzname eingeben';
+
+  @override
+  String get mailboxClaimAll => 'Alle abholen';
 }

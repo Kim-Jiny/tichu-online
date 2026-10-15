@@ -9284,6 +9284,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Claim all'**
   String get mailboxClaimAll;
+
+  /// No description provided for @lobbyNeedMorePlayers.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more to start'**
+  String lobbyNeedMorePlayers(int count);
+
+  /// No description provided for @lobbyRoomInfoSeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Seats'**
+  String get lobbyRoomInfoSeats;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

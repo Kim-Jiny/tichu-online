@@ -5144,4 +5144,12 @@ class L10nKo extends L10n {
 
   @override
   String get mailboxClaimAll => '모두 받기';
+
+  @override
+  String lobbyNeedMorePlayers(int count) {
+    return '$count명 더 모이면 시작할 수 있어요';
+  }
+
+  @override
+  String get lobbyRoomInfoSeats => '자리';
 }

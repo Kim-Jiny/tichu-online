@@ -1813,5 +1813,7 @@
   "attendanceProgress": "{done}/7 Tage",
   "settingsDeleteTypeNickname": "Um versehentliches Löschen zu verhindern, gib deinen aktuellen Spitznamen \"{nickname}\" genau ein.",
   "settingsDeleteNicknameHint": "Spitzname eingeben",
-  "mailboxClaimAll": "Alle abholen"
+  "mailboxClaimAll": "Alle abholen",
+  "lobbyNeedMorePlayers": "Noch {count} zum Starten",
+  "lobbyRoomInfoSeats": "Plätze"
 }

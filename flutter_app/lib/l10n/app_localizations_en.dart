@@ -5262,4 +5262,12 @@ class L10nEn extends L10n {
 
   @override
   String get mailboxClaimAll => 'Claim all';
+
+  @override
+  String lobbyNeedMorePlayers(int count) {
+    return '$count more to start';
+  }
+
+  @override
+  String get lobbyRoomInfoSeats => 'Seats';
 }

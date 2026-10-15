@@ -3060,5 +3060,8 @@
   "settingsDeleteTypeNickname": "To prevent accidental deletion, type your current nickname \"{nickname}\" exactly.",
   "@settingsDeleteTypeNickname": {"placeholders": {"nickname": {"type": "String"}}},
   "settingsDeleteNicknameHint": "Type your nickname",
-  "mailboxClaimAll": "Claim all"
+  "mailboxClaimAll": "Claim all",
+  "lobbyNeedMorePlayers": "{count} more to start",
+  "@lobbyNeedMorePlayers": {"placeholders": {"count": {"type": "int"}}},
+  "lobbyRoomInfoSeats": "Seats"
 }

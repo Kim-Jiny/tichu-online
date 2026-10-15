@@ -5298,4 +5298,12 @@ class L10nDe extends L10n {
 
   @override
   String get mailboxClaimAll => 'Alle abholen';
+
+  @override
+  String lobbyNeedMorePlayers(int count) {
+    return 'Noch $count zum Starten';
+  }
+
+  @override
+  String get lobbyRoomInfoSeats => 'Plätze';
 }

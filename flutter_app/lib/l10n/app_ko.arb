@@ -1813,5 +1813,7 @@
   "attendanceProgress": "{done}/7일 출석",
   "settingsDeleteTypeNickname": "실수로 탈퇴하는 것을 막기 위해, 현재 닉네임 \"{nickname}\"을(를) 똑같이 입력해 주세요.",
   "settingsDeleteNicknameHint": "닉네임 입력",
-  "mailboxClaimAll": "모두 받기"
+  "mailboxClaimAll": "모두 받기",
+  "lobbyNeedMorePlayers": "{count}명 더 모이면 시작할 수 있어요",
+  "lobbyRoomInfoSeats": "자리"
 }

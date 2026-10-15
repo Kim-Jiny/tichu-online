@@ -464,6 +464,53 @@ class _RulesScreenState extends State<RulesScreen> {
                 ],
                 extra: const _TigressDisplayPreview(),
               ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.extension,
+                    size: 20,
+                    color: Color(0xFFFF8A65),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    L10n.of(context).rulesSkExpansionTitle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF3E312A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              _RuleText(L10n.of(context).rulesSkExpansionBody),
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: const _GuideCardImage('assets/cards/sk_kraken.webp'),
+                name: L10n.of(context).rulesSkExpKraken,
+                sub: '',
+                count: 1,
+                lines: [L10n.of(context).rulesSkExpKrakenDesc],
+              ),
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: const _GuideCardImage(
+                  'assets/cards/sk_white_whale.webp',
+                ),
+                name: L10n.of(context).rulesSkExpWhiteWhale,
+                sub: '',
+                count: 1,
+                lines: [L10n.of(context).rulesSkExpWhiteWhaleDesc],
+              ),
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: const _GuideCardImage('assets/cards/sk_loot.webp'),
+                name: L10n.of(context).rulesSkExpLoot,
+                sub: '',
+                count: 2,
+                lines: [L10n.of(context).rulesSkExpLootDesc],
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(10),
@@ -622,41 +669,6 @@ class _RulesScreenState extends State<RulesScreen> {
           title: L10n.of(context).rulesSkWinTitle,
           art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesSkWinBody),
-        ),
-        _section(
-          icon: Icons.extension,
-          iconColor: const Color(0xFFFF8A65),
-          title: L10n.of(context).rulesSkExpansionTitle,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _RuleText(L10n.of(context).rulesSkExpansionBody),
-              const SizedBox(height: 12),
-              _expansionCard(
-                assetPath: 'assets/cards/sk_kraken.webp',
-                title: L10n.of(context).rulesSkExpKraken,
-                count: 1,
-                description: L10n.of(context).rulesSkExpKrakenDesc,
-                color: const Color(0xFF2B1E3F),
-              ),
-              const SizedBox(height: 10),
-              _expansionCard(
-                assetPath: 'assets/cards/sk_white_whale.webp',
-                title: L10n.of(context).rulesSkExpWhiteWhale,
-                count: 1,
-                description: L10n.of(context).rulesSkExpWhiteWhaleDesc,
-                color: const Color(0xFF3A6B8F),
-              ),
-              const SizedBox(height: 10),
-              _expansionCard(
-                assetPath: 'assets/cards/sk_loot.webp',
-                title: L10n.of(context).rulesSkExpLoot,
-                count: 2,
-                description: L10n.of(context).rulesSkExpLootDesc,
-                color: const Color(0xFF8B6F22),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -949,88 +961,6 @@ class _RulesScreenState extends State<RulesScreen> {
             child,
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _expansionCard({
-    required String assetPath,
-    required String title,
-    required int count,
-    required String description,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.asset(
-              assetPath,
-              width: 44,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  Container(width: 44, height: 60, color: color),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: color,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        L10n.of(context).rulesSkCardCount(count),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.45,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2135,16 +2065,17 @@ class _CardGuide extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 4),
-                Text(
-                  sub,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF8A7A72),
+                if (sub.isNotEmpty) const SizedBox(height: 4),
+                if (sub.isNotEmpty)
+                  Text(
+                    sub,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF8A7A72),
+                    ),
                   ),
-                ),
                 if (lines.isNotEmpty) const SizedBox(height: 8),
                 for (final l in lines)
                   Padding(

@@ -2040,6 +2040,7 @@
     }
   },
   "shopAdRewardDone": "Daily ad rewards complete",
+  "shopAdPreparing": "Ad is getting ready...",
   "appForceUpdateTitle": "Update Required",
   "appForceUpdateBody": "A new version has been released.\nPlease update to continue using the app.",
   "appForceUpdateButton": "Update",

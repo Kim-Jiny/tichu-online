@@ -3740,6 +3740,9 @@ class L10nEn extends L10n {
   String get shopAdRewardDone => 'Daily ad rewards complete';
 
   @override
+  String get shopAdPreparing => 'Ad is getting ready...';
+
+  @override
   String get appForceUpdateTitle => 'Update Required';
 
   @override

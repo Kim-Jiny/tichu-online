@@ -3652,6 +3652,9 @@ class L10nKo extends L10n {
   String get shopAdRewardDone => '오늘의 광고 보상 완료';
 
   @override
+  String get shopAdPreparing => '광고 준비 중...';
+
+  @override
   String get appForceUpdateTitle => '업데이트가 필요합니다';
 
   @override

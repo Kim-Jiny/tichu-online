@@ -1176,6 +1176,7 @@
   "shopAdCannotShow": "Werbung kann nicht angezeigt werden",
   "shopAdWatchForGold": "Werbung sehen und 50 Gold erhalten ({current}/{max})",
   "shopAdRewardDone": "Tägliche Werbebelohnungen abgeschlossen",
+  "shopAdPreparing": "Werbung wird vorbereitet...",
   "appForceUpdateTitle": "Update erforderlich",
   "appForceUpdateBody": "Eine neue Version wurde veröffentlicht.\nBitte aktualisiere, um die App weiter zu nutzen.",
   "appForceUpdateButton": "Aktualisieren",

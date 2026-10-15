@@ -1166,6 +1166,7 @@
   "shopAdCannotShow": "광고를 표시할 수 없습니다",
   "shopAdWatchForGold": "광고 보고 50골드 받기 ({current}/{max})",
   "shopAdRewardDone": "오늘의 광고 보상 완료",
+  "shopAdPreparing": "광고 준비 중...",
   "appForceUpdateTitle": "업데이트가 필요합니다",
   "appForceUpdateBody": "새로운 버전이 출시되었습니다.\n원활한 이용을 위해 업데이트해주세요.",
   "appForceUpdateButton": "업데이트",

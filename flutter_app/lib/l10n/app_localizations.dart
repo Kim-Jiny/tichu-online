@@ -6693,6 +6693,12 @@ abstract class L10n {
   /// **'Daily ad rewards complete'**
   String get shopAdRewardDone;
 
+  /// No description provided for @shopAdPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad is getting ready...'**
+  String get shopAdPreparing;
+
   /// No description provided for @appForceUpdateTitle.
   ///
   /// In en, this message translates to:

@@ -3758,6 +3758,9 @@ class L10nDe extends L10n {
   String get shopAdRewardDone => 'Tägliche Werbebelohnungen abgeschlossen';
 
   @override
+  String get shopAdPreparing => 'Werbung wird vorbereitet...';
+
+  @override
   String get appForceUpdateTitle => 'Update erforderlich';
 
   @override

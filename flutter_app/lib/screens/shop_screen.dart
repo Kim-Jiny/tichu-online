@@ -40,6 +40,9 @@ class _ShopScreenState extends State<ShopScreen> {
   final Set<String> _busyItemKeys = {};
   int _todayAdCount = 0;
   bool _adLoading = false;
+  // 광고 로드 상태를 팝업이 실시간으로 따라가도록 알림으로도 둔다.
+  final ValueNotifier<bool> _adReadyVN = ValueNotifier<bool>(false);
+  bool _rewardedAdLoading = false;
   RewardedAd? _rewardedAd;
   bool _rewardedAdReady = false;
   // Attendance has its OWN rewarded ad unit (separate AdMob slot) so it
@@ -184,17 +187,23 @@ class _ShopScreenState extends State<ShopScreen> {
     // No AdMob on web; the tiles that need a loaded ad stay hidden because
     // _rewardedAdReady never flips.
     if (kIsWeb) return;
+    if (_rewardedAdLoading) return;
+    _rewardedAdLoading = true;
     RewardedAd.load(
       adUnitId: AdService.rewardedAdId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          _rewardedAdLoading = false;
           _rewardedAd = ad;
+          _adReadyVN.value = true;
           if (mounted) setState(() => _rewardedAdReady = true);
         },
         onAdFailedToLoad: (error) {
           debugPrint('[AdService] Rewarded FAILED: ${error.message}');
+          _rewardedAdLoading = false;
           _rewardedAdReady = false;
+          _adReadyVN.value = false;
         },
       ),
     );
@@ -250,6 +259,7 @@ class _ShopScreenState extends State<ShopScreen> {
     _attendanceAd?.dispose();
     _attendanceAdReady.dispose();
     _inventoryTabController.dispose();
+    _adReadyVN.dispose();
     super.dispose();
   }
 
@@ -408,7 +418,6 @@ class _ShopScreenState extends State<ShopScreen> {
         : null;
     final attendanceClaimed = attendance?['claimedToday'] == true;
     final adCanWatch = _todayAdCount < AdService.maxDailyRewards;
-    final adEnabled = adCanWatch && !_adLoading;
 
     return CartoonEntrance(
       from: const Offset(0, -30),
@@ -453,10 +462,10 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                if (_rewardedAdReady || _adLoading) ...[
+                if (!kIsWeb) ...[
                   rewardChip(
                     icon: Icons.play_circle_rounded,
-                    color: adEnabled
+                    color: (adCanWatch && _rewardedAdReady)
                         ? const Color(0xFF7E57C2)
                         : Cartoon.ink.withValues(alpha: 0.4),
                     tooltip: adCanWatch
@@ -466,7 +475,11 @@ class _ShopScreenState extends State<ShopScreen> {
                     badge: adCanWatch
                         ? '${AdService.maxDailyRewards - _todayAdCount}'
                         : null,
-                    onTap: () => _showAdRewardInfo(game),
+                    onTap: () {
+                      // 로드에 실패했거나 아직이면 다시 불러 두고 팝업을 연다.
+                      if (!_rewardedAdReady) _preloadRewardedAd();
+                      _showAdRewardInfo(game);
+                    },
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -1765,12 +1778,12 @@ class _ShopScreenState extends State<ShopScreen> {
           borderRadius: BorderRadius.circular(20),
           onTap: () => _showItemDetailSheet(context, item),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildShopRowVisual(item, 64),
-                const SizedBox(width: 12),
+                _buildShopRowVisual(item, 52),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1783,11 +1796,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF4A3A33),
-                              ),
+                              style: Cartoon.userText(size: 14.5),
                             ),
                           ),
                           if (equipped)
@@ -1829,259 +1838,214 @@ class _ShopScreenState extends State<ShopScreen> {
                                 : l10n.shopPermanentOwned),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF8A7A72),
+                        style: Cartoon.userText(
+                          size: 11.5,
+                          weight: FontWeight.w500,
+                          color: Cartoon.ink.withValues(alpha: 0.6),
                           height: 1.3,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Spacer(),
-                          if (isToggleable)
-                            // A button that says the current state, not a switch:
-                            // switching it off costs days that keep running, so it
-                            // asks first — and a switch that opens a dialog is a
-                            // button wearing the wrong clothes.
-                            SizedBox(
-                              height: 34,
-                              child: ElevatedButton(
-                                onPressed: () => _showFeatureToggleDialog(
-                                  context,
-                                  game,
-                                  effectType,
-                                  featureOn,
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: featureOn
-                                      ? const Color(0xFFDDF0E4)
-                                      : const Color(0xFFEFEBE9),
-                                  foregroundColor: featureOn
-                                      ? const Color(0xFF33734B)
-                                      : const Color(0xFF8A7A72),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                  ),
-                                  minimumSize: const Size(0, 34),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    side: const BorderSide(
-                                      color: Cartoon.ink,
-                                      width: 1.6,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  featureOn
-                                      ? l10n.shopFeatureInUse
-                                      : l10n.shopFeatureOff,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else if (isCustomTitle) ...[
-                            // Two things to do with a written title: change the
-                            // text, and take it off without losing it. Unequip is
-                            // the same slot clear as any other title; putting it
-                            // back on re-saves the stored text.
-                            if (game.myCustomTitleText != null)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: SizedBox(
-                                  height: 34,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      final worn =
-                                          game.equippedTitle?.startsWith(
-                                            'custom:',
-                                          ) ==
-                                          true;
-                                      if (worn) {
-                                        _runItemAction(
-                                          itemKey,
-                                          () => game.unequipCategory('title'),
-                                        );
-                                      } else {
-                                        _runItemAction(
-                                          itemKey,
-                                          () => game.setCustomTitle(
-                                            game.myCustomTitleText!,
-                                            game.myCustomTitleColor ?? 'rose',
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          game.equippedTitle?.startsWith(
-                                                'custom:',
-                                              ) ==
-                                              true
-                                          ? const Color(0xFFE3F2FD)
-                                          : const Color(0xFFB3E5FC),
-                                      foregroundColor: const Color(0xFF4A3A33),
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      minimumSize: const Size(0, 34),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        side: const BorderSide(
-                                          color: Cartoon.ink,
-                                          width: 1.6,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      game.equippedTitle?.startsWith(
-                                                'custom:',
-                                              ) ==
-                                              true
-                                          ? l10n.shopButtonUnequip
-                                          : l10n.shopButtonEquip,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            SizedBox(
-                              height: 34,
-                              child: ElevatedButton(
-                                onPressed: _busyItemKeys.contains(itemKey)
-                                    ? null
-                                    : () =>
-                                          _showCustomTitleDialog(context, game),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFB3E5FC),
-                                  foregroundColor: const Color(0xFF4A3A33),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                  ),
-                                  minimumSize: const Size(0, 34),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    side: const BorderSide(
-                                      color: Cartoon.ink,
-                                      width: 1.6,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  l10n.customTitleButton,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (!noEquipAction)
-                            SizedBox(
-                              height: 34,
-                              child: ElevatedButton(
-                                onPressed: _busyItemKeys.contains(itemKey)
-                                    ? null
-                                    : () {
-                                        if (effectType == 'nickname_change') {
-                                          _showNicknameChangeDialog(
-                                            context,
-                                            game,
-                                          );
-                                        } else if (effectType ==
-                                            'custom_title') {
-                                          _showCustomTitleDialog(context, game);
-                                        } else if (isConsumable) {
-                                          _showUseConfirmDialog(
-                                            context,
-                                            itemKey,
-                                            name,
-                                            () => _runItemAction(
-                                              itemKey,
-                                              () => game.useItem(itemKey),
-                                            ),
-                                          );
-                                        } else if (equipped) {
-                                          // Same button, other direction: what is
-                                          // on can be taken off. There was no way
-                                          // back to "no banner" once one was worn.
-                                          _runItemAction(
-                                            itemKey,
-                                            () =>
-                                                game.unequipCategory(category),
-                                          );
-                                        } else {
-                                          _runItemAction(
-                                            itemKey,
-                                            () => game.equipItem(itemKey),
-                                          );
-                                        }
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isConsumable
-                                      ? const Color(0xFFFFE0B2)
-                                      : (equipped
-                                            ? const Color(0xFFE3F2FD)
-                                            : const Color(0xFFB3E5FC)),
-                                  foregroundColor: const Color(0xFF4A3A33),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    side: const BorderSide(
-                                      color: Cartoon.ink,
-                                      width: 1.6,
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                  ),
-                                  minimumSize: const Size(0, 34),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: _busyItemKeys.contains(itemKey)
-                                    ? const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Color(0xFF4A3A33),
-                                        ),
-                                      )
-                                    : Text(
-                                        isCustomTitle
-                                            ? l10n.customTitleButton
-                                            : isConsumable
-                                            ? l10n.shopButtonUse
-                                            : (equipped
-                                                  ? l10n.shopButtonUnequip
-                                                  : l10n.shopButtonEquip),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                        ],
-                      ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isToggleable)
+                      // A button that says the current state, not a switch:
+                      // switching it off costs days that keep running, so it
+                      // asks first — and a switch that opens a dialog is a
+                      // button wearing the wrong clothes.
+                      SizedBox(
+                        height: 34,
+                        child: ElevatedButton(
+                          onPressed: () => _showFeatureToggleDialog(
+                            context,
+                            game,
+                            effectType,
+                            featureOn,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: featureOn
+                                ? Cartoon.green
+                                : Cartoon.cream,
+                            foregroundColor: featureOn
+                                ? Colors.white
+                                : Cartoon.ink.withValues(alpha: 0.6),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            featureOn
+                                ? l10n.shopFeatureInUse
+                                : l10n.shopFeatureOff,
+                            style: Cartoon.text(size: 14),
+                          ),
+                        ),
+                      )
+                    else if (isCustomTitle) ...[
+                      // Two things to do with a written title: change the
+                      // text, and take it off without losing it. Unequip is
+                      // the same slot clear as any other title; putting it
+                      // back on re-saves the stored text.
+                      if (game.myCustomTitleText != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: SizedBox(
+                            height: 34,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final worn =
+                                    game.equippedTitle?.startsWith('custom:') ==
+                                    true;
+                                if (worn) {
+                                  _runItemAction(
+                                    itemKey,
+                                    () => game.unequipCategory('title'),
+                                  );
+                                } else {
+                                  _runItemAction(
+                                    itemKey,
+                                    () => game.setCustomTitle(
+                                      game.myCustomTitleText!,
+                                      game.myCustomTitleColor ?? 'rose',
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    game.equippedTitle?.startsWith('custom:') ==
+                                        true
+                                    ? Cartoon.cream
+                                    : Cartoon.blue,
+                                foregroundColor:
+                                    game.equippedTitle?.startsWith('custom:') ==
+                                        true
+                                    ? Cartoon.ink
+                                    : Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                minimumSize: const Size(0, 34),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text(
+                                game.equippedTitle?.startsWith('custom:') ==
+                                        true
+                                    ? l10n.shopButtonUnequip
+                                    : l10n.shopButtonEquip,
+                                style: Cartoon.text(size: 14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      SizedBox(
+                        height: 34,
+                        child: ElevatedButton(
+                          onPressed: _busyItemKeys.contains(itemKey)
+                              ? null
+                              : () => _showCustomTitleDialog(context, game),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Cartoon.blue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            l10n.customTitleButton,
+                            style: Cartoon.text(size: 14),
+                          ),
+                        ),
+                      ),
+                    ] else if (!noEquipAction)
+                      SizedBox(
+                        height: 34,
+                        child: ElevatedButton(
+                          onPressed: _busyItemKeys.contains(itemKey)
+                              ? null
+                              : () {
+                                  if (effectType == 'nickname_change') {
+                                    _showNicknameChangeDialog(context, game);
+                                  } else if (effectType == 'custom_title') {
+                                    _showCustomTitleDialog(context, game);
+                                  } else if (isConsumable) {
+                                    _showUseConfirmDialog(
+                                      context,
+                                      itemKey,
+                                      name,
+                                      () => _runItemAction(
+                                        itemKey,
+                                        () => game.useItem(itemKey),
+                                      ),
+                                    );
+                                  } else if (equipped) {
+                                    // Same button, other direction: what is
+                                    // on can be taken off. There was no way
+                                    // back to "no banner" once one was worn.
+                                    _runItemAction(
+                                      itemKey,
+                                      () => game.unequipCategory(category),
+                                    );
+                                  } else {
+                                    _runItemAction(
+                                      itemKey,
+                                      () => game.equipItem(itemKey),
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isConsumable
+                                ? Cartoon.orange
+                                : (equipped ? Cartoon.cream : Cartoon.blue),
+                            foregroundColor: (equipped && !isConsumable)
+                                ? Cartoon.ink
+                                : Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: _busyItemKeys.contains(itemKey)
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF4A3A33),
+                                  ),
+                                )
+                              : Text(
+                                  isCustomTitle
+                                      ? l10n.customTitleButton
+                                      : isConsumable
+                                      ? l10n.shopButtonUse
+                                      : (equipped
+                                            ? l10n.shopButtonUnequip
+                                            : l10n.shopButtonEquip),
+                                  style: Cartoon.text(size: 14),
+                                ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -4759,16 +4723,29 @@ class _ShopScreenState extends State<ShopScreen> {
             style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
             child: Text(l10n.commonClose, style: Cartoon.text(size: 17)),
           ),
-          if (canWatch && !_adLoading && _rewardedAdReady)
-            gameButton(
-              l10n.shopAdWatchForGold(_todayAdCount, AdService.maxDailyRewards),
-              () {
-                Navigator.pop(ctx);
-                _watchRewardedAd(game);
+          if (canWatch)
+            ValueListenableBuilder<bool>(
+              valueListenable: _adReadyVN,
+              builder: (_, ready, _) {
+                final ok = ready && !_adLoading;
+                return gameButton(
+                  ok
+                      ? l10n.shopAdWatchForGold(
+                          _todayAdCount,
+                          AdService.maxDailyRewards,
+                        )
+                      : l10n.shopAdPreparing,
+                  ok
+                      ? () {
+                          Navigator.pop(ctx);
+                          _watchRewardedAd(game);
+                        }
+                      : null,
+                  color: const Color(0xFF7E57C2),
+                  size: 16,
+                  hPad: 14,
+                );
               },
-              color: const Color(0xFF7E57C2),
-              size: 16,
-              hPad: 14,
             ),
         ],
       ),
@@ -4783,6 +4760,7 @@ class _ShopScreenState extends State<ShopScreen> {
       _adLoading = true;
       _rewardedAd = null;
       _rewardedAdReady = false;
+      _adReadyVN.value = false;
     });
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {

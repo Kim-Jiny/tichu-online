@@ -2777,6 +2777,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
+            // 색이 반드시 있어야 한다: 번지지 않는 단색 그림자는 투명한 상자
+            // 안쪽까지 비쳐서, 색 없는 상자가 통째로 먹색이 된다.
+            color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Cartoon.ink, width: 2.5),
             boxShadow: const [

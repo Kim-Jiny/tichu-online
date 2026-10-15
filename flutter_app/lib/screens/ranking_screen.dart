@@ -8,6 +8,7 @@ import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../theme/cartoon.dart';
 import '../widgets/game_type_icon.dart';
+import '../widgets/host_crown.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/profile_avatar.dart';
 
@@ -537,14 +538,7 @@ class _RankingScreenState extends State<RankingScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (rank == 1)
-              CartoonFloat(
-                amplitude: 3,
-                child: Image.asset(
-                  'assets/icons/crown.webp',
-                  width: 34,
-                  height: 34,
-                ),
-              )
+              CartoonFloat(amplitude: 3, child: const HostCrown(size: 38))
             else
               const SizedBox(height: 34),
             Container(

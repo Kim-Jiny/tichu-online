@@ -914,6 +914,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
     bool gamePickerOpen = false;
+    bool advancedOpen = false;
     final Set<String> skExpansionsSelected = <String>{};
     String? errorText;
     void Function(void Function())? dialogSetState;
@@ -1095,6 +1096,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
+                  side: const BorderSide(color: Cartoon.ink, width: 3),
                 ),
                 backgroundColor: themeColors.first.withValues(alpha: 0.94),
                 contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
@@ -1384,171 +1386,263 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              optionCard(
-                                iconAsset: 'assets/icons/private.webp',
-                                iconColor: const Color(0xFF7A6A62),
-                                title: l10n.lobbyPrivateRoom,
-                                description: isRanked
-                                    ? l10n.lobbyPrivateRoomDescRanked
-                                    : null,
-                                value: isPrivate,
-                                enabled: !isRanked,
-                                onChanged: (v) => setState(() => isPrivate = v),
-                              ),
-                              if (isPrivate) ...[
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: passwordController,
-                                  obscureText: true,
-                                  decoration: fieldDecoration(
-                                    l10n.lobbyPasswordHint,
-                                  ),
-                                ),
-                              ],
-                              optionCard(
-                                iconAsset: 'assets/icons/allowSpectators.webp',
-                                title: l10n.lobbyAllowSpectators,
-                                value: allowSpectators,
-                                onChanged: (v) => setState(() {
-                                  allowSpectators = v;
-                                  // Breaking in means breaking in from the
-                                  // spectator seat, so the option below cannot
-                                  // outlive spectating. The server enforces the
-                                  // same dependency; dropping it here keeps the
-                                  // switch from reading as on when it isn't.
-                                  if (!v) allowMidGameJoin = false;
-                                }),
-                              ),
-                              optionCard(
-                                iconAsset:
-                                    'assets/icons/allowBotReplacement.webp',
-                                iconColor: const Color(0xFF4A4080),
-                                title: l10n.midJoinCreateOption,
-                                description: isRanked
-                                    ? null
-                                    : l10n.midJoinCreateOptionHint,
-                                value: allowMidGameJoin,
-                                // Ranked rooms hold no bots, so there is never
-                                // a seat to take over.
-                                enabled: !isRanked && allowSpectators,
-                                onChanged: (v) =>
-                                    setState(() => allowMidGameJoin = v),
-                              ),
-                              if (selectedGameType != 'love_letter' &&
-                                  context.read<GameService>().authProvider !=
-                                      'local') ...[
-                                optionCard(
-                                  iconAsset: 'assets/icons/lankIcon.webp',
-                                  iconColor: const Color(0xFFD9A036),
-                                  title: l10n.lobbyRanked,
-                                  description: selectedGameType == 'skull_king'
-                                      ? l10n.lobbyRankedDescSk
-                                      : selectedGameType == 'mighty'
-                                      ? l10n.lobbyRankedDescMighty
-                                      : l10n.lobbyRankedDesc,
-                                  value: isRanked,
-                                  onChanged: (v) => setState(() {
-                                    isRanked = v;
-                                    if (isRanked) {
-                                      isPrivate = false;
-                                      passwordController.clear();
-                                      targetScoreController.text =
-                                          selectedGameType == 'mighty'
-                                          ? '50'
-                                          : '1000';
-                                    }
-                                  }),
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              sectionTitle(
-                                l10n.lobbyGameSettings,
-                                (selectedGameType == 'tichu' ||
-                                        selectedGameType == 'mighty')
-                                    ? l10n.lobbyGameSettingsDescTichu
-                                    : l10n.lobbyGameSettingsDescSk,
-                              ),
                               const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          l10n.lobbyTimeLimit,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12,
+                              CartoonPressable(
+                                scale: 0.97,
+                                onTap: () => setState(
+                                  () => advancedOpen = !advancedOpen,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Cartoon.cream,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: Cartoon.ink,
+                                      width: 2.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.tune,
+                                        color: Cartoon.ink,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        l10n.lobbyGameSettings,
+                                        style: Cartoon.text(size: 16),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          [
+                                            if (isPrivate)
+                                              l10n.lobbyPrivateRoom,
+                                            if (isRanked) l10n.lobbyRanked,
+                                            '${timeLimitController.text}${l10n.lobbySuffixSeconds}',
+                                          ].join(' · '),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.end,
+                                          style: Cartoon.text(
+                                            size: 13,
+                                            color: Cartoon.ink.withValues(
+                                              alpha: 0.6,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(height: 6),
+                                      ),
+                                      AnimatedRotation(
+                                        turns: advancedOpen ? 0.5 : 0,
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        child: const Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          color: Cartoon.ink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 240),
+                                curve: Curves.easeOutCubic,
+                                alignment: Alignment.topCenter,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (advancedOpen) ...[
+                                      const SizedBox(height: 8),
+                                      optionCard(
+                                        iconAsset: 'assets/icons/private.webp',
+                                        iconColor: const Color(0xFF7A6A62),
+                                        title: l10n.lobbyPrivateRoom,
+                                        description: isRanked
+                                            ? l10n.lobbyPrivateRoomDescRanked
+                                            : null,
+                                        value: isPrivate,
+                                        enabled: !isRanked,
+                                        onChanged: (v) =>
+                                            setState(() => isPrivate = v),
+                                      ),
+                                      if (isPrivate) ...[
+                                        const SizedBox(height: 10),
                                         TextField(
-                                          controller: timeLimitController,
-                                          keyboardType: TextInputType.number,
-                                          inputFormatters: [
-                                            FilteringTextInputFormatter
-                                                .digitsOnly,
-                                            LengthLimitingTextInputFormatter(3),
-                                          ],
-                                          textAlign: TextAlign.center,
+                                          controller: passwordController,
+                                          obscureText: true,
                                           decoration: fieldDecoration(
-                                            l10n.lobbyTimeLimitRange,
-                                            suffixText: l10n.lobbySuffixSeconds,
+                                            l10n.lobbyPasswordHint,
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                  if (selectedGameType == 'tichu' ||
-                                      selectedGameType == 'mighty') ...[
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                      optionCard(
+                                        iconAsset:
+                                            'assets/icons/allowSpectators.webp',
+                                        title: l10n.lobbyAllowSpectators,
+                                        value: allowSpectators,
+                                        onChanged: (v) => setState(() {
+                                          allowSpectators = v;
+                                          // Breaking in means breaking in from the
+                                          // spectator seat, so the option below cannot
+                                          // outlive spectating. The server enforces the
+                                          // same dependency; dropping it here keeps the
+                                          // switch from reading as on when it isn't.
+                                          if (!v) allowMidGameJoin = false;
+                                        }),
+                                      ),
+                                      optionCard(
+                                        iconAsset:
+                                            'assets/icons/allowBotReplacement.webp',
+                                        iconColor: const Color(0xFF4A4080),
+                                        title: l10n.midJoinCreateOption,
+                                        description: isRanked
+                                            ? null
+                                            : l10n.midJoinCreateOptionHint,
+                                        value: allowMidGameJoin,
+                                        // Ranked rooms hold no bots, so there is never
+                                        // a seat to take over.
+                                        enabled: !isRanked && allowSpectators,
+                                        onChanged: (v) => setState(
+                                          () => allowMidGameJoin = v,
+                                        ),
+                                      ),
+                                      if (selectedGameType != 'love_letter' &&
+                                          context
+                                                  .read<GameService>()
+                                                  .authProvider !=
+                                              'local') ...[
+                                        optionCard(
+                                          iconAsset:
+                                              'assets/icons/lankIcon.webp',
+                                          iconColor: const Color(0xFFD9A036),
+                                          title: l10n.lobbyRanked,
+                                          description:
+                                              selectedGameType == 'skull_king'
+                                              ? l10n.lobbyRankedDescSk
+                                              : selectedGameType == 'mighty'
+                                              ? l10n.lobbyRankedDescMighty
+                                              : l10n.lobbyRankedDesc,
+                                          value: isRanked,
+                                          onChanged: (v) => setState(() {
+                                            isRanked = v;
+                                            if (isRanked) {
+                                              isPrivate = false;
+                                              passwordController.clear();
+                                              targetScoreController.text =
+                                                  selectedGameType == 'mighty'
+                                                  ? '50'
+                                                  : '1000';
+                                            }
+                                          }),
+                                        ),
+                                      ],
+                                      const SizedBox(height: 16),
+                                      sectionTitle(
+                                        l10n.lobbyGameSettings,
+                                        (selectedGameType == 'tichu' ||
+                                                selectedGameType == 'mighty')
+                                            ? l10n.lobbyGameSettingsDescTichu
+                                            : l10n.lobbyGameSettingsDescSk,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
                                         children: [
-                                          Text(
-                                            l10n.lobbyTargetScore,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 12,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  l10n.lobbyTimeLimit,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                TextField(
+                                                  controller:
+                                                      timeLimitController,
+                                                  keyboardType:
+                                                      TextInputType.number,
+                                                  inputFormatters: [
+                                                    FilteringTextInputFormatter
+                                                        .digitsOnly,
+                                                    LengthLimitingTextInputFormatter(
+                                                      3,
+                                                    ),
+                                                  ],
+                                                  textAlign: TextAlign.center,
+                                                  decoration: fieldDecoration(
+                                                    l10n.lobbyTimeLimitRange,
+                                                    suffixText:
+                                                        l10n.lobbySuffixSeconds,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(height: 6),
-                                          TextField(
-                                            controller: targetScoreController,
-                                            enabled: !isRanked,
-                                            keyboardType: TextInputType.number,
-                                            inputFormatters: [
-                                              FilteringTextInputFormatter
-                                                  .digitsOnly,
-                                              LengthLimitingTextInputFormatter(
-                                                5,
+                                          if (selectedGameType == 'tichu' ||
+                                              selectedGameType == 'mighty') ...[
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    l10n.lobbyTargetScore,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  TextField(
+                                                    controller:
+                                                        targetScoreController,
+                                                    enabled: !isRanked,
+                                                    keyboardType:
+                                                        TextInputType.number,
+                                                    inputFormatters: [
+                                                      FilteringTextInputFormatter
+                                                          .digitsOnly,
+                                                      LengthLimitingTextInputFormatter(
+                                                        5,
+                                                      ),
+                                                    ],
+                                                    textAlign: TextAlign.center,
+                                                    decoration: fieldDecoration(
+                                                      isRanked
+                                                          ? (selectedGameType ==
+                                                                    'mighty'
+                                                                ? l10n.lobbyTargetScoreFixedMighty
+                                                                : l10n.lobbyTargetScoreFixed)
+                                                          : (selectedGameType ==
+                                                                    'mighty'
+                                                                ? l10n.lobbyTargetScoreRangeMighty
+                                                                : l10n.lobbyTargetScoreRange),
+                                                      suffixText: l10n
+                                                          .lobbySuffixPoints,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                            textAlign: TextAlign.center,
-                                            decoration: fieldDecoration(
-                                              isRanked
-                                                  ? (selectedGameType ==
-                                                            'mighty'
-                                                        ? l10n.lobbyTargetScoreFixedMighty
-                                                        : l10n.lobbyTargetScoreFixed)
-                                                  : (selectedGameType ==
-                                                            'mighty'
-                                                        ? l10n.lobbyTargetScoreRangeMighty
-                                                        : l10n.lobbyTargetScoreRange),
-                                              suffixText:
-                                                  l10n.lobbySuffixPoints,
                                             ),
-                                          ),
+                                          ],
                                         ],
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                               // The info box that sat here restated things already on
                               // screen: the ranked rules are the ranked toggle's own
@@ -1729,8 +1823,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
                       foregroundColor: const Color(0xFF2A1E18),
+                      textStyle: const TextStyle(
+                        fontFamily: Cartoon.font,
+                        fontSize: 16,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Cartoon.ink, width: 2.5),
                       ),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(
@@ -1915,6 +2014,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Column(
       children: [
         Expanded(child: body),
+        if (!isLandscape) _buildLobbyBottomNav(game),
         if (_bannerAd != null && _bannerAdLoaded)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -1968,6 +2068,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Widget _buildLobbyHeader(GameService game, {required bool isLandscape}) {
+    // 세로: 로고 + 내 골드만. 버튼 다섯 개는 글자가 붙은 하단 탭으로 내려갔다.
+    if (!isLandscape) return _buildSimpleLobbyHeader(game);
     return CartoonEntrance(
       from: const Offset(0, -40),
       child: Container(
@@ -2043,6 +2145,105 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  String _withCommas(int n) => n.toString().replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+
+  Widget _buildSimpleLobbyHeader(GameService game) {
+    return CartoonEntrance(
+      from: const Offset(0, -40),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 44,
+                    maxWidth: 150,
+                  ),
+                  child: Image.asset('assets/logo2.webp', fit: BoxFit.contain),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+              decoration: BoxDecoration(
+                color: Cartoon.cream,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/icons/goldIcon.webp',
+                    width: 26,
+                    height: 26,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(_withCommas(game.gold), style: Cartoon.text(size: 18)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 하단 탭: 상점 · 친구 · 랭킹 · 내 프로필 · 설정. 아이콘만 있던 헤더 버튼에
+  /// 글자를 붙여, 처음 온 사람도 무엇인지 알 수 있게 했다. 누르는 동작과 배지는
+  /// 예전 헤더 버튼을 그대로 가져온다.
+  Widget _buildLobbyBottomNav(GameService game) {
+    final l10n = L10n.of(context);
+    final buttons = _buildLobbyActionButtons(game, 46);
+    final labels = [
+      l10n.shopTitle,
+      l10n.friendsTitle,
+      l10n.rankingTitle,
+      l10n.lobbyMyProfile,
+      l10n.settingsTitle,
+    ];
+    return CartoonEntrance(
+      from: const Offset(0, 50),
+      delay: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+        decoration: const BoxDecoration(
+          color: Cartoon.paper,
+          border: Border(top: BorderSide(color: Cartoon.ink, width: 3)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < buttons.length; i++)
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    buttons[i],
+                    const SizedBox(height: 5),
+                    Text(
+                      labels[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Cartoon.text(size: 12.5),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -2445,23 +2646,48 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildEmptyRoomList() {
+  Widget _buildEmptyRoomList() =>
+      _buildEmptyState(L10n.of(context).lobbyEmptyRoomList);
+
+  /// 방이 없을 때: 졸고 있는 마스코트 + 바로 방을 만들 수 있는 버튼.
+  /// 글자만 있던 빈 화면은 "그래서 뭘 해야 하지?" 에 답이 없었다.
+  Widget _buildEmptyState(String message) {
     return _fillScrollable(
       Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.meeting_room_outlined,
-              size: 48,
-              color: Color(0xFFC4B8B0),
+            CartoonFloat(
+              amplitude: 8,
+              child: Image.asset(
+                'assets/dragonIcon.webp',
+                width: 96,
+                height: 96,
+                color: Colors.white.withValues(alpha: 0.35),
+                colorBlendMode: BlendMode.modulate,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            Cartoon.outlinedText('Zzz…', size: 24, fill: Cartoon.skyTop),
+            const SizedBox(height: 10),
             Text(
-              L10n.of(context).lobbyEmptyRoomList,
+              message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Color(0xFF9A8E8A)),
+              style: Cartoon.text(size: 17, height: 1.4),
+            ),
+            const SizedBox(height: 18),
+            CartoonPulse(
+              child: CartoonButton(
+                expand: false,
+                height: 50,
+                color: Cartoon.green,
+                onPressed: _showCreateRoomDialog,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 26),
+                  child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
+                ),
+              ),
             ),
           ],
         ),
@@ -2539,13 +2765,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       (r) => r.gameType,
     );
     if (rooms.isEmpty) {
-      return Center(
-        child: Text(
-          L10n.of(context).lobbyNoRoomsForFilter,
-          style: const TextStyle(color: Color(0xFF9C8B84)),
-          textAlign: TextAlign.center,
-        ),
-      );
+      return _buildEmptyState(L10n.of(context).lobbyNoRoomsForFilter);
     }
     // Waiting rooms on top, in-progress rooms at the bottom.
     // Stable sort so server-provided order is preserved within each group.
@@ -2897,29 +3117,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             message: isInProgress
                                 ? l10n.lobbyRoomPlaying
                                 : l10n.lobbyRoomWaiting,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 11,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF6F3F2),
-                                borderRadius: BorderRadius.circular(11),
-                              ),
-                              child: Text(
-                                '${room.playerCount}/${room.effectiveMaxPlayers}',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  // Green when there is no seat left, amber
-                                  // while there is.
-                                  color:
-                                      room.playerCount >=
-                                          room.effectiveMaxPlayers
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFFFF9800),
-                                ),
-                              ),
+                            child: _SeatDots(
+                              filled: room.playerCount,
+                              total: room.effectiveMaxPlayers,
+                              color: stripColor,
                             ),
                           ),
                         ],
@@ -5206,3 +5407,105 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
 /// Full-screen "uploading" barrier, shown as an OverlayEntry above whatever
 /// route is current (including the profile dialog).
+
+/// 방 카드의 자리 현황: 앉은 자리는 게임 색으로 채우고 빈 자리는 비워 둔다.
+/// 한 자리만 남았으면 그 빈 자리가 깜빡여서 "지금 들어가면 시작" 을 알려 준다.
+class _SeatDots extends StatefulWidget {
+  const _SeatDots({
+    required this.filled,
+    required this.total,
+    required this.color,
+  });
+
+  final int filled;
+  final int total;
+  final Color color;
+
+  @override
+  State<_SeatDots> createState() => _SeatDotsState();
+}
+
+class _SeatDotsState extends State<_SeatDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _syncBlink();
+  }
+
+  @override
+  void didUpdateWidget(_SeatDots old) {
+    super.didUpdateWidget(old);
+    _syncBlink();
+  }
+
+  void _syncBlink() {
+    final lastSeat = widget.total - widget.filled == 1;
+    if (lastSeat && !_c.isAnimating) {
+      _c.repeat(reverse: true);
+    } else if (!lastSeat && _c.isAnimating) {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final full = widget.filled >= widget.total;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < widget.total; i++)
+              Padding(
+                padding: EdgeInsets.only(left: i == 0 ? 0 : 3),
+                child: _dot(
+                  i < widget.filled,
+                  blink:
+                      i == widget.filled && widget.total - widget.filled == 1,
+                  full: full,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _dot(bool filled, {required bool blink, required bool full}) {
+    final glow = blink ? _c.value : 0.0;
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: filled
+            ? (full ? Cartoon.green : widget.color)
+            : Color.lerp(Colors.white, Cartoon.yellow, glow),
+        border: Border.all(color: Cartoon.ink, width: 2),
+        boxShadow: blink
+            ? [
+                BoxShadow(
+                  color: Cartoon.yellow.withValues(alpha: 0.7 * glow),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+    );
+  }
+}

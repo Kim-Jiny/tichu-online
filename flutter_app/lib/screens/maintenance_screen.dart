@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart' show gameButton, gamePillDecoration;
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/session_service.dart';
@@ -113,135 +115,131 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     final isEnded = _remaining == Duration.zero && _autoReconnectTriggered;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.construction,
-                  color: Color(0xFFE65100),
-                  size: 64,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.maintenanceTitle,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFE65100),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (game.maintenanceMessage.isNotEmpty)
-                  Text(
-                    game.maintenanceMessage,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.black87,
-                      height: 1.5,
-                    ),
-                  ),
-                if (timeText.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    timeText,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFFBF360C),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                if (isEnded && _reconnecting)
-                  Column(
-                    children: [
-                      Text(
-                        l10n.maintenanceEnded,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF2E7D32),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ],
-                  )
-                else if (!isEnded && _remaining > Duration.zero) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFB74D)),
+      body: CartoonBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: CartoonEntrance(
+                  from: const Offset(0, 24),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
+                    decoration: Cartoon.panelDecoration(
+                      radius: 28,
+                      shadowOffset: 4,
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          l10n.maintenanceCountdown(_formatCountdown(_remaining)),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100),
+                        CartoonFloat(
+                          amplitude: 4,
+                          child: Container(
+                            width: 84,
+                            height: 84,
+                            decoration: BoxDecoration(
+                              color: Cartoon.yellow,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 2.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.construction_rounded,
+                              color: Cartoon.ink,
+                              size: 46,
+                            ),
                           ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          l10n.maintenanceTitle,
+                          textAlign: TextAlign.center,
+                          style: Cartoon.text(size: 24),
+                        ),
+                        const SizedBox(height: 12),
+                        if (game.maintenanceMessage.isNotEmpty)
+                          Text(
+                            game.maintenanceMessage,
+                            textAlign: TextAlign.center,
+                            style: Cartoon.userText(
+                              size: 15,
+                              weight: FontWeight.w600,
+                              height: 1.5,
+                            ),
+                          ),
+                        if (timeText.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: gamePillDecoration(radius: 99),
+                            child: Text(
+                              timeText,
+                              style: Cartoon.text(size: 14),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        if (isEnded && _reconnecting)
+                          Column(
+                            children: [
+                              Text(
+                                l10n.maintenanceEnded,
+                                style: Cartoon.text(
+                                  size: 16,
+                                  color: Cartoon.green,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const CartoonLoader(size: 36),
+                            ],
+                          )
+                        else if (!isEnded && _remaining > Duration.zero)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 22,
+                              vertical: 10,
+                            ),
+                            decoration: gamePillDecoration(
+                              radius: 18,
+                              color: const Color(0xFFFFF1B8),
+                            ),
+                            child: Text(
+                              l10n.maintenanceCountdown(
+                                _formatCountdown(_remaining),
+                              ),
+                              style: Cartoon.text(size: 19),
+                            ),
+                          ),
+                        if (_reconnectError != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _reconnectError!,
+                            textAlign: TextAlign.center,
+                            style: Cartoon.userText(
+                              size: 13.5,
+                              color: Cartoon.red,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 22),
+                        gameButton(
+                          l10n.maintenanceRetry,
+                          _reconnecting ? null : _attemptReconnect,
+                          height: 52,
+                          size: 19,
+                          expand: true,
                         ),
                       ],
                     ),
                   ),
-                ],
-                if (_reconnectError != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _reconnectError!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.red,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _reconnecting ? null : _attemptReconnect,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF28C26),
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _reconnecting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            l10n.maintenanceRetry,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

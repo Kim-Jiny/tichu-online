@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import '../widgets/game_chrome.dart' show gameButton;
 import '../services/iap_service.dart';
 import '../widgets/gold_icon.dart';
 
@@ -101,40 +102,45 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
         scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, color: Color(0xFF66BB6A), size: 52),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Cartoon.green,
+              size: 56,
+            ),
             const SizedBox(height: 14),
             Text(
               L10n.of(ctx).goldPaymentComplete,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
+              style: Cartoon.text(size: 18),
             ),
             const SizedBox(height: 8),
             Text(
               L10n.of(ctx).goldGranted(_fmt(granted)),
-              style: const TextStyle(fontSize: 15, color: Color(0xFF5A4038)),
+              style: Cartoon.userText(size: 15, weight: FontWeight.w500),
             ),
             const SizedBox(height: 4),
             Text(
               L10n.of(ctx).goldBalanceNow(_fmt(newGold)),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFB35B19),
-              ),
+              style: Cartoon.text(size: 13, color: Color(0xFFB35B19)),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(L10n.of(ctx).commonOk),
+          gameButton(
+            L10n.of(ctx).commonOk,
+            () => Navigator.of(ctx).pop(),
+            height: 44,
+            size: 17,
           ),
         ],
       ),
@@ -317,7 +323,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           child: Text(
             L10n.of(context).goldIapUnavailable,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF8A7A72)),
+            style: Cartoon.userText(
+              size: 14,
+              color: Cartoon.ink.withValues(alpha: 0.6),
+            ),
           ),
         ),
       );
@@ -330,7 +339,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       return Center(
         child: Text(
           L10n.of(context).goldNoProducts,
-          style: const TextStyle(color: Color(0xFF8A7A72)),
+          style: Cartoon.userText(
+            size: 14,
+            color: Cartoon.ink.withValues(alpha: 0.6),
+          ),
         ),
       );
     }
@@ -399,13 +411,20 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFAF7F2),
+          color: Cartoon.cream,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFEDE4DE)),
+          border: Border.all(
+            color: Cartoon.ink.withValues(alpha: 0.25),
+            width: 1.6,
+          ),
         ),
         child: Text(
           l10n.goldBankUnavailable,
-          style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A7A72)),
+          style: Cartoon.userText(
+            size: 12.5,
+            weight: FontWeight.w500,
+            color: Cartoon.ink.withValues(alpha: 0.6),
+          ),
         ),
       );
     }
@@ -420,9 +439,12 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF2),
+        color: Cartoon.cream,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF0E0BE)),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.25),
+          width: 1.6,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -435,14 +457,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 color: Color(0xFFB07A12),
               ),
               const SizedBox(width: 6),
-              Text(
-                l10n.goldBankSectionTitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
+              Text(l10n.goldBankSectionTitle, style: Cartoon.text(size: 14)),
             ],
           ),
           const SizedBox(height: 8),
@@ -479,31 +494,33 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           const SizedBox(height: 9),
           Text(
             l10n.goldBankHowTo,
-            style: const TextStyle(
-              fontSize: 11.5,
-              height: 1.45,
+            style: Cartoon.userText(
+              size: 11.5,
+              weight: FontWeight.w500,
               color: Color(0xFF7A6A62),
+              height: 1.45,
             ),
           ),
           if (note.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               note,
-              style: const TextStyle(
-                fontSize: 11.5,
-                height: 1.45,
+              style: Cartoon.userText(
+                size: 11.5,
+                weight: FontWeight.w600,
                 color: Color(0xFFB35B19),
-                fontWeight: FontWeight.w600,
+                height: 1.45,
               ),
             ),
           ],
           const SizedBox(height: 4),
           Text(
             l10n.goldBankManualNotice,
-            style: const TextStyle(
-              fontSize: 11,
-              height: 1.4,
+            style: Cartoon.userText(
+              size: 11,
+              weight: FontWeight.w500,
               color: Color(0xFF9A8A82),
+              height: 1.4,
             ),
           ),
           // Escape hatch for "I paid but it wasn't confirmed". The in-app
@@ -552,19 +569,14 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           width: 58,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: Color(0xFF9A8A82)),
-          ),
-        ),
-        Expanded(
-          child: SelectableText(
-            value,
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF5A4038),
+            style: Cartoon.userText(
+              size: 11.5,
+              weight: FontWeight.w500,
+              color: Color(0xFF9A8A82),
             ),
           ),
         ),
+        Expanded(child: SelectableText(value, style: Cartoon.text(size: 13.5))),
       ],
     );
   }
@@ -582,10 +594,16 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
         scrollable: true,
         title: Text(
           l10n.goldBankDialogTitle,
-          style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038)),
+          style: Cartoon.userText(size: 17, weight: FontWeight.w500),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -593,31 +611,37 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           children: [
             Text(
               l10n.goldBankDialogAmount(_krw(price)),
-              style: const TextStyle(fontSize: 13.5, color: Color(0xFF5A4038)),
+              style: Cartoon.userText(size: 13.5, weight: FontWeight.w500),
             ),
             const SizedBox(height: 14),
             TextField(
               controller: controller,
               autofocus: true,
               maxLength: 40,
-              decoration: InputDecoration(
-                labelText: l10n.goldBankDepositorLabel,
-                hintText: l10n.goldBankDepositorHint,
-                counterText: '',
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
+              decoration:
+                  Cartoon.inputDecoration(
+                    hint: l10n.goldBankDepositorHint,
+                    radius: 14,
+                  ).copyWith(
+                    labelText: l10n.goldBankDepositorLabel,
+                    counterText: '',
+                    isDense: true,
+                  ),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.commonCancel),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(l10n.commonCancel, style: Cartoon.text(size: 16)),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.goldBankSubmit),
+          gameButton(
+            l10n.goldBankSubmit,
+            () => Navigator.of(ctx).pop(true),
+            height: 44,
+            size: 16,
           ),
         ],
       ),
@@ -709,10 +733,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                     const SizedBox(width: 4),
                     Text(
                       L10n.of(context).goldUnit,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF9A8E8A),
+                      style: Cartoon.userText(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: Cartoon.ink.withValues(alpha: 0.5),
                       ),
                     ),
                     if (bonus > 0) ...[
@@ -728,10 +752,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                         ),
                         child: Text(
                           '+$bonusPct%',
-                          style: const TextStyle(
+                          style: Cartoon.text(
+                            size: 11,
                             color: Color(0xFF2E7D32),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
                           ),
                         ),
                       ),
@@ -763,10 +786,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                           ),
                           child: Text(
                             L10n.of(context).goldBestValue,
-                            style: const TextStyle(
+                            style: Cartoon.text(
+                              size: 10.5,
                               color: Color(0xFFE07A1F),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10.5,
                             ),
                           ),
                         ),
@@ -775,9 +797,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                         // it, that form got ellipsised exactly on the tier it
                         // mattered for.
                         L10n.of(context).goldBonusIncluded(_fmt(bonus)),
-                        style: const TextStyle(
+                        style: Cartoon.userText(
+                          size: 11.5,
+                          weight: FontWeight.w500,
                           color: Color(0xFF2E7D32),
-                          fontSize: 11.5,
                         ),
                       ),
                     ],
@@ -841,18 +864,22 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
   // gold is not refundable) stay visible; the procedural rest is one tap away.
   // A six-bullet wall used to take a third of the screen above the fold.
   Widget _purchaseNotice() {
-    const muted = TextStyle(
-      fontSize: 11.5,
-      color: Color(0xFF8A8A8A),
+    final muted = Cartoon.userText(
+      size: 11.5,
+      weight: FontWeight.w500,
+      color: Cartoon.ink.withValues(alpha: 0.55),
       height: 1.5,
     );
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF7F2),
+        color: Cartoon.cream,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFEDE4DE)),
+        border: Border.all(
+          color: Cartoon.ink.withValues(alpha: 0.25),
+          width: 1.6,
+        ),
       ),
       child: Theme(
         // Strips the ExpansionTile's own divider lines, which fight the border.
@@ -862,11 +889,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           children: [
             Text(
               L10n.of(context).goldNoticeTitle,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
+              style: Cartoon.text(size: 13),
             ),
             const SizedBox(height: 6),
             Text(L10n.of(context).goldNoticeBody, style: muted),
@@ -877,10 +900,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               minTileHeight: 40,
               title: Text(
                 L10n.of(context).goldNoticeMore,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF8A7A72),
+                style: Cartoon.userText(
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
               children: [

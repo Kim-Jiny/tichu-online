@@ -6,7 +6,10 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
+import '../theme/cartoon.dart';
+import '../widgets/game_type_icon.dart';
 import '../widgets/player_profile_dialog.dart';
+import '../widgets/profile_avatar.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -24,15 +27,25 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-      // AdMob has no web implementation at all, so this can only fail there.
-      // Leaving it to fail was working — the load callbacks null the banner
-      // out — but it is a plugin exception per screen to get to the same
-      // place. Web ads would be AdSense / H5 Games Ads, a separate product.
-    _bannerAd = kIsWeb ? null : AdService.createBannerAd(
-      AdService.rankingBannerId,
-      onAdLoaded: (_) { if (mounted) setState(() => _bannerAdLoaded = true); },
-      onAdFailedToLoad: (_, _) { if (mounted) setState(() { _bannerAd = null; _bannerAdLoaded = false; }); },
-    );
+    // AdMob has no web implementation at all, so this can only fail there.
+    // Leaving it to fail was working — the load callbacks null the banner
+    // out — but it is a plugin exception per screen to get to the same
+    // place. Web ads would be AdSense / H5 Games Ads, a separate product.
+    _bannerAd = kIsWeb
+        ? null
+        : AdService.createBannerAd(
+            AdService.rankingBannerId,
+            onAdLoaded: (_) {
+              if (mounted) setState(() => _bannerAdLoaded = true);
+            },
+            onAdFailedToLoad: (_, _) {
+              if (mounted)
+                setState(() {
+                  _bannerAd = null;
+                  _bannerAdLoaded = false;
+                });
+            },
+          );
     _bannerAd?.load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -51,44 +64,52 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
-    return Scaffold(
-      // On the web the engine has already shrunk its canvas to the visual
-      // viewport by the time the keyboard is up, so letting the Scaffold
-      // subtract viewInsets on top of that takes the keyboard height off
-      // twice and leaves an empty band above the keyboard. Native keeps the
-      // default, where the inset is the only thing doing the resizing.
-      resizeToAvoidBottomInset: kIsWeb ? false : null,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: Scaffold(
+        // On the web the engine has already shrunk its canvas to the visual
+        // viewport by the time the keyboard is up, so letting the Scaffold
+        // subtract viewInsets on top of that takes the keyboard height off
+        // twice and leaves an empty band above the keyboard. Native keeps the
+        // default, where the inset is the only thing doing the resizing.
+        resizeToAvoidBottomInset: kIsWeb ? false : null,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: themeColors,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              return Column(
-                children: [
-                  _buildTopBar(context),
-                  const SizedBox(height: 6),
-                  _buildGameTypeToggle(game),
-                  const SizedBox(height: 6),
-                  _buildSeasonSelector(game),
-                  const SizedBox(height: 6),
-                  Expanded(
-                    child: _buildBody(game),
-                  ),
-                  if (_bannerAd != null && _bannerAdLoaded)
-                    SizedBox(
-                      height: _bannerAd!.size.height.toDouble(),
-                      width: _bannerAd!.size.width.toDouble(),
-                      child: AdWidget(ad: _bannerAd!, key: ValueKey(_bannerAd!.hashCode)),
-                    ),
-                ],
-              );
-            },
+          child: SafeArea(
+            bottom: false,
+            child: Consumer<GameService>(
+              builder: (context, game, _) {
+                return Column(
+                  children: [
+                    _buildTopBar(context),
+                    _buildGameTypeToggle(game),
+                    const SizedBox(height: 10),
+                    _buildSeasonSelector(game),
+                    const SizedBox(height: 8),
+                    Expanded(child: _buildBody(game)),
+                    // 내 순위는 목록 맨 위 카드로 스크롤과 함께 사라지던 것을 아래에
+                    // 붙박이로 — 어디를 보고 있든 내가 몇 등인지 보인다.
+                    if (game.myRankData != null) _buildMyRankBar(game),
+                    if (_bannerAd != null && _bannerAdLoaded)
+                      SizedBox(
+                        height: _bannerAd!.size.height.toDouble(),
+                        width: _bannerAd!.size.width.toDouble(),
+                        child: AdWidget(
+                          ad: _bannerAd!,
+                          key: ValueKey(_bannerAd!.hashCode),
+                        ),
+                      ),
+                    SizedBox(height: MediaQuery.viewPaddingOf(context).bottom),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -96,70 +117,116 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Widget _buildGameTypeToggle(GameService game) {
+    final l10n = L10n.of(context);
+    final tabs = [
+      ('tichu', l10n.rankingTichu),
+      ('skull_king', l10n.rankingSkullKing),
+      ('mighty', l10n.rankingMighty),
+    ];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        width: double.infinity,
-        child: SegmentedButton<String>(
-          segments: [
-            ButtonSegment(value: 'tichu', label: Text(L10n.of(context).rankingTichu, overflow: TextOverflow.ellipsis, maxLines: 1)),
-            ButtonSegment(value: 'skull_king', label: Text(L10n.of(context).rankingSkullKing, overflow: TextOverflow.ellipsis, maxLines: 1)),
-            ButtonSegment(value: 'mighty', label: Text(L10n.of(context).rankingMighty, overflow: TextOverflow.ellipsis, maxLines: 1)),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: [
+          for (final (i, (key, label)) in tabs.indexed) ...[
+            if (i > 0) const SizedBox(width: 6),
+            Expanded(
+              child: CartoonPressable(
+                onTap: () {
+                  setState(() {
+                    _rankingGameType = key;
+                    _selectedSeasonId = null;
+                  });
+                  if (key == 'skull_king') {
+                    game.requestSKRankings();
+                  } else if (key == 'mighty') {
+                    game.requestMightyRankings();
+                  } else {
+                    game.requestRankings();
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: _rankingGameType == key
+                        ? gameTypeColor(key)
+                        : Cartoon.paper,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Cartoon.ink, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Cartoon.ink,
+                        offset: Offset(0, _rankingGameType == key ? 4 : 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedScale(
+                        scale: _rankingGameType == key ? 1.15 : 1.0,
+                        duration: const Duration(milliseconds: 380),
+                        curve: Curves.elasticOut,
+                        child: gameTypeSymbol(key, size: 30),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Cartoon.text(
+                          size: 14,
+                          color: _rankingGameType == key
+                              ? Colors.white
+                              : Cartoon.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
-          selected: {_rankingGameType},
-          onSelectionChanged: (v) {
-            setState(() {
-              _rankingGameType = v.first;
-              _selectedSeasonId = null;
-            });
-            if (_rankingGameType == 'skull_king') {
-              game.requestSKRankings();
-            } else if (_rankingGameType == 'mighty') {
-              game.requestMightyRankings();
-            } else {
-              game.requestRankings();
-            }
-          },
-          style: SegmentedButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: 0.7),
-            selectedBackgroundColor: Colors.white,
-          ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildTopBar(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF8A7A72),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            L10n.of(context).rankingTitle,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF5A4038),
+    return CartoonEntrance(
+      from: const Offset(0, -30),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Row(
+          children: [
+            CartoonPressable(
+              scale: 0.88,
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Cartoon.paper,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
+              ),
             ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: _refreshRankings,
-            icon: const Icon(Icons.refresh),
-            color: const Color(0xFF8A7A72),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Flexible(
+              child: Cartoon.outlinedText(
+                L10n.of(context).rankingTitle,
+                size: 28,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -174,55 +241,103 @@ class _RankingScreenState extends State<RankingScreen> {
       orElse: () => seasons.first,
     );
     _selectedSeasonId ??= active['id'] as int;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          const Icon(Icons.calendar_month, size: 16, color: Color(0xFF8A7A72)),
-          const SizedBox(width: 8),
           Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _selectedSeasonId,
-                isExpanded: true,
-                items: seasons.map((s) {
-                  final name = s['name']?.toString() ?? '';
-                  final id = s['id'] as int;
-                  return DropdownMenuItem(
-                    value: id,
-                    child: Text(name, overflow: TextOverflow.ellipsis),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => _selectedSeasonId = value);
-                  final isActive = seasons.firstWhere((s) => s['id'] == value)['status'] == 'active';
-                  if (_rankingGameType == 'skull_king') {
-                    if (isActive) {
-                      game.requestSKRankings();
-                    } else {
-                      game.requestSKRankingsForSeason(value);
-                    }
-                  } else if (_rankingGameType == 'mighty') {
-                    if (isActive) {
-                      game.requestMightyRankings();
-                    } else {
-                      game.requestMightyRankingsForSeason(value);
-                    }
-                  } else {
-                    if (isActive) {
-                      game.requestRankings();
-                    } else {
-                      game.requestRankingsForSeason(value);
-                    }
-                  }
-                },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              decoration: BoxDecoration(
+                color: Cartoon.paper,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Cartoon.ink, width: 2.2),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                ],
               ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_month_rounded,
+                    size: 20,
+                    color: Cartoon.ink,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedSeasonId,
+                        isExpanded: true,
+                        dropdownColor: Cartoon.paper,
+                        borderRadius: BorderRadius.circular(16),
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Cartoon.ink,
+                        ),
+                        style: Cartoon.userText(size: 15),
+                        items: seasons.map((s) {
+                          final name = s['name']?.toString() ?? '';
+                          final id = s['id'] as int;
+                          return DropdownMenuItem(
+                            value: id,
+                            child: Text(name, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _selectedSeasonId = value);
+                          final isActive =
+                              seasons.firstWhere(
+                                (s) => s['id'] == value,
+                              )['status'] ==
+                              'active';
+                          if (_rankingGameType == 'skull_king') {
+                            if (isActive) {
+                              game.requestSKRankings();
+                            } else {
+                              game.requestSKRankingsForSeason(value);
+                            }
+                          } else if (_rankingGameType == 'mighty') {
+                            if (isActive) {
+                              game.requestMightyRankings();
+                            } else {
+                              game.requestMightyRankingsForSeason(value);
+                            }
+                          } else {
+                            if (isActive) {
+                              game.requestRankings();
+                            } else {
+                              game.requestRankingsForSeason(value);
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // 새로고침은 시즌 선택 옆 — 이 목록을 새로고침한다는 게 보이는 자리.
+          CartoonPressable(
+            scale: 0.88,
+            onTap: _refreshRankings,
+            child: Container(
+              width: 44,
+              height: 42,
+              margin: const EdgeInsets.only(bottom: 3),
+              decoration: BoxDecoration(
+                color: Cartoon.paper,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Cartoon.ink, width: 2.2),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                ],
+              ),
+              child: const Icon(Icons.refresh_rounded, color: Cartoon.ink),
             ),
           ),
         ],
@@ -267,8 +382,11 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Widget _buildRankingContent(GameService game) {
+    final l10n = L10n.of(context);
     if (game.rankingsLoading) {
-      return _fillScrollable(const CircularProgressIndicator());
+      return _fillScrollable(
+        const CircularProgressIndicator(color: Cartoon.orange, strokeWidth: 4),
+      );
     }
     if (game.rankingsError != null) {
       return _fillScrollable(
@@ -276,14 +394,14 @@ class _RankingScreenState extends State<RankingScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              localizeServiceMessage(game.rankingsError!, L10n.of(context)),
+              localizeServiceMessage(game.rankingsError!, l10n),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFFCC6666)),
+              style: Cartoon.userText(size: 14, color: const Color(0xFFCC4444)),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: _refreshRankings,
-              child: Text(L10n.of(context).noticeRetry),
+              child: Text(l10n.noticeRetry),
             ),
           ],
         ),
@@ -291,31 +409,184 @@ class _RankingScreenState extends State<RankingScreen> {
     }
     if (game.rankings.isEmpty) {
       return _fillScrollable(
-        Text(
-          L10n.of(context).rankingNoData,
-          style: const TextStyle(color: Color(0xFF9A8E8A)),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CartoonFloat(
+              amplitude: 8,
+              child: Image.asset(
+                'assets/dragonIcon.webp',
+                width: 88,
+                height: 88,
+                color: Colors.white.withValues(alpha: 0.35),
+                colorBlendMode: BlendMode.modulate,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.rankingNoData,
+              style: Cartoon.userText(
+                size: 15,
+                color: Cartoon.ink.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.separated(
+    final rows = game.rankings;
+    final rest = rows.length > 3
+        ? rows.sublist(3)
+        : const <Map<String, dynamic>>[];
+    return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-      itemCount: game.rankings.length + (game.myRankData != null ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        // First item: my rank card
-        if (game.myRankData != null && index == 0) {
-          return _buildMyRankCard(game);
-        }
-        final rankIndex = game.myRankData != null ? index - 1 : index;
-        final row = game.rankings[rankIndex];
-        return _buildRankItem(rankIndex + 1, row);
-      },
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
+      children: [
+        _buildPodium(rows.take(3).toList()),
+        if (rest.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (i, row) in rest.indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1.5,
+                      color: Cartoon.ink.withValues(alpha: 0.1),
+                    ),
+                  _buildRankItem(i + 4, row),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildMyRankCard(GameService game) {
+  /// 1·2·3등 시상대: 가운데가 1등(왕관), 양옆이 2·3등. 막대 높이가 순위를 말한다.
+  Widget _buildPodium(List<Map<String, dynamic>> top) {
+    final order = <int>[1, 0, 2]; // 화면 왼쪽부터 2등, 1등, 3등
+    final heights = {0: 92.0, 1: 66.0, 2: 48.0};
+    final colors = {
+      0: const Color(0xFFFFD54F),
+      1: const Color(0xFFCFD8DC),
+      2: const Color(0xFFD9A07A),
+    };
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 0),
+      decoration: Cartoon.panelDecoration(
+        color: const Color(0xFFFFF6DD),
+        radius: 22,
+        shadowOffset: 4,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final idx in order)
+            Expanded(
+              child: idx < top.length
+                  ? _podiumSlot(
+                      rank: idx + 1,
+                      row: top[idx],
+                      height: heights[idx]!,
+                      color: colors[idx]!,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _podiumSlot({
+    required int rank,
+    required Map<String, dynamic> row,
+    required double height,
+    required Color color,
+  }) {
+    final nickname = row['nickname']?.toString() ?? '';
+    final rating = row['rating'] ?? 0;
+    final game = context.read<GameService>();
+    return CartoonEntrance(
+      key: ValueKey('podium-$rank-$nickname'),
+      delay: Duration(
+        milliseconds: 120 * (rank == 1 ? 2 : (rank == 2 ? 0 : 1)),
+      ),
+      from: const Offset(0, 40),
+      child: CartoonPressable(
+        scale: 0.96,
+        onTap: nickname.isEmpty
+            ? null
+            : () => showPlayerProfileDialog(
+                context,
+                nickname,
+                game,
+                initialGame: _rankingGameType,
+              ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (rank == 1)
+              CartoonFloat(
+                amplitude: 3,
+                child: Image.asset(
+                  'assets/icons/crown.webp',
+                  width: 34,
+                  height: 34,
+                ),
+              )
+            else
+              const SizedBox(height: 34),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+                boxShadow: const [
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(17),
+                child: DefaultAvatar(size: rank == 1 ? 62 : 52),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              nickname,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Cartoon.userText(size: 13.5, weight: FontWeight.w900),
+            ),
+            Text('$rating', style: Cartoon.text(size: 17)),
+            const SizedBox(height: 4),
+            Container(
+              height: height,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.topCenter,
+              padding: const EdgeInsets.only(top: 6),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                border: Border.all(color: Cartoon.ink, width: 2.5),
+              ),
+              child: Cartoon.outlinedText('$rank', size: 26),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 아래에 붙박이로 놓이는 내 순위.
+  Widget _buildMyRankBar(GameService game) {
     final data = game.myRankData!;
     final rank = game.myRank ?? 0;
     final nickname = data['nickname']?.toString() ?? '';
@@ -324,91 +595,123 @@ class _RankingScreenState extends State<RankingScreen> {
     final losses = data['losses'] ?? 0;
     final total = data['total_games'] ?? 0;
     final winRate = data['win_rate'] ?? 0;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEDE7F6), Color(0xFFF3E5F5)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFCE93D8)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Color(0xFF7E57C2),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$rank',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 14,
+    return CartoonEntrance(
+      from: const Offset(0, 40),
+      child: CartoonPressable(
+        scale: 0.97,
+        onTap: nickname.isEmpty
+            ? null
+            : () => showPlayerProfileDialog(
+                context,
+                nickname,
+                game,
+                initialGame: _rankingGameType,
               ),
-            ),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+          padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+          decoration: Cartoon.panelDecoration(
+            color: const Color(0xFFE9E1FF),
+            radius: 20,
+            shadowOffset: 4,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      nickname,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7E57C2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                ),
+                child: FittedBox(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Text(
+                      '$rank',
+                      style: Cartoon.text(size: 18, color: Colors.white),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF7E57C2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'ME',
-                        style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            nickname,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Cartoon.userText(
+                              size: 16,
+                              weight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7E57C2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Cartoon.ink, width: 1.8),
+                          ),
+                          child: const Text(
+                            'ME',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      L10n.of(
+                        context,
+                      ).rankingRecordWithWinRate(total, wins, losses, winRate),
+                      style: Cartoon.userText(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: Cartoon.ink.withValues(alpha: 0.65),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  L10n.of(context).rankingRecordWithWinRate(total, wins, losses, winRate),
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(L10n.of(context).rankingSeasonScore, style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A))),
-              Text(
-                '$rating',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4A4080),
-                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    L10n.of(context).rankingSeasonScore,
+                    style: Cartoon.userText(
+                      size: 11,
+                      weight: FontWeight.w600,
+                      color: Cartoon.ink.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  Text('$rating', style: Cartoon.text(size: 24)),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
+  /// 4등부터의 한 줄. 상자가 아니라 패널 안 구분선 목록의 한 칸이다.
   Widget _buildRankItem(int rank, Map<String, dynamic> row) {
     final nickname = row['nickname']?.toString() ?? '';
     final rating = row['rating'] ?? 0;
@@ -417,14 +720,6 @@ class _RankingScreenState extends State<RankingScreen> {
     final total = row['total_games'] ?? 0;
     final winRate = row['win_rate'] ?? 0;
     final bannerKey = row['banner_key']?.toString();
-
-    final isTop3 = rank <= 3;
-    final badgeColor = switch (rank) {
-      1 => const Color(0xFFFFD54F),
-      2 => const Color(0xFFB0BEC5),
-      3 => const Color(0xFFC58B6B),
-      _ => const Color(0xFFE8E0DC),
-    };
 
     final game = context.read<GameService>();
     final bannerGradient = game.bannerGradient(bannerKey);
@@ -440,81 +735,62 @@ class _RankingScreenState extends State<RankingScreen> {
               game,
               initialGame: _rankingGameType,
             ),
-      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: bannerGradient,
-          color: bannerGradient == null ? Colors.white.withValues(alpha: 0.95) : null,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0D8D4)),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFD9CCC8).withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+        // 장착한 배너는 그 줄의 배경으로 — 내가 산 걸 남이 알아본다.
+        decoration: BoxDecoration(gradient: bannerGradient),
         child: Row(
           children: [
-            Container(
+            SizedBox(
               width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: badgeColor,
-                shape: BoxShape.circle,
-              ),
               child: Text(
                 '$rank',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isTop3 ? const Color(0xFF5A4038) : const Color(0xFF6A5A52),
+                textAlign: TextAlign.center,
+                style: Cartoon.text(
+                  size: 18,
+                  color:
+                      bannerTextOverride ?? Cartoon.ink.withValues(alpha: 0.7),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     nickname,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: bannerTextOverride ?? const Color(0xFF5A4038),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(
+                      size: 15.5,
+                      weight: FontWeight.w900,
+                      color: bannerTextOverride ?? Cartoon.ink,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    L10n.of(context).rankingRecordWithWinRate(total, wins, losses, winRate),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8A7A72),
+                    L10n.of(
+                      context,
+                    ).rankingRecordWithWinRate(total, wins, losses, winRate),
+                    style: Cartoon.userText(
+                      size: 12,
+                      weight: FontWeight.w600,
+                      color: (bannerTextOverride ?? Cartoon.ink).withValues(
+                        alpha: 0.65,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  L10n.of(context).rankingSeasonScore,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF9A8E8A)),
-                ),
-                Text(
-                  '$rating',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A4080),
-                  ),
-                ),
-              ],
+            Text(
+              '$rating',
+              style: Cartoon.text(
+                size: 20,
+                color: bannerTextOverride ?? const Color(0xFF4A4080),
+              ),
             ),
           ],
         ),

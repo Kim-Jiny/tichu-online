@@ -2812,16 +2812,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.anchor, size: 20, color: Color(0xFF8A7A72)),
+            Icon(
+              Icons.anchor_rounded,
+              size: 26,
+              color: Cartoon.ink.withValues(alpha: 0.35),
+            ),
             const SizedBox(height: 4),
             Text(
               state.phase == 'bidding'
                   ? L10n.of(context).skGameBiddingPhase
                   : L10n.of(context).skGamePlayCard,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
+              style: Cartoon.text(
+                size: 17,
+                color: Cartoon.ink.withValues(alpha: 0.7),
               ),
             ),
             _buildCenterTimerBadge(state),
@@ -2869,217 +2872,157 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     // Voided trick → distinct banner
     if (isVoided && state.phase == 'trick_end') {
-      final Color accentColor = isKraken
-          ? const Color(0xFFFFD54F)
-          : const Color(0xFFDBF3FF);
-      final List<Color> gradientColors = isKraken
-          ? [
-              const Color(0xFF1A102A).withValues(alpha: 0.97),
-              const Color(0xFF2B1E3F).withValues(alpha: 0.93),
-              const Color(0xFF4A2F63).withValues(alpha: 0.90),
-            ]
-          : [
-              const Color(0xFF163C54).withValues(alpha: 0.97),
-              const Color(0xFF2F6687).withValues(alpha: 0.93),
-              const Color(0xFF6CA6C4).withValues(alpha: 0.90),
-            ];
-      return Container(
-        constraints: const BoxConstraints(maxWidth: 260),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradientColors,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.70),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildCard(isKraken ? 'sk_kraken' : 'sk_white_whale', size: 50),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        L10n.of(context).skGameTrickVoided,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          color: accentColor,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        voidReason ?? '',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              L10n.of(context).skGameLeadPlayer(winnerName),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.82),
-              ),
-            ),
-            _buildCenterTimerBadge(state),
-          ],
-        ),
+      return _skEffectPanel(
+        cardId: isKraken ? 'sk_kraken' : 'sk_white_whale',
+        cardSize: 62,
+        color: isKraken ? const Color(0xFFE2D4F7) : const Color(0xFFD3ECFF),
+        title: L10n.of(context).skGameTrickVoided,
+        subtitle: voidReason ?? '',
+        footer: L10n.of(context).skGameLeadPlayer(winnerName),
+        timer: _buildCenterTimerBadge(state),
       );
     }
 
     if (!isKraken && hasWhiteWhaleEffect && state.phase == 'trick_end') {
-      return Container(
-        constraints: const BoxConstraints(maxWidth: 270),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFE6F6FF).withValues(alpha: 0.98),
-              const Color(0xFFD2ECFA).withValues(alpha: 0.96),
-              const Color(0xFFB7DBEE).withValues(alpha: 0.94),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: const Color(0xFF4F88A8).withValues(alpha: 0.55),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF2B5C78).withValues(alpha: 0.16),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildCard('sk_white_whale', size: 52),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        L10n.of(context).skGameTrickWinner(winnerName),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF214A62),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        whaleNullifyLabel ??
-                            L10n.of(context).skGameWhiteWhaleActivated,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF356B89),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (bonus > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                lootBonusPoints > 0
-                    ? L10n.of(
-                        context,
-                      ).skGameBonusWithLoot(bonus, lootBonusPoints)
-                    : L10n.of(context).skGameBonus(bonus),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF2E8B57),
-                ),
-              ),
-            ],
-            _buildCenterTimerBadge(state),
-          ],
-        ),
+      return _skEffectPanel(
+        cardId: 'sk_white_whale',
+        cardSize: 62,
+        color: const Color(0xFFD3ECFF),
+        title: L10n.of(context).skGameTrickWinner(winnerName),
+        subtitle:
+            whaleNullifyLabel ?? L10n.of(context).skGameWhiteWhaleActivated,
+        bonusText: bonus > 0
+            ? (lootBonusPoints > 0
+                  ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
+                  : L10n.of(context).skGameBonus(bonus))
+            : null,
+        timer: _buildCenterTimerBadge(state),
       );
     }
 
+    final ended = state.phase == 'trick_end';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            state.phase == 'trick_end'
-                ? L10n.of(context).skGameTrickWinner(winnerName)
-                : L10n.of(context).skGameCheckingCards,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF5A4038),
-            ),
-          ),
-          if (whaleNullifyLabel != null && state.phase == 'trick_end') ...[
-            const SizedBox(height: 4),
+          // 트릭이 끝나면 승자를 노란 알약으로, 카드를 확인하는 동안은 조용한 글자로.
+          if (ended)
+            CartoonEntrance(
+              from: const Offset(0, 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 4,
+                ),
+                decoration: gamePillDecoration(color: Cartoon.yellow),
+                child: Text(
+                  L10n.of(context).skGameTrickWinner(winnerName),
+                  style: Cartoon.userText(size: 17),
+                ),
+              ),
+            )
+          else
             Text(
-              whaleNullifyLabel,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF3A6B8F),
+              L10n.of(context).skGameCheckingCards,
+              style: Cartoon.text(
+                size: 16,
+                color: Cartoon.ink.withValues(alpha: 0.7),
               ),
             ),
+          if (whaleNullifyLabel != null && ended) ...[
+            const SizedBox(height: 6),
+            _skInfoChip(whaleNullifyLabel, const Color(0xFFD3ECFF)),
           ],
-          if (state.phase == 'trick_end' && bonus > 0) ...[
-            const SizedBox(height: 4),
-            Text(
+          if (ended && bonus > 0) ...[
+            const SizedBox(height: 6),
+            _skInfoChip(
               lootBonusPoints > 0
                   ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
                   : L10n.of(context).skGameBonus(bonus),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF43A047),
-              ),
+              const Color(0xFFCDEFD6),
             ),
           ],
           _buildCenterTimerBadge(state),
         ],
+      ),
+    );
+  }
+
+  Widget _skInfoChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: gamePillDecoration(color: color),
+      child: Text(text, style: Cartoon.text(size: 14)),
+    );
+  }
+
+  /// 크라켄·흰고래 같은 특수 카드 효과를 알리는 가운데 패널.
+  /// 카드가 통 튀며 나타나고, 제목·설명·선공·보너스를 순서대로 읽게 쌓는다.
+  Widget _skEffectPanel({
+    required String cardId,
+    required double cardSize,
+    required Color color,
+    required String title,
+    required String subtitle,
+    String? footer,
+    String? bonusText,
+    Widget? timer,
+  }) {
+    return CartoonEntrance(
+      from: const Offset(0, 14),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 270),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: Cartoon.panelDecoration(
+          color: color,
+          radius: 22,
+          shadowOffset: 3,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCard(cardId, size: cardSize),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Cartoon.userText(size: 19, height: 1.15),
+                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: Cartoon.text(
+                            size: 14,
+                            height: 1.25,
+                            color: Cartoon.ink.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (bonusText != null) ...[
+              const SizedBox(height: 8),
+              _skInfoChip(bonusText, const Color(0xFFCDEFD6)),
+            ],
+            if (footer != null) ...[
+              const SizedBox(height: 8),
+              _skInfoChip(footer, Colors.white),
+            ],
+            ?timer,
+          ],
+        ),
       ),
     );
   }

@@ -4684,559 +4684,592 @@ class _LobbyScreenState extends State<LobbyScreen> {
           _showUserProfileDialog(player.name, game);
         }
       },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Builder(
-            builder: (_) {
-              // Equipped banner becomes the slot's background gradient when
-              // the player owns one — overrides the state-based pastel fill.
-              // The gradient comes from the server's visual catalog so it
-              // honors admin-edited angle/stops (not a hardcoded copy).
-              final bannerGradient = (!isEmpty && !isBot)
-                  ? game.bannerGradient(player.bannerKey)
-                  : null;
-              // One neutral fill. Five different tints (ready green, bot indigo,
-              // blocked pink, blocked-slot grey, plain beige) made four seats look
-              // like four unrelated widgets; ready and "my slot" are already said
-              // by the border, and "bot" by the avatar's corner marker.
-              // 불투명해야 한다(단색 그림자가 비치지 않게). 빈 자리는 살짝 연한
-              // 크림, 막힌 자리는 회색.
-              // 자리는 테두리 없이 옅은 바탕만. 내 자리·준비한 자리는 연초록,
-              // 빈 자리는 거의 투명하게 두어 "아직 비었다"가 조용히 보인다.
-              final fallbackColor = isSlotBlocked
-                  ? const Color(0x14000000)
-                  : isBlockedPlayer
-                  ? const Color(0xFFFAEDED)
-                  : (isMySlot || isReady)
-                  ? const Color(0xFFDDF3E2)
-                  : isEmpty
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : Colors.white.withValues(alpha: 0.7);
-              return Container(
-                width: double.infinity,
-                // Sized off the avatar: a 46dp photo with 7 above and below,
-                // which is enough for the level chip that overhangs its bottom
-                // corner by 3. Anything tighter starts clipping the chip
-                // rather than trimming space.
-                //
-                // The side padding is that same 7, so the gap from the avatar
-                // to the box is identical on all four edges. At 8 it wasn't,
-                // and one pixel of difference is visible when the thing it
-                // frames is a square.
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                decoration: BoxDecoration(
-                  color: bannerGradient == null ? fallbackColor : null,
-                  gradient: bannerGradient,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    // Left-side block X button (host, empty, SK/LL)
-                    if (canBlockSlot)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => game.blockSlot(slotIndex),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE0E0),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Color(0xFFC62828),
-                          ),
-                        ),
-                      ),
-                    // Blocked slot indicator
-                    if (isSlotBlocked)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 6),
-                        child: Icon(
-                          Icons.lock_outline,
-                          size: 16,
-                          color: Color(0xFF8A7A72),
-                        ),
-                      ),
-                    // Ready state is now conveyed by the background check
-                    // watermark (see Stack below) so the inline check icon is
-                    // removed to keep the row layout stable.
-                    // Level badge takes the previous host-pill spot. The host
-                    // indicator itself is now a 👑 emoji overhanging the top-left
-                    // corner (see Positioned below).
-                    if (player != null && !isBot)
-                      Builder(
-                        builder: (_) {
-                          // The level badge used to BE the avatar, so a player with a paid
-                          // photo showed no level at all, and a photo-less one showed a
-                          // brown disc with a number where a face goes. One 38dp avatar —
-                          // photo, else a plain silhouette — with the level as a corner
-                          // chip, the same shape the bot marker uses. The seat row is 56
-                          // tall with no vertical padding.
-                          final resolved = game.resolvePhotoUrl(
-                            player.photoUrl,
-                          );
-                          final hidden = game.blockedUsers.contains(
-                            player.name,
-                          );
-                          const avatarSize = 46.0;
-                          final avatar = Container(
+      child: _SeatPop(
+        key: ValueKey('${slotIndex}_${player?.id ?? 'empty'}'),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Builder(
+              builder: (_) {
+                // Equipped banner becomes the slot's background gradient when
+                // the player owns one — overrides the state-based pastel fill.
+                // The gradient comes from the server's visual catalog so it
+                // honors admin-edited angle/stops (not a hardcoded copy).
+                final bannerGradient = (!isEmpty && !isBot)
+                    ? game.bannerGradient(player.bannerKey)
+                    : null;
+                // One neutral fill. Five different tints (ready green, bot indigo,
+                // blocked pink, blocked-slot grey, plain beige) made four seats look
+                // like four unrelated widgets; ready and "my slot" are already said
+                // by the border, and "bot" by the avatar's corner marker.
+                // 불투명해야 한다(단색 그림자가 비치지 않게). 빈 자리는 살짝 연한
+                // 크림, 막힌 자리는 회색.
+                // 자리는 테두리 없이 옅은 바탕만. 내 자리·준비한 자리는 연초록,
+                // 빈 자리는 거의 투명하게 두어 "아직 비었다"가 조용히 보인다.
+                final fallbackColor = isSlotBlocked
+                    ? const Color(0x14000000)
+                    : isBlockedPlayer
+                    ? const Color(0xFFFAEDED)
+                    : (isMySlot || isReady)
+                    ? const Color(0xFFDDF3E2)
+                    : isEmpty
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : Colors.white.withValues(alpha: 0.7);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOut,
+                  width: double.infinity,
+                  // Sized off the avatar: a 46dp photo with 7 above and below,
+                  // which is enough for the level chip that overhangs its bottom
+                  // corner by 3. Anything tighter starts clipping the chip
+                  // rather than trimming space.
+                  //
+                  // The side padding is that same 7, so the gap from the avatar
+                  // to the box is identical on all four edges. At 8 it wasn't,
+                  // and one pixel of difference is visible when the thing it
+                  // frames is a square.
+                  height: 64,
+                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                  decoration: BoxDecoration(
+                    color: bannerGradient == null ? fallbackColor : null,
+                    gradient: bannerGradient,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      // Left-side block X button (host, empty, SK/LL)
+                      if (canBlockSlot)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => game.blockSlot(slotIndex),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
+                              color: const Color(0xFFFFE0E0),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Color(0xFFC62828),
+                            ),
+                          ),
+                        ),
+                      // Blocked slot indicator
+                      if (isSlotBlocked)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: Color(0xFF8A7A72),
+                          ),
+                        ),
+                      // Ready state is now conveyed by the background check
+                      // watermark (see Stack below) so the inline check icon is
+                      // removed to keep the row layout stable.
+                      // Level badge takes the previous host-pill spot. The host
+                      // indicator itself is now a 👑 emoji overhanging the top-left
+                      // corner (see Positioned below).
+                      if (player != null && !isBot)
+                        Builder(
+                          builder: (_) {
+                            // The level badge used to BE the avatar, so a player with a paid
+                            // photo showed no level at all, and a photo-less one showed a
+                            // brown disc with a number where a face goes. One 38dp avatar —
+                            // photo, else a plain silhouette — with the level as a corner
+                            // chip, the same shape the bot marker uses. The seat row is 56
+                            // tall with no vertical padding.
+                            final resolved = game.resolvePhotoUrl(
+                              player.photoUrl,
+                            );
+                            final hidden = game.blockedUsers.contains(
+                              player.name,
+                            );
+                            const avatarSize = 46.0;
+                            final avatar = Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: ProfileAvatar(
+                                  photoUrl: resolved,
+                                  size: avatarSize - 4,
+                                  blocked: hidden,
+                                  fallback: DefaultAvatar(size: avatarSize - 4),
+                                ),
+                              ),
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: player.level == null
+                                  ? avatar
+                                  : SizedBox(
+                                      width: avatarSize,
+                                      height: avatarSize,
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          avatar,
+                                          Positioned(
+                                            right: -3,
+                                            bottom: -3,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1.2,
+                                                ),
+                                              ),
+                                              child: LevelBadge(
+                                                level: player.level,
+                                                size: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                            );
+                          },
+                        ),
+                      // Bots have no level and never had a photo, so this slot was empty
+                      // for them and every bot row looked alike apart from its number.
+                      // Sized like the other games' waiting rooms rather than like the
+                      // level badge it sits next to.
+                      if (player != null && isBot)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          // The corner marker replaces the "BOT" text chip that used to
+                          // sit beside the seat: avatar + chip together left the nickname
+                          // no width at all, and it rendered as nothing — so you could
+                          // not tell 봇 1 from 봇 2.
+                          child: BotAvatar(
+                            size: 44,
+                            name: player.name,
+                            showBadge: true,
+                            speed: player.botSpeed,
+                          ),
+                        ),
+                      // Strategy chip only. Speed used to have its own icon here; it is
+                      // now the colour of the avatar's corner marker (slow green, normal
+                      // blue, fast red), so the icon was saying the same thing twice.
+                      if (isBot)
+                        Builder(
+                          builder: (_) {
+                            final strategy = player.botStrategy;
+                            final showStrategy =
+                                strategy != null &&
+                                strategy != BotStrategy.heuristic &&
+                                strategy != BotStrategy.winrate &&
+                                strategy != BotStrategy.mixOracle &&
+                                strategy != BotStrategy.legacyMixExpectimax;
+                            if (!showStrategy) return const SizedBox.shrink();
+                            return Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC5CAE9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _shortStrategyLabel(strategy),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF6A1B9A),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      // Blocked indicator
+                      if (isBlockedPlayer)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(
+                            Icons.block,
+                            size: 14,
+                            color: Color(0xFFE57373),
+                          ),
+                        ),
+                      // Bug #8: Disconnected indicator
+                      if (player != null && !player.connected)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(
+                            Icons.wifi_off,
+                            size: 14,
+                            color: Color(0xFFFF8A65),
+                          ),
+                        ),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, cons) => FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: cons.maxWidth,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  if (player != null &&
+                                      player.titleName != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 2),
+                                      child: TitleChip(
+                                        titleKey: player.titleKey,
+                                        titleName: player.titleName,
+                                        // Same override the nickname below uses,
+                                        // so both react to a dark banner together.
+                                        onInk: (!isEmpty && !isBot)
+                                            ? game.bannerTextColor(
+                                                player.bannerKey,
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  Builder(
+                                    builder: (_) {
+                                      // When the slot is showing an equipped banner, prefer the
+                                      // banner's admin-defined text color (white-on-galaxy,
+                                      // etc.) so the nickname stays readable on dark gradients.
+                                      // Falls through to the existing state-based palette for
+                                      // empty / bot / blocked / disconnected slots.
+                                      final bannerTextOverride =
+                                          (player != null &&
+                                              !isBot &&
+                                              player.connected)
+                                          ? game.bannerTextColor(
+                                              player.bannerKey,
+                                            )
+                                          : null;
+                                      final defaultColor = isBot
+                                          ? const Color(0xFF3949AB)
+                                          : isBlockedPlayer
+                                          ? const Color(0xFFBB8888)
+                                          : (player != null &&
+                                                !player.connected)
+                                          ? const Color(0xFFBBAAAA)
+                                          : player != null
+                                          ? Cartoon.ink
+                                          : isSlotBlocked
+                                          ? const Color(0xFF8A7A72)
+                                          : Cartoon.ink.withValues(alpha: 0.4);
+                                      return Text(
+                                        player?.name ??
+                                            (isSlotBlocked
+                                                ? L10n.of(
+                                                    context,
+                                                  ).lobbySlotBlocked
+                                                : L10n.of(
+                                                    context,
+                                                  ).lobbyEmptySlot),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color:
+                                              bannerTextOverride ??
+                                              defaultColor,
+                                          fontWeight: isMySlot || player != null
+                                              ? FontWeight.w900
+                                              : FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // 착석. A spectator's way into the game, on the seat
+                      // itself rather than as a button somewhere else asking
+                      // which seat you meant. Tapping the row does the same
+                      // thing; this is the part that says so.
+                      if (game.isSpectator && isEmpty && !isSlotBlocked)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => game.switchToPlayer(slotIndex),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Cartoon.green,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 1.6,
+                              ),
+                            ),
+                            child: Text(
+                              L10n.of(context).lobbyTakeSeat,
+                              style: Cartoon.text(
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Add bot button on empty slots (host only, not ranked, not blocked)
+                      if (!game.isSpectator &&
+                          isEmpty &&
+                          game.isHost &&
+                          !game.isRankedRoom &&
+                          !isSlotBlocked)
+                        PopupMenuButton<String>(
+                          onSelected: (speed) {
+                            final defaultStrategy =
+                                game.currentGameType == 'tichu'
+                                ? BotStrategy.winrate
+                                : game.currentGameType == 'mighty'
+                                ? BotStrategy.mixOracle
+                                : BotStrategy.heuristic;
+                            game.addBot(
+                              targetSlot: slotIndex,
+                              speed: speed,
+                              strategy: defaultStrategy,
+                            );
+                          },
+                          itemBuilder: (ctx) {
+                            final l10n = L10n.of(ctx);
+                            return [
+                              PopupMenuItem(
+                                value: 'fast',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.fast_forward,
+                                      size: 16,
+                                      color: Color(0xFFE65100),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        l10n.lobbyBotSpeedFast,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'normal',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.play_arrow,
+                                      size: 16,
+                                      color: Color(0xFF3949AB),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        l10n.lobbyBotSpeedNormal,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'slow',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.slow_motion_video,
+                                      size: 16,
+                                      color: Color(0xFF558B2F),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        l10n.lobbyBotSpeedSlow,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ];
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          position: PopupMenuPosition.under,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE9EEFF),
+                              borderRadius: BorderRadius.circular(11),
                               border: Border.all(
                                 color: Cartoon.ink,
                                 width: 1.5,
                               ),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: ProfileAvatar(
-                                photoUrl: resolved,
-                                size: avatarSize - 4,
-                                blocked: hidden,
-                                fallback: DefaultAvatar(size: avatarSize - 4),
-                              ),
-                            ),
-                          );
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: player.level == null
-                                ? avatar
-                                : SizedBox(
-                                    width: avatarSize,
-                                    height: avatarSize,
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        avatar,
-                                        Positioned(
-                                          right: -3,
-                                          bottom: -3,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.white,
-                                                width: 1.2,
-                                              ),
-                                            ),
-                                            child: LevelBadge(
-                                              level: player.level,
-                                              size: 14,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                          );
-                        },
-                      ),
-                    // Bots have no level and never had a photo, so this slot was empty
-                    // for them and every bot row looked alike apart from its number.
-                    // Sized like the other games' waiting rooms rather than like the
-                    // level badge it sits next to.
-                    if (player != null && isBot)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        // The corner marker replaces the "BOT" text chip that used to
-                        // sit beside the seat: avatar + chip together left the nickname
-                        // no width at all, and it rendered as nothing — so you could
-                        // not tell 봇 1 from 봇 2.
-                        child: BotAvatar(
-                          size: 44,
-                          name: player.name,
-                          showBadge: true,
-                          speed: player.botSpeed,
-                        ),
-                      ),
-                    // Strategy chip only. Speed used to have its own icon here; it is
-                    // now the colour of the avatar's corner marker (slow green, normal
-                    // blue, fast red), so the icon was saying the same thing twice.
-                    if (isBot)
-                      Builder(
-                        builder: (_) {
-                          final strategy = player.botStrategy;
-                          final showStrategy =
-                              strategy != null &&
-                              strategy != BotStrategy.heuristic &&
-                              strategy != BotStrategy.winrate &&
-                              strategy != BotStrategy.mixOracle &&
-                              strategy != BotStrategy.legacyMixExpectimax;
-                          if (!showStrategy) return const SizedBox.shrink();
-                          return Container(
-                            margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFC5CAE9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _shortStrategyLabel(strategy),
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF6A1B9A),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    // Blocked indicator
-                    if (isBlockedPlayer)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 6),
-                        child: Icon(
-                          Icons.block,
-                          size: 14,
-                          color: Color(0xFFE57373),
-                        ),
-                      ),
-                    // Bug #8: Disconnected indicator
-                    if (player != null && !player.connected)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 6),
-                        child: Icon(
-                          Icons.wifi_off,
-                          size: 14,
-                          color: Color(0xFFFF8A65),
-                        ),
-                      ),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, cons) => FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: cons.maxWidth,
-                            ),
-                            child: Column(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                if (player != null && player.titleName != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 2),
-                                    child: TitleChip(
-                                      titleKey: player.titleKey,
-                                      titleName: player.titleName,
-                                      // Same override the nickname below uses,
-                                      // so both react to a dark banner together.
-                                      onInk: (!isEmpty && !isBot)
-                                          ? game.bannerTextColor(
-                                              player.bannerKey,
-                                            )
-                                          : null,
-                                    ),
+                                const Icon(
+                                  Icons.smart_toy_rounded,
+                                  size: 16,
+                                  color: Color(0xFF3949AB),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  L10n.of(context).lobbyBot,
+                                  style: Cartoon.userText(
+                                    size: 12.5,
+                                    weight: FontWeight.w900,
+                                    color: const Color(0xFF3949AB),
                                   ),
-                                Builder(
-                                  builder: (_) {
-                                    // When the slot is showing an equipped banner, prefer the
-                                    // banner's admin-defined text color (white-on-galaxy,
-                                    // etc.) so the nickname stays readable on dark gradients.
-                                    // Falls through to the existing state-based palette for
-                                    // empty / bot / blocked / disconnected slots.
-                                    final bannerTextOverride =
-                                        (player != null &&
-                                            !isBot &&
-                                            player.connected)
-                                        ? game.bannerTextColor(player.bannerKey)
-                                        : null;
-                                    final defaultColor = isBot
-                                        ? const Color(0xFF3949AB)
-                                        : isBlockedPlayer
-                                        ? const Color(0xFFBB8888)
-                                        : (player != null && !player.connected)
-                                        ? const Color(0xFFBBAAAA)
-                                        : player != null
-                                        ? Cartoon.ink
-                                        : isSlotBlocked
-                                        ? const Color(0xFF8A7A72)
-                                        : Cartoon.ink.withValues(alpha: 0.4);
-                                    return Text(
-                                      player?.name ??
-                                          (isSlotBlocked
-                                              ? L10n.of(
-                                                  context,
-                                                ).lobbySlotBlocked
-                                              : L10n.of(
-                                                  context,
-                                                ).lobbyEmptySlot),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color:
-                                            bannerTextOverride ?? defaultColor,
-                                        fontWeight: isMySlot || player != null
-                                            ? FontWeight.w900
-                                            : FontWeight.w600,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    );
-                                  },
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    // 착석. A spectator's way into the game, on the seat
-                    // itself rather than as a button somewhere else asking
-                    // which seat you meant. Tapping the row does the same
-                    // thing; this is the part that says so.
-                    if (game.isSpectator && isEmpty && !isSlotBlocked)
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => game.switchToPlayer(slotIndex),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Cartoon.green,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Cartoon.ink, width: 1.6),
-                          ),
-                          child: Text(
-                            L10n.of(context).lobbyTakeSeat,
-                            style: Cartoon.text(size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    // Add bot button on empty slots (host only, not ranked, not blocked)
-                    if (!game.isSpectator &&
-                        isEmpty &&
-                        game.isHost &&
-                        !game.isRankedRoom &&
-                        !isSlotBlocked)
-                      PopupMenuButton<String>(
-                        onSelected: (speed) {
-                          final defaultStrategy =
-                              game.currentGameType == 'tichu'
-                              ? BotStrategy.winrate
-                              : game.currentGameType == 'mighty'
-                              ? BotStrategy.mixOracle
-                              : BotStrategy.heuristic;
-                          game.addBot(
-                            targetSlot: slotIndex,
-                            speed: speed,
-                            strategy: defaultStrategy,
-                          );
-                        },
-                        itemBuilder: (ctx) {
-                          final l10n = L10n.of(ctx);
-                          return [
-                            PopupMenuItem(
-                              value: 'fast',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.fast_forward,
-                                    size: 16,
-                                    color: Color(0xFFE65100),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      l10n.lobbyBotSpeedFast,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'normal',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.play_arrow,
-                                    size: 16,
-                                    color: Color(0xFF3949AB),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      l10n.lobbyBotSpeedNormal,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'slow',
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.slow_motion_video,
-                                    size: 16,
-                                    color: Color(0xFF558B2F),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      l10n.lobbyBotSpeedSlow,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ];
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        position: PopupMenuPosition.under,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE9EEFF),
-                            borderRadius: BorderRadius.circular(11),
-                            border: Border.all(color: Cartoon.ink, width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.smart_toy_rounded,
-                                size: 16,
-                                color: Color(0xFF3949AB),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                L10n.of(context).lobbyBot,
-                                style: Cartoon.userText(
-                                  size: 12.5,
-                                  weight: FontWeight.w900,
-                                  color: const Color(0xFF3949AB),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    // Season rating chip on the right — only in ranked rooms, only
-                    // for humans. Number-only, no emoji.
-                    if (player != null &&
-                        !isBot &&
-                        game.isRankedRoom &&
-                        player.seasonRating != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE9B8),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Cartoon.ink, width: 1.5),
-                          ),
-                          child: Text(
-                            '${player.seasonRating}',
-                            style: Cartoon.text(
-                              size: 14,
-                              color: const Color(0xFFB45309),
-                            ),
-                          ),
-                        ),
-                      ),
-                    // Kick button: show only for host, on other players' occupied slots (including bots)
-                    if (game.isHost && !isEmpty && !isMySlot)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: GestureDetector(
-                          onTap: () {
-                            if (isBot) {
-                              game.kickPlayer(player.id);
-                            } else {
-                              _showKickConfirmDialog(
-                                player.name,
-                                player.id,
-                                game,
-                              );
-                            }
-                          },
+                      // Season rating chip on the right — only in ranked rooms, only
+                      // for humans. Number-only, no emoji.
+                      if (player != null &&
+                          !isBot &&
+                          game.isRankedRoom &&
+                          player.seasonRating != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFE3E3),
+                              color: const Color(0xFFFFE9B8),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: Cartoon.ink,
                                 width: 1.5,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 18,
-                              color: Color(0xFFC62828),
+                            child: Text(
+                              '${player.seasonRating}',
+                              style: Cartoon.text(
+                                size: 14,
+                                color: const Color(0xFFB45309),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
-          if (isReady)
-            Builder(
-              builder: (_) {
-                // Same override the nickname/title use — plain green at 18%
-                // reads fine on the default light seat, but disappears against
-                // a dark banner (개천절/크리스마스/한글날 etc). The banner's
-                // own text color is already guaranteed readable against it, so
-                // reuse that instead of a fixed color; bumped up a bit past the
-                // nickname's alpha since a flat white/black watermark is
-                // fainter at a given opacity than the original saturated green.
-                // isReady already implies player != null (isReady's own
-                // definition short-circuits on !isEmpty).
-                final bannerTextOverride = (!isBot && player.connected)
-                    ? game.bannerTextColor(player.bannerKey)
-                    : null;
-                final readyColor =
-                    bannerTextOverride ?? const Color(0xFF43A047);
-                final readyAlpha = bannerTextOverride != null ? 0.28 : 0.18;
-                return Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      // Scaled with the seat (was 56 in a 68-tall row). A
-                      // watermark that reaches the edges stops reading as a
-                      // background mark.
-                      child: Icon(
-                        Icons.check_circle,
-                        size: 48,
-                        color: readyColor.withValues(alpha: readyAlpha),
-                      ),
-                    ),
+                      // Kick button: show only for host, on other players' occupied slots (including bots)
+                      if (game.isHost && !isEmpty && !isMySlot)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (isBot) {
+                                game.kickPlayer(player.id);
+                              } else {
+                                _showKickConfirmDialog(
+                                  player.name,
+                                  player.id,
+                                  game,
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFE3E3),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: Color(0xFFC62828),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
             ),
-          if (player != null && !isBot && player.isHost)
-            const Positioned(left: -3, top: -7, child: HostCrown(size: 22)),
-          // What this player just said, for a couple of seconds. Laid over the
-          // seat so a line of chat is visible without opening the panel.
-          if (player != null) ?_seatChatBubble(player.name),
-        ],
+            if (isReady)
+              Builder(
+                builder: (_) {
+                  // Same override the nickname/title use — plain green at 18%
+                  // reads fine on the default light seat, but disappears against
+                  // a dark banner (개천절/크리스마스/한글날 etc). The banner's
+                  // own text color is already guaranteed readable against it, so
+                  // reuse that instead of a fixed color; bumped up a bit past the
+                  // nickname's alpha since a flat white/black watermark is
+                  // fainter at a given opacity than the original saturated green.
+                  // isReady already implies player != null (isReady's own
+                  // definition short-circuits on !isEmpty).
+                  final bannerTextOverride = (!isBot && player.connected)
+                      ? game.bannerTextColor(player.bannerKey)
+                      : null;
+                  final readyColor =
+                      bannerTextOverride ?? const Color(0xFF43A047);
+                  final readyAlpha = bannerTextOverride != null ? 0.28 : 0.18;
+                  return Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        // Scaled with the seat (was 56 in a 68-tall row). A
+                        // watermark that reaches the edges stops reading as a
+                        // background mark.
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.3, end: 1),
+                          duration: const Duration(milliseconds: 450),
+                          curve: Curves.elasticOut,
+                          builder: (_, v, child) =>
+                              Transform.scale(scale: v, child: child),
+                          child: Icon(
+                            Icons.check_circle,
+                            size: 48,
+                            color: readyColor.withValues(alpha: readyAlpha),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (player != null && !isBot && player.isHost)
+              const Positioned(
+                left: -3,
+                top: -7,
+                child: CartoonFloat(amplitude: 1.5, child: HostCrown(size: 22)),
+              ),
+            // What this player just said, for a couple of seconds. Laid over the
+            // seat so a line of chat is visible without opening the panel.
+            if (player != null) ?_seatChatBubble(player.name),
+          ],
+        ),
       ),
     );
   }
@@ -5498,6 +5531,27 @@ class _RefreshChipState extends State<_RefreshChip>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 자리에 사람이 앉거나 바뀔 때 살짝 커지며 나타난다(key 가 바뀔 때만 재생).
+class _SeatPop extends StatelessWidget {
+  const _SeatPop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutBack,
+      builder: (_, v, child) => Opacity(
+        opacity: v.clamp(0.0, 1.0),
+        child: Transform.scale(scale: 0.92 + 0.08 * v, child: child),
+      ),
+      child: child,
     );
   }
 }

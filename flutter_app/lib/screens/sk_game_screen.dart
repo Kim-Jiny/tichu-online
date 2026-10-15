@@ -16,6 +16,7 @@ import '../widgets/bot_avatar.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/draggable_chat_panel.dart';
+import '../widgets/game_chrome.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -433,26 +434,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
         children: [
           // Round/Trick info
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFCCCCCC)),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: gamePillDecoration(),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.anchor, size: 14, color: Color(0xFF5A4038)),
-                const SizedBox(width: 5),
+                const Icon(Icons.anchor_rounded, size: 17, color: Cartoon.ink),
+                const SizedBox(width: 6),
                 Text(
                   L10n.of(
                     context,
                   ).skGameRoundTrick(state.round, state.trickNumber),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
-                  ),
+                  style: Cartoon.text(size: 16),
                 ),
               ],
             ),
@@ -591,17 +584,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         // the card-view button is hidden and the menu is narrower.
         width: game.isSpectator ? 158 : 210,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.97),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1017,20 +1000,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ? '${currentPlayerName.substring(0, 8)}…'
         : currentPlayerName;
     final urgent = _remainingSeconds <= 10;
-    final primaryColor = urgent
-        ? const Color(0xFFCC4444)
-        : const Color(0xFF5A4038);
+    final primaryColor = urgent ? Cartoon.red : Cartoon.ink;
     final timerText = L10n.of(context).skGameSecondsShort(_remainingSeconds);
 
-    final boxDecoration = BoxDecoration(
-      color: urgent
-          ? const Color(0xFFFFE4E4)
-          : Colors.white.withValues(alpha: 0.82),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: urgent ? const Color(0xFFFF6B6B) : const Color(0xFFD7CEC8),
-        width: urgent ? 2 : 1,
-      ),
+    final boxDecoration = gamePillDecoration(
+      radius: 16,
+      color: urgent ? const Color(0xFFFFD9D6) : Cartoon.cream,
     );
 
     // Bidding badge lays out label / name / timer vertically so long
@@ -1049,12 +1024,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               Text(
                 L10n.of(context).skGameLeaderLabelShort,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                style: Cartoon.text(
+                  size: 13,
                   color: urgent
-                      ? const Color(0xFFCC4444)
-                      : const Color(0xFF8A7A72),
+                      ? Cartoon.red
+                      : Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 2),
@@ -1063,11 +1037,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: primaryColor,
-                ),
+                style: Cartoon.userText(size: 17, color: primaryColor),
               ),
               const SizedBox(height: 4),
               Row(
@@ -1077,11 +1047,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   const SizedBox(width: 4),
                   Text(
                     timerText,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: primaryColor,
-                    ),
+                    style: Cartoon.text(size: 16, color: primaryColor),
                   ),
                 ],
               ),
@@ -1111,22 +1077,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 turnLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: primaryColor,
-                ),
+                style: Cartoon.userText(size: 15, color: primaryColor),
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              timerText,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: primaryColor,
-              ),
-            ),
+            Text(timerText, style: Cartoon.text(size: 16, color: primaryColor)),
           ],
         ),
       ),
@@ -1265,14 +1220,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
         title: Text(
           L10n.of(context).skGameLeaveTitle,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF3E312A),
-          ),
+          style: Cartoon.text(size: 22),
         ),
         // A mid-game-join room hands the seat to a bot instead of ending
         // the match; say so rather than warning about the wrong outcome.
@@ -1282,27 +1238,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   context,
                 ).midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : L10n.of(context).skGameLeaveConfirm,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF6A5A52)),
+          style: Cartoon.text(size: 16.5, height: 1.4),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).commonCancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.leaveGame();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE53935),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(
+              L10n.of(context).commonCancel,
+              style: Cartoon.text(size: 17),
             ),
-            child: Text(L10n.of(context).skGameLeaveButton),
           ),
+          gameButton(L10n.of(context).skGameLeaveButton, () {
+            Navigator.pop(ctx);
+            game.leaveGame();
+          }, color: Cartoon.red),
         ],
       ),
     );
@@ -2069,10 +2020,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           height: timeoutHeight,
                           child: Text(
                             '⏱ ${p.timeoutCount}/3',
-                            style: TextStyle(
-                              color: const Color(0xFFE65100),
-                              fontSize: compact ? 8.5 : 10,
-                              fontWeight: FontWeight.w800,
+                            style: Cartoon.text(
+                              size: compact ? 10 : 12,
+                              color: Cartoon.orangeDeep,
                             ),
                           ),
                         ),
@@ -2089,11 +2039,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             size: avatarDiameter,
                             blocked: game.blockedUsers.contains(p.name),
                             border: isCurrentTurn
-                                ? Border.all(
-                                    color: const Color(0xFFE6C86A),
-                                    width: 1.5,
-                                  )
-                                : null,
+                                ? Border.all(color: Cartoon.orange, width: 3)
+                                : Border.all(color: Cartoon.ink, width: 2),
                             fallback: p.isBot
                                 ? BotAvatar(size: avatarDiameter, name: p.name)
                                 : DefaultAvatar(size: avatarDiameter),
@@ -2123,14 +2070,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             Flexible(
                               child: Text(
                                 p.name,
-                                style: TextStyle(
+                                style: Cartoon.userText(
+                                  size: nameFontSize + 1,
                                   color: p.connected
-                                      ? const Color(0xFF5A4038)
-                                      : const Color(0xFFE53935),
-                                  fontSize: nameFontSize,
-                                  fontWeight: isSelf
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
+                                      ? Cartoon.ink
+                                      : Cartoon.red,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -2143,11 +2087,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       SizedBox(height: spacing),
                       Text(
                         '${p.totalScore}',
-                        style: TextStyle(
-                          color: const Color(0xFF5A4038),
-                          fontSize: scoreFontSize,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Cartoon.text(size: scoreFontSize + 3),
                       ),
                       SizedBox(
                         height: bidHeight,
@@ -2160,23 +2100,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: p.tricks == p.bid
-                                      ? const Color(0xFFE8F5E9)
+                                      ? const Color(0xFFCDEFD6)
                                       : p.tricks > p.bid!
-                                      ? const Color(0xFFFFF3E0)
-                                      : const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(8),
+                                      ? const Color(0xFFFFE0B8)
+                                      : Cartoon.cream,
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 1.4,
+                                  ),
                                 ),
                                 child: Text(
                                   '${p.tricks}/${p.bid}',
-                                  style: TextStyle(
-                                    color: p.tricks == p.bid
-                                        ? const Color(0xFF4CAF50)
-                                        : p.tricks > p.bid!
-                                        ? const Color(0xFFE65100)
-                                        : const Color(0xFF8A7A72),
-                                    fontSize: bidFontSize,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Cartoon.text(size: bidFontSize + 2),
                                 ),
                               )
                             : p.hasBid && p.bid == null
@@ -2187,13 +2123,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   vertical: compact ? 0 : 1,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF0EBF8),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: Cartoon.cream,
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 1.4,
+                                  ),
                                 ),
                                 child: Icon(
-                                  Icons.check,
-                                  size: compact ? 10 : 12,
-                                  color: const Color(0xFF7A6A95),
+                                  Icons.check_rounded,
+                                  size: compact ? 11 : 13,
+                                  color: Cartoon.ink,
                                 ),
                               )
                             : null,
@@ -2269,29 +2209,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
       bottom: 200,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFE4E4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFF6B6B)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFCC4444)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                localizeServiceMessage(message, L10n.of(context)),
-                style: const TextStyle(
-                  color: Color(0xFFCC4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.warning_rounded,
+        text: localizeServiceMessage(message, L10n.of(context)),
       ),
     );
   }
@@ -2301,29 +2221,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
       bottom: 240,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFFB74D)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.timer_off, color: Color(0xFFE65100)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                L10n.of(context).skGameTimeout(playerName),
-                style: const TextStyle(
-                  color: Color(0xFFE65100),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.timer_off_rounded,
+        color: Cartoon.yellow,
+        text: L10n.of(context).skGameTimeout(playerName),
       ),
     );
   }
@@ -2333,31 +2234,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
       bottom: 240,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFE4E4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFF6B6B)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.person_off, color: Color(0xFFCC4444)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                reason == 'timeout'
-                    ? L10n.of(context).skGameDesertionTimeout(playerName)
-                    : L10n.of(context).skGameDesertionLeave(playerName),
-                style: const TextStyle(
-                  color: Color(0xFFCC4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.person_off_rounded,
+        text: reason == 'timeout'
+            ? L10n.of(context).skGameDesertionTimeout(playerName)
+            : L10n.of(context).skGameDesertionLeave(playerName),
       ),
     );
   }
@@ -3214,10 +3095,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       return Container(
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -3231,16 +3109,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             Text(
               L10n.of(context).skGameBidDone(selfPlayer.bid ?? 0),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5A4038),
-              ),
+              style: Cartoon.text(size: 20),
             ),
             const SizedBox(height: 4),
             Text(
               L10n.of(context).skGameWaitingOthers,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8A7A72)),
+              style: Cartoon.text(
+                size: 14,
+                color: Cartoon.ink.withValues(alpha: 0.6),
+              ),
             ),
             SizedBox(height: isLandscape ? 8 : 12),
             // Keep the hand visible while waiting for other bids — the
@@ -3259,16 +3136,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, isLandscape ? 12 : 16),
       decoration: BoxDecoration(
-        color: isMyBidTurn
-            ? const Color(0xFFFFF6D8).withValues(alpha: 0.96)
-            : Colors.white.withValues(alpha: 0.92),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: isMyBidTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
-          top: BorderSide(
-            color: isMyBidTurn
-                ? const Color(0xFFE6C86A)
-                : const Color(0xFFE0D8D4),
-          ),
+          top: BorderSide(color: Cartoon.ink, width: isMyBidTurn ? 3.2 : 2.2),
         ),
       ),
       child: Column(
@@ -3280,11 +3151,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
           Text(
             L10n.of(context).skGameBidPrompt,
-            style: TextStyle(
-              color: const Color(0xFF5A4038),
-              fontSize: isLandscape ? 13 : 14,
-              fontWeight: FontWeight.w800,
-            ),
+            style: Cartoon.text(size: isLandscape ? 16 : 18),
           ),
           SizedBox(height: isLandscape ? 6 : 8),
           // Card preview (overlapping like Tichu)
@@ -3297,56 +3164,51 @@ class _SKGameScreenState extends State<SKGameScreen> {
           Wrap(
             spacing: 8,
             runSpacing: isLandscape ? 6 : 8,
+            alignment: WrapAlignment.center,
             children: List.generate(state.round + 1, (i) {
               final selected = _selectedBid == i;
-              return ChoiceChip(
-                label: Text('$i'),
-                selected: selected,
-                onSelected: (_) => setState(() => _selectedBid = i),
-                selectedColor: const Color(0xFFE6F1FF),
-                labelStyle: TextStyle(
-                  color: selected
-                      ? const Color(0xFF355D89)
-                      : const Color(0xFF5A4038),
-                  fontWeight: FontWeight.bold,
-                  fontSize: isLandscape ? 14 : 16,
+              return CartoonPressable(
+                scale: 0.9,
+                onTap: () => setState(() => _selectedBid = i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 120),
+                  width: isLandscape ? 42 : 46,
+                  height: isLandscape ? 42 : 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? Cartoon.orange : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Cartoon.ink,
+                      width: selected ? 2.6 : 1.8,
+                    ),
+                  ),
+                  child: Text(
+                    '$i',
+                    style: Cartoon.text(
+                      size: isLandscape ? 19 : 22,
+                      color: selected ? Colors.white : Cartoon.ink,
+                    ),
+                  ),
                 ),
-                visualDensity: isLandscape
-                    ? VisualDensity.compact
-                    : VisualDensity.standard,
               );
             }),
           ),
           SizedBox(height: isLandscape ? 6 : 8),
-          SizedBox(
-            width: double.infinity,
-            height: isLandscape ? 40 : 44,
-            child: FilledButton(
-              onPressed: _selectedBid != null
-                  ? () {
-                      game.submitBid(_selectedBid!);
-                      setState(() => _selectedBid = null);
-                    }
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFE6F1FF),
-                foregroundColor: const Color(0xFF355D89),
-                disabledBackgroundColor: const Color(0xFFE0E0E0),
-                disabledForegroundColor: const Color(0xFF9E9E9E),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                _selectedBid != null
-                    ? L10n.of(context).skGameBidSubmit(_selectedBid!)
-                    : L10n.of(context).skGameSelectNumber,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: isLandscape ? 14 : 15,
-                ),
-              ),
-            ),
+          gameButton(
+            _selectedBid != null
+                ? L10n.of(context).skGameBidSubmit(_selectedBid!)
+                : L10n.of(context).skGameSelectNumber,
+            _selectedBid != null
+                ? () {
+                    game.submitBid(_selectedBid!);
+                    setState(() => _selectedBid = null);
+                  }
+                : null,
+            color: Cartoon.green,
+            height: isLandscape ? 46 : 52,
+            size: isLandscape ? 18 : 20,
+            expand: true,
           ),
         ],
       ),
@@ -3381,15 +3243,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(8, 8, 8, isLandscape ? 8 : 12),
       decoration: BoxDecoration(
-        color: state.isMyTurn
-            ? const Color(0xFFFFF6D8).withValues(alpha: 0.96)
-            : Colors.white.withValues(alpha: 0.92),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: state.isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(
-            color: state.isMyTurn
-                ? const Color(0xFFE6C86A)
-                : const Color(0xFFE0D8D4),
+            color: Cartoon.ink,
+            width: state.isMyTurn ? 3.2 : 2.2,
           ),
         ),
       ),
@@ -3404,34 +3263,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
           if (state.isMyTurn && selectedCard != null && isSelectedLegal)
             Padding(
               padding: const EdgeInsets.only(bottom: 6, left: 8, right: 8),
-              child: SizedBox(
-                width: double.infinity,
-                height: isLandscape ? 38 : 42,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    if (selectedCard.startsWith('sk_tigress')) {
-                      _showTigressDialog(game, selectedCard);
-                    } else {
-                      game.playCard(selectedCard);
-                      setState(() => _selectedCard = null);
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFE6F1FF),
-                    foregroundColor: const Color(0xFF355D89),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.play_arrow, size: 20),
-                  label: Text(
-                    L10n.of(context).skGamePlayCardButton,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: isLandscape ? 14 : 15,
-                    ),
-                  ),
-                ),
+              child: gameButton(
+                L10n.of(context).skGamePlayCardButton,
+                () {
+                  if (selectedCard.startsWith('sk_tigress')) {
+                    _showTigressDialog(game, selectedCard);
+                  } else {
+                    game.playCard(selectedCard);
+                    setState(() => _selectedCard = null);
+                  }
+                },
+                color: Cartoon.green,
+                height: isLandscape ? 44 : 50,
+                size: isLandscape ? 18 : 20,
+                expand: true,
               ),
             )
           else if (state.isMyTurn)
@@ -3439,11 +3284,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 L10n.of(context).skGameSelectCard,
-                style: TextStyle(
-                  color: const Color(0xFF5A4038),
-                  fontSize: isLandscape ? 13 : 14,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Cartoon.text(size: isLandscape ? 16 : 18),
               ),
             ),
           // Hand cards (overlapping like Tichu)
@@ -3475,15 +3316,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final exceeds = hasBid && tricks > bid;
 
     final trickBidBg = matches
-        ? const Color(0xFFE8F5E9)
+        ? const Color(0xFFCDEFD6)
         : exceeds
-        ? const Color(0xFFFFF3E0)
-        : const Color(0xFFE8F1FF);
-    final trickBidFg = matches
-        ? const Color(0xFF2E7D32)
-        : exceeds
-        ? const Color(0xFFE65100)
-        : const Color(0xFF355D89);
+        ? const Color(0xFFFFE0B8)
+        : const Color(0xFFD6EAFF);
+    final trickBidFg = Cartoon.ink;
 
     Widget chip({
       required IconData icon,
@@ -3498,20 +3335,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
         ),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: Cartoon.ink, width: 1.8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: compact ? 14 : 16, color: fg),
+            Icon(icon, size: compact ? 16 : 18, color: fg),
             const SizedBox(width: 4),
             Text(
               value,
-              style: TextStyle(
-                color: fg,
-                fontSize: compact ? 13 : 14,
-                fontWeight: FontWeight.w800,
-              ),
+              style: Cartoon.text(size: compact ? 16 : 18, color: fg),
             ),
           ],
         ),
@@ -3541,8 +3375,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             chip(
               icon: Icons.stars_rounded,
               value: '${selfPlayer.totalScore}',
-              bg: const Color(0xFFF6EFE8),
-              fg: const Color(0xFF6A4B3A),
+              bg: Cartoon.cream,
+              fg: Cartoon.ink,
             ),
           ],
         ),
@@ -3556,36 +3390,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFFB74D)),
+          color: Cartoon.yellow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 1.8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.timer_off_outlined,
-              size: 15,
-              color: Color(0xFFE65100),
-            ),
+            const Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
             const SizedBox(width: 5),
-            Text(
-              '${game.myTimeoutCount}/3',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFFE65100),
-              ),
-            ),
+            Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 14)),
             const SizedBox(width: 4),
-            Text(
-              L10n.of(context).skGameReset,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFFE65100),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text(L10n.of(context).skGameReset, style: Cartoon.text(size: 13)),
           ],
         ),
       ),
@@ -3766,7 +3582,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
       context: context,
       barrierColor: Colors.black54,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
@@ -3785,11 +3606,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFD8CCC5),
-                            width: 1.5,
-                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Cartoon.ink, width: 2),
                         ),
                         child: Column(
                           children: [
@@ -3801,11 +3619,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             const SizedBox(height: 8),
                             Text(
                               L10n.of(context).skGameTigressEscape,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF6A5A52),
-                              ),
+                              style: Cartoon.text(size: 18),
                             ),
                           ],
                         ),
@@ -3823,12 +3637,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF0F0),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFD24B4B),
-                            width: 1.5,
-                          ),
+                          color: const Color(0xFFFFE3E0),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Cartoon.ink, width: 2),
                         ),
                         child: Column(
                           children: [
@@ -3840,11 +3651,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             const SizedBox(height: 8),
                             Text(
                               L10n.of(context).skGameTigressPirate,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFD24B4B),
-                              ),
+                              style: Cartoon.text(size: 18, color: Cartoon.red),
                             ),
                           ],
                         ),
@@ -3872,11 +3679,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.all(isLandscape ? 12 : 16),
       margin: EdgeInsets.all(isLandscape ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
+      decoration: Cartoon.panelDecoration(radius: 24, shadowOffset: 3),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: isLandscape
@@ -3893,16 +3696,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   vertical: isLandscape ? 5 : 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF7F1EC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE7DBD4)),
+                  color: Cartoon.yellow,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
                 child: Text(
                   L10n.of(context).skGameRoundResult(state.round),
-                  style: TextStyle(
-                    color: Color(0xFF5A4038),
-                    fontSize: isLandscape ? 14 : 16,
-                    fontWeight: FontWeight.w800,
+                  style: Cartoon.userText(
+                    size: isLandscape ? 16 : 18,
+                    color: Cartoon.ink,
                   ),
                 ),
               ),
@@ -3915,26 +3717,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: Text(
                       '#',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isLandscape ? 9 : 10,
-                        color: const Color(0xFF8A7A72),
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.userText(
+                        size: isLandscape ? 11 : 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
-                  const Expanded(
-                    flex: 3,
-                    child: Text('', style: TextStyle(fontSize: 11)),
-                  ),
+                  const Expanded(flex: 3, child: SizedBox.shrink()),
                   Expanded(
                     flex: 2,
                     child: Text(
                       L10n.of(context).skGameBidTricks,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isLandscape ? 9 : 10,
-                        color: const Color(0xFF8A7A72),
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.userText(
+                        size: isLandscape ? 11 : 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -3943,10 +3740,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: Text(
                       L10n.of(context).skGameBonusHeader,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isLandscape ? 9 : 10,
-                        color: const Color(0xFF8A7A72),
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.userText(
+                        size: isLandscape ? 11 : 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -3955,10 +3751,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: Text(
                       L10n.of(context).skGameScoreHeader,
                       textAlign: TextAlign.end,
-                      style: TextStyle(
-                        fontSize: isLandscape ? 9 : 10,
-                        color: const Color(0xFF8A7A72),
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.userText(
+                        size: isLandscape ? 11 : 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -3967,16 +3762,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     child: Text(
                       L10n.of(context).skGameTotalScoreHeader,
                       textAlign: TextAlign.end,
-                      style: TextStyle(
-                        fontSize: isLandscape ? 9 : 10,
-                        color: const Color(0xFF8A7A72),
-                        fontWeight: FontWeight.bold,
+                      style: Cartoon.userText(
+                        size: isLandscape ? 11 : 12,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
                       ),
                     ),
                   ),
                 ],
               ),
-              const Divider(height: 8),
+              Divider(
+                height: 8,
+                thickness: 1.5,
+                color: Cartoon.ink.withValues(alpha: 0.15),
+              ),
               if (scores != null)
                 ...(() {
                   // Sort by total score desc — keeps the leaderboard ordering
@@ -4006,9 +3804,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: p.position == 'self'
-                            ? const Color(0xFFF7F1EC)
+                            ? Cartoon.cream
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         children: [
@@ -4017,10 +3815,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             child: Text(
                               '$rank',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: Cartoon.userText(
+                                size: isLandscape ? 14 : 15,
                                 color: rankColor,
-                                fontSize: isLandscape ? 12 : 13,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
@@ -4029,12 +3826,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             child: Text(
                               p.name,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: const Color(0xFF5A4038),
-                                fontSize: isLandscape ? 12 : 13,
-                                fontWeight: p.position == 'self'
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                              style: Cartoon.userText(
+                                size: isLandscape ? 14 : 15,
+                                color: Cartoon.ink,
                               ),
                             ),
                           ),
@@ -4044,18 +3838,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  success ? Icons.check_circle : Icons.cancel,
-                                  size: 12,
-                                  color: success
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFFE53935),
+                                  success
+                                      ? Icons.check_circle_rounded
+                                      : Icons.cancel_rounded,
+                                  size: 15,
+                                  color: success ? Cartoon.green : Cartoon.red,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '$tricks/$bid',
-                                  style: const TextStyle(
-                                    color: Color(0xFF5A4038),
-                                    fontSize: 12,
+                                  style: Cartoon.userText(
+                                    size: 12 + 2,
+                                    color: Cartoon.ink,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -4067,10 +3861,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             child: bonus > 0
                                 ? Text(
                                     '+$bonus',
-                                    style: TextStyle(
-                                      color: Color(0xFFFFB74D),
-                                      fontSize: isLandscape ? 10 : 11,
-                                      fontWeight: FontWeight.bold,
+                                    style: Cartoon.userText(
+                                      size: isLandscape ? 12 : 13,
+                                      color: Cartoon.orangeDeep,
                                     ),
                                     textAlign: TextAlign.center,
                                   )
@@ -4080,12 +3873,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             width: isLandscape ? 40 : 44,
                             child: Text(
                               '${roundScore > 0 ? '+' : ''}$roundScore',
-                              style: TextStyle(
-                                color: roundScore >= 0
-                                    ? const Color(0xFF4CAF50)
-                                    : const Color(0xFFE53935),
-                                fontSize: isLandscape ? 12 : 14,
-                                fontWeight: FontWeight.bold,
+                              style: Cartoon.userText(
+                                size: isLandscape ? 14 : 16,
+                                color: roundScore,
                               ),
                               textAlign: TextAlign.end,
                             ),
@@ -4094,10 +3884,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                             width: isLandscape ? 42 : 46,
                             child: Text(
                               '${p.totalScore}',
-                              style: TextStyle(
-                                color: const Color(0xFF5A4038),
-                                fontSize: isLandscape ? 12 : 14,
-                                fontWeight: FontWeight.bold,
+                              style: Cartoon.userText(
+                                size: isLandscape ? 14 : 16,
+                                color: Cartoon.ink,
                               ),
                               textAlign: TextAlign.end,
                             ),
@@ -4110,9 +3899,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               SizedBox(height: isLandscape ? 6 : 8),
               Text(
                 L10n.of(context).skGameNextRoundPreparing,
-                style: TextStyle(
-                  color: const Color(0xFF8A7A72),
-                  fontSize: isLandscape ? 11 : 12,
+                style: Cartoon.userText(
+                  size: isLandscape ? 13 : 14,
+                  color: Cartoon.ink.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -4130,28 +3919,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
+      decoration: Cartoon.panelDecoration(radius: 24, shadowOffset: 3),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F1EC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE7DBD4)),
+              color: Cartoon.yellow,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: Cartoon.ink, width: 1.8),
             ),
             child: Text(
               L10n.of(context).skGameGameOver,
-              style: const TextStyle(
-                color: Color(0xFF5A4038),
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
+              style: Cartoon.userText(size: 18 + 2, color: Cartoon.ink),
             ),
           ),
           const SizedBox(height: 16),
@@ -4163,12 +3944,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: isWinner
-                    ? const Color(0xFFFFF8E1)
-                    : Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(10),
+                color: isWinner ? const Color(0xFFFFF1B8) : Cartoon.cream,
+                borderRadius: BorderRadius.circular(14),
                 border: isWinner
-                    ? Border.all(color: const Color(0xFFFFD700))
+                    ? Border.all(color: Cartoon.ink, width: 1.8)
                     : null,
               ),
               child: Row(
@@ -4177,48 +3956,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: isWinner
-                          ? const Color(0xFFFFD700)
-                          : const Color(0xFFF5F5F5),
+                      color: isWinner ? Cartoon.yellow : Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isWinner
-                            ? const Color(0xFFFFB300)
-                            : const Color(0xFFE0D8D4),
-                      ),
+                      border: Border.all(color: Cartoon.ink, width: 1.8),
                     ),
                     child: Center(
-                      child: Text(
-                        '$rank',
-                        style: TextStyle(
-                          color: isWinner
-                              ? Colors.black
-                              : const Color(0xFF5A4038),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: Text('$rank', style: Cartoon.text(size: 17)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       p.name,
-                      style: TextStyle(
-                        color: const Color(0xFF5A4038),
-                        fontSize: isWinner ? 16 : 14,
-                        fontWeight: isWinner
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                      style: Cartoon.userText(
+                        size: isWinner ? 18 : 16,
+                        color: Cartoon.ink,
                       ),
                     ),
                   ),
                   Text(
                     '${p.totalScore}',
-                    style: TextStyle(
-                      color: const Color(0xFF5A4038),
-                      fontSize: isWinner ? 18 : 15,
-                      fontWeight: FontWeight.bold,
+                    style: Cartoon.userText(
+                      size: isWinner ? 20 : 17,
+                      color: Cartoon.ink,
                     ),
                   ),
                 ],
@@ -4230,9 +3990,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF2FF),
+              color: const Color(0xFFD6EAFF),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFC7DCF8)),
             ),
             child: Text(
               _gameEndCountdown > 0
@@ -4241,11 +4000,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     ).skGameAutoReturnCountdown(_gameEndCountdown)
                   : L10n.of(context).skGameReturningToRoom,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF355D89),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Cartoon.userText(size: 14 + 2, color: Cartoon.ink),
             ),
           ),
         ],

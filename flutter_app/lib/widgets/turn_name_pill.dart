@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/cartoon.dart';
+
 /// 지금 차례인 사람의 닉네임을 감싸는 노란 알약.
 ///
 /// 티츄 판에서 쓰던 표시를 마이티·스컬킹·러브레터도 함께 쓴다. 사진
@@ -23,8 +25,8 @@ class TurnNamePill extends StatelessWidget {
   final double horizontal;
   final double vertical;
 
-  static const Color background = Color(0xFFFFF2B3);
-  static const Color border = Color(0xFFE6C86A);
+  static const Color background = Cartoon.yellow;
+  static const Color border = Cartoon.ink;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +35,10 @@ class TurnNamePill extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: vertical),
       decoration: BoxDecoration(
         color: isTurn ? background : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isTurn ? border : Colors.transparent,
-          width: 1,
+          width: 1.6,
         ),
       ),
       child: child,

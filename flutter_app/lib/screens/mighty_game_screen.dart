@@ -5356,24 +5356,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
               child: Opacity(
                 opacity: (isLegal && !isKittyBlocked) ? 1.0 : 0.4,
                 child: Container(
-                  decoration: isSelected
-                      ? BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF355D89,
-                              ).withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        )
-                      : null,
+                  color: Colors.transparent,
                   child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: cardPadding),
                     child: PlayingCard(
@@ -5452,43 +5438,55 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  /// 조커 무늬·조커콜 같은 작은 선택 칩: 고르면 색이 차고 테두리가 진해진다.
+  Widget _choiceChip({
+    required Widget child,
+    required bool selected,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    return CartoonPressable(
+      scale: 0.92,
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration:
+            gamePillDecoration(
+              radius: 12,
+              color: selected
+                  ? Color.lerp(accent, Colors.white, 0.72)
+                  : Cartoon.cream,
+            ).copyWith(
+              border: Border.all(
+                color: selected ? accent : Cartoon.ink.withValues(alpha: 0.35),
+                width: selected ? 2.6 : 1.8,
+              ),
+            ),
+        child: child,
+      ),
+    );
+  }
+
   Widget _buildJokerSuitSelector() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            L10n.of(context).mtJokerSuit,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
-          ),
+          Text(L10n.of(context).mtJokerSuit, style: Cartoon.text(size: 14)),
+          const SizedBox(width: 4),
           ...[
-            ('spade', '\u2660', const Color(0xFF2B2B2B)),
-            ('diamond', '\u2666', const Color(0xFF6FB6E5)),
-            ('heart', '\u2665', const Color(0xFFD24B4B)),
-            ('club', '\u2663', const Color(0xFF4BAA6A)),
-          ].map((s) {
-            final selected = _jokerSuitChoice == s.$1;
-            return GestureDetector(
-              onTap: () => setState(() => _jokerSuitChoice = s.$1),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? s.$3.withValues(alpha: 0.12)
-                      : const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: selected ? s.$3 : const Color(0xFFE0D8D4),
-                    width: selected ? 2 : 1,
-                  ),
-                ),
-                child: SuitIcon(suit: s.$1, size: 18, color: s.$3),
-              ),
+            ('spade', const Color(0xFF2B2B2B)),
+            ('diamond', const Color(0xFF6FB6E5)),
+            ('heart', const Color(0xFFD24B4B)),
+            ('club', const Color(0xFF4BAA6A)),
+          ].map((e) {
+            return _choiceChip(
+              selected: _jokerSuitChoice == e.$1,
+              accent: e.$2,
+              onTap: () => setState(() => _jokerSuitChoice = e.$1),
+              child: SuitIcon(suit: e.$1, size: 20, color: e.$2),
             );
           }),
         ],
@@ -5496,307 +5494,289 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
-  // ── Round End (SK-style) ──
+  // ── Round End ──
   Widget _buildRoundEndUI(MightyGameStateData state) {
     final result = state.roundResult;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
+    final success = result?['success'] == true;
+    Widget head(String t, {double w = 48}) => SizedBox(
+      width: w,
+      child: Text(
+        t,
+        textAlign: TextAlign.right,
+        overflow: TextOverflow.ellipsis,
+        style: Cartoon.text(
+          size: 12,
+          color: Cartoon.ink.withValues(alpha: 0.5),
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F1EC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE7DBD4)),
-            ),
-            child: Text(
-              L10n.of(context).mtRoundResult(state.round),
-              style: const TextStyle(
-                color: Color(0xFF5A4038),
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (result != null) ...[
+    );
+    return CartoonEntrance(
+      from: const Offset(0, 28),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        margin: const EdgeInsets.all(16),
+        decoration: Cartoon.panelDecoration(radius: 26, shadowOffset: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: result['success'] == true
-                    ? const Color(0xFFE8F5E9)
-                    : const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(8),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: gamePillDecoration(radius: 16, color: Cartoon.yellow),
               child: Text(
-                result['success'] == true
-                    ? L10n.of(context).mtDeclarerWins(result['declarerPoints'])
-                    : L10n.of(
-                        context,
-                      ).mtDeclarerFails(result['declarerPoints']),
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: result['success'] == true
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFE53935),
-                ),
+                L10n.of(context).mtRoundResult(state.round),
+                style: Cartoon.text(size: 18),
               ),
             ),
-            const SizedBox(height: 8),
-          ],
-          const Divider(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-            child: Row(
-              children: [
-                const SizedBox(width: 14),
-                const Expanded(child: SizedBox()),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    L10n.of(context).llRound,
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF9A8E8A),
-                    ),
-                  ),
+            const SizedBox(height: 10),
+            if (result != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 5,
                 ),
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    L10n.of(context).mtTotal,
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF9A8E8A),
-                    ),
-                  ),
+                decoration: gamePillDecoration(
+                  radius: 14,
+                  color: success ? Cartoon.green : Cartoon.red,
                 ),
-              ],
-            ),
-          ),
-          ...state.players.map((p) {
-            final roundScore = (result?['scores']?[p.id] as num?)?.toInt();
-            final totalScore = state.scores[p.id] ?? 0;
-            final isDeclarer = p.id == state.declarer;
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
-              decoration: BoxDecoration(
-                color: p.position == 'self'
-                    ? const Color(0xFFF7F1EC)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
+                child: Text(
+                  success
+                      ? L10n.of(
+                          context,
+                        ).mtDeclarerWins(result['declarerPoints'])
+                      : L10n.of(
+                          context,
+                        ).mtDeclarerFails(result['declarerPoints']),
+                  style: Cartoon.text(size: 15, color: Colors.white),
+                ),
               ),
+              const SizedBox(height: 10),
+            ],
+            Container(
+              height: 2,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: Cartoon.ink.withValues(alpha: 0.15),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 14,
-                    child: isDeclarer
-                        ? const Text(
-                            '\u2605',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFFFF8A00),
-                            ),
-                          )
-                        : null,
-                  ),
-                  Expanded(
-                    child: Text(
-                      p.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: p.position == 'self'
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: const Color(0xFF5A4038),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 48,
-                    child: Text(
-                      roundScore == null ? '' : '$roundScore',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: (roundScore ?? 0) < 0
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFF3E312A),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 56,
-                    child: Text(
-                      '$totalScore',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: totalScore < 0
-                            ? const Color(0xFFE53935)
-                            : const Color(0xFF3E312A),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(child: SizedBox()),
+                  head(L10n.of(context).llRound),
+                  head(L10n.of(context).mtTotal, w: 56),
                 ],
               ),
-            );
-          }),
-          const SizedBox(height: 8),
-          Text(
-            L10n.of(context).mtNextRound,
-            style: const TextStyle(color: Color(0xFF8A7A72), fontSize: 12),
-          ),
-        ],
+            ),
+            ...state.players.map((p) {
+              final roundScore = (result?['scores']?[p.id] as num?)?.toInt();
+              final totalScore = state.scores[p.id] ?? 0;
+              final isDeclarer = p.id == state.declarer;
+              final isSelf = p.position == 'self';
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 6),
+                margin: const EdgeInsets.only(bottom: 2),
+                decoration: BoxDecoration(
+                  color: isSelf ? Cartoon.cream : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      child: isDeclarer
+                          ? const Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: Cartoon.orange,
+                            )
+                          : null,
+                    ),
+                    Expanded(
+                      child: Text(
+                        p.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: Cartoon.userText(
+                          size: 14,
+                          weight: isSelf ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 48,
+                      child: Text(
+                        roundScore == null ? '' : '$roundScore',
+                        textAlign: TextAlign.right,
+                        style: Cartoon.text(
+                          size: 15,
+                          color: (roundScore ?? 0) < 0
+                              ? Cartoon.red
+                              : Cartoon.ink,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        '$totalScore',
+                        textAlign: TextAlign.right,
+                        style: Cartoon.text(
+                          size: 17,
+                          color: totalScore < 0 ? Cartoon.red : Cartoon.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            Text(
+              L10n.of(context).mtNextRound,
+              style: Cartoon.text(
+                size: 13,
+                color: Cartoon.ink.withValues(alpha: 0.55),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ── Game End (SK-style) ──
+  // ── Game End ──
   Widget _buildGameEndUI(MightyGameStateData state, GameService game) {
     final sorted = List<MightyPlayer>.from(state.players)
       ..sort(
         (a, b) => (state.scores[b.id] ?? 0).compareTo(state.scores[a.id] ?? 0),
       );
+    Color rankColor(int r) => switch (r) {
+      1 => Cartoon.yellow,
+      2 => const Color(0xFFE3E3E3),
+      3 => const Color(0xFFE0A877),
+      _ => const Color(0xFFF1EADF),
+    };
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0D8D4)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF7F1EC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE7DBD4)),
-            ),
-            child: Text(
-              L10n.of(context).mtGameOver,
-              style: const TextStyle(
-                color: Color(0xFF5A4038),
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...sorted.asMap().entries.map((entry) {
-            final rank = entry.key + 1;
-            final p = entry.value;
-            final score = state.scores[p.id] ?? 0;
-            final isWinner = rank == 1;
-            return Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              margin: const EdgeInsets.only(bottom: 4),
-              decoration: BoxDecoration(
-                color: isWinner
-                    ? const Color(0xFFFFF8E1)
-                    : Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(10),
-                border: isWinner
-                    ? Border.all(color: const Color(0xFFFFD700))
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: isWinner
-                          ? const Color(0xFFFFD700)
-                          : const Color(0xFFF5F5F5),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isWinner
-                            ? const Color(0xFFFFB300)
-                            : const Color(0xFFE0D8D4),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        CartoonEntrance(
+          from: const Offset(0, 28),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(16),
+            decoration: Cartoon.panelDecoration(radius: 26, shadowOffset: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 7,
+                  ),
+                  decoration: gamePillDecoration(
+                    radius: 18,
+                    color: Cartoon.yellow,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.emoji_events_rounded,
+                        size: 22,
+                        color: Cartoon.orangeDeep,
                       ),
+                      const SizedBox(width: 6),
+                      Text(
+                        L10n.of(context).mtGameOver,
+                        style: Cartoon.text(size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ...sorted.asMap().entries.map((entry) {
+                  final rank = entry.key + 1;
+                  final p = entry.value;
+                  final score = state.scores[p.id] ?? 0;
+                  final isWinner = rank == 1;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 8,
                     ),
-                    child: Center(
-                      child: Text(
-                        '$rank',
-                        style: TextStyle(
-                          color: isWinner
-                              ? Colors.black
-                              : const Color(0xFF5A4038),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                    margin: const EdgeInsets.only(bottom: 5),
+                    decoration: isWinner
+                        ? gamePillDecoration(
+                            radius: 16,
+                            color: const Color(0xFFFFF1B8),
+                          )
+                        : BoxDecoration(
+                            color: Cartoon.cream,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: rankColor(rank),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Cartoon.ink, width: 1.8),
+                          ),
+                          child: Center(
+                            child: Text('$rank', style: Cartoon.text(size: 15)),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            p.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: Cartoon.userText(
+                              size: isWinner ? 17 : 15,
+                              weight: isWinner
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '$score',
+                          style: Cartoon.text(
+                            size: isWinner ? 20 : 17,
+                            color: score < 0 ? Cartoon.red : Cartoon.ink,
+                          ),
+                        ),
+                      ],
                     ),
+                  );
+                }),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      p.name,
-                      style: TextStyle(
-                        color: const Color(0xFF5A4038),
-                        fontSize: isWinner ? 16 : 14,
-                        fontWeight: isWinner
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
+                  decoration: gamePillDecoration(
+                    radius: 16,
+                    color: const Color(0xFFDDEEFF),
                   ),
-                  Text(
-                    '$score',
-                    style: TextStyle(
-                      color: const Color(0xFF5A4038),
-                      fontSize: isWinner ? 18 : 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Text(
+                    _gameEndCountdown > 0
+                        ? L10n.of(context).mtReturningIn(_gameEndCountdown)
+                        : L10n.of(context).mtReturningToRoom,
+                    textAlign: TextAlign.center,
+                    style: Cartoon.text(size: 15),
                   ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF2FF),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFC7DCF8)),
-            ),
-            child: Text(
-              _gameEndCountdown > 0
-                  ? L10n.of(context).mtReturningIn(_gameEndCountdown)
-                  : L10n.of(context).mtReturningToRoom,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF355D89),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+        const Positioned.fill(child: CartoonConfetti(seed: 5, count: 48)),
+      ],
     );
   }
 
@@ -5814,32 +5794,18 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       right: 20,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                const Icon(Icons.visibility, color: Color(0xFF6A6090)),
+                const Icon(Icons.visibility_rounded, color: Cartoon.blue),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     L10n.of(context).gameCardViewRequest(spectatorNickname),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4080),
-                    ),
+                    style: Cartoon.userText(size: 15),
                   ),
                 ),
               ],
@@ -5848,28 +5814,24 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () =>
-                        game.respondCardViewRequest(spectatorId, false),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFCC6666),
-                      side: const BorderSide(color: Color(0xFFCC6666)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: Text(L10n.of(context).gameReject),
+                  child: gameButton(
+                    L10n.of(context).gameReject,
+                    () => game.respondCardViewRequest(spectatorId, false),
+                    color: Cartoon.red,
+                    height: 44,
+                    size: 16,
+                    expand: true,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        game.respondCardViewRequest(spectatorId, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A9BD1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: Text(L10n.of(context).gameAllow),
+                  child: gameButton(
+                    L10n.of(context).gameAllow,
+                    () => game.respondCardViewRequest(spectatorId, true),
+                    color: Cartoon.blue,
+                    height: 44,
+                    size: 16,
+                    expand: true,
                   ),
                 ),
               ],
@@ -6767,69 +6729,29 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            L10n.of(context).mtJokerCall,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF5A4038)),
-          ),
-          GestureDetector(
+          Text(L10n.of(context).mtJokerCall, style: Cartoon.text(size: 14)),
+          const SizedBox(width: 4),
+          _choiceChip(
+            selected: _jokerCallChoice,
+            accent: Cartoon.green,
             onTap: () => setState(() => _jokerCallChoice = true),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: _jokerCallChoice
-                    ? const Color(0xFFE8F5E9)
-                    : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _jokerCallChoice
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFE0D8D4),
-                  width: _jokerCallChoice ? 2 : 1,
-                ),
-              ),
-              child: Text(
-                L10n.of(context).mtYes,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: _jokerCallChoice
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                  color: _jokerCallChoice
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFF5A4038),
-                ),
+            child: Text(
+              L10n.of(context).mtYes,
+              style: Cartoon.text(
+                size: 15,
+                color: _jokerCallChoice ? Cartoon.green : Cartoon.ink,
               ),
             ),
           ),
-          GestureDetector(
+          _choiceChip(
+            selected: !_jokerCallChoice,
+            accent: Cartoon.red,
             onTap: () => setState(() => _jokerCallChoice = false),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: !_jokerCallChoice
-                    ? const Color(0xFFFFEBEE)
-                    : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: !_jokerCallChoice
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFFE0D8D4),
-                  width: !_jokerCallChoice ? 2 : 1,
-                ),
-              ),
-              child: Text(
-                L10n.of(context).mtNo,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: !_jokerCallChoice
-                      ? FontWeight.bold
-                      : FontWeight.normal,
-                  color: !_jokerCallChoice
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFF5A4038),
-                ),
+            child: Text(
+              L10n.of(context).mtNo,
+              style: Cartoon.text(
+                size: 15,
+                color: !_jokerCallChoice ? Cartoon.red : Cartoon.ink,
               ),
             ),
           ),

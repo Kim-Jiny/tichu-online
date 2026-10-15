@@ -106,7 +106,10 @@ class PlayingCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: badgeColor ?? const Color(0xFFE53935),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFF3B2A20),
+                      width: 1.5,
+                    ),
                   ),
                   child: Icon(badgeIcon, size: 11, color: Colors.white),
                 ),

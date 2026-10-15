@@ -14,7 +14,6 @@ import 'profile_avatar.dart';
 /// buttons, sound panel, spectator list and score-history dialogs stay
 /// visually and behaviourally consistent.
 
-const Color _kTextPrimary = Color(0xFF5A4038);
 const Color _kTextSubtle = Color(0xFF8A7A72);
 
 /// A rounded icon action button. Matches the original `_buildTopActionButton`
@@ -77,24 +76,14 @@ class SpectatorActionSurface extends StatelessWidget {
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(11),
+          padding: const EdgeInsets.all(9),
+          // 불투명 크림 바탕 + 갈색 테두리(그림자 없음). 켜져 있으면 주황.
           decoration: BoxDecoration(
-            color: active
-                ? _kTextPrimary.withValues(alpha: 0.92)
-                : Colors.white.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 6,
-              ),
-            ],
+            color: active ? Cartoon.orange : Cartoon.paper,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: Cartoon.ink, width: 1.8),
           ),
-          child: Icon(
-            icon,
-            size: 19,
-            color: active ? Colors.white : (iconColor ?? _kTextPrimary),
-          ),
+          child: Icon(icon, size: 21, color: iconColor ?? Cartoon.ink),
         ),
         if (badgeCount > 0)
           Positioned(
@@ -104,18 +93,14 @@ class SpectatorActionSurface extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 18),
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
-                color: const Color(0xFFE53935),
+                color: Cartoon.red,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white, width: 1.2),
+                border: Border.all(color: Cartoon.ink, width: 1.5),
               ),
               child: Text(
                 badgeCount > 99 ? '99+' : '$badgeCount',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Cartoon.text(size: 11, color: Colors.white),
               ),
             ),
           ),
@@ -142,30 +127,16 @@ class SpectatorSoundPanel extends StatelessWidget {
     return Container(
       width: width,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+      decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: _kTextPrimary,
-            ),
-          ),
+          Text(title, style: Cartoon.text(size: 15)),
           Slider(
+            activeColor: Cartoon.orange,
+            inactiveColor: Cartoon.ink.withValues(alpha: 0.15),
+            thumbColor: Cartoon.orange,
             value: game.sfxVolume,
             onChanged: (v) => game.setSfxVolume(v),
             onChangeEnd: (v) => game.setSfxVolume(v, persist: true),

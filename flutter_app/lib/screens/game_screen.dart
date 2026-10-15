@@ -21,6 +21,7 @@ import '../widgets/tichu_fx_events.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
+import '../widgets/game_chrome.dart';
 import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -805,17 +806,7 @@ class _GameScreenState extends State<GameScreen> {
             // scale, and neither had anything to do with how wide three
             // buttons and two gaps actually are.
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.97),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
+            decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 3),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
@@ -971,36 +962,10 @@ class _GameScreenState extends State<GameScreen> {
       bottom: 200,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFE4E4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFF6B6B)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8 * _s,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFCC4444)),
-            SizedBox(width: 8 * _s),
-            Expanded(
-              child: Text(
-                displayMessage,
-                style: TextStyle(
-                  color: Color(0xFFCC4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14 * _ts,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.warning_rounded,
+        text: displayMessage,
+        scale: _s,
       ),
     );
   }
@@ -1010,36 +975,11 @@ class _GameScreenState extends State<GameScreen> {
       bottom: 240,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFFB74D)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8 * _s,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.timer_off, color: Color(0xFFE65100)),
-            SizedBox(width: 8 * _s),
-            Expanded(
-              child: Text(
-                L10n.of(context).gameTimeout(playerName),
-                style: TextStyle(
-                  color: Color(0xFFE65100),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14 * _ts,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.timer_off_rounded,
+        color: Cartoon.yellow,
+        text: L10n.of(context).gameTimeout(playerName),
+        scale: _s,
       ),
     );
   }
@@ -1049,38 +989,12 @@ class _GameScreenState extends State<GameScreen> {
       bottom: 240,
       left: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFE4E4),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFF6B6B)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8 * _s,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.person_off, color: Color(0xFFCC4444)),
-            SizedBox(width: 8 * _s),
-            Expanded(
-              child: Text(
-                reason == 'timeout'
-                    ? L10n.of(context).gameDesertionTimeout(playerName)
-                    : L10n.of(context).gameDesertionLeave(playerName),
-                style: TextStyle(
-                  color: Color(0xFFCC4444),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14 * _ts,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: GameNoticeBar(
+        icon: Icons.person_off_rounded,
+        text: reason == 'timeout'
+            ? L10n.of(context).gameDesertionTimeout(playerName)
+            : L10n.of(context).gameDesertionLeave(playerName),
+        scale: _s,
       ),
     );
   }
@@ -1984,11 +1898,20 @@ class _GameScreenState extends State<GameScreen> {
     final kings = state.remainingKings;
     final dragon = state.remainingDragon > 0;
     final phoenix = state.remainingPhoenix > 0;
-    final horizontal = compact ? 6.0 * _s : 8.0 * _s;
+    final horizontal = compact ? 8.0 * _s : 10.0 * _s;
     final vertical = compact ? 3.0 * _s : 4.0 * _s;
-    final spacing = compact ? 5.0 * _s : 8.0 * _s;
-    final iconFont = compact ? 12.0 * _s : 13.0 * _s;
-    final textFont = compact ? 12.0 * _s : 13.0 * _s;
+    final spacing = compact ? 6.0 * _s : 9.0 * _s;
+    final iconFont = compact ? 13.0 * _s : 14.0 * _s;
+    final textFont = compact ? 13.0 * _s : 15.0 * _s;
+    final sub = Cartoon.ink.withValues(alpha: 0.55);
+    Widget mark(bool alive, Color on) => Text(
+      alive ? '\u25CB' : '\u2715',
+      style: TextStyle(
+        fontSize: 13 * _ts,
+        fontWeight: FontWeight.w900,
+        color: alive ? on : Cartoon.ink.withValues(alpha: 0.25),
+      ),
+    );
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -1997,69 +1920,27 @@ class _GameScreenState extends State<GameScreen> {
           horizontal: horizontal,
           vertical: vertical,
         ),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F4F0),
-          borderRadius: BorderRadius.circular(8 * _s),
-          border: Border.all(color: const Color(0xFFE6DCE8)),
-        ),
+        decoration: gamePillDecoration(radius: 14 * _s),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'A',
-              style: TextStyle(
-                fontSize: textFont,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF5A4038),
-              ),
-            ),
+            Text('A', style: Cartoon.text(size: textFont)),
             Text(
               ':$aces',
-              style: TextStyle(
-                fontSize: textFont,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF8A7A6A),
-              ),
+              style: Cartoon.text(size: textFont, color: sub),
             ),
             SizedBox(width: spacing),
-            Text(
-              'K',
-              style: TextStyle(
-                fontSize: textFont,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF5A4038),
-              ),
-            ),
+            Text('K', style: Cartoon.text(size: textFont)),
             Text(
               ':$kings',
-              style: TextStyle(
-                fontSize: textFont,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF8A7A6A),
-              ),
+              style: Cartoon.text(size: textFont, color: sub),
             ),
             SizedBox(width: spacing),
             Text('\u{1F409}', style: TextStyle(fontSize: iconFont)),
-            Text(
-              dragon ? '\u25CB' : '\u2715',
-              style: TextStyle(
-                fontSize: 12 * _ts,
-                color: dragon
-                    ? const Color(0xFF4A90D9)
-                    : const Color(0xFFCCC0B8),
-              ),
-            ),
+            mark(dragon, Cartoon.blue),
             SizedBox(width: compact ? 4 * _s : 6 * _s),
             Text('\u{1F426}', style: TextStyle(fontSize: iconFont)),
-            Text(
-              phoenix ? '\u25CB' : '\u2715',
-              style: TextStyle(
-                fontSize: 12 * _ts,
-                color: phoenix
-                    ? const Color(0xFFD4A030)
-                    : const Color(0xFFCCC0B8),
-              ),
-            ),
+            mark(phoenix, Cartoon.orangeDeep),
           ],
         ),
       ),
@@ -2074,75 +1955,59 @@ class _GameScreenState extends State<GameScreen> {
     final enemyScore = myTeam == 'A' ? teamB : teamA;
     final myLeading = myScore > enemyScore;
     final enemyLeading = enemyScore > myScore;
-    const myColor = Color(0xFF4A90D9);
-    const enemyColor = Color(0xFFD24B4B);
+    final dim = Cartoon.ink.withValues(alpha: 0.5);
 
-    return GestureDetector(
+    return CartoonPressable(
+      scale: 0.94,
       onTap: () => _showScoreHistoryDialog(state),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12 * _s, vertical: 5 * _s),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F4F0),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE6DCE8)),
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 14 * _s, vertical: 4 * _s),
+        decoration: gamePillDecoration(),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               myTeam,
-              style: TextStyle(
-                fontSize: 10 * _ts,
-                fontWeight: FontWeight.bold,
-                color: myLeading ? myColor : const Color(0xFF8A7A72),
+              style: Cartoon.text(
+                size: 12 * _ts,
+                color: myLeading ? Cartoon.blue : dim,
               ),
             ),
-            SizedBox(width: 3 * _s),
+            SizedBox(width: 4 * _s),
             Text(
               '$myScore',
-              style: TextStyle(
-                fontSize: 14 * _ts,
-                fontWeight: FontWeight.bold,
-                color: myLeading ? myColor : const Color(0xFF5A4038),
+              style: Cartoon.text(
+                size: 19 * _ts,
+                color: myLeading ? Cartoon.blue : Cartoon.ink,
               ),
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 6 * _s),
               child: Text(
                 ':',
-                style: TextStyle(
-                  fontSize: 14 * _ts,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF8A7A72),
-                ),
+                style: Cartoon.text(size: 17 * _ts, color: dim),
               ),
             ),
             Text(
               '$enemyScore',
-              style: TextStyle(
-                fontSize: 14 * _ts,
-                fontWeight: FontWeight.bold,
-                color: enemyLeading ? enemyColor : const Color(0xFF5A4038),
+              style: Cartoon.text(
+                size: 19 * _ts,
+                color: enemyLeading ? Cartoon.red : Cartoon.ink,
               ),
             ),
-            SizedBox(width: 3 * _s),
+            SizedBox(width: 4 * _s),
             Text(
               myTeam == 'A' ? 'B' : 'A',
-              style: TextStyle(
-                fontSize: 10 * _ts,
-                fontWeight: FontWeight.bold,
-                color: enemyLeading ? enemyColor : const Color(0xFF8A7A72),
+              style: Cartoon.text(
+                size: 12 * _ts,
+                color: enemyLeading ? Cartoon.red : dim,
               ),
             ),
             // The finish line moved into the score-history dialog: next to the
             // running score it read as a fraction ("25 / 1000") rather than a
             // goal, and this bar is the one thing always on screen.
-            SizedBox(width: 4 * _s),
-            Icon(
-              Icons.leaderboard_outlined,
-              size: 12 * _s,
-              color: const Color(0xFF8A7A72),
-            ),
+            SizedBox(width: 6 * _s),
+            Icon(Icons.leaderboard_rounded, size: 15 * _s, color: dim),
           ],
         ),
       ),
@@ -2406,25 +2271,14 @@ class _GameScreenState extends State<GameScreen> {
     final isMyTurn = state.isMyTurn;
     return Container(
       padding: EdgeInsets.all(10 * _s),
+      // 내 차례엔 노란 바탕과 두꺼운 윗줄, 아니면 크림 바탕. 번지는 그림자 대신
+      // 윗줄 하나로만 구분한다.
       decoration: BoxDecoration(
-        color: isMyTurn
-            ? const Color(0xFFFFF8E1)
-            : Colors.white.withValues(alpha: 0.95),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: isMyTurn
-                ? const Color(0xFFFFD54F).withValues(alpha: 0.4)
-                : Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10 * _s,
-            offset: const Offset(0, -4),
-          ),
-        ],
-        border: isMyTurn
-            ? const Border(
-                top: BorderSide(color: Color(0xFFFFCA28), width: 2.5),
-              )
-            : null,
+        color: isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+        border: Border(
+          top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),
+        ),
       ),
       child: Column(
         children: [
@@ -2433,54 +2287,40 @@ class _GameScreenState extends State<GameScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                margin: EdgeInsets.only(right: 4 * _s),
-                padding: EdgeInsets.symmetric(horizontal: 3 * _s, vertical: 1),
+                margin: EdgeInsets.only(right: 6 * _s),
+                padding: EdgeInsets.symmetric(horizontal: 6 * _s, vertical: 1),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE3F0FF),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: const Color(0xFF4A90D9),
-                    width: 0.5 * _s,
-                  ),
+                  color: Cartoon.blue,
+                  borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(
                   state.myTeam,
-                  style: TextStyle(
-                    fontSize: 8 * _ts,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF4A90D9),
-                  ),
+                  style: Cartoon.text(size: 11 * _ts, color: Colors.white),
                 ),
               ),
               GestureDetector(
                 onTap: () => _showPlayerProfileDialog(game.playerName, game),
                 child: Text(
                   game.playerName,
-                  style: TextStyle(
-                    fontSize: 12 * _ts,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF5A4038),
-                  ),
+                  style: Cartoon.userText(size: 14 * _ts),
                 ),
               ),
               if (isMyTurn) ...[
                 SizedBox(width: 6 * _s),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 8 * _s,
-                    vertical: 3 * _s,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF2B3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE6C86A)),
-                  ),
-                  child: Text(
-                    L10n.of(context).gameMyTurn,
-                    style: TextStyle(
-                      fontSize: 11 * _ts,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF5A4038),
+                CartoonPulse(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10 * _s,
+                      vertical: 2 * _s,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Cartoon.orange,
+                      borderRadius: BorderRadius.circular(99),
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
+                    ),
+                    child: Text(
+                      L10n.of(context).gameMyTurn,
+                      style: Cartoon.text(size: 13 * _ts, color: Colors.white),
                     ),
                   ),
                 ),
@@ -2503,28 +2343,21 @@ class _GameScreenState extends State<GameScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
+                      color: Cartoon.yellow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFB74D)),
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           '${game.myTimeoutCount}/3',
-                          style: TextStyle(
-                            fontSize: 12 * _ts,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFE65100),
-                          ),
+                          style: Cartoon.text(size: 13 * _ts),
                         ),
                         SizedBox(width: 4 * _s),
                         Text(
                           L10n.of(context).gameNotAfk,
-                          style: TextStyle(
-                            fontSize: 11 * _ts,
-                            color: Color(0xFFE65100),
-                          ),
+                          style: Cartoon.text(size: 12 * _ts),
                         ),
                       ],
                     ),
@@ -2548,52 +2381,32 @@ class _GameScreenState extends State<GameScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton(
-                onPressed:
-                    (state.phase == 'playing' &&
+              gameButton(
+                L10n.of(context).gamePlay,
+                (state.phase == 'playing' &&
                         _selectedCards.isNotEmpty &&
                         !state.dragonPending &&
                         (state.isMyTurn ||
                             _isBombCombo(_selectedCards.toList())))
                     ? _playCards
                     : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDAF3E1),
-                  foregroundColor: const Color(0xFF2F5A40),
-                  disabledBackgroundColor: const Color(0xFFCAC3BF),
-                  disabledForegroundColor: const Color(0xFF7A6E68),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(L10n.of(context).gamePlay),
+                color: Cartoon.green,
+                height: 50,
+                size: 20,
+                hPad: 30,
               ),
-              SizedBox(width: 12 * _s),
-              ElevatedButton(
-                onPressed:
-                    (state.phase == 'playing' &&
+              SizedBox(width: 14 * _s),
+              gameButton(
+                L10n.of(context).gamePass,
+                (state.phase == 'playing' &&
                         state.isMyTurn &&
                         state.currentTrick.isNotEmpty)
                     ? _passTurn
                     : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3EDE8),
-                  foregroundColor: const Color(0xFF5A4E48),
-                  disabledBackgroundColor: const Color(0xFFCFC7C2),
-                  disabledForegroundColor: const Color(0xFF7D736E),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(L10n.of(context).gamePass),
+                color: const Color(0xFFB9B1A8),
+                height: 50,
+                size: 20,
+                hPad: 30,
               ),
             ],
           ),
@@ -2604,19 +2417,9 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildLargeTichuDialog(GameService game) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24 * _s),
+      margin: EdgeInsets.symmetric(horizontal: 20 * _s),
       padding: EdgeInsets.symmetric(horizontal: 16 * _s, vertical: 12 * _s),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2624,33 +2427,26 @@ class _GameScreenState extends State<GameScreen> {
           Flexible(
             child: Text(
               L10n.of(context).gameLargeTichuQuestion,
-              style: TextStyle(fontSize: 16 * _ts, fontWeight: FontWeight.bold),
+              style: Cartoon.text(size: 18 * _ts, height: 1.2),
             ),
           ),
           SizedBox(width: 12 * _s),
-          ElevatedButton(
-            onPressed: () => game.declareLargeTichu(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700),
-              textStyle: TextStyle(fontSize: 14 * _ts),
-              padding: EdgeInsets.symmetric(
-                horizontal: 16 * _s,
-                vertical: 8 * _s,
-              ),
-            ),
-            child: Text(L10n.of(context).gameDeclare),
+          gameButton(
+            L10n.of(context).gameDeclare,
+            () => game.declareLargeTichu(),
+            color: Cartoon.orange,
+            height: 42,
+            size: 17,
+            hPad: 14,
           ),
-          SizedBox(width: 12 * _s),
-          OutlinedButton(
-            onPressed: () => game.passLargeTichu(),
-            style: OutlinedButton.styleFrom(
-              textStyle: TextStyle(fontSize: 14 * _ts),
-              padding: EdgeInsets.symmetric(
-                horizontal: 16 * _s,
-                vertical: 8 * _s,
-              ),
-            ),
-            child: Text(L10n.of(context).gamePass),
+          SizedBox(width: 8 * _s),
+          gameButton(
+            L10n.of(context).gamePass,
+            () => game.passLargeTichu(),
+            color: const Color(0xFFB9B1A8),
+            height: 42,
+            size: 17,
+            hPad: 14,
           ),
         ],
       ),
@@ -2813,43 +2609,48 @@ class _GameScreenState extends State<GameScreen> {
       padding: const EdgeInsets.only(right: 12, bottom: 4),
       child: Align(
         alignment: Alignment.centerRight,
-        child: ElevatedButton(
-          onPressed: () {
+        child: gameButton(
+          L10n.of(context).gameSmallTichuDeclare,
+          () {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text(L10n.of(context).gameSmallTichuConfirmTitle),
-                content: Text(L10n.of(context).gameSmallTichuConfirmContent),
+                backgroundColor: Cartoon.paper,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                  side: const BorderSide(color: Cartoon.ink, width: 2.5),
+                ),
+                title: Text(
+                  L10n.of(context).gameSmallTichuConfirmTitle,
+                  style: Cartoon.text(size: 22),
+                ),
+                content: Text(
+                  L10n.of(context).gameSmallTichuConfirmContent,
+                  style: Cartoon.text(size: 16.5, height: 1.4),
+                ),
+                actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(),
-                    child: Text(L10n.of(context).gameCancel),
+                    style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+                    child: Text(
+                      L10n.of(context).gameCancel,
+                      style: Cartoon.text(size: 17),
+                    ),
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      game.declareSmallTichu();
-                    },
-                    child: Text(L10n.of(context).gameDeclareButton),
-                  ),
+                  gameButton(L10n.of(context).gameDeclareButton, () {
+                    Navigator.of(ctx).pop();
+                    game.declareSmallTichu();
+                  }),
                 ],
               ),
             );
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFFE4B5),
-            foregroundColor: const Color(0xFF8B6914),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-          child: Text(
-            L10n.of(context).gameSmallTichuDeclare,
-            style: TextStyle(fontSize: 15 * _ts, fontWeight: FontWeight.bold),
-          ),
+          color: Cartoon.yellow,
+          height: 40,
+          size: 17,
+          hPad: 16,
         ),
       ),
     );

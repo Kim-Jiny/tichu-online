@@ -200,9 +200,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (mounted) setState(() {});
   });
 
-  // 배너 광고
-  BannerAd? _bannerAd;
-  bool _bannerAdLoaded = false;
+  // 배너 광고 (대기방 전용 — 로비 목록 화면에는 배너를 달지 않는다)
   BannerAd? _roomBannerAd;
   bool _roomBannerLoaded = false;
 
@@ -220,28 +218,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) precacheCommonImages(context);
     });
-    // AdMob has no web implementation at all, so this can only fail there.
-    // Leaving it to fail was working — the load callbacks null the banner
-    // out — but it is a plugin exception per screen to get to the same
-    // place. Web ads would be AdSense / H5 Games Ads, a separate product.
-    _bannerAd = kIsWeb
-        ? null
-        : AdService.createBannerAd(
-            AdService.lobbyBannerId,
-            onAdLoaded: (_) {
-              if (mounted) setState(() => _bannerAdLoaded = true);
-            },
-            onAdFailedToLoad: (ad, error) {
-              ad.dispose();
-              if (mounted) {
-                setState(() {
-                  _bannerAd = null;
-                  _bannerAdLoaded = false;
-                });
-              }
-            },
-          );
-    _bannerAd?.load();
     // AdMob has no web implementation at all, so this can only fail there.
     // Leaving it to fail was working — the load callbacks null the banner
     // out — but it is a plugin exception per screen to get to the same
@@ -317,7 +293,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _seatChat.dispose();
     _chatController.dispose();
     _chatScrollController.dispose();
-    _bannerAd?.dispose();
     _roomBannerAd?.dispose();
     super.dispose();
   }
@@ -2024,28 +1999,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
 
-    // Single shared banner-ad slot (same tree position for both orientations)
-    // so the one BannerAd is never attached to two AdWidgets at once — which
-    // throws "AdWidget is already in the Widget tree" during an orientation /
-    // rebuild transition.
     return Column(
       children: [
         Expanded(child: body),
-        if (_bannerAd != null && _bannerAdLoaded)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Center(
-              child: SizedBox(
-                height: _bannerAd!.size.height.toDouble(),
-                width: _bannerAd!.size.width.toDouble(),
-                child: AdWidget(
-                  ad: _bannerAd!,
-                  key: ValueKey(_bannerAd!.hashCode),
-                ),
-              ),
-            ),
-          ),
-        // 탭은 맨 아래, 광고는 그 위.
         if (!isLandscape) _buildLobbyBottomNav(game),
       ],
     );

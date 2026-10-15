@@ -638,93 +638,97 @@ class _LobbyScreenState extends State<LobbyScreen> {
             final canOfferMidJoin = !gs.isRankedRoom;
             return SizedBox(
               width: 320,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _settingsSectionLabel(l10n.lobbyRoomName),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: controller,
-                    maxLength: 20,
-                    style: Cartoon.userText(size: 16),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      // The 0/20 counter added a whole line of chrome under a
-                      // field nobody is at risk of overrunning.
-                      counterText: '',
-                      hintText: l10n.lobbyEnterRoomTitle,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 13,
-                      ),
-                    ),
-                  ),
-                  if (canOfferMidJoin) ...[
-                    const SizedBox(height: 18),
-                    _settingsSectionLabel(l10n.lobbyRoomRules),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _settingsSectionLabel(l10n.lobbyRoomName),
                     const SizedBox(height: 6),
-                    // Applied on the spot rather than on "변경", which only
-                    // commits the name. A switch that silently needed a second
-                    // button to take effect is the kind of thing you find out
-                    // about after the game has already started — so the row
-                    // says as much, right where the switch is.
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
-                      decoration: BoxDecoration(
-                        color: gs.roomAllowMidGameJoin
-                            ? const Color(0xFFE3F4E8)
-                            : Cartoon.cream,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          Image.asset(
-                            'assets/icons/allowBotReplacement.webp',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.midJoinCreateOption,
-                                  style: Cartoon.text(size: 16),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  l10n.midJoinCreateOptionHint,
-                                  style: Cartoon.text(
-                                    size: 12.5,
-                                    color: Cartoon.ink.withValues(alpha: 0.65),
-                                    height: 1.35,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  l10n.lobbyAppliesImmediately,
-                                  style: Cartoon.text(
-                                    size: 12,
-                                    color: Cartoon.orangeDeep,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            activeThumbColor: Colors.white,
-                            activeTrackColor: Cartoon.green,
-                            value: gs.roomAllowMidGameJoin,
-                            onChanged: (v) => gs.setMidGameJoin(v),
-                          ),
-                        ],
+                    TextField(
+                      controller: controller,
+                      maxLength: 20,
+                      style: Cartoon.userText(size: 16),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        // The 0/20 counter added a whole line of chrome under a
+                        // field nobody is at risk of overrunning.
+                        counterText: '',
+                        hintText: l10n.lobbyEnterRoomTitle,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 13,
+                        ),
                       ),
                     ),
+                    if (canOfferMidJoin) ...[
+                      const SizedBox(height: 18),
+                      _settingsSectionLabel(l10n.lobbyRoomRules),
+                      const SizedBox(height: 6),
+                      // Applied on the spot rather than on "변경", which only
+                      // commits the name. A switch that silently needed a second
+                      // button to take effect is the kind of thing you find out
+                      // about after the game has already started — so the row
+                      // says as much, right where the switch is.
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+                        decoration: BoxDecoration(
+                          color: gs.roomAllowMidGameJoin
+                              ? const Color(0xFFE3F4E8)
+                              : Cartoon.cream,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              'assets/icons/allowBotReplacement.webp',
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.midJoinCreateOption,
+                                    style: Cartoon.text(size: 16),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    l10n.midJoinCreateOptionHint,
+                                    style: Cartoon.text(
+                                      size: 12.5,
+                                      color: Cartoon.ink.withValues(
+                                        alpha: 0.65,
+                                      ),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    l10n.lobbyAppliesImmediately,
+                                    style: Cartoon.text(
+                                      size: 12,
+                                      color: Cartoon.orangeDeep,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              activeThumbColor: Colors.white,
+                              activeTrackColor: Cartoon.green,
+                              value: gs.roomAllowMidGameJoin,
+                              onChanged: (v) => gs.setMidGameJoin(v),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
           },

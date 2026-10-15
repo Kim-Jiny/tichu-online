@@ -708,7 +708,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: Cartoon.text(size: fontSize),
+      style: Cartoon.userText(size: fontSize),
       decoration: Cartoon.inputDecoration(hint: hint, icon: icon),
     );
   }

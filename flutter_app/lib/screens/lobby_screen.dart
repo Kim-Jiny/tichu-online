@@ -2864,7 +2864,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     Expanded(
                                       child: Text(
                                         room.name,
-                                        style: Cartoon.text(size: 19),
+                                        // 방 이름은 사용자가 정한 글자라 Jua 서브셋에
+                                        // 없는 글자가 올 수 있다 — 기본 글꼴로.
+                                        style: Cartoon.userText(size: 18),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),

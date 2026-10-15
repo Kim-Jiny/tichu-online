@@ -17,6 +17,11 @@ class Cartoon {
 
   static const String font = 'Jua';
 
+  /// Jua 는 앱 문자열 글자만 담은 서브셋이라, 없는 글자가 나오면 이쪽으로 넘어간다.
+  /// (웹은 Pretendard, 네이티브는 이름이 없으면 시스템 글꼴.) 사용자가 입력한
+  /// 글자(방 이름, 닉네임, 입력창)에는 Jua 를 아예 쓰지 않는다.
+  static const List<String> fontFallback = ['Pretendard'];
+
   /// 모든 테두리와 단색 그림자의 색.
   static const Color ink = Color(0xFF3B2A20);
 
@@ -47,6 +52,7 @@ class Cartoon {
   }) {
     TextStyle style({required bool outline}) => TextStyle(
       fontFamily: font,
+      fontFamilyFallback: fontFallback,
       fontSize: size,
       letterSpacing: letterSpacing,
       height: 1.1,

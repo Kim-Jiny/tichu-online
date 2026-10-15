@@ -16,6 +16,7 @@ import '../models/game_state.dart';
 import '../models/player.dart';
 import '../models/tichu_fx_detector.dart';
 import '../widgets/tichu_effects.dart';
+import '../theme/cartoon.dart';
 import '../widgets/tichu_fx_events.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/connection_overlay.dart';
@@ -154,49 +155,9 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  Widget _buildRecoveryLoading({
-    required String title,
-    String? subtitle,
-    Color spinnerColor = Colors.white,
-  }) {
+  Widget _buildRecoveryLoading({required String title, String? subtitle}) {
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 320),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: spinnerColor),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (subtitle != null && subtitle.trim().isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+      child: CartoonLoadingCard(title: title, subtitle: subtitle),
     );
   }
 

@@ -673,3 +673,196 @@ class _ConfettiPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ConfettiPainter old) => old.t != t;
 }
+
+/// 통통 튀는 마스코트 로더. 점프할 때 늘어나고 착지할 때 눌리며, 바닥 그림자가
+/// 높이에 따라 작아졌다 커진다. 밋밋한 회전 스피너 대신 "일하는 중" 을 보여 준다.
+class CartoonLoader extends StatefulWidget {
+  const CartoonLoader({super.key, this.size = 84});
+
+  final double size;
+
+  @override
+  State<CartoonLoader> createState() => _CartoonLoaderState();
+}
+
+class _CartoonLoaderState extends State<CartoonLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.size;
+    final jump = s * 0.4;
+    return SizedBox(
+      width: s * 1.5,
+      height: s + jump * 0.4,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          // 0→1→0 : 땅에서 올라갔다 내려온다.
+          final h = math.sin(_c.value * math.pi);
+          final airborne = h.clamp(0.0, 1.0);
+          // 착지 직전·직후에 납작하게(squash), 공중에선 길쭉하게(stretch).
+          final squash = (1 - airborne) * (1 - airborne);
+          final scaleX = 1.0 + 0.14 * squash - 0.05 * airborne;
+          final scaleY = 1.0 - 0.14 * squash + 0.08 * airborne;
+          return Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              // 바닥 그림자
+              Container(
+                width: s * (0.7 - 0.22 * airborne),
+                height: s * 0.1,
+                decoration: BoxDecoration(
+                  color: Cartoon.ink.withValues(alpha: 0.28 - 0.14 * airborne),
+                  borderRadius: BorderRadius.circular(s),
+                ),
+              ),
+              Positioned(
+                bottom: s * 0.05 + jump * airborne,
+                child: Transform(
+                  alignment: Alignment.bottomCenter,
+                  transform: Matrix4.diagonal3Values(scaleX, scaleY, 1),
+                  child: Image.asset(
+                    'assets/dragonIcon.webp',
+                    width: s,
+                    height: s,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// "연결 중" 뒤에 점 세 개가 차례로 튄다.
+class CartoonDotsText extends StatefulWidget {
+  const CartoonDotsText(this.text, {super.key, this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  State<CartoonDotsText> createState() => _CartoonDotsTextState();
+}
+
+class _CartoonDotsTextState extends State<CartoonDotsText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = widget.style ?? Cartoon.text(size: 19);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Text(widget.text, style: style, textAlign: TextAlign.center),
+        ),
+        const SizedBox(width: 3),
+        AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < 3; i++)
+                Padding(
+                  padding: const EdgeInsets.only(left: 3, bottom: 4),
+                  child: Transform.translate(
+                    offset: Offset(
+                      0,
+                      -7 *
+                          math.max(
+                            0.0,
+                            math.sin((_c.value * 2 * math.pi) - i * 0.9),
+                          ),
+                    ),
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: style.color ?? Cartoon.ink,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 연결·로그인 중 화면에 올리는 안내 카드: 튀는 마스코트 + 제목(점이 튐) + 부제.
+class CartoonLoadingCard extends StatelessWidget {
+  const CartoonLoadingCard({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.action,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return CartoonEntrance(
+      from: const Offset(0, 24),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 320),
+        margin: const EdgeInsets.symmetric(horizontal: 28),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+        decoration: Cartoon.panelDecoration(radius: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CartoonLoader(),
+            const SizedBox(height: 10),
+            CartoonDotsText(title),
+            if (subtitle != null && subtitle!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: Cartoon.userText(
+                  size: 13,
+                  weight: FontWeight.w500,
+                  color: Cartoon.ink.withValues(alpha: 0.65),
+                  height: 1.4,
+                ),
+              ),
+            ],
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ],
+        ),
+      ),
+    );
+  }
+}

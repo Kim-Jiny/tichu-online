@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../services/network_service.dart';
 import '../services/session_service.dart';
+import '../theme/cartoon.dart';
 
 class ConnectionOverlay extends StatefulWidget {
   final Widget child;
@@ -206,27 +207,8 @@ class _ConnectionOverlayState extends State<ConnectionOverlay>
           child: Container(
             color: Colors.black54,
             alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 3,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  L10n.of(context).serviceRestoreConnecting,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            child: CartoonLoadingCard(
+              title: L10n.of(context).serviceRestoreConnecting,
             ),
           ),
         ),

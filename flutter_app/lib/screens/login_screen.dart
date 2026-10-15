@@ -812,56 +812,31 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       color: Colors.black54,
       child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: Color(0xFFF28C26)),
-              const SizedBox(height: 20),
-              Text(
-                session.isRestoring
-                    ? l10n.loginAutoLoggingIn
-                    : l10n.loginLoggingIn,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                session.isRestoring
-                    ? localizeRestorePhase(session, l10n)
-                    : l10n.loginVerifyingAccount,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF8A746A),
-                  height: 1.4,
-                ),
-              ),
-              // Only for a social popup, and only on the web: closing the
-              // provider's window does not reliably reject the pending future,
-              // which used to leave this spinner up with no way back to the
-              // login form. Session restore is not offered a cancel — it ends
-              // on its own.
-              if (kIsWeb && !session.isRestoring) ...[
-                const SizedBox(height: 18),
-                TextButton(
+        child: CartoonLoadingCard(
+          title: session.isRestoring
+              ? l10n.loginAutoLoggingIn
+              : l10n.loginLoggingIn,
+          subtitle: session.isRestoring
+              ? localizeRestorePhase(session, l10n)
+              : l10n.loginVerifyingAccount,
+          // Only for a social popup, and only on the web: closing the
+          // provider's window does not reliably reject the pending future,
+          // which used to leave this spinner up with no way back to the
+          // login form. Session restore is not offered a cancel — it ends
+          // on its own.
+          action: (kIsWeb && !session.isRestoring)
+              ? CartoonButton(
+                  expand: false,
+                  height: 44,
+                  radius: 15,
+                  color: const Color(0xFFB9B0A8),
                   onPressed: _cancelSocialSignIn,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF8A746A),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: CartoonButton.label(l10n.commonCancel, size: 16),
                   ),
-                  child: Text(l10n.commonCancel),
-                ),
-              ],
-            ],
-          ),
+                )
+              : null,
         ),
       ),
     );

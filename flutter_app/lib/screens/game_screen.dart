@@ -3526,18 +3526,18 @@ class _GameScreenState extends State<GameScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const horizontalMargin = 16.0;
+        const horizontalMargin = 4.0;
         final availableWidth = constraints.maxWidth - (horizontalMargin * 2);
         final perRow = cards.length <= 6
             ? cards.length
             : (cards.length / 2).ceil();
         final dense = cards.length >= 13;
-        final cardPadding = dense ? 2.0 : 3.0;
+        final cardPadding = dense ? 1.5 : 2.5;
         final totalPadding = perRow * cardPadding * 2;
         // Scaled with the board — these were the only card sizes left in
         // absolute pixels, so on a large screen the hand stayed phone-sized
         // while the table around it grew.
-        final maxWidth = (dense ? 46.0 : 50.0) * _s;
+        final maxWidth = (dense ? 54.0 : 58.0) * _s;
         final minWidth = (dense ? 34.0 : 38.0) * _s;
         var cardWidth = ((availableWidth - totalPadding) / perRow).clamp(
           minWidth,
@@ -3545,8 +3545,8 @@ class _GameScreenState extends State<GameScreen> {
         );
         final ratio = dense ? 1.35 : 1.4;
         var cardHeight = (cardWidth * ratio).clamp(
-          (dense ? 48.0 : 53.0) * _s,
-          (dense ? 64.0 : 70.0) * _s,
+          (dense ? 50.0 : 55.0) * _s,
+          (dense ? 76.0 : 82.0) * _s,
         );
 
         // Nothing above was looking at how much *height* the hand takes. Width

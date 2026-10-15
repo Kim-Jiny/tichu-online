@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:ui' show FontFeature, ImageFilter;
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -267,22 +267,21 @@ class _GameScreenState extends State<GameScreen> {
       barrierDismissible: false,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: Cartoon.paper,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(26),
+            side: const BorderSide(color: Cartoon.ink, width: 2.5),
           ),
           titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
           title: Row(
             children: [
-              const Text('🐦', style: TextStyle(fontSize: 20)),
+              const Text('🐦', style: TextStyle(fontSize: 26)),
               const SizedBox(width: 8),
               Text(
                 L10n.of(context).gameSparrowCall,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3E312A),
-                ),
+                style: Cartoon.text(size: 22),
               ),
             ],
           ),
@@ -298,50 +297,35 @@ class _GameScreenState extends State<GameScreen> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7F1EC),
+                    color: Cartoon.cream,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE7DBD4)),
                   ),
                   child: Text(
                     L10n.of(context).gameSelectNumberToCall,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6A5A52),
-                    ),
+                    style: Cartoon.text(size: 15),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _buildBirdCallRankRow(ctx, lowRanks),
-                const SizedBox(height: 8),
                 _buildBirdCallRankRow(ctx, highRanks),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      _birdCallDialogOpen = false;
-                      Navigator.pop(ctx);
-                      context.read<GameService>().playCards(
-                        _selectedCards.toList(),
-                        callRank: 'none',
-                      );
-                      setState(() => _selectedCards.clear());
-                    },
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      side: const BorderSide(color: Color(0xFFD8CCC5)),
-                      foregroundColor: const Color(0xFF6A5A52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.remove_circle_outline, size: 18),
-                    label: Text(L10n.of(context).gameNoCall),
-                  ),
-                ),
                 const SizedBox(height: 6),
+                gameButton(
+                  L10n.of(context).gameNoCall,
+                  () {
+                    _birdCallDialogOpen = false;
+                    Navigator.pop(ctx);
+                    context.read<GameService>().playCards(
+                      _selectedCards.toList(),
+                      callRank: 'none',
+                    );
+                    setState(() => _selectedCards.clear());
+                  },
+                  color: const Color(0xFFB9B1A8),
+                  height: 46,
+                  size: 17,
+                ),
+                const SizedBox(height: 2),
                 Center(
                   child: TextButton(
                     onPressed: () {
@@ -349,10 +333,11 @@ class _GameScreenState extends State<GameScreen> {
                       Navigator.pop(ctx);
                       setState(() => _selectedCards.clear());
                     },
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF6A5A52),
+                    style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+                    child: Text(
+                      L10n.of(context).gameCancelPickAnother,
+                      style: Cartoon.text(size: 16),
                     ),
-                    child: Text(L10n.of(context).gameCancelPickAnother),
                   ),
                 ),
               ],
@@ -368,9 +353,10 @@ class _GameScreenState extends State<GameScreen> {
       children: ranks.map((rank) {
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: FilledButton(
-              onPressed: () {
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: gameButton(
+              rank,
+              () {
                 _birdCallDialogOpen = false;
                 Navigator.pop(ctx);
                 context.read<GameService>().playCards(
@@ -379,25 +365,11 @@ class _GameScreenState extends State<GameScreen> {
                 );
                 setState(() => _selectedCards.clear());
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFE6F1FF),
-                foregroundColor: const Color(0xFF355D89),
-                minimumSize: const Size(0, 42),
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                rank,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF355D89),
-                ),
-              ),
+              color: Cartoon.blue,
+              height: 42,
+              size: 17,
+              expand: true,
+              hPad: 0,
             ),
           ),
         );
@@ -923,7 +895,16 @@ class _GameScreenState extends State<GameScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(L10n.of(context).gameLeaveTitle),
+        backgroundColor: Cartoon.paper,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        ),
+        title: Text(
+          L10n.of(context).gameLeaveTitle,
+          style: Cartoon.text(size: 22),
+        ),
         // In a mid-game-join room leaving does not end the match — a bot
         // takes the seat — but it is still recorded, so the warning has to say
         // which of the two is about to happen.
@@ -933,20 +914,22 @@ class _GameScreenState extends State<GameScreen> {
                   context,
                 ).midLeaveConfirmBody(kMidGameJoinCooldownMinutes)
               : L10n.of(context).gameLeaveConfirm,
+          style: Cartoon.text(size: 16.5, height: 1.4),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(L10n.of(context).gameCancel),
+            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+            child: Text(
+              L10n.of(context).gameCancel,
+              style: Cartoon.text(size: 17),
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              game.leaveGame();
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(L10n.of(context).gameLeave),
-          ),
+          gameButton(L10n.of(context).gameLeave, () {
+            Navigator.pop(ctx);
+            game.leaveGame();
+          }, color: Cartoon.red),
         ],
       ),
     );
@@ -2674,18 +2657,8 @@ class _GameScreenState extends State<GameScreen> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 3),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -2697,10 +2670,7 @@ class _GameScreenState extends State<GameScreen> {
                   selectedCard != null
                       ? L10n.of(context).gameSelectRecipient
                       : L10n.of(context).gameSelectExchangeCard(assignedCount),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Cartoon.text(size: 16),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -2722,52 +2692,40 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     child: Text(
                       L10n.of(context).gameReset,
-                      style: const TextStyle(fontSize: 12),
+                      style: Cartoon.text(size: 14),
                     ),
                   ),
                 ),
               ],
               const SizedBox(width: 6),
-              SizedBox(
-                height: 28,
-                child: ElevatedButton(
-                  onPressed: assignedCount == 3
-                      ? () {
-                          _exchangeGiven
-                            ..clear()
-                            ..addAll(_exchangeAssignments);
-                          _exchangeSummaryShown = false;
-                          game.exchangeCards(
-                            _exchangeAssignments['left']!,
-                            _exchangeAssignments['partner']!,
-                            _exchangeAssignments['right']!,
-                          );
-                          setState(() {
-                            _exchangeSubmitted = true;
-                            _exchangeAssignments.clear();
-                            _selectedCards.clear();
-                          });
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFC7E6D0),
-                    foregroundColor: const Color(0xFF3A5A40),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 0,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    L10n.of(context).gameExchangeComplete,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
+              gameButton(
+                L10n.of(context).gameExchangeComplete,
+                assignedCount == 3
+                    ? () {
+                        _exchangeGiven
+                          ..clear()
+                          ..addAll(_exchangeAssignments);
+                        _exchangeSummaryShown = false;
+                        game.exchangeCards(
+                          _exchangeAssignments['left']!,
+                          _exchangeAssignments['partner']!,
+                          _exchangeAssignments['right']!,
+                        );
+                        setState(() {
+                          _exchangeSubmitted = true;
+                          _exchangeAssignments.clear();
+                          _selectedCards.clear();
+                        });
+                      }
+                    : null,
+                color: Cartoon.green,
+                height: 36,
+                size: 15,
+                hPad: 12,
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
@@ -2830,16 +2788,16 @@ class _GameScreenState extends State<GameScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isAssigned
-              ? const Color(0xFFC7E6D0)
+              ? const Color(0xFFCDEFD6)
               : canAssign
-              ? const Color(0xFFE8F4FF)
-              : const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(12),
+              ? const Color(0xFFD6EAFF)
+              : Cartoon.cream,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: canAssign
-                ? const Color(0xFF4D99FF)
-                : const Color(0xFFDDD0CC),
-            width: canAssign ? 2 : 1,
+                ? Cartoon.blue
+                : Cartoon.ink.withValues(alpha: 0.35),
+            width: canAssign ? 2.4 : 1.6,
           ),
         ),
         child: Row(
@@ -2848,19 +2806,17 @@ class _GameScreenState extends State<GameScreen> {
             Flexible(
               child: Text(
                 name,
-                style: TextStyle(
-                  fontSize: 12 * _ts,
-                  fontWeight: FontWeight.bold,
-                  color: isAssigned
-                      ? const Color(0xFF3A5A40)
-                      : const Color(0xFF5A4038),
-                ),
+                style: Cartoon.userText(size: 14 * _ts),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isAssigned) ...[
               SizedBox(width: 4 * _s),
-              Icon(Icons.check_circle, size: 14 * _s, color: Color(0xFF3A5A40)),
+              Icon(
+                Icons.check_circle_rounded,
+                size: 16 * _s,
+                color: Cartoon.green,
+              ),
             ],
           ],
         ),
@@ -2876,30 +2832,36 @@ class _GameScreenState extends State<GameScreen> {
     );
     final leftName = left?.name ?? L10n.of(context).gameLeftPlayer;
     final rightName = right?.name ?? L10n.of(context).gameRightPlayer;
+    Widget pick(String name, String side) => CartoonButton(
+      expand: false,
+      height: 48,
+      color: Cartoon.orange,
+      onPressed: () => game.dragonGive(side),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Cartoon.userText(size: 17, color: Colors.white),
+        ),
+      ),
+    );
     return _buildDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             L10n.of(context).gameDragonQuestion,
-            style: const TextStyle(fontSize: 16),
+            style: Cartoon.text(size: 20, height: 1.3),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 12,
-            runSpacing: 8,
-            children: [
-              ElevatedButton(
-                onPressed: () => game.dragonGive('left'),
-                child: Text(leftName),
-              ),
-              ElevatedButton(
-                onPressed: () => game.dragonGive('right'),
-                child: Text(rightName),
-              ),
-            ],
+            runSpacing: 4,
+            children: [pick(leftName, 'left'), pick(rightName, 'right')],
           ),
         ],
       ),
@@ -2911,9 +2873,9 @@ class _GameScreenState extends State<GameScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF66BB6A)),
+        color: const Color(0xFFD9F3E0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Cartoon.ink, width: 1.8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2921,13 +2883,8 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Text('\u{1F409}', style: TextStyle(fontSize: 20 * _ts)),
           SizedBox(width: 8 * _s),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 14 * _ts,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
-            ),
+          Flexible(
+            child: Text(message, style: Cartoon.text(size: 16 * _ts)),
           ),
         ],
       ),
@@ -2956,30 +2913,36 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Text(
             L10n.of(context).gameSelectCallRank,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: Cartoon.text(size: 20),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6,
+            runSpacing: 2,
             alignment: WrapAlignment.center,
             children: ranks.map((rank) {
-              return ElevatedButton(
-                onPressed: () => game.callRank(rank),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(48, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+              return SizedBox(
+                width: 56,
+                child: gameButton(
+                  rank,
+                  () => game.callRank(rank),
+                  color: Cartoon.blue,
+                  height: 44,
+                  size: 19,
+                  expand: true,
+                  hPad: 0,
                 ),
-                child: Text(rank),
               );
             }).toList(),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: () => game.callRank('none'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(120, 40)),
-            child: Text(L10n.of(context).gameNoCall),
+          const SizedBox(height: 10),
+          gameButton(
+            L10n.of(context).gameNoCall,
+            () => game.callRank('none'),
+            color: const Color(0xFFB9B1A8),
+            height: 44,
+            size: 17,
           ),
         ],
       ),
@@ -3033,31 +2996,26 @@ class _GameScreenState extends State<GameScreen> {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
-              color: Color(0xFF1C1C1E),
-            ),
+            style: Cartoon.text(size: 30, height: 1.1),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           // 총점을 크게 두 칸으로. 결과 화면에서 눈이 먼저 가는 건 누가
           // 몇 점인가지, "총점:" 이라는 글자가 아니다.
           Row(
             children: [
               Expanded(
-                child: _scoreColumn(
-                  l10n.gameScoreUs,
-                  myTotal,
-                  const Color(0xFF007AFF),
-                ),
+                child: _scoreColumn(l10n.gameScoreUs, myTotal, Cartoon.blue),
               ),
-              Container(width: 1, height: 44, color: const Color(0xFFE5E5EA)),
+              Container(
+                width: 1.5,
+                height: 48,
+                color: Cartoon.ink.withValues(alpha: 0.15),
+              ),
               Expanded(
                 child: _scoreColumn(
                   l10n.gameScoreThem,
                   theirTotal,
-                  const Color(0xFFFF3B30),
+                  Cartoon.red,
                 ),
               ),
             ],
@@ -3073,31 +3031,26 @@ class _GameScreenState extends State<GameScreen> {
                 Expanded(
                   child: Text(
                     l10n.gameThisRound.replaceAll(RegExp(r'[:\s]+$'), ''),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF8E8E93),
+                    style: Cartoon.text(
+                      size: 16,
+                      color: Cartoon.ink.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
                 Text(
                   '$myRound',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF007AFF),
-                  ),
+                  style: Cartoon.text(size: 19, color: Cartoon.blue),
                 ),
-                const Text(
+                Text(
                   '  :  ',
-                  style: TextStyle(fontSize: 14, color: Color(0xFFC7C7CC)),
+                  style: Cartoon.text(
+                    size: 16,
+                    color: Cartoon.ink.withValues(alpha: 0.35),
+                  ),
                 ),
                 Text(
                   '$theirRound',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFFFF3B30),
-                  ),
+                  style: Cartoon.text(size: 19, color: Cartoon.red),
                 ),
               ],
             ),
@@ -3112,7 +3065,10 @@ class _GameScreenState extends State<GameScreen> {
           Text(
             isGameEnd ? l10n.gameAutoReturnLobby : l10n.gameAutoNextRound,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93)),
+            style: Cartoon.text(
+              size: 14,
+              color: Cartoon.ink.withValues(alpha: 0.55),
+            ),
           ),
         ],
       ),
@@ -3125,23 +3081,15 @@ class _GameScreenState extends State<GameScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF8E8E93),
+          style: Cartoon.text(
+            size: 15,
+            color: Cartoon.ink.withValues(alpha: 0.6),
           ),
         ),
         const SizedBox(height: 2),
         Text(
           '$score',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -1,
-            color: color,
-            // 자릿수가 달라도 두 칸이 흔들리지 않게.
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+          style: Cartoon.text(size: 44, color: color, height: 1.1),
         ),
       ],
     );
@@ -3149,7 +3097,7 @@ class _GameScreenState extends State<GameScreen> {
 
   /// 머리카락 굵기 구분선. 상자를 또 만들지 않고 영역만 나눈다.
   Widget _dialogHairline() =>
-      Container(height: 0.5, color: const Color(0xFFE5E5EA));
+      Container(height: 1.5, color: Cartoon.ink.withValues(alpha: 0.12));
 
   Widget _buildRankedResult(GameService game) {
     final profile = game.profileFor(game.playerName);
@@ -3172,7 +3120,7 @@ class _GameScreenState extends State<GameScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
+        color: Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -3182,11 +3130,7 @@ class _GameScreenState extends State<GameScreen> {
           const SizedBox(width: 10),
           Text(
             L10n.of(context).gameRankedScore(seasonRating as int),
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1C1C1E),
-            ),
+            style: Cartoon.text(size: 17),
           ),
         ],
       ),
@@ -3232,24 +3176,17 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _rankPill(String label, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 14 * _s, color: color),
+          Icon(icon, size: 16 * _s, color: Cartoon.ink),
           SizedBox(width: 4 * _s),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12 * _ts,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Text(label, style: Cartoon.text(size: 14 * _ts)),
         ],
       ),
     );
@@ -3267,17 +3204,7 @@ class _GameScreenState extends State<GameScreen> {
             margin: EdgeInsets.all(32 * _s),
             padding: EdgeInsets.fromLTRB(24 * _s, 22 * _s, 24 * _s, 18 * _s),
             constraints: const BoxConstraints(maxWidth: 320),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(26),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.16),
-                  blurRadius: 30,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
+            decoration: Cartoon.panelDecoration(radius: 28, shadowOffset: 4),
             child: child,
           ),
         ),

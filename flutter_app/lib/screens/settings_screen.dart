@@ -12,6 +12,7 @@ import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/choice_pill.dart';
+import '../widgets/legal_text_dialog.dart';
 import '../widgets/notice_body.dart';
 import '../widgets/player_profile_header.dart';
 import '../widgets/profile_avatar.dart';
@@ -889,57 +890,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool isTermsOfService = false,
   }) {
     final game = context.read<GameService>();
-    final l10n = L10n.of(context);
     if (content == null || content.isEmpty) {
       // Fetch from server if not loaded yet. Pass the current UI locale so
       // the server returns the matching-language EULA/privacy.
       final locale = context.read<LocaleService>().effectiveLocale.languageCode;
       game.requestAppConfig(locale: locale);
     }
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: Consumer<GameService>(
-            builder: (context, game, _) {
-              final text = isTermsOfService
-                  ? game.eulaContent
-                  : game.privacyPolicy;
-              if (text == null) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (text.isEmpty) {
-                return Center(
-                  child: Text(
-                    l10n.textViewLoadFailed,
-                    style: const TextStyle(color: Color(0xFF9A8E8A)),
-                  ),
-                );
-              }
-              return SingleChildScrollView(
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.6,
-                    color: Color(0xFF5A4038),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
-          ),
-        ],
-      ),
+    showLegalTextDialog(
+      context,
+      title: title,
+      isTermsOfService: isTermsOfService,
     );
   }
 

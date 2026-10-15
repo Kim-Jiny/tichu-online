@@ -633,7 +633,10 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (dialogContext) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: Cartoon.ink, width: 3),
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
           child: Padding(
@@ -886,7 +889,8 @@ class _ShopScreenState extends State<ShopScreen> {
             vertical: 28,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(26),
+            side: const BorderSide(color: Cartoon.ink, width: 3),
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -1780,7 +1784,6 @@ class _ShopScreenState extends State<ShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(L10n.of(context).shopUseConfirmTitle),
         content: Text(L10n.of(context).shopUseConfirmBody(name)),
         actions: [
@@ -1813,7 +1816,6 @@ class _ShopScreenState extends State<ShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(L10n.of(context).shopExtendTitle),
         content: Text(
           L10n.of(
@@ -2822,7 +2824,6 @@ class _ShopScreenState extends State<ShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           extended
               ? L10n.of(context).shopExtendComplete
@@ -4229,7 +4230,6 @@ class _ShopScreenState extends State<ShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(L10n.of(context).shopNicknameChangeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,

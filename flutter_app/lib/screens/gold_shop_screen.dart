@@ -101,7 +101,6 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -582,7 +581,6 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.goldBankDialogTitle,
           style: const TextStyle(fontSize: 17, color: Color(0xFF5A4038)),

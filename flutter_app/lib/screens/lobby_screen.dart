@@ -1754,117 +1754,123 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // utility box, which is not how the app has ever presented them.
     final isLandscape =
         !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
-    return ConnectionOverlay(
-      child: PopScope(
-        // Never let the pop through: on the web that would walk the browser
-        // off the site mid-session, and on Android it would drop to the home
-        // screen. What back MEANS is decided below instead.
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (didPop) return;
-          // In a waiting room, back is the header's ← — the one thing on this
-          // screen there is to back out of. Anywhere else (the lobby itself,
-          // the login form) there is nothing behind, so it stays a no-op
-          // rather than doing something surprising.
-          //
-          // Games and the spectator view are other screens with their own
-          // PopScope; they still swallow it, so nobody leaves a live hand by
-          // reaching for the back button.
-          final game = context.read<GameService>();
-          if (!_inRoom && game.currentDestination == AppDestination.lobby) {
-            return;
-          }
-          _leaveRoom(game);
-        },
-        child: Scaffold(
-          // On the web the engine has already shrunk its canvas to the visual
-          // viewport by the time the keyboard is up, so letting the Scaffold
-          // subtract viewInsets on top of that takes the keyboard height off
-          // twice and leaves an empty band above the keyboard. Native keeps the
-          // default, where the inset is the only thing doing the resizing.
-          resizeToAvoidBottomInset: kIsWeb ? false : null,
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: themeColors,
+    return Theme(
+      data: cartoonTheme(Theme.of(context)),
+      child: ConnectionOverlay(
+        child: PopScope(
+          // Never let the pop through: on the web that would walk the browser
+          // off the site mid-session, and on Android it would drop to the home
+          // screen. What back MEANS is decided below instead.
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            // In a waiting room, back is the header's ← — the one thing on this
+            // screen there is to back out of. Anywhere else (the lobby itself,
+            // the login form) there is nothing behind, so it stays a no-op
+            // rather than doing something surprising.
+            //
+            // Games and the spectator view are other screens with their own
+            // PopScope; they still swallow it, so nobody leaves a live hand by
+            // reaching for the back button.
+            final game = context.read<GameService>();
+            if (!_inRoom && game.currentDestination == AppDestination.lobby) {
+              return;
+            }
+            _leaveRoom(game);
+          },
+          child: Scaffold(
+            // On the web the engine has already shrunk its canvas to the visual
+            // viewport by the time the keyboard is up, so letting the Scaffold
+            // subtract viewInsets on top of that takes the keyboard height off
+            // twice and leaves an empty band above the keyboard. Native keeps the
+            // default, where the inset is the only thing doing the resizing.
+            resizeToAvoidBottomInset: kIsWeb ? false : null,
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: themeColors,
+                ),
               ),
-            ),
-            // 아래 안전영역은 화면이 직접 채운다 — 로비 하단 탭이 그 영역까지
-            // 이어져야 해서, 여기서 비워 두면 탭 밑에 배경색 띠가 보였다.
-            child: SafeArea(
-              bottom: false,
-              child: Consumer<GameService>(
-                builder: (context, game, _) {
-                  // Handle duplicate login kick
-                  if (game.duplicateLoginKicked) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) async {
-                      if (!mounted) return;
-                      if (!game.consumeDuplicateLoginKick()) return;
-                      final session = context.read<SessionService>();
-                      final messenger = ScaffoldMessenger.of(context);
-                      final duplicateLoginMessage = L10n.of(
-                        context,
-                      ).lobbyDuplicateLoginKicked;
-                      await session.logout();
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(duplicateLoginMessage),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    });
-                  }
-                  // Show room invite dialog if any
-                  if (game.hasRoomInvites) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      final invite = game.firstRoomInvite;
-                      if (invite == null) return;
-                      game.dismissInvite(0);
-                      _showRoomInviteDialog(invite, game);
-                    });
-                  }
-
-                  // Sync local room flag with server state
-                  if (!game.hasRoom && _inRoom) {
-                    _inRoom = false;
-                    // Back on the lobby: re-check for a reply popup deferred
-                    // while in a room (no further notify is guaranteed).
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) => _onInquiryUpdate(),
-                    );
-                  }
-                  // Spectators land here too now — the waiting room is one
-                  // screen for both.
-                  if (game.isInRoomWithoutGame && !_inRoom) {
-                    _inRoom = true;
-                  }
-
-                  final destination = game.currentDestination;
-
-                  if (destination != AppDestination.lobby || _inRoom) {
-                    _inRoom = true;
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.paddingOf(context).bottom,
-                      ),
-                      child: _buildRoomView(game, isLandscape: isLandscape),
-                    );
-                  }
-                  final lobby = _buildLobbyView(game, isLandscape: isLandscape);
-                  // 세로는 하단 탭이 안전영역까지 덮고, 가로는 탭이 없으니 여기서 띄운다.
-                  return isLandscape
-                      ? Padding(
-                          padding: EdgeInsets.only(
-                            bottom: MediaQuery.paddingOf(context).bottom,
+              // 아래 안전영역은 화면이 직접 채운다 — 로비 하단 탭이 그 영역까지
+              // 이어져야 해서, 여기서 비워 두면 탭 밑에 배경색 띠가 보였다.
+              child: SafeArea(
+                bottom: false,
+                child: Consumer<GameService>(
+                  builder: (context, game, _) {
+                    // Handle duplicate login kick
+                    if (game.duplicateLoginKicked) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        if (!mounted) return;
+                        if (!game.consumeDuplicateLoginKick()) return;
+                        final session = context.read<SessionService>();
+                        final messenger = ScaffoldMessenger.of(context);
+                        final duplicateLoginMessage = L10n.of(
+                          context,
+                        ).lobbyDuplicateLoginKicked;
+                        await session.logout();
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(duplicateLoginMessage),
+                            backgroundColor: Colors.red,
                           ),
-                          child: lobby,
-                        )
-                      : lobby;
-                },
+                        );
+                      });
+                    }
+                    // Show room invite dialog if any
+                    if (game.hasRoomInvites) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        final invite = game.firstRoomInvite;
+                        if (invite == null) return;
+                        game.dismissInvite(0);
+                        _showRoomInviteDialog(invite, game);
+                      });
+                    }
+
+                    // Sync local room flag with server state
+                    if (!game.hasRoom && _inRoom) {
+                      _inRoom = false;
+                      // Back on the lobby: re-check for a reply popup deferred
+                      // while in a room (no further notify is guaranteed).
+                      WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => _onInquiryUpdate(),
+                      );
+                    }
+                    // Spectators land here too now — the waiting room is one
+                    // screen for both.
+                    if (game.isInRoomWithoutGame && !_inRoom) {
+                      _inRoom = true;
+                    }
+
+                    final destination = game.currentDestination;
+
+                    if (destination != AppDestination.lobby || _inRoom) {
+                      _inRoom = true;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.paddingOf(context).bottom,
+                        ),
+                        child: _buildRoomView(game, isLandscape: isLandscape),
+                      );
+                    }
+                    final lobby = _buildLobbyView(
+                      game,
+                      isLandscape: isLandscape,
+                    );
+                    // 세로는 하단 탭이 안전영역까지 덮고, 가로는 탭이 없으니 여기서 띄운다.
+                    return isLandscape
+                        ? Padding(
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.paddingOf(context).bottom,
+                            ),
+                            child: lobby,
+                          )
+                        : lobby;
+                  },
+                ),
               ),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
@@ -117,14 +118,11 @@ void showPlayerProfileDialog(
               width: dialogWidth,
               decoration: BoxDecoration(
                 gradient: banner,
-                color: banner == null ? const Color(0xFFFDFBFA) : null,
-                borderRadius: BorderRadius.circular(22),
+                color: banner == null ? Cartoon.paper : null,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(color: Cartoon.ink, width: 3),
                 boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 8),
-                  ),
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 5)),
                 ],
               ),
               child: Column(

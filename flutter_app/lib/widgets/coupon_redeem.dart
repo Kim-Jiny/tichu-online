@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../theme/cartoon.dart';
 import '../services/game_service.dart';
 
 /// Whether this build may offer to redeem a code.
@@ -129,18 +130,13 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
     final l10n = L10n.of(context);
     final done = _success != null;
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           couponIcon(size: 22),
           const SizedBox(width: 8),
           Text(
             l10n.couponRedeemTitle,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF3E312A),
-            ),
+            style: Cartoon.text(size: 21),
           ),
         ],
       ),

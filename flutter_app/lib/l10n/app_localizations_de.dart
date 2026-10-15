@@ -5287,4 +5287,12 @@ class L10nDe extends L10n {
   String attendanceProgress(int done) {
     return '$done/7 Tage';
   }
+
+  @override
+  String settingsDeleteTypeNickname(String nickname) {
+    return 'Um versehentliches Löschen zu verhindern, gib deinen aktuellen Spitznamen \"$nickname\" genau ein.';
+  }
+
+  @override
+  String get settingsDeleteNicknameHint => 'Spitzname eingeben';
 }

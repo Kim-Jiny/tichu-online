@@ -9266,6 +9266,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'{done}/7 days'**
   String attendanceProgress(int done);
+
+  /// No description provided for @settingsDeleteTypeNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'To prevent accidental deletion, type your current nickname \"{nickname}\" exactly.'**
+  String settingsDeleteTypeNickname(String nickname);
+
+  /// No description provided for @settingsDeleteNicknameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your nickname'**
+  String get settingsDeleteNicknameHint;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

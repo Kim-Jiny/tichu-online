@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/cartoon.dart';
+
 /// A single-choice pill, as used by the inquiry and report forms.
 ///
 /// Material's ChoiceChip was doing this before: it draws its own outline, its
@@ -24,21 +26,24 @@ class ChoicePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? accent : const Color(0xFFF4F1F0),
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : const Color(0xFF7A6E68),
-            ),
+    return CartoonPressable(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? accent : Cartoon.paper,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, selected ? 3 : 2)),
+          ],
+        ),
+        child: Text(
+          label,
+          style: Cartoon.text(
+            size: 14.5,
+            color: selected ? Colors.white : Cartoon.ink,
           ),
         ),
       ),
@@ -49,39 +54,29 @@ class ChoicePill extends StatelessWidget {
 /// The field label used above the inputs in those same dialogs.
 Widget formFieldLabel(String text) {
   return Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF9A8E8A),
-      ),
-    ),
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Text(text, style: Cartoon.text(size: 14.5)),
   );
 }
 
-/// Filled input decoration: softer than the boxed outline these forms used, and
-/// the same shape in both of them.
+/// 카툰 입력창: 흰 바탕, 진한 테두리, 포커스는 주황.
 InputDecoration formFieldDecoration(String hint, {int? maxLines}) {
+  OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
+    borderRadius: BorderRadius.circular(14),
+    borderSide: BorderSide(color: c, width: w),
+  );
   return InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFFB9ADA8)),
+    hintStyle: TextStyle(
+      fontSize: 13.5,
+      color: Cartoon.ink.withValues(alpha: 0.4),
+    ),
     filled: true,
-    fillColor: const Color(0xFFF7F4F2),
+    fillColor: Colors.white,
     counterText: '',
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Color(0xFFCDBDE8), width: 1.5),
-    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    border: b(Cartoon.ink, 2.5),
+    enabledBorder: b(Cartoon.ink, 2.5),
+    focusedBorder: b(Cartoon.orange, 3),
   );
 }

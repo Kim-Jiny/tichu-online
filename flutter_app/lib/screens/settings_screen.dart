@@ -150,6 +150,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// 팝업 제목: 색 입힌 아이콘 칩 + 제목.
+  Widget _dialogTitle(IconData icon, Color tone, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Color.lerp(tone, Colors.white, 0.75),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: Cartoon.ink, width: 2.2),
+            boxShadow: const [
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Icon(icon, size: 22, color: tone),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            style: Cartoon.text(size: 20),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showLanguageDialog(
     BuildContext ctx,
     LocaleService localeService,
@@ -158,7 +187,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: ctx,
       builder: (dialogCtx) => SimpleDialog(
-        title: Text(l10n.settingsLanguage),
+        title: _dialogTitle(
+          Icons.language_rounded,
+          const Color(0xFF42A5F5),
+          l10n.settingsLanguage,
+        ),
         children: [
           _languageOption(dialogCtx, localeService, null, l10n.languageAuto),
           _languageOption(
@@ -187,6 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ) {
     final isSelected = localeService.userSelectedLocale == locale;
     return SimpleDialogOption(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       onPressed: () {
         localeService.setLocale(locale);
         final effectiveCode =
@@ -194,23 +228,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context.read<GameService>().sendLocale(effectiveCode);
         Navigator.pop(dialogCtx);
       },
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                color: isSelected
-                    ? const Color(0xFF42A5F5)
-                    : const Color(0xFF3E312A),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Cartoon.blue : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
+          boxShadow: [
+            BoxShadow(
+              color: Cartoon.ink,
+              offset: Offset(0, isSelected ? 3 : 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: Cartoon.userText(
+                  size: 16,
+                  weight: FontWeight.w800,
+                  color: isSelected ? Colors.white : Cartoon.ink,
+                ),
               ),
             ),
-          ),
-          if (isSelected)
-            const Icon(Icons.check, color: Color(0xFF42A5F5), size: 20),
-        ],
+            if (isSelected)
+              const Icon(Icons.check_rounded, color: Colors.white, size: 22),
+          ],
+        ),
       ),
     );
   }
@@ -232,31 +278,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showDeleteAccountDialog() {
     final l10n = L10n.of(context);
+    final nickname = context.read<GameService>().playerName;
+    final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.settingsDeleteAccount),
-        content: Text(l10n.settingsDeleteAccountConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: Text(l10n.commonCancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              _deleteAccount();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC62828),
-              foregroundColor: Colors.white,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setState) {
+          // 현재 닉네임을 똑같이 쳐야만 탈퇴 버튼이 켜진다 — 실수 탈퇴 방지.
+          final matches =
+              nickname.isNotEmpty && controller.text.trim() == nickname;
+          return AlertDialog(
+            title: _dialogTitle(
+              Icons.warning_amber_rounded,
+              const Color(0xFFC62828),
+              l10n.settingsDeleteAccount,
             ),
-            child: Text(l10n.settingsDeleteAccountWithdraw),
-          ),
-        ],
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.settingsDeleteAccountConfirm),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFE3E3),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                    ),
+                    child: Text(
+                      l10n.settingsDeleteTypeNickname(nickname),
+                      style: Cartoon.userText(
+                        size: 13.5,
+                        weight: FontWeight.w700,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: controller,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: Cartoon.userText(size: 16),
+                    onChanged: (_) => setState(() {}),
+                    decoration: formFieldDecoration(
+                      l10n.settingsDeleteNicknameHint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: Text(l10n.commonCancel),
+              ),
+              CartoonButton(
+                expand: false,
+                height: 46,
+                color: const Color(0xFFE5484D),
+                onPressed: matches
+                    ? () {
+                        Navigator.pop(dialogCtx);
+                        _deleteAccount();
+                      }
+                    : null,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: CartoonButton.label(
+                    l10n.settingsDeleteAccountWithdraw,
+                    size: 17,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 
   void _deleteAccount() {
@@ -298,40 +403,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (dialogCtx, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
           titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-          backgroundColor: const Color(0xFFFDFBFA),
-          title: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF6EDFA),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.help_outline,
-                  size: 19,
-                  color: Color(0xFFBA68C8),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  l10n.inquiryTitle,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF4A3A33),
-                  ),
-                ),
-              ),
-            ],
+          title: _dialogTitle(
+            Icons.help_rounded,
+            const Color(0xFFBA68C8),
+            l10n.inquiryTitle,
           ),
           content: SizedBox(
             width: 360,
@@ -406,9 +483,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFBA68C8),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
               ),
               child: Text(l10n.inquirySubmit),
             ),
@@ -425,18 +499,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.mark_email_read, color: Color(0xFF1E88E5)),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                l10n.inquiryHistoryTitle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: _dialogTitle(
+          Icons.mark_email_read_rounded,
+          const Color(0xFF1E88E5),
+          l10n.inquiryHistoryTitle,
         ),
         content: SizedBox(
           width: double.maxFinite,
@@ -509,8 +575,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0D8D4)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Cartoon.ink, width: 2.2),
+                          boxShadow: const [
+                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -521,20 +590,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isResolved
-                                    ? const Color(0xFFE8F5E9)
-                                    : const Color(0xFFFFF8E1),
+                                    ? const Color(0xFFD8F5DF)
+                                    : const Color(0xFFFFE9B8),
                                 borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 1.8,
+                                ),
                               ),
                               child: Text(
                                 isResolved
                                     ? l10n.inquiryStatusResolved
                                     : l10n.inquiryStatusPending,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                style: Cartoon.text(
+                                  size: 12.5,
                                   color: isResolved
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFFF57C00),
+                                      ? const Color(0xFF2E8B57)
+                                      : const Color(0xFFE5791A),
                                 ),
                               ),
                             ),
@@ -545,19 +617,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 children: [
                                   Text(
                                     title,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF5A4038),
+                                    style: Cartoon.userText(
+                                      size: 14,
+                                      weight: FontWeight.w800,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '$category · $createdAt',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF8A7A72),
+                                    style: Cartoon.userText(
+                                      size: 11.5,
+                                      weight: FontWeight.w500,
+                                      color: Cartoon.ink.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -601,8 +673,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title),
+        title: Text(
+          title,
+          style: Cartoon.userText(size: 19, weight: FontWeight.w900),
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,68 +785,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
               required Color color,
             }) {
               final selected = game.cardViewPref == value;
-              return InkWell(
-                onTap: () {
-                  game.setCardViewPref(value);
-                  setDialogState(() {});
-                  Navigator.pop(ctx);
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(icon, size: 20, color: color),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: selected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
-                            color: const Color(0xFF5A4038),
-                          ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 9),
+                child: CartoonPressable(
+                  scale: 0.97,
+                  onTap: () {
+                    game.setCardViewPref(value);
+                    setDialogState(() {});
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Color.lerp(color, Colors.white, 0.8)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Cartoon.ink,
+                          offset: Offset(0, selected ? 3 : 2),
                         ),
-                      ),
-                      if (selected) Icon(Icons.check, color: color, size: 20),
-                    ],
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 24, color: color),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(label, style: Cartoon.text(size: 16)),
+                        ),
+                        if (selected)
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: color,
+                            size: 24,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );
             }
 
             return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
+                    _dialogTitle(
+                      Icons.visibility_rounded,
+                      const Color(0xFF6A6090),
                       l10n.settingsCardViewPolicy,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A4038),
-                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       l10n.settingsCardViewPolicyDescription,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8A7A72),
+                      style: Cartoon.userText(
+                        size: 12.5,
+                        weight: FontWeight.w500,
+                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     option(
                       value: 'ask',
                       label: l10n.gameCardViewPolicyAsk,
@@ -817,7 +899,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(title),
         contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
         content: SizedBox(
@@ -867,12 +948,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.linkDialogTitle),
+        title: _dialogTitle(
+          Icons.link_rounded,
+          const Color(0xFF7E57C2),
+          l10n.linkDialogTitle,
+        ),
         content: Text(l10n.linkDialogContent),
         actions: [
           if (SocialConfig.googleEnabled)
-            TextButton(
+            OutlinedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
@@ -902,7 +986,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           if (SocialConfig.appleEnabled)
-            TextButton(
+            OutlinedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
@@ -931,7 +1015,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           if (SocialConfig.kakaoEnabled)
-            TextButton(
+            OutlinedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {

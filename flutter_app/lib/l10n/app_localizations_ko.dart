@@ -5133,4 +5133,12 @@ class L10nKo extends L10n {
   String attendanceProgress(int done) {
     return '$done/7일 출석';
   }
+
+  @override
+  String settingsDeleteTypeNickname(String nickname) {
+    return '실수로 탈퇴하는 것을 막기 위해, 현재 닉네임 \"$nickname\"을(를) 똑같이 입력해 주세요.';
+  }
+
+  @override
+  String get settingsDeleteNicknameHint => '닉네임 입력';
 }

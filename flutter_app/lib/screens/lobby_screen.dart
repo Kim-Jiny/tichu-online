@@ -1900,7 +1900,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 colors: themeColors,
               ),
             ),
+            // 아래 안전영역은 화면이 직접 채운다 — 로비 하단 탭이 그 영역까지
+            // 이어져야 해서, 여기서 비워 두면 탭 밑에 배경색 띠가 보였다.
             child: SafeArea(
+              bottom: false,
               child: Consumer<GameService>(
                 builder: (context, game, _) {
                   // Handle duplicate login kick
@@ -1953,9 +1956,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
                   if (destination != AppDestination.lobby || _inRoom) {
                     _inRoom = true;
-                    return _buildRoomView(game, isLandscape: isLandscape);
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.paddingOf(context).bottom,
+                      ),
+                      child: _buildRoomView(game, isLandscape: isLandscape),
+                    );
                   }
-                  return _buildLobbyView(game, isLandscape: isLandscape);
+                  final lobby = _buildLobbyView(game, isLandscape: isLandscape);
+                  // 세로는 하단 탭이 안전영역까지 덮고, 가로는 탭이 없으니 여기서 띄운다.
+                  return isLandscape
+                      ? Padding(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.paddingOf(context).bottom,
+                          ),
+                          child: lobby,
+                        )
+                      : lobby;
                 },
               ),
             ),
@@ -2220,7 +2237,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
       from: const Offset(0, 50),
       delay: const Duration(milliseconds: 200),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 10, 6, 6),
+        padding: EdgeInsets.fromLTRB(
+          6,
+          10,
+          6,
+          6 + MediaQuery.paddingOf(context).bottom,
+        ),
         decoration: const BoxDecoration(
           color: Cartoon.paper,
           border: Border(top: BorderSide(color: Cartoon.ink, width: 3)),
@@ -2596,25 +2618,55 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                game.requestRoomList();
-                await Future.delayed(const Duration(milliseconds: 500));
-              },
-              child: !game.roomListReceived
-                  ? _buildRoomListLoading()
-                  : (game.roomList.isEmpty
-                        ? _buildEmptyRoomList()
-                        : _buildRoomList(game.roomList)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          CartoonPulse(
-            child: CartoonButton(
-              height: 54,
-              color: Cartoon.green,
-              onPressed: _showCreateRoomDialog,
-              child: CartoonButton.label(L10n.of(context).lobbyCreateRoom),
+            // 방 만들기는 목록 위에 떠 있는 알약 버튼 — 목록이 화면을 다 쓰고,
+            // 엄지가 닿는 오른쪽 아래에 있다.
+            child: Stack(
+              children: [
+                RefreshIndicator(
+                  onRefresh: () async {
+                    game.requestRoomList();
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
+                  child: !game.roomListReceived
+                      ? _buildRoomListLoading()
+                      : (game.roomList.isEmpty
+                            ? _buildEmptyRoomList()
+                            : _buildRoomList(game.roomList)),
+                ),
+                Positioned(
+                  right: 4,
+                  bottom: 6,
+                  child: CartoonEntrance(
+                    delay: const Duration(milliseconds: 450),
+                    from: const Offset(0, 40),
+                    child: CartoonPulse(
+                      child: CartoonButton(
+                        expand: false,
+                        height: 54,
+                        color: Cartoon.green,
+                        onPressed: _showCreateRoomDialog,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 14, right: 20),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.add_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                              const SizedBox(width: 4),
+                              CartoonButton.label(
+                                L10n.of(context).lobbyCreateRoom,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -2764,6 +2816,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       });
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
+      // 떠 있는 방 만들기 버튼 밑으로 마지막 카드가 가려지지 않게.
+      padding: const EdgeInsets.only(bottom: 92),
       itemCount: sorted.length,
       separatorBuilder: (_, _) => const SizedBox(height: 9),
       itemBuilder: (context, index) {

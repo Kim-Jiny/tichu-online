@@ -3032,7 +3032,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           // 아래 영역이 커져서 보드와 이벤트 로그가 위로 밀렸다.
           ...[
             SizedBox(
-              height: 60,
+              height: 44,
               child: selfPlayer.discardPile.isEmpty
                   ? null
                   : Row(
@@ -3057,8 +3057,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                       padding: const EdgeInsets.only(right: 3),
                                       child: LoveLetterCard(
                                         cardId: cardId,
-                                        width: 42,
-                                        height: 60,
+                                        width: 31,
+                                        height: 44,
+                                        borderRadius: 7,
+                                        compact: true,
                                         isInteractive: false,
                                       ),
                                     ),

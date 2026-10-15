@@ -4019,21 +4019,20 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final info = _parseCardId(cardId);
     final w = size * 0.7;
     final h = size;
-    final radius = BorderRadius.circular(6);
+    final radius = BorderRadius.circular((size * 0.09).clamp(5.0, 9.0));
 
+    // 입체감: 진한 테두리 + 아래로 어긋난 단색 그림자. 강조(이긴 카드)는 파란 테두리와
+    // 파란 그림자로 한 단계 더 떠 보이게.
     final border = Border.all(
       color: highlighted
-          ? const Color(0xFF355D89)
-          : Colors.black.withValues(alpha: 0.15),
-      width: highlighted ? 2.5 : 1,
+          ? const Color(0xFF2F7DE0)
+          : const Color(0xFF3B2A20).withValues(alpha: 0.7),
+      width: highlighted ? 2.6 : 1.5,
     );
     final shadow = [
       BoxShadow(
-        color: highlighted
-            ? const Color(0xFF355D89).withValues(alpha: 0.4)
-            : Colors.black.withValues(alpha: 0.10),
-        blurRadius: highlighted ? 8 : 3,
-        offset: const Offset(0, 1),
+        color: highlighted ? const Color(0xFF1F4F94) : const Color(0xFF8C7B6C),
+        offset: Offset(0, highlighted ? 4 : 2.5),
       ),
     ];
 

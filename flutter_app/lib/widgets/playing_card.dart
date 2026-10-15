@@ -46,14 +46,19 @@ class PlayingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cardColors = context.watch<GameService>().cardBackColors;
     final backBg = cardColors[0];
-    final backBorder = cardColors[1];
 
+    // 입체감: 진한 테두리 + 아래로 어긋난 단색 그림자(카드가 종이처럼 떠 보이게),
+    // 앞면은 위가 밝고 아래가 살짝 따뜻한 그라데이션. 선택하면 더 높이 떠오른다.
+    const edge = Color(0xFF3B2A20);
     final effectiveBorderColor = isSelected
-        ? const Color(0xFF4D99FF)
-        : borderColor ?? (isFaceUp ? const Color(0xFFE6DCE8) : backBorder);
+        ? const Color(0xFF2F7DE0)
+        : borderColor ?? edge.withValues(alpha: isFaceUp ? 0.7 : 0.85);
     final effectiveBorderWidth = isSelected
-        ? 2.0
-        : (borderColor != null ? 2.0 : 1.0);
+        ? 2.4
+        : (borderColor != null ? 2.4 : (width < 40 ? 1.2 : 1.5));
+    final lift = isSelected ? -12.0 : 0.0;
+    final shadowY = isSelected ? 5.0 : 2.5;
+    final radius = (width / 48 * 12).clamp(4.0, 13.0);
 
     return GestureDetector(
       onTap: isInteractive ? onTap : null,
@@ -65,21 +70,27 @@ class PlayingCard extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              transform: Matrix4.translationValues(0, isSelected ? -8 : 0, 0),
+              transform: Matrix4.translationValues(0, lift, 0),
               decoration: BoxDecoration(
                 color: isFaceUp ? Colors.white : backBg,
-                borderRadius: BorderRadius.circular(
-                  (width / 48 * 14).clamp(4, 14),
-                ),
+                gradient: isFaceUp
+                    ? const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFFFFFFF), Color(0xFFF6EEE2)],
+                      )
+                    : null,
+                borderRadius: BorderRadius.circular(radius),
                 border: Border.all(
                   color: effectiveBorderColor,
                   width: effectiveBorderWidth,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFE1D7E6).withValues(alpha: 0.4),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
+                    color: isSelected
+                        ? const Color(0xFF1F4F94)
+                        : const Color(0xFF8C7B6C),
+                    offset: Offset(0, shadowY),
                   ),
                 ],
               ),

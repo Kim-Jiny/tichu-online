@@ -1944,12 +1944,9 @@ class _GameScreenState extends State<GameScreen> {
     // pile, and it kept a hardcoded 32x45 card while every other played card is
     // 44x61 * _s — so on a scaled-up board the Dog came out at under half size.
     return Container(
+      // 일반 트릭처럼 상자 없이 글자와 카드만. 상자가 있으면 같은 화면의 다른
+      // 패와 달라 보여서 "패가 두 벌"처럼 읽혔다.
       padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
-      decoration: BoxDecoration(
-        color: Cartoon.cream,
-        borderRadius: BorderRadius.circular(16 * _s),
-        border: Border.all(color: Cartoon.ink, width: 1.8),
-      ),
       child: Column(
         children: [
           Text(
@@ -1974,8 +1971,8 @@ class _GameScreenState extends State<GameScreen> {
           SizedBox(height: 4 * _s),
           PlayingCard(
             cardId: 'special_dog',
-            width: 44 * _s,
-            height: 61 * _s,
+            width: 52 * _s,
+            height: 73 * _s,
             isInteractive: false,
           ),
         ],

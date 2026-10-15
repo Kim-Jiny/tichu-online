@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
 import '../widgets/game_type_icon.dart';
 import '../widgets/playing_card.dart';
+import '../widgets/sk_number_card.dart';
 
 /// Rules / "게임설명" screen — accessible from the lobby header.
 /// Shows Tichu and Skull King rules with exact card counts. The Skull King
@@ -1680,13 +1681,6 @@ class _SkMini extends StatelessWidget {
   final String? special;
   final bool next;
 
-  static const _suitColors = {
-    'yellow': Color(0xFFD4A017),
-    'green': Color(0xFF2E7D32),
-    'purple': Color(0xFF6A1B9A),
-    'black': Color(0xFF212121),
-  };
-
   @override
   Widget build(BuildContext context) {
     const w = 52.0, h = 73.0;
@@ -1721,25 +1715,7 @@ class _SkMini extends StatelessWidget {
         ),
       );
     }
-    final color = _suitColors[suit] ?? const Color(0xFF212121);
-    return Container(
-      width: w,
-      height: h,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color, width: 2),
-      ),
-      child: Text(
-        rank!,
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w900,
-          color: color,
-        ),
-      ),
-    );
+    return SkNumberCard(suit: suit!, rank: rank!, size: h);
   }
 }
 
@@ -1953,15 +1929,31 @@ class _GuideSkNumbers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return const SizedBox(
       width: 84,
       height: 118,
       child: Stack(
-        children: const [
-          Positioned(left: 0, top: 34, child: _SkMini.number('yellow', '7')),
-          Positioned(left: 10, top: 24, child: _SkMini.number('green', '3')),
-          Positioned(left: 20, top: 12, child: _SkMini.number('purple', '9')),
-          Positioned(left: 30, top: 0, child: _SkMini.number('black', '13')),
+        children: [
+          Positioned(
+            left: 0,
+            top: 14,
+            child: SkNumberCard(suit: 'yellow', rank: '7', size: 100),
+          ),
+          Positioned(
+            left: 5,
+            top: 9,
+            child: SkNumberCard(suit: 'green', rank: '3', size: 100),
+          ),
+          Positioned(
+            left: 10,
+            top: 4,
+            child: SkNumberCard(suit: 'purple', rank: '9', size: 100),
+          ),
+          Positioned(
+            left: 14,
+            top: 0,
+            child: SkNumberCard(suit: 'black', rank: '13', size: 100),
+          ),
         ],
       ),
     );

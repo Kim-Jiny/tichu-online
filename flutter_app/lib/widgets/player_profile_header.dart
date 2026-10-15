@@ -13,6 +13,7 @@ import '../utils/level_curve.dart';
 import '../utils/banner_ink.dart';
 import 'bot_avatar.dart';
 import 'choice_pill.dart';
+import 'game_chrome.dart' show gameButton;
 import 'profile_avatar.dart';
 import 'title_chip.dart';
 
@@ -168,14 +169,22 @@ class PlayerProfileHeader extends StatelessWidget {
                   if (isBot)
                     Text(
                       l10n.profileBotSubtitle,
-                      style: TextStyle(fontSize: 13, color: mutedColor),
+                      style: Cartoon.userText(
+                        size: 13,
+                        weight: FontWeight.w500,
+                        color: mutedColor,
+                      ),
                     )
                   else if (subtitleBuilder != null)
                     subtitleBuilder!(inner)
                   else
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 13, color: mutedColor),
+                      style: Cartoon.userText(
+                        size: 13,
+                        weight: FontWeight.w500,
+                        color: mutedColor,
+                      ),
                     ),
                 ],
               ),
@@ -327,7 +336,7 @@ class PlayerProfileHeader extends StatelessWidget {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: editable
-                    ? const Color(0xFF6C63FF)
+                    ? Cartoon.blue
                     : Colors.black.withValues(alpha: 0.55),
                 shape: BoxShape.circle,
                 border: Border.all(color: Cartoon.ink, width: 1.5),
@@ -528,10 +537,10 @@ void showEnlargedProfilePhoto(
             child: Text(
               nickname,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: Cartoon.userText(
+                size: 15,
+                weight: FontWeight.w600,
                 color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -555,54 +564,32 @@ Future<void> confirmDeleteProfilePhoto(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      backgroundColor: const Color(0xFFFDFBFA),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(26),
+        side: const BorderSide(color: Cartoon.ink, width: 2.5),
+      ),
+      backgroundColor: Cartoon.paper,
+      surfaceTintColor: Colors.transparent,
       titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      title: Text(
-        l10n.profilePhotoDelete,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF3E312A),
-        ),
-      ),
+      title: Text(l10n.profilePhotoDelete, style: Cartoon.text(size: 18)),
       content: Text(
         l10n.profilePhotoDeleteConfirm,
-        style: const TextStyle(
-          fontSize: 15,
-          height: 1.5,
-          color: Color(0xFF5A4038),
-        ),
+        style: Cartoon.userText(size: 15, weight: FontWeight.w500, height: 1.5),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            foregroundColor: const Color(0xFF8A7A72),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          child: Text(l10n.commonCancel),
+          style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+          child: Text(l10n.commonCancel, style: Cartoon.text(size: 16)),
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFFC62828),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          child: Text(l10n.profilePhotoDelete),
+        gameButton(
+          l10n.profilePhotoDelete,
+          () => Navigator.pop(ctx, true),
+          color: Cartoon.red,
+          height: 44,
+          size: 16,
         ),
       ],
     ),
@@ -651,8 +638,10 @@ Future<void> changeProfilePhoto(
 
   final choice = await showModalBottomSheet<Object>(
     context: context,
+    backgroundColor: Cartoon.paper,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      side: BorderSide(color: Cartoon.ink, width: 2.5),
     ),
     builder: (sheetCtx) => SafeArea(
       child: Column(
@@ -662,7 +651,7 @@ Future<void> changeProfilePhoto(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
             child: Text(
               l10n.profilePhotoSourceTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: Cartoon.text(size: 16),
             ),
           ),
           // Said before the picker opens, not after a rejection: the photo is
@@ -673,17 +662,18 @@ Future<void> changeProfilePhoto(
             child: Text(
               l10n.profilePhotoUploadNotice,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                height: 1.35,
+              style: Cartoon.userText(
+                size: 12,
+                weight: FontWeight.w500,
                 color: Color(0xFF8A8078),
+                height: 1.35,
               ),
             ),
           ),
           ListTile(
             leading: const Icon(
               Icons.photo_camera_rounded,
-              color: Color(0xFF6C63FF),
+              color: Cartoon.blue,
             ),
             title: Text(l10n.profilePhotoFromCamera),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
@@ -691,7 +681,7 @@ Future<void> changeProfilePhoto(
           ListTile(
             leading: const Icon(
               Icons.photo_library_rounded,
-              color: Color(0xFF6C63FF),
+              color: Cartoon.blue,
             ),
             title: Text(l10n.profilePhotoFromGallery),
             onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
@@ -701,7 +691,7 @@ Future<void> changeProfilePhoto(
           if (photoUrl != null) ...[
             const Divider(height: 1, indent: 20, endIndent: 20),
             ListTile(
-              leading: const Icon(Icons.zoom_in, color: Color(0xFF6C63FF)),
+              leading: const Icon(Icons.zoom_in, color: Cartoon.blue),
               title: Text(l10n.profilePhotoViewLarge),
               onTap: () => Navigator.pop(sheetCtx, 'view'),
             ),
@@ -822,17 +812,29 @@ Future<void> _promptOpenSettings(
   final go = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(title),
-      content: Text(body),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(26),
+        side: const BorderSide(color: Cartoon.ink, width: 2.5),
+      ),
+      backgroundColor: Cartoon.paper,
+      surfaceTintColor: Colors.transparent,
+      title: Text(title, style: Cartoon.text(size: 19)),
+      content: Text(
+        body,
+        style: Cartoon.userText(size: 15, weight: FontWeight.w600, height: 1.5),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: Text(l10n.commonCancel),
+          style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+          child: Text(l10n.commonCancel, style: Cartoon.text(size: 16)),
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: Text(l10n.profilePhotoOpenSettings),
+        gameButton(
+          l10n.profilePhotoOpenSettings,
+          () => Navigator.pop(ctx, true),
+          height: 44,
+          size: 16,
         ),
       ],
     ),
@@ -868,28 +870,31 @@ class _UploadingNotice extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.82),
-              borderRadius: BorderRadius.circular(12),
+              color: Cartoon.cream,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Cartoon.ink, width: 2),
+              boxShadow: const [
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
+                    color: Cartoon.orange,
+                    strokeWidth: 2.6,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    style: Cartoon.userText(
+                      size: 13.5,
+                      weight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -944,9 +949,11 @@ void showProfileReportDialog(
           padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
           child: AlertDialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(26),
+              side: const BorderSide(color: Cartoon.ink, width: 2.5),
             ),
-            backgroundColor: const Color(0xFFFDFBFA),
+            backgroundColor: Cartoon.paper,
+            surfaceTintColor: Colors.transparent,
             titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
             title: Row(
@@ -955,24 +962,21 @@ void showProfileReportDialog(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEDED),
+                    color: Cartoon.red,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Cartoon.ink, width: 1.6),
                   ),
                   child: const Icon(
-                    Icons.flag,
+                    Icons.flag_rounded,
                     size: 19,
-                    color: Color(0xFFE57373),
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     l10n.gameReportTitle(nickname),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF4A3A33),
-                    ),
+                    style: Cartoon.text(size: 17),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -1005,8 +1009,9 @@ void showProfileReportDialog(
                         Expanded(
                           child: Text(
                             l10n.gameReportWarning,
-                            style: const TextStyle(
-                              fontSize: 11.5,
+                            style: Cartoon.userText(
+                              size: 11.5,
+                              weight: FontWeight.w500,
                               color: Color(0xFFA47C7C),
                               height: 1.4,
                             ),
@@ -1024,7 +1029,7 @@ void showProfileReportDialog(
                             (r) => ChoicePill(
                               label: r.value,
                               selected: selectedReason == r.value,
-                              accent: const Color(0xFFD9534F),
+                              accent: Cartoon.red,
                               onTap: () => setLocalState(() {
                                 selectedReason = r.value;
                                 selectedReasonCode = r.key;
@@ -1039,7 +1044,10 @@ void showProfileReportDialog(
                       controller: reasonController,
                       maxLines: 3,
                       maxLength: 500,
-                      style: const TextStyle(fontSize: 14),
+                      style: Cartoon.userText(
+                        size: 14,
+                        weight: FontWeight.w500,
+                      ),
                       decoration: formFieldDecoration(
                         l10n.gameReportDetailHint,
                       ),
@@ -1048,13 +1056,16 @@ void showProfileReportDialog(
                 ),
               ),
             ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.gameCancel),
+                style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+                child: Text(l10n.gameCancel, style: Cartoon.text(size: 16)),
               ),
-              ElevatedButton(
-                onPressed: selectedReason == null
+              gameButton(
+                l10n.gameReportSubmit,
+                selectedReason == null
                     ? null
                     : () {
                         final detail = reasonController.text.trim();
@@ -1093,13 +1104,9 @@ void showProfileReportDialog(
                           game.removeListener(listener);
                         });
                       },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE57373),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(l10n.gameReportSubmit),
+                color: Cartoon.red,
+                height: 44,
+                size: 16,
               ),
             ],
           ),
@@ -1122,9 +1129,9 @@ Widget privateProfileNotice(L10n l10n) {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
     decoration: BoxDecoration(
-      color: const Color(0xFFF6F3FA),
+      color: Cartoon.cream,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE4DCEF)),
+      border: Border.all(color: Cartoon.ink.withValues(alpha: 0.3), width: 1.6),
     ),
     child: Column(
       mainAxisSize: MainAxisSize.min,
@@ -1134,17 +1141,17 @@ Widget privateProfileNotice(L10n l10n) {
         Text(
           l10n.profilePrivateTitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14.5,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF5A4038),
-          ),
+          style: Cartoon.text(size: 14.5),
         ),
         const SizedBox(height: 5),
         Text(
           l10n.profilePrivateBody,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A7A72)),
+          style: Cartoon.userText(
+            size: 12.5,
+            weight: FontWeight.w500,
+            color: Cartoon.ink.withValues(alpha: 0.6),
+          ),
         ),
       ],
     ),
@@ -1163,9 +1170,9 @@ Widget _botCard(L10n l10n) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     decoration: BoxDecoration(
-      color: const Color(0xFFF3F4FB),
+      color: Cartoon.cream,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFDCDEF0)),
+      border: Border.all(color: Cartoon.ink.withValues(alpha: 0.3), width: 1.6),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1178,19 +1185,16 @@ Widget _botCard(L10n l10n) {
             children: [
               Text(
                 l10n.profileBotHeadline,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF3949AB),
-                ),
+                style: Cartoon.text(size: 13, color: Color(0xFF3949AB)),
               ),
               const SizedBox(height: 4),
               Text(
                 l10n.profileBotBody,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
+                style: Cartoon.userText(
+                  size: 12,
+                  weight: FontWeight.w500,
                   color: Color(0xFF5C5F73),
+                  height: 1.4,
                 ),
               ),
             ],
@@ -1250,8 +1254,9 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
       const SizedBox(width: 6),
       Text(
         '${p.expInLevel}/${p.expToNext}',
-        style: TextStyle(
-          fontSize: 11,
+        style: Cartoon.userText(
+          size: 11,
+          weight: FontWeight.w500,
           color:
               ink?.withValues(alpha: 0.75) ??
               Cartoon.ink.withValues(alpha: 0.6),

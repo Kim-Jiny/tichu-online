@@ -179,8 +179,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                             24 + MediaQuery.viewPaddingOf(context).bottom,
                           ),
                           itemCount: game.notices.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 12),
+                          separatorBuilder: (_, _) => const SizedBox.shrink(),
                           itemBuilder: (context, index) {
                             final item = game.notices[index];
                             return CartoonEntrance(
@@ -189,7 +188,19 @@ class _NoticesScreenState extends State<NoticesScreen> {
                                 milliseconds: 40 * index.clamp(0, 7),
                               ),
                               from: const Offset(0, 18),
-                              child: _buildNoticeItem(item, l10n),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildNoticeItem(item, l10n),
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1.5,
+                                    indent: 10,
+                                    endIndent: 10,
+                                    color: Cartoon.ink.withValues(alpha: 0.12),
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         );
@@ -249,12 +260,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
     // 위 줄: 꼬리표(NEW · 분류 · 쿠폰)와 날짜. 아래 줄: 제목이 카드 폭을 통째로.
     // 예전엔 꼬리표를 제목 왼쪽에 줄줄이 세웠더니 제목이 몇 글자 못 들어갔다.
     final card = Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: EdgeInsets.fromLTRB(14, isPinned ? 16 : 12, 10, 12),
-      decoration: Cartoon.panelDecoration(
-        color: isNew ? const Color(0xFFFFF6DD) : Cartoon.paper,
-        radius: 18,
-        shadowOffset: 2.5,
+      // 상자 없이 한 줄 — 안 읽은 글만 연한 노란 바탕. 아래 구분선은 바깥에서.
+      padding: EdgeInsets.fromLTRB(14, isPinned ? 18 : 12, 10, 12),
+      decoration: BoxDecoration(
+        color: isNew ? const Color(0xFFFFF3D0) : null,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

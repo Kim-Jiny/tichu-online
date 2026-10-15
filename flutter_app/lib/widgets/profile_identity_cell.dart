@@ -89,153 +89,161 @@ class ProfileIdentityCell extends StatelessWidget {
     final photo = game.resolvePhotoUrl(photoUrl);
     const avatarSize = 40.0;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            // 불투명해야 한다: 반투명 바탕 위 단색 그림자는 비쳐서 칸이 어두워진다.
-            color: gradient == null
-                ? (away ? const Color(0xFFF1EEEC) : Cartoon.paper)
-                : null,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: away ? Cartoon.ink.withValues(alpha: 0.45) : Cartoon.ink,
-              width: 2.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: away ? Cartoon.ink.withValues(alpha: 0.45) : Cartoon.ink,
-                offset: const Offset(0, 3),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              // 상자 없이 한 줄. 줄 사이 구분은 목록(친구 화면)이 선으로 한다.
+              // 장착한 배너 그라데이션만 줄 배경으로 남는다.
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(14),
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Its own column rather than a corner of the avatar: overlaid,
-              // it covered part of the face, and the opposite corner is
-              // already taken by the level badge.
-              if (isOnline != null) ...[
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: isOnline! ? Cartoon.green : const Color(0xFFC4BAB4),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Cartoon.ink, width: 1.5),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              SizedBox(
-                width: avatarSize,
-                height: avatarSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
+              child: Row(
+                children: [
+                  // Its own column rather than a corner of the avatar: overlaid,
+                  // it covered part of the face, and the opposite corner is
+                  // already taken by the level badge.
+                  if (isOnline != null) ...[
                     Container(
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          avatarCornerRadius(avatarSize) + 2,
-                        ),
-                        border: Border.all(color: Cartoon.ink, width: 1.6),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          avatarCornerRadius(avatarSize),
-                        ),
-                        child: ProfileAvatar(
-                          photoUrl: photo,
-                          size: avatarSize - 4.4,
-                          fallback: DefaultAvatar(size: avatarSize - 4.4),
-                        ),
+                        color: isOnline!
+                            ? Cartoon.green
+                            : const Color(0xFFC4BAB4),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Cartoon.ink, width: 1.5),
                       ),
                     ),
-                    // A private account has no level to show, so the corner
-                    // stays empty rather than claiming level 1.
-                    if ((level ?? 0) > 0)
-                      Positioned(
-                        right: -3,
-                        bottom: -3,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Cartoon.ink, width: 1.4),
-                          ),
-                          child: LevelBadge(level: level, size: 15),
-                        ),
-                      ),
+                    const SizedBox(width: 8),
                   ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if ((titleName ?? '').isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: TitleChip(
-                          titleKey: titleKey,
-                          titleName: titleName,
-                          // Title colours are chosen against cream; several
-                          // vanish on a dark banner without this.
-                          onInk: textColor,
-                        ),
-                      ),
-                    Row(
+                  SizedBox(
+                    width: avatarSize,
+                    height: avatarSize,
+                    child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Flexible(
-                          child: Text(
-                            nickname,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: textColor ?? Cartoon.ink,
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(
+                              avatarCornerRadius(avatarSize) + 2,
+                            ),
+                            border: Border.all(color: Cartoon.ink, width: 1.6),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              avatarCornerRadius(avatarSize),
+                            ),
+                            child: ProfileAvatar(
+                              photoUrl: photo,
+                              size: avatarSize - 4.4,
+                              fallback: DefaultAvatar(size: avatarSize - 4.4),
                             ),
                           ),
                         ),
-                        if (isPrivate) ...[
-                          const SizedBox(width: 6),
-                          _privateBadge(l10n.profilePrivateBadge),
-                        ],
+                        // A private account has no level to show, so the corner
+                        // stays empty rather than claiming level 1.
+                        if ((level ?? 0) > 0)
+                          Positioned(
+                            right: -3,
+                            bottom: -3,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Cartoon.ink,
+                                  width: 1.4,
+                                ),
+                              ),
+                              child: LevelBadge(level: level, size: 15),
+                            ),
+                          ),
                       ],
                     ),
-                    if ((subtitle ?? '').isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          subtitle!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            // On a banner the caller's colour would be a
-                            // guess about a surface it cannot see; the
-                            // banner's own text colour is the one that reads.
-                            color: textColor != null
-                                ? textColor.withValues(alpha: 0.85)
-                                : (subtitleColor ?? const Color(0xFF9A8E8A)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if ((titleName ?? '').isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: TitleChip(
+                              titleKey: titleKey,
+                              titleName: titleName,
+                              // Title colours are chosen against cream; several
+                              // vanish on a dark banner without this.
+                              onInk: textColor,
+                            ),
                           ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                nickname,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: textColor ?? Cartoon.ink,
+                                ),
+                              ),
+                            ),
+                            if (isPrivate) ...[
+                              const SizedBox(width: 6),
+                              _privateBadge(l10n.profilePrivateBadge),
+                            ],
+                          ],
                         ),
-                      ),
+                        if ((subtitle ?? '').isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                // On a banner the caller's colour would be a
+                                // guess about a surface it cannot see; the
+                                // banner's own text colour is the one that reads.
+                                color: textColor != null
+                                    ? textColor.withValues(alpha: 0.85)
+                                    : (subtitleColor ??
+                                          const Color(0xFF9A8E8A)),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 8),
+                    trailing!,
                   ],
-                ),
+                ],
               ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
-            ],
+            ),
           ),
         ),
-      ),
+        Divider(
+          height: 1,
+          thickness: 1.5,
+          indent: 8,
+          endIndent: 8,
+          color: Cartoon.ink.withValues(alpha: 0.12),
+        ),
+      ],
     );
   }
 

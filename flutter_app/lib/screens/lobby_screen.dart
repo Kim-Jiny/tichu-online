@@ -2719,7 +2719,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // 떠 있는 방 만들기 버튼 밑으로 마지막 카드가 가려지지 않게.
       padding: const EdgeInsets.only(bottom: 92),
       itemCount: sorted.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 9),
+      // 줄 아래 구분선은 각 줄이 직접 그린다 — 방이 하나뿐이어도 아래 선이 남도록.
+      separatorBuilder: (_, _) => const SizedBox.shrink(),
       itemBuilder: (context, index) {
         final room = sorted[index];
         // 새로 나타난 방만 통통 등장한다 (id 로 구분). 처음 목록이 뜰 때는
@@ -2728,7 +2729,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
           key: ValueKey('room-${room.id}'),
           delay: Duration(milliseconds: 45 * index.clamp(0, 6)),
           from: const Offset(0, 22),
-          child: _buildRoomItem(room),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildRoomItem(room),
+              Divider(
+                height: 1,
+                thickness: 1.5,
+                indent: 8,
+                endIndent: 8,
+                color: Cartoon.ink.withValues(alpha: 0.12),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -2782,7 +2795,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // "게임 중" chip. The state belongs to the room, not to one corner of
       // it, and saying it with the surface costs no width — which is what the
       // row had run out of.
-      color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
+      // 상자 없이 한 줄씩 — 줄 사이는 구분선이 나눈다.
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () {
@@ -2804,15 +2818,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
+          // 진행 중인 방은 옅게 가라앉힌다. 그림자가 없으니 반투명이어도 된다.
           decoration: BoxDecoration(
-            // 색이 반드시 있어야 한다: 번지지 않는 단색 그림자는 투명한 상자
-            // 안쪽까지 비쳐서, 색 없는 상자가 통째로 먹색이 된다.
-            color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
+            color: isInProgress ? const Color(0x14000000) : null,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Cartoon.ink, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
           ),
           // Clip the contents to the card's INNER curve instead of asking the
           // strip to round itself. A 16px radius on a 6px-wide box is not a

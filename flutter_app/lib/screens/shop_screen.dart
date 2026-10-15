@@ -969,7 +969,11 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
+        decoration: BoxDecoration(
+          // 테두리·그림자 없이 옅은 흰 바탕만 — 상품 그림 하나가 눈에 들어오게.
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1321,7 +1325,11 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
+        decoration: BoxDecoration(
+          // 테두리·그림자 없이 옅은 흰 바탕만 — 상품 그림 하나가 눈에 들어오게.
+          color: Colors.white.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1712,12 +1720,18 @@ class _ShopScreenState extends State<ShopScreen> {
         : null;
     final equipped = isActive && !noEquipAction;
 
+    // 상자 없이 한 줄: 착용 중인 것만 연한 파랑 바탕, 아래 구분선.
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      decoration: Cartoon.panelDecoration(
-        color: equipped ? const Color(0xFFE6F2FF) : Cartoon.paper,
-        radius: 20,
-        shadowOffset: 2.5,
+      margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+      decoration: BoxDecoration(
+        color: equipped ? const Color(0xFFE6F2FF) : null,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(
+          bottom: BorderSide(
+            color: Cartoon.ink.withValues(alpha: 0.12),
+            width: 1.5,
+          ),
+        ),
       ),
       child: Material(
         color: Colors.transparent,

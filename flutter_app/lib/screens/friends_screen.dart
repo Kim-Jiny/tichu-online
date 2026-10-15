@@ -559,7 +559,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 from: const Offset(0, 16),
                 pop: false,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
+                  padding: EdgeInsets.zero,
                   child: ProfileIdentityCell(
                     game: game,
                     nickname: nickname,
@@ -905,7 +905,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                         24 + MediaQuery.viewPaddingOf(context).bottom,
                       ),
                       itemCount: game.searchResults.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 9),
+                      separatorBuilder: (_, _) => const SizedBox.shrink(),
                       itemBuilder: (context, index) {
                         final user = game.searchResults[index];
                         final nickname = user['nickname'] as String? ?? '';
@@ -1077,7 +1077,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 _buildRequestsSectionLabel(l10n.friendsReceivedSection),
               for (final nickname in received) ...[
                 _buildReceivedRequestCard(context, game, nickname),
-                const SizedBox(height: 9),
+                const SizedBox.shrink(),
               ],
             ],
             if (sent.isNotEmpty) ...[
@@ -1087,7 +1087,6 @@ class _FriendsScreenState extends State<FriendsScreen>
               ],
               for (final req in sent) ...[
                 _buildSentRequestCard(context, game, req),
-                const SizedBox(height: 8),
               ],
             ],
           ],

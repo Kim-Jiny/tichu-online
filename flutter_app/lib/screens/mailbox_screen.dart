@@ -382,23 +382,21 @@ class _MailboxScreenState extends State<MailboxScreen> {
     // a ListTile paints its highlight and ink splash onto the nearest Material
     // ancestor. A coloured box in between hides them — Flutter asserts about
     // exactly this — so the fill and the border live on the Material itself.
-    final fill = unread ? const Color(0xFFFFF6DD) : Cartoon.paper;
+    // 상자 없이: 안 읽은 편지만 연한 노란 바탕, 아래에 구분선 한 줄.
+    final fill = unread ? const Color(0xFFFFF3D0) : Colors.transparent;
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2.5)),
-        ],
+        border: Border(
+          bottom: BorderSide(
+            color: Cartoon.ink.withValues(alpha: 0.12),
+            width: 1.5,
+          ),
+        ),
       ),
       child: Material(
         color: fill,
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Cartoon.ink, width: 2),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(

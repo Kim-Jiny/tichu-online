@@ -2762,38 +2762,71 @@ class _GameScreenState extends State<GameScreen> {
       state.players,
       (p) => p.position == 'right',
     );
-    final leftName = left?.name ?? L10n.of(context).gameLeftPlayer;
-    final rightName = right?.name ?? L10n.of(context).gameRightPlayer;
-    Widget pick(String name, String side) => CartoonButton(
-      expand: false,
-      height: 48,
-      color: Cartoon.orange,
-      onPressed: () => game.dragonGive(side),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: Text(
-          name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Cartoon.userText(size: 17, color: Colors.white),
+    final l10n = L10n.of(context);
+    // 자리 기준으로 왼쪽·오른쪽을 양쪽에 둔다. 용을 줄 때는 이름보다 "내 왼쪽/오른쪽
+    // 사람"으로 고르는 경우가 많아서, 이름은 보조로 아래에 작게만 적는다.
+    Widget pick(String side, String? name, bool isLeft) {
+      final label = isLeft ? l10n.gameLeftPlayer : l10n.gameRightPlayer;
+      return Expanded(
+        child: CartoonButton(
+          height: 84,
+          color: isLeft ? Cartoon.blue : Cartoon.orange,
+          onPressed: () => game.dragonGive(side),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isLeft)
+                      const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    Flexible(child: CartoonButton.label(label, size: 20)),
+                    if (!isLeft)
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                  ],
+                ),
+                if ((name ?? '').isNotEmpty)
+                  Text(
+                    name!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 14, color: Colors.white),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
-    );
+      );
+    }
+
     return _buildDialog(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            L10n.of(context).gameDragonQuestion,
+            l10n.gameDragonQuestion,
             style: Cartoon.text(size: 20, height: 1.3),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 18),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 12,
-            runSpacing: 4,
-            children: [pick(leftName, 'left'), pick(rightName, 'right')],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              pick('left', left?.name, true),
+              const SizedBox(width: 12),
+              pick('right', right?.name, false),
+            ],
           ),
         ],
       ),

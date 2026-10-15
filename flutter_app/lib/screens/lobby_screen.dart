@@ -888,7 +888,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final timeLimitController = TextEditingController(text: '30');
     final targetScoreController = TextEditingController(text: '1000');
     String selectedGameType = 'tichu';
-    bool gamePickerOpen = false;
     bool advancedOpen = false;
     final Set<String> skExpansionsSelected = <String>{};
     String? errorText;
@@ -902,33 +901,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
           final accent = themeColors.length > 1
               ? themeColors[1]
               : themeColors.first;
-          final fillColor = Colors.white.withValues(alpha: 0.82);
 
           InputDecoration fieldDecoration(
             String hintText, {
             String? suffixText,
           }) {
+            OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: c, width: w),
+            );
             return InputDecoration(
               hintText: hintText,
+              hintStyle: Cartoon.text(
+                size: 15,
+                color: Cartoon.ink.withValues(alpha: 0.4),
+              ),
               suffixText: suffixText,
+              suffixStyle: Cartoon.text(size: 14),
               filled: true,
-              fillColor: fillColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: accent.withValues(alpha: 0.2)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: accent.withValues(alpha: 0.2)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: accent, width: 1.4),
-              ),
+              fillColor: Colors.white,
+              border: b(Cartoon.ink, 2.5),
+              enabledBorder: b(Cartoon.ink, 2.5),
+              focusedBorder: b(Cartoon.orange, 3),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
-                vertical: 12,
+                vertical: 13,
               ),
             );
           }
@@ -938,14 +936,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           // picker), which is most of the dialog's height and none of its
           // information. The parameter stays so call sites don't all change.
           Widget sectionTitle(String title, String subtitle) {
-            return Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF3E312A),
-              ),
-            );
+            return Text(title, style: Cartoon.text(size: 16));
           }
 
           Widget optionCard({
@@ -1001,12 +992,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         children: [
                           Text(
                             title,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                            style: Cartoon.text(
+                              size: 15,
                               color: enabled
-                                  ? const Color(0xFF4B3C35)
-                                  : const Color(0xFF9A8E8A),
+                                  ? Cartoon.ink
+                                  : Cartoon.ink.withValues(alpha: 0.45),
                             ),
                           ),
                           // Only where the switch has consequences you cannot
@@ -1027,7 +1017,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Switch(value: value, onChanged: enabled ? onChanged : null),
+                    Switch(
+                      value: value,
+                      onChanged: enabled ? onChanged : null,
+                      activeTrackColor: Cartoon.green,
+                      activeThumbColor: Colors.white,
+                      inactiveTrackColor: Colors.white,
+                      inactiveThumbColor: Cartoon.ink,
+                      trackOutlineColor: const WidgetStatePropertyAll(
+                        Cartoon.ink,
+                      ),
+                      trackOutlineWidth: const WidgetStatePropertyAll(2.5),
+                    ),
                   ],
                 ),
               ),
@@ -1073,7 +1074,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   borderRadius: BorderRadius.circular(24),
                   side: const BorderSide(color: Cartoon.ink, width: 3),
                 ),
-                backgroundColor: themeColors.first.withValues(alpha: 0.94),
+                backgroundColor: Cartoon.paper,
                 contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
                 content: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 440),
@@ -1098,90 +1099,87 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               // the section captions above a game picker and a name
                               // field — they named what was already visible.
                               const SizedBox(height: 4),
-                              Builder(
-                                builder: (ctx) {
-                                  String gameLabel;
-                                  Color gameBgColor;
-                                  Color gameFgColor;
-                                  // Same colours as the room list's strips, badges
-                                  // and filters — the dialog had its own palette
-                                  // (purple Tichu, yellow-on-navy SK) so the same game
-                                  // wore different colours two screens apart.
-                                  switch (selectedGameType) {
-                                    case 'skull_king':
-                                      gameLabel = l10n.lobbySkullKing;
-                                      gameBgColor = const Color(0xFF21455F);
-                                      gameFgColor = Colors.white;
-                                      break;
-                                    case 'love_letter':
-                                      gameLabel = l10n.lobbyLoveLetter;
-                                      gameBgColor = const Color(0xFFE91E63);
-                                      gameFgColor = Colors.white;
-                                      break;
-                                    case 'mighty':
-                                      gameLabel = l10n.lobbyMighty;
-                                      gameBgColor = const Color(0xFF5C6BC0);
-                                      gameFgColor = Colors.white;
-                                      break;
-                                    default:
-                                      gameLabel = l10n.lobbyTichu;
-                                      gameBgColor = const Color(0xFF64B5F6);
-                                      gameFgColor = Colors.white;
-                                  }
-                                  return Column(
-                                    children: [
-                                      InkWell(
-                                        onTap: () => setState(
-                                          () =>
-                                              gamePickerOpen = !gamePickerOpen,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Container(
-                                          width: double.infinity,
+                              // 드롭다운 대신 네 게임을 한눈에 — 눌러서 바로 고른다.
+                              // 펼쳐지는 목록이 아래 옵션 위로 겹치던 문제가 없어진다.
+                              Row(
+                                children: [
+                                  for (final (i, t) in const [
+                                    'tichu',
+                                    'mighty',
+                                    'skull_king',
+                                    'love_letter',
+                                  ].indexed) ...[
+                                    if (i > 0) const SizedBox(width: 6),
+                                    Expanded(
+                                      child: CartoonPressable(
+                                        onTap: () => selectGame(t),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 160,
+                                          ),
+                                          margin: const EdgeInsets.only(
+                                            bottom: 4,
+                                          ),
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
                                             vertical: 10,
+                                            horizontal: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: gameBgColor,
+                                            color: selectedGameType == t
+                                                ? gameTypeColor(t)
+                                                : Cartoon.paper,
                                             borderRadius: BorderRadius.circular(
-                                              12,
+                                              14,
                                             ),
+                                            border: Border.all(
+                                              color: Cartoon.ink,
+                                              width: 2.5,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Cartoon.ink,
+                                                offset: Offset(
+                                                  0,
+                                                  selectedGameType == t ? 4 : 2,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          child: Row(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              gameTypeSymbol(
-                                                selectedGameType,
-                                                size: 20,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  gameLabel,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: gameFgColor,
-                                                  ),
-                                                ),
-                                              ),
-                                              AnimatedRotation(
-                                                turns: gamePickerOpen ? 0.5 : 0,
+                                              AnimatedScale(
+                                                scale: selectedGameType == t
+                                                    ? 1.18
+                                                    : 1.0,
                                                 duration: const Duration(
-                                                  milliseconds: 160,
+                                                  milliseconds: 380,
                                                 ),
-                                                child: Icon(
-                                                  Icons.arrow_drop_down,
-                                                  color: gameFgColor,
+                                                curve: Curves.elasticOut,
+                                                child: gameTypeSymbol(
+                                                  t,
+                                                  size: 34,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 5),
+                                              Text(
+                                                gameTypeLabel(l10n, t),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Cartoon.text(
+                                                  size: 14,
+                                                  color: selectedGameType == t
+                                                      ? Colors.white
+                                                      : Cartoon.ink,
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  );
-                                },
+                                    ),
+                                  ],
+                                ],
                               ),
                               if (selectedGameType == 'skull_king') ...[
                                 const SizedBox(height: 14),
@@ -1650,88 +1648,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               ],
                             ],
                           ),
-                          if (gamePickerOpen)
-                            Positioned(
-                              top: 52,
-                              left: 0,
-                              right: 0,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(0xFFE0D5D0),
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.14,
-                                        ),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      for (final (type, label, color) in [
-                                        for (final t in const [
-                                          'tichu',
-                                          'mighty',
-                                          'skull_king',
-                                          'love_letter',
-                                        ])
-                                          (
-                                            t,
-                                            gameTypeLabel(l10n, t),
-                                            gameTypeColor(t),
-                                          ),
-                                      ])
-                                        InkWell(
-                                          onTap: () {
-                                            selectGame(type);
-                                            setState(
-                                              () => gamePickerOpen = false,
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                gameTypeSymbol(type, size: 20),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Text(
-                                                    label,
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: color,
-                                                    ),
-                                                  ),
-                                                ),
-                                                if (selectedGameType == type)
-                                                  Icon(
-                                                    Icons.check,
-                                                    size: 18,
-                                                    color: color,
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -2832,8 +2748,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     } else {
       badgeText = l10n.lobbyTichuBadge;
     }
-    const nameColor = Color(0xFF4E3A34);
-    const subTextColor = Color(0xFF9C8B84);
 
     return Material(
       // A match already running greys the whole cell instead of wearing a
@@ -2911,9 +2825,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       ),
                                       child: Text(
                                         badgeText,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                        style: Cartoon.text(
+                                          size: 13,
                                           color: badgeTextColor,
                                         ),
                                       ),
@@ -2948,11 +2861,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     Expanded(
                                       child: Text(
                                         room.name,
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w500,
-                                          color: nameColor,
-                                        ),
+                                        style: Cartoon.text(size: 19),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -2976,9 +2885,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 room.turnTimeLimit,
                                                 room.targetScore,
                                               ),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: subTextColor,
+                                        style: Cartoon.text(
+                                          size: 13,
+                                          color: Cartoon.ink.withValues(
+                                            alpha: 0.62,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -3011,6 +2922,81 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             ),
                                           ),
                                         ),
+                                    if (room.allowMidGameJoin)
+                                      Tooltip(
+                                        message: l10n.midJoinRoomBadge,
+                                        // Geometry copied from the spectate button beside
+                                        // it (8/7 padding, 16px glyph, radius 10) so the
+                                        // two read as one pair of room actions rather than
+                                        // two unrelated marks. Only the colour differs, and
+                                        // that difference is the whole message: purple =
+                                        // you can get in, not just watch.
+                                        child: Container(
+                                          // Tighter than the eye button's 8/7 because this
+                                          // glyph is wider than tall: same outer box, more
+                                          // of it spent on the artwork.
+                                          // Bare artwork — no plate, no border. Four
+                                          // boxed chips in a row read as a toolbar; the
+                                          // icons alone read as what the room is.
+                                          padding: const EdgeInsets.only(
+                                            left: 4,
+                                          ),
+                                          // Availability rides on opacity, since artwork
+                                          // can't be recoloured and a second symbol would
+                                          // undo the point of using this one: full when a
+                                          // seat is free right now, faded when it is only
+                                          // the room's rule.
+                                          child: Opacity(
+                                            opacity: room.canJoinInProgress
+                                                ? 1.0
+                                                : 0.4,
+                                            child: Image.asset(
+                                              'assets/icons/allowBotReplacement.webp',
+                                              width: 28,
+                                              height: 23,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (room.allowSpectators)
+                                      GestureDetector(
+                                        onTap: () =>
+                                            _spectateWithPasswordCheck(room),
+                                        child: Container(
+                                          // Still the tap target that opens spectating —
+                                          // the padding keeps it thumb-sized without a
+                                          // border drawing a button around it.
+                                          padding: const EdgeInsets.fromLTRB(
+                                            2,
+                                            4,
+                                            8,
+                                            4,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Image.asset(
+                                                'assets/icons/allowSpectators.webp',
+                                                width: 28,
+                                                height: 22,
+                                                fit: BoxFit.contain,
+                                              ),
+                                              if (room.spectatorCount > 0) ...[
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '${room.spectatorCount}',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Color(0xFF7A6A62),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ],
@@ -3043,71 +3029,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           // here at all — leaving hands your seat to a bot and
                           // counts against you. Filled when a seat is free to take
                           // this second, outlined when it is only the rule.
-                          if (room.allowMidGameJoin)
-                            Tooltip(
-                              message: l10n.midJoinRoomBadge,
-                              // Geometry copied from the spectate button beside
-                              // it (8/7 padding, 16px glyph, radius 10) so the
-                              // two read as one pair of room actions rather than
-                              // two unrelated marks. Only the colour differs, and
-                              // that difference is the whole message: purple =
-                              // you can get in, not just watch.
-                              child: Container(
-                                // Tighter than the eye button's 8/7 because this
-                                // glyph is wider than tall: same outer box, more
-                                // of it spent on the artwork.
-                                // Bare artwork — no plate, no border. Four
-                                // boxed chips in a row read as a toolbar; the
-                                // icons alone read as what the room is.
-                                padding: const EdgeInsets.only(right: 8),
-                                // Availability rides on opacity, since artwork
-                                // can't be recoloured and a second symbol would
-                                // undo the point of using this one: full when a
-                                // seat is free right now, faded when it is only
-                                // the room's rule.
-                                child: Opacity(
-                                  opacity: room.canJoinInProgress ? 1.0 : 0.4,
-                                  child: Image.asset(
-                                    'assets/icons/allowBotReplacement.webp',
-                                    width: 28,
-                                    height: 23,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (room.allowSpectators)
-                            GestureDetector(
-                              onTap: () => _spectateWithPasswordCheck(room),
-                              child: Container(
-                                // Still the tap target that opens spectating —
-                                // the padding keeps it thumb-sized without a
-                                // border drawing a button around it.
-                                padding: const EdgeInsets.fromLTRB(2, 4, 8, 4),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Image.asset(
-                                      'assets/icons/allowSpectators.webp',
-                                      width: 28,
-                                      height: 22,
-                                      fit: BoxFit.contain,
-                                    ),
-                                    if (room.spectatorCount > 0) ...[
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${room.spectatorCount}',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF7A6A62),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
                           // Seats only. Whether the match is running is carried
                           // by the cell's own background now, so nothing here
                           // has to spend width repeating it.
@@ -5469,7 +5390,7 @@ class _SeatDotsState extends State<_SeatDots>
           children: [
             for (var i = 0; i < widget.total; i++)
               Padding(
-                padding: EdgeInsets.only(left: i == 0 ? 0 : 3),
+                padding: EdgeInsets.only(left: i == 0 ? 0 : 2),
                 child: _dot(
                   i < widget.filled,
                   blink:
@@ -5486,14 +5407,14 @@ class _SeatDotsState extends State<_SeatDots>
   Widget _dot(bool filled, {required bool blink, required bool full}) {
     final glow = blink ? _c.value : 0.0;
     return Container(
-      width: 14,
-      height: 14,
+      width: 12,
+      height: 12,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: filled
             ? (full ? Cartoon.green : widget.color)
             : Color.lerp(Colors.white, Cartoon.yellow, glow),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(color: Cartoon.ink, width: 1.8),
         boxShadow: blink
             ? [
                 BoxShadow(

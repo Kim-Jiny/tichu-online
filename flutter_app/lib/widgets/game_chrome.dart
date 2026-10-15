@@ -74,7 +74,7 @@ Widget gameButton(
   bool expand = false,
   double hPad = 20,
 }) {
-  return CartoonButton(
+  final button = CartoonButton(
     expand: expand,
     height: height,
     color: color,
@@ -84,4 +84,6 @@ Widget gameButton(
       child: CartoonButton.label(label, size: size),
     ),
   );
+  // 눌리지 않을 때는 색이 흐려져 "지금은 못 누른다"가 한눈에 보이게.
+  return onPressed == null ? Opacity(opacity: 0.45, child: button) : button;
 }

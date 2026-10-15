@@ -1622,7 +1622,7 @@ class _GameScreenState extends State<GameScreen> {
     // 중앙 트릭 영역은 배경 상자 없이 내용만 얹는다 (Mighty/SK/LL 톤).
     return Center(
       child: Container(
-        width: 220 * _s,
+        width: 260 * _s,
         padding: EdgeInsets.symmetric(horizontal: 8 * _s, vertical: 6 * _s),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1634,11 +1634,7 @@ class _GameScreenState extends State<GameScreen> {
             if (state.phase != 'playing')
               Text(
                 _getPhaseName(state.phase),
-                style: TextStyle(
-                  fontSize: 15 * _ts,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF5A4038),
-                ),
+                style: Cartoon.text(size: 20 * _ts),
                 textAlign: TextAlign.center,
               ),
             if (state.phase == 'playing') ...[
@@ -1648,18 +1644,26 @@ class _GameScreenState extends State<GameScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
-                    child: Text(
-                      state.isMyTurn
-                          ? L10n.of(context).gameMyTurn
-                          : L10n.of(
-                              context,
-                            ).gamePlayerTurn(_getCurrentPlayerName(state)),
-                      style: TextStyle(
-                        fontSize: 17 * _ts,
-                        color: state.isMyTurn
-                            ? const Color(0xFFE6A800)
-                            : const Color(0xFF5A4038),
-                        fontWeight: FontWeight.bold,
+                    // 내 차례면 주황 알약, 남의 차례면 크림 알약에 이름.
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12 * _s,
+                        vertical: 3 * _s,
+                      ),
+                      decoration: gamePillDecoration(
+                        color: state.isMyTurn ? Cartoon.orange : Cartoon.cream,
+                      ),
+                      child: Text(
+                        state.isMyTurn
+                            ? L10n.of(context).gameMyTurn
+                            : L10n.of(
+                                context,
+                              ).gamePlayerTurn(_getCurrentPlayerName(state)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: state.isMyTurn
+                            ? Cartoon.text(size: 18 * _ts, color: Colors.white)
+                            : Cartoon.userText(size: 16 * _ts),
                       ),
                     ),
                   ),
@@ -1668,45 +1672,13 @@ class _GameScreenState extends State<GameScreen> {
                   // 이건 트릭을 볼 때 자연스러운 위치에서 한 번 더 알려주는 용도.
                   if (_remainingSeconds > 0) ...[
                     SizedBox(width: 6 * _s),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6 * _s,
-                        vertical: 2 * _s,
-                      ),
-                      decoration: BoxDecoration(
+                    Text(
+                      '${_remainingSeconds}s',
+                      style: Cartoon.text(
+                        size: 18 * _ts,
                         color: _remainingSeconds <= 10
-                            ? const Color(0xFFFFE4E4)
-                            : const Color(0xFFF5EEE8),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _remainingSeconds <= 10
-                              ? const Color(0xFFFF6B6B)
-                              : const Color(0xFFD8CCC4),
-                          width: _remainingSeconds <= 10 ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.schedule,
-                            size: 13 * _ts,
-                            color: _remainingSeconds <= 10
-                                ? const Color(0xFFCC4444)
-                                : const Color(0xFF6A5A52),
-                          ),
-                          SizedBox(width: 3 * _s),
-                          Text(
-                            '${_remainingSeconds}s',
-                            style: TextStyle(
-                              fontSize: 13 * _ts,
-                              fontWeight: FontWeight.bold,
-                              color: _remainingSeconds <= 10
-                                  ? const Color(0xFFCC4444)
-                                  : const Color(0xFF5A4038),
-                            ),
-                          ),
-                        ],
+                            ? Cartoon.red
+                            : Cartoon.ink.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -1719,29 +1691,22 @@ class _GameScreenState extends State<GameScreen> {
               SizedBox(height: 4 * _s),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 12,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0x33FF4444),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFFF4444),
-                    width: 1.5 * _s,
-                  ),
+                  color: const Color(0xFFFFD9D6),
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('🐦', style: TextStyle(fontSize: 14 * _ts)),
+                    Text('🐦', style: TextStyle(fontSize: 16 * _ts)),
                     SizedBox(width: 4 * _s),
                     Text(
                       L10n.of(context).gameCall(state.callRank!),
-                      style: TextStyle(
-                        fontSize: 16 * _ts,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFFF4444),
-                      ),
+                      style: Cartoon.text(size: 18 * _ts, color: Cartoon.red),
                     ),
                   ],
                 ),
@@ -2038,19 +2003,18 @@ class _GameScreenState extends State<GameScreen> {
                   text: lastPlay.playerName.length > 8
                       ? '${lastPlay.playerName.substring(0, 8)}..'
                       : lastPlay.playerName,
-                  style: TextStyle(
-                    fontSize: 14 * _ts,
-                    fontWeight: FontWeight.bold,
+                  style: Cartoon.userText(
+                    size: 16 * _ts,
                     color: isMyTeam
-                        ? const Color(0xFF4A90D9)
-                        : const Color(0xFFD94A5A),
+                        ? const Color(0xFF2F6FC4)
+                        : const Color(0xFFC73A4B),
                   ),
                 ),
                 TextSpan(
                   text: L10n.of(context).gamePlayedCards,
-                  style: TextStyle(
-                    fontSize: 12 * _ts,
-                    color: Color(0xFF8A7A72),
+                  style: Cartoon.text(
+                    size: 14 * _ts,
+                    color: Cartoon.ink.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -2068,8 +2032,8 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildOverlappedTrick(List<String> cards, {TrickPlay? lastPlay}) {
     // 관전 트릭과 동일 톤: 44×62, minOverlap 24, maxOverlap 34.
     // 7장 이상은 두 줄로, 4장 이상은 살짝 겹치도록 아래 LayoutBuilder 에서 처리.
-    final double baseCardW = 44 * _s;
-    final double baseCardH = 62 * _s;
+    final double baseCardW = 52 * _s;
+    final double baseCardH = 73 * _s;
     var cardW = baseCardW;
     var cardH = baseCardH;
 
@@ -2103,17 +2067,13 @@ class _GameScreenState extends State<GameScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFC107),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white, width: 1.5),
+                color: Cartoon.yellow,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: Cartoon.ink, width: 1.5),
               ),
               child: Text(
                 phoenixBeatLabel,
-                style: TextStyle(
-                  fontSize: 9 * _ts,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF5A4038),
-                ),
+                style: Cartoon.text(size: 12 * _ts),
               ),
             ),
           ),
@@ -2348,7 +2308,7 @@ class _GameScreenState extends State<GameScreen> {
                         state.currentTrick.isNotEmpty)
                     ? _passTurn
                     : null,
-                color: const Color(0xFFB9B1A8),
+                color: Cartoon.blue,
                 height: 50,
                 size: 20,
                 hPad: 30,

@@ -284,10 +284,7 @@ class CouponTag extends StatelessWidget {
           decoration: BoxDecoration(
             color: Cartoon.yellow,
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: Cartoon.ink, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
+            border: Border.all(color: Cartoon.ink, width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -333,7 +330,7 @@ class NoticeCouponBlock extends StatelessWidget {
             decoration: Cartoon.panelDecoration(
               color: const Color(0xFFFFF1C9),
               radius: 22,
-              shadowOffset: 4,
+              shadowOffset: 2.5,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -353,7 +350,10 @@ class NoticeCouponBlock extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Cartoon.orange,
                               borderRadius: BorderRadius.circular(11),
-                              border: Border.all(color: Cartoon.ink, width: 2),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 1.5,
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -386,7 +386,7 @@ class NoticeCouponBlock extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Cartoon.ink, width: 2.2),
+                          border: Border.all(color: Cartoon.ink, width: 1.6),
                         ),
                         child: Row(
                           children: [
@@ -424,14 +424,8 @@ class NoticeCouponBlock extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: Cartoon.ink,
-                                    width: 2.2,
+                                    width: 1.6,
                                   ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Cartoon.ink,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
                                 child: const Icon(
                                   Icons.copy_rounded,

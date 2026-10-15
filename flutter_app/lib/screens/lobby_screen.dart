@@ -789,9 +789,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         decoration: BoxDecoration(
           color: Color.lerp(accent, Colors.white, 0.55),
           borderRadius: BorderRadius.circular(r),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: ClipRRect(
@@ -858,9 +858,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         decoration: BoxDecoration(
           color: Color.lerp(color, Colors.white, 0.55),
           borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: Icon(icon, color: Cartoon.ink, size: _headerGlyphFor(box)),
@@ -1090,7 +1090,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: const BorderSide(color: Cartoon.ink, width: 3),
+                  side: const BorderSide(color: Cartoon.ink, width: 2.2),
                 ),
                 backgroundColor: Cartoon.paper,
                 contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
@@ -1151,7 +1151,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             ),
                                             border: Border.all(
                                               color: Cartoon.ink,
-                                              width: 2.5,
+                                              width: 2,
                                             ),
                                             boxShadow: [
                                               BoxShadow(
@@ -1393,7 +1393,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
                                       color: Cartoon.ink,
-                                      width: 2.5,
+                                      width: 2,
                                     ),
                                   ),
                                   child: Row(
@@ -1738,7 +1738,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: Cartoon.ink, width: 2.5),
+                        side: const BorderSide(color: Cartoon.ink, width: 2),
                       ),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(
@@ -1992,7 +1992,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         // growing; a ternary that returns the same number twice only reads as
         // an intention nobody has.
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 2.5),
         margin: EdgeInsets.fromLTRB(
           isLandscape ? 12 : 16,
           isLandscape ? 12 : 16,
@@ -2075,7 +2075,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
-        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 4),
+        decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 2.5),
         child: Row(
           children: [
             Expanded(
@@ -2098,9 +2098,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
                 child: Row(
@@ -2147,7 +2147,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ),
         decoration: const BoxDecoration(
           color: Cartoon.paper,
-          border: Border(top: BorderSide(color: Cartoon.ink, width: 3)),
+          border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
         child: Row(
@@ -2677,11 +2677,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 decoration: BoxDecoration(
                   color: _roomGameFilter == type ? color : Cartoon.paper,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: _roomGameFilter == type
                       ? null
                       : const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                         ],
                 ),
                 child: Text(
@@ -2809,9 +2809,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             // 안쪽까지 비쳐서, 색 없는 상자가 통째로 먹색이 된다.
             color: isInProgress ? const Color(0xFFE9E4DF) : Cartoon.paper,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Cartoon.ink, width: 2.5),
+            border: Border.all(color: Cartoon.ink, width: 2),
             boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
             ],
           ),
           // Clip the contents to the card's INNER curve instead of asking the
@@ -3160,7 +3160,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: Cartoon.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Cartoon.ink, width: 3),
+          side: const BorderSide(color: Cartoon.ink, width: 2.2),
         ),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
         title: Row(
@@ -3475,10 +3475,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             decoration: BoxDecoration(
               color: active ? Cartoon.orange : Cartoon.paper,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Cartoon.ink, width: 2.2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-              ],
+              border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
             child: Icon(
               icon,
@@ -3495,7 +3492,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.red,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Cartoon.ink, width: 1.8),
+                  border: Border.all(color: Cartoon.ink, width: 1.4),
                 ),
                 child: Text(
                   badge > 99 ? '99+' : '$badge',
@@ -3532,7 +3529,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           duration: const Duration(milliseconds: 160),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -3601,7 +3598,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.cream,
                       borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
                     child: Icon(icon, size: 21, color: Cartoon.ink),
                   ),
@@ -3618,7 +3615,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.red,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Cartoon.ink, width: 1.8),
+                          border: Border.all(color: Cartoon.ink, width: 1.4),
                         ),
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
@@ -3661,7 +3658,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       // 보이던 윗변이 둥글게 닫힌다.
       margin: EdgeInsets.fromLTRB(12, isLandscape ? 4 : 6, 12, 6),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-      decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+      decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 2.5),
       // One row: back, a title block (room name + its rules underneath), then
       // icon-only actions. It was two rows — title with two chips and a share
       // button, then four labelled pastel chips — which spent ~110dp of height
@@ -3678,9 +3675,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.paper,
                 borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
+                border: Border.all(color: Cartoon.ink, width: 2),
                 boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),
               child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
@@ -3848,7 +3845,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Cartoon.outlinedText(label, size: 15),
     );
@@ -3868,10 +3865,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE9B8),
                 borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: Cartoon.ink, width: 2.2),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                ],
+                border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -4396,7 +4390,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.paper,
                 borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: Cartoon.ink, width: 2),
+                border: Border.all(color: Cartoon.ink, width: 1.5),
               ),
               child: Icon(icon, size: 19, color: color),
             ),
@@ -4412,7 +4406,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: Cartoon.panelDecoration(
         color: const Color(0xFFE9EEFF),
         radius: 18,
-        shadowOffset: 3,
+        shadowOffset: 2,
       ),
       child: Row(
         children: [
@@ -4497,7 +4491,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
       child: Text(
         label,
@@ -4523,7 +4517,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFE8E0F8),
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4567,7 +4561,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         decoration: BoxDecoration(
           color: Cartoon.cream,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: Cartoon.ink, width: 2),
+          border: Border.all(color: Cartoon.ink, width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -4635,7 +4629,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4843,7 +4837,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           final avatar = Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Cartoon.ink, width: 2),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 1.5,
+                              ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(14),
@@ -5057,13 +5054,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: BoxDecoration(
                             color: Cartoon.green,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Cartoon.ink, width: 2.2),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Cartoon.ink,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            border: Border.all(color: Cartoon.ink, width: 1.6),
                           ),
                           child: Text(
                             L10n.of(context).lobbyTakeSeat,
@@ -5167,7 +5158,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFE9EEFF),
                             borderRadius: BorderRadius.circular(11),
-                            border: Border.all(color: Cartoon.ink, width: 2),
+                            border: Border.all(color: Cartoon.ink, width: 1.5),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -5206,7 +5197,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFE9B8),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Cartoon.ink, width: 2),
+                            border: Border.all(color: Cartoon.ink, width: 1.5),
                           ),
                           child: Text(
                             '${player.seasonRating}',
@@ -5238,7 +5229,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFE3E3),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Cartoon.ink, width: 2),
+                              border: Border.all(
+                                color: Cartoon.ink,
+                                width: 1.5,
+                              ),
                             ),
                             child: const Icon(
                               Icons.close_rounded,
@@ -5441,7 +5435,7 @@ class _SeatDotsState extends State<_SeatDots>
         color: filled
             ? (full ? Cartoon.green : widget.color)
             : Color.lerp(Colors.white, Cartoon.yellow, glow),
-        border: Border.all(color: Cartoon.ink, width: 1.8),
+        border: Border.all(color: Cartoon.ink, width: 1.4),
         boxShadow: blink
             ? [
                 BoxShadow(
@@ -5500,9 +5494,6 @@ class _LockChipState extends State<_LockChip>
           color: Cartoon.yellow,
           borderRadius: BorderRadius.circular(s * 0.34),
           border: Border.all(color: Cartoon.ink, width: s >= 30 ? 2.5 : 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
         ),
         child: Image.asset('assets/icons/private.webp', fit: BoxFit.contain),
       ),
@@ -5547,9 +5538,9 @@ class _RefreshChipState extends State<_RefreshChip>
         decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: RotationTransition(

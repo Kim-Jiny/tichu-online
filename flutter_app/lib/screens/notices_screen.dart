@@ -82,14 +82,11 @@ class _NoticesScreenState extends State<NoticesScreen> {
                             decoration: BoxDecoration(
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Cartoon.ink,
-                                width: 2.5,
-                              ),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Cartoon.ink,
-                                  offset: Offset(0, 3),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -257,7 +254,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
       decoration: Cartoon.panelDecoration(
         color: isNew ? const Color(0xFFFFF6DD) : Cartoon.paper,
         radius: 18,
-        shadowOffset: 4,
+        shadowOffset: 2.5,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +276,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.red,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Cartoon.ink, width: 2),
+                          border: Border.all(color: Cartoon.ink, width: 1.5),
                         ),
                         child: const Text(
                           'NEW',
@@ -298,7 +295,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                       decoration: BoxDecoration(
                         color: _categoryBgColor(category),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Cartoon.ink, width: 2),
+                        border: Border.all(color: Cartoon.ink, width: 1.5),
                       ),
                       child: Text(
                         _categoryLabel(l10n, category),
@@ -381,10 +378,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                       decoration: BoxDecoration(
                         color: Cartoon.red,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Cartoon.ink, width: 2.2),
-                        boxShadow: const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                        ],
+                        border: Border.all(color: Cartoon.ink, width: 1.6),
                       ),
                       child: const Icon(
                         Icons.push_pin_rounded,
@@ -558,14 +552,11 @@ class _NoticeDetailPage extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Cartoon.ink,
-                                width: 2.5,
-                              ),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Cartoon.ink,
-                                  offset: Offset(0, 3),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -584,7 +575,7 @@ class _NoticeDetailPage extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: categoryBg,
                             borderRadius: BorderRadius.circular(11),
-                            border: Border.all(color: Cartoon.ink, width: 2.2),
+                            border: Border.all(color: Cartoon.ink, width: 1.6),
                           ),
                           child: Text(
                             categoryLabel,

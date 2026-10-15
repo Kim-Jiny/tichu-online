@@ -116,8 +116,8 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       decoration: BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Cartoon.ink, width: 2.5),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
+        border: Border.all(color: Cartoon.ink, width: 2),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -156,7 +156,7 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
         decoration: BoxDecoration(
           color: widget.accentColor,
           border: const Border(
-            bottom: BorderSide(color: Cartoon.ink, width: 2.5),
+            bottom: BorderSide(color: Cartoon.ink, width: 2),
           ),
         ),
         child: Row(

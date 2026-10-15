@@ -37,8 +37,9 @@ class Cartoon {
   static const Color red = Color(0xFFFF5A5F);
   static const Color yellow = Color(0xFFFFD43B);
 
-  static const double border = 3;
-  static const double shadow = 5;
+  // 두껍고 큰 그림자가 화면을 번잡하게 해서 한 단계씩 줄였다 (3/5 → 2.2/3).
+  static const double border = 2.2;
+  static const double shadow = 3;
 
   /// 외곽선 + 채움을 겹쳐 그린 글자. 어떤 배경 위에서도 읽힌다.
   static Widget outlinedText(
@@ -447,7 +448,7 @@ class _CartoonPressableState extends State<CartoonPressable> {
 
 /// 숨 쉬듯 아주 살짝 커졌다 작아진다 — "여기를 눌러" 라는 신호.
 class CartoonPulse extends StatefulWidget {
-  const CartoonPulse({super.key, required this.child, this.amount = 0.035});
+  const CartoonPulse({super.key, required this.child, this.amount = 0.02});
 
   final Widget child;
   final double amount;

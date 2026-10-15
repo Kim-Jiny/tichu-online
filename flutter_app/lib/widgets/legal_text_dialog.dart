@@ -174,7 +174,7 @@ class _LegalBodyState extends State<_LegalBody> {
                         decoration: BoxDecoration(
                           color: Cartoon.cream,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Cartoon.ink, width: 2.2),
+                          border: Border.all(color: Cartoon.ink, width: 1.6),
                         ),
                         child: Text(
                           s.heading!,
@@ -210,9 +210,9 @@ class _LegalBodyState extends State<_LegalBody> {
                     0.75,
                   ),
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
                 child: Icon(
@@ -241,9 +241,9 @@ class _LegalBodyState extends State<_LegalBody> {
                   decoration: BoxDecoration(
                     color: Cartoon.paper,
                     borderRadius: BorderRadius.circular(13),
-                    border: Border.all(color: Cartoon.ink, width: 2.5),
+                    border: Border.all(color: Cartoon.ink, width: 2),
                     boxShadow: const [
-                      BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                      BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                     ],
                   ),
                   child: const Icon(Icons.close_rounded, color: Cartoon.ink),
@@ -258,7 +258,7 @@ class _LegalBodyState extends State<_LegalBody> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Cartoon.ink, width: 2),
+              border: Border.all(color: Cartoon.ink, width: 1.5),
             ),
             clipBehavior: Clip.antiAlias,
             alignment: Alignment.centerLeft,
@@ -288,13 +288,7 @@ class _LegalBodyState extends State<_LegalBody> {
                           decoration: BoxDecoration(
                             color: Cartoon.paper,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Cartoon.ink, width: 2),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Cartoon.ink,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            border: Border.all(color: Cartoon.ink, width: 1.5),
                           ),
                           child: Text(
                             s.heading!,

@@ -34,7 +34,7 @@ class ChoicePill extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? accent : Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
+          border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: [
             BoxShadow(color: Cartoon.ink, offset: Offset(0, selected ? 3 : 2)),
           ],

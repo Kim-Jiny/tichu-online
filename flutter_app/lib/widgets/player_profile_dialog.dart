@@ -124,9 +124,9 @@ void showPlayerProfileDialog(
                   gradient: banner,
                   color: banner == null ? Cartoon.paper : null,
                   borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: Cartoon.ink, width: 3),
+                  border: Border.all(color: Cartoon.ink, width: 2.2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 5)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
                   ],
                 ),
                 child: Column(

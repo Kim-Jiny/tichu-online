@@ -120,10 +120,7 @@ class ChatBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isMe ? mineColor : Colors.white,
                   borderRadius: BorderRadius.circular(bubbleRadius),
-                  border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                  ],
+                  border: Border.all(color: Cartoon.ink, width: 1.5),
                 ),
                 child: Text(
                   message,

@@ -91,7 +91,7 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           decoration: BoxDecoration(
             color: Cartoon.paper,
-            border: Border(top: BorderSide(color: Cartoon.ink, width: 2.5)),
+            border: Border(top: BorderSide(color: Cartoon.ink, width: 2)),
           ),
           child: Row(
             children: [
@@ -111,14 +111,14 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                       borderRadius: BorderRadius.circular(18),
                       borderSide: const BorderSide(
                         color: Cartoon.ink,
-                        width: 2.2,
+                        width: 1.6,
                       ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
                       borderSide: const BorderSide(
                         color: Cartoon.ink,
-                        width: 2.2,
+                        width: 1.6,
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
@@ -155,10 +155,7 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                     decoration: BoxDecoration(
                       color: widget.sendIconColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Cartoon.ink, width: 2.2),
-                      boxShadow: const [
-                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                      ],
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
                     child: const Icon(
                       Icons.send_rounded,

@@ -208,7 +208,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: Cartoon.ink,
-                                width: 2.2,
+                                width: 1.6,
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -506,7 +506,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       decoration: Cartoon.panelDecoration(
         color: Colors.white,
         radius: 20,
-        shadowOffset: 3,
+        shadowOffset: 2,
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -586,7 +586,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
@@ -1477,7 +1477,7 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
           decoration: BoxDecoration(
             color: on ? color : Cartoon.paper,
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: Cartoon.ink, width: 2.2),
+            border: Border.all(color: Cartoon.ink, width: 1.6),
             boxShadow: [
               BoxShadow(color: Cartoon.ink, offset: Offset(0, on ? 3 : 2)),
             ],
@@ -1511,9 +1511,9 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                     decoration: BoxDecoration(
                       color: Cartoon.cream,
                       borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: Cartoon.ink, width: 2.5),
+                      border: Border.all(color: Cartoon.ink, width: 2),
                       boxShadow: const [
-                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                        BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                       ],
                     ),
                     child: const Icon(
@@ -1540,9 +1540,9 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                       decoration: BoxDecoration(
                         color: Cartoon.paper,
                         borderRadius: BorderRadius.circular(13),
-                        border: Border.all(color: Cartoon.ink, width: 2.5),
+                        border: Border.all(color: Cartoon.ink, width: 2),
                         boxShadow: const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                         ],
                       ),
                       child: const Icon(

@@ -162,10 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           decoration: BoxDecoration(
             color: Color.lerp(tone, Colors.white, 0.75),
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: Cartoon.ink, width: 2.2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
+            border: Border.all(color: Cartoon.ink, width: 1.6),
           ),
           child: Icon(icon, size: 22, color: tone),
         ),
@@ -235,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Cartoon.blue : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
+          border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: [
             BoxShadow(
               color: Cartoon.ink,
@@ -311,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFE3E3),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
                     child: Text(
                       l10n.settingsDeleteTypeNickname(nickname),
@@ -578,10 +575,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Cartoon.ink, width: 2.2),
-                          boxShadow: const [
-                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                          ],
+                          border: Border.all(color: Cartoon.ink, width: 1.6),
                         ),
                         child: Row(
                           children: [
@@ -597,7 +591,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 1.8,
+                                  width: 1.4,
                                 ),
                               ),
                               child: Text(
@@ -806,7 +800,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ? Color.lerp(color, Colors.white, 0.8)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Cartoon.ink, width: 2.2),
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
                       boxShadow: [
                         BoxShadow(
                           color: Cartoon.ink,
@@ -957,9 +951,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Cartoon.ink, width: 2.5),
+              border: Border.all(color: Cartoon.ink, width: 2),
               boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
               ],
             ),
             child: Row(
@@ -1071,9 +1065,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
+                border: Border.all(color: Cartoon.ink, width: 2),
                 boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),
               child: ClipRRect(
@@ -1234,7 +1228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Cartoon.ink, width: 2.2),
+                  border: Border.all(color: Cartoon.ink, width: 1.6),
                 ),
                 child: Text(title, style: Cartoon.text(size: 14)),
               ),
@@ -1242,7 +1236,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               margin: const EdgeInsets.only(bottom: 3),
               padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+              decoration: Cartoon.panelDecoration(
+                radius: 22,
+                shadowOffset: 2.5,
+              ),
               clipBehavior: Clip.antiAlias,
               child: Column(children: children),
             ),
@@ -1322,12 +1319,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
                                     color: Cartoon.ink,
-                                    width: 2.5,
+                                    width: 2,
                                   ),
                                   boxShadow: const [
                                     BoxShadow(
                                       color: Cartoon.ink,
-                                      offset: Offset(0, 3),
+                                      offset: Offset(0, 2),
                                     ),
                                   ],
                                 ),

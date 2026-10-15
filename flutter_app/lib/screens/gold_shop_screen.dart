@@ -225,9 +225,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                         top: Radius.circular(26),
                       ),
                       border: Border(
-                        top: BorderSide(color: Cartoon.ink, width: 3),
-                        left: BorderSide(color: Cartoon.ink, width: 3),
-                        right: BorderSide(color: Cartoon.ink, width: 3),
+                        top: BorderSide(color: Cartoon.ink, width: 2.2),
+                        left: BorderSide(color: Cartoon.ink, width: 2.2),
+                        right: BorderSide(color: Cartoon.ink, width: 2.2),
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -260,9 +260,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.paper,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
                 child: const Icon(
@@ -287,9 +287,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
                 child: Row(
@@ -675,7 +675,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       decoration: Cartoon.panelDecoration(
         color: isBest ? const Color(0xFFFFF4D6) : Cartoon.paper,
         radius: 20,
-        shadowOffset: 4,
+        shadowOffset: 2.5,
       ),
       child: Row(
         children: [

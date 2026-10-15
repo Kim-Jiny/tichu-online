@@ -347,9 +347,9 @@ class _ShopScreenState extends State<ShopScreen> {
           decoration: BoxDecoration(
             color: Cartoon.paper,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Cartoon.ink, width: 2.5),
+            border: Border.all(color: Cartoon.ink, width: 2),
             boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
             ],
           ),
           child: child,
@@ -401,9 +401,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       decoration: BoxDecoration(
                         color: Cartoon.cream,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Cartoon.ink, width: 2.5),
+                        border: Border.all(color: Cartoon.ink, width: 2),
                         boxShadow: const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                         ],
                       ),
                       child: Row(
@@ -492,9 +492,9 @@ class _ShopScreenState extends State<ShopScreen> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(avatarCornerRadius(40)),
-              border: Border.all(color: Cartoon.ink, width: 2.5),
+              border: Border.all(color: Cartoon.ink, width: 2),
               boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
               ],
             ),
             child: ProfileAvatar(
@@ -546,9 +546,9 @@ class _ShopScreenState extends State<ShopScreen> {
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -601,9 +601,9 @@ class _ShopScreenState extends State<ShopScreen> {
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
-          top: BorderSide(color: Cartoon.ink, width: 3),
-          left: BorderSide(color: Cartoon.ink, width: 3),
-          right: BorderSide(color: Cartoon.ink, width: 3),
+          top: BorderSide(color: Cartoon.ink, width: 2.2),
+          left: BorderSide(color: Cartoon.ink, width: 2.2),
+          right: BorderSide(color: Cartoon.ink, width: 2.2),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -701,7 +701,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                 ),
                 child: Row(
                   children: [
@@ -969,7 +969,7 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1040,10 +1040,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   decoration: BoxDecoration(
                     color: isWorn ? Cartoon.paper : Cartoon.blue,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Cartoon.ink, width: 2.2),
-                    boxShadow: const [
-                      BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                    ],
+                    border: Border.all(color: Cartoon.ink, width: 1.6),
                   ),
                   child: Text(
                     isWorn ? l10n.shopButtonUnequip : l10n.shopButtonEquip,
@@ -1064,7 +1061,7 @@ class _ShopScreenState extends State<ShopScreen> {
                 decoration: BoxDecoration(
                   color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 2.2),
+                  border: Border.all(color: Cartoon.ink, width: 1.6),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1109,7 +1106,7 @@ class _ShopScreenState extends State<ShopScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFE3E3),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cartoon.ink, width: 2.5),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Row(
         children: [
@@ -1261,7 +1258,7 @@ class _ShopScreenState extends State<ShopScreen> {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Cartoon.ink, width: 2),
+          border: Border.all(color: Cartoon.ink, width: 1.5),
         ),
         child: Text(
           text,
@@ -1324,7 +1321,7 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+        decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1394,7 +1391,7 @@ class _ShopScreenState extends State<ShopScreen> {
       decoration: BoxDecoration(
         color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
@@ -1720,7 +1717,7 @@ class _ShopScreenState extends State<ShopScreen> {
       decoration: Cartoon.panelDecoration(
         color: equipped ? const Color(0xFFE6F2FF) : Cartoon.paper,
         radius: 20,
-        shadowOffset: 4,
+        shadowOffset: 2.5,
       ),
       child: Material(
         color: Colors.transparent,
@@ -1835,7 +1832,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     borderRadius: BorderRadius.circular(10),
                                     side: const BorderSide(
                                       color: Cartoon.ink,
-                                      width: 2.2,
+                                      width: 1.6,
                                     ),
                                   ),
                                 ),
@@ -1902,7 +1899,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                         borderRadius: BorderRadius.circular(10),
                                         side: const BorderSide(
                                           color: Cartoon.ink,
-                                          width: 2.2,
+                                          width: 1.6,
                                         ),
                                       ),
                                     ),
@@ -1942,7 +1939,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     borderRadius: BorderRadius.circular(10),
                                     side: const BorderSide(
                                       color: Cartoon.ink,
-                                      width: 2.2,
+                                      width: 1.6,
                                     ),
                                   ),
                                 ),
@@ -2008,7 +2005,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     borderRadius: BorderRadius.circular(10),
                                     side: const BorderSide(
                                       color: Cartoon.ink,
-                                      width: 2.2,
+                                      width: 1.6,
                                     ),
                                   ),
                                   padding: const EdgeInsets.symmetric(
@@ -2668,9 +2665,9 @@ class _ShopScreenState extends State<ShopScreen> {
               color: Cartoon.paper,
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               border: Border(
-                top: BorderSide(color: Cartoon.ink, width: 3),
-                left: BorderSide(color: Cartoon.ink, width: 3),
-                right: BorderSide(color: Cartoon.ink, width: 3),
+                top: BorderSide(color: Cartoon.ink, width: 2.2),
+                left: BorderSide(color: Cartoon.ink, width: 2.2),
+                right: BorderSide(color: Cartoon.ink, width: 2.2),
               ),
             ),
             // Price and CTA are pinned below the scroll area. Inside it they sat
@@ -2711,12 +2708,12 @@ class _ShopScreenState extends State<ShopScreen> {
                                 borderRadius: BorderRadius.circular(22),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 3,
+                                  width: 2.2,
                                 ),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: Cartoon.ink,
-                                    offset: Offset(0, 4),
+                                    offset: Offset(0, 2.5),
                                   ),
                                 ],
                               ),
@@ -2744,7 +2741,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: Cartoon.ink,
-                                        width: 2.5,
+                                        width: 2,
                                       ),
                                     ),
                                     child: const Text(
@@ -2843,12 +2840,12 @@ class _ShopScreenState extends State<ShopScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 2.5,
+                                  width: 2,
                                 ),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: Cartoon.ink,
-                                    offset: Offset(0, 3),
+                                    offset: Offset(0, 2),
                                   ),
                                 ],
                               ),
@@ -2965,7 +2962,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   decoration: BoxDecoration(
                     color: Cartoon.cream,
                     border: const Border(
-                      top: BorderSide(color: Cartoon.ink, width: 3),
+                      top: BorderSide(color: Cartoon.ink, width: 2.2),
                     ),
                   ),
                   child: Column(
@@ -3716,7 +3713,7 @@ class _ShopScreenState extends State<ShopScreen> {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
       child: Text(
         label,
@@ -4123,7 +4120,7 @@ class _ShopScreenState extends State<ShopScreen> {
           decoration: BoxDecoration(
             color: selected ? Cartoon.blue : Cartoon.paper,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Cartoon.ink, width: 2.5),
+            border: Border.all(color: Cartoon.ink, width: 2),
             boxShadow: [
               BoxShadow(
                 color: Cartoon.ink,
@@ -4329,7 +4326,7 @@ class _ShopScreenState extends State<ShopScreen> {
             child: Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
-                side: const BorderSide(color: Cartoon.ink, width: 3),
+                side: const BorderSide(color: Cartoon.ink, width: 2.2),
               ),
               // Capped, not free-sizing. Dialog lets its child take whatever
               // width is on offer, and the rows inside are Expanded — so on a
@@ -4351,14 +4348,11 @@ class _ShopScreenState extends State<ShopScreen> {
                             decoration: BoxDecoration(
                               color: Cartoon.yellow,
                               borderRadius: BorderRadius.circular(15),
-                              border: Border.all(
-                                color: Cartoon.ink,
-                                width: 2.5,
-                              ),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Cartoon.ink,
-                                  offset: Offset(0, 3),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -4386,12 +4380,12 @@ class _ShopScreenState extends State<ShopScreen> {
                                 borderRadius: BorderRadius.circular(13),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 2.5,
+                                  width: 2,
                                 ),
                                 boxShadow: const [
                                   BoxShadow(
                                     color: Cartoon.ink,
-                                    offset: Offset(0, 3),
+                                    offset: Offset(0, 2),
                                   ),
                                 ],
                               ),
@@ -4431,7 +4425,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                   borderRadius: BorderRadius.circular(9),
                                   border: Border.all(
                                     color: Cartoon.ink,
-                                    width: 2.2,
+                                    width: 1.6,
                                   ),
                                 ),
                                 clipBehavior: Clip.antiAlias,
@@ -4487,7 +4481,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFD8F5DF),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Cartoon.ink, width: 2.5),
+                            border: Border.all(color: Cartoon.ink, width: 2),
                           ),
                           child: Text(
                             l.attendanceDoneToday,

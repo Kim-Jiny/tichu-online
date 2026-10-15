@@ -257,9 +257,9 @@ class PlayerProfileHeader extends StatelessWidget {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Cartoon.ink, width: 3),
+          border: Border.all(color: Cartoon.ink, width: 2.2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: ClipRRect(
@@ -271,8 +271,8 @@ class PlayerProfileHeader extends StatelessWidget {
     Widget framed(Widget child) => Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Cartoon.ink, width: 3),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
+        border: Border.all(color: Cartoon.ink, width: 2.2),
+        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(17), child: child),
     );
@@ -330,7 +330,7 @@ class PlayerProfileHeader extends StatelessWidget {
                     ? const Color(0xFF6C63FF)
                     : Colors.black.withValues(alpha: 0.55),
                 shape: BoxShape.circle,
-                border: Border.all(color: Cartoon.ink, width: 2),
+                border: Border.all(color: Cartoon.ink, width: 1.5),
               ),
               child: Icon(
                 editable ? Icons.edit : Icons.zoom_in,
@@ -445,10 +445,7 @@ class PlayerProfileHeader extends StatelessWidget {
             decoration: BoxDecoration(
               color: onBanner ? Colors.white : Cartoon.paper,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Cartoon.ink, width: 2.2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-              ],
+              border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
             child: Icon(icon, size: 21, color: color),
           ),
@@ -464,10 +461,7 @@ class PlayerProfileHeader extends StatelessWidget {
         decoration: BoxDecoration(
           color: onBanner ? Colors.white : Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          border: Border.all(color: Cartoon.ink, width: 1.6),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1226,7 +1220,7 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
         decoration: BoxDecoration(
           color: Cartoon.yellow,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Cartoon.ink, width: 2),
+          border: Border.all(color: Cartoon.ink, width: 1.5),
         ),
         child: Text(
           'Lv.$level',
@@ -1240,7 +1234,7 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Cartoon.ink, width: 2),
+            border: Border.all(color: Cartoon.ink, width: 1.5),
           ),
           clipBehavior: Clip.antiAlias,
           alignment: Alignment.centerLeft,

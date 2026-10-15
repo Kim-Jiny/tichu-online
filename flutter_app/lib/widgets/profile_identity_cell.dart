@@ -127,7 +127,7 @@ class ProfileIdentityCell extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isOnline! ? Cartoon.green : const Color(0xFFC4BAB4),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Cartoon.ink, width: 2),
+                    border: Border.all(color: Cartoon.ink, width: 1.5),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -143,7 +143,7 @@ class ProfileIdentityCell extends StatelessWidget {
                         borderRadius: BorderRadius.circular(
                           avatarCornerRadius(avatarSize) + 2,
                         ),
-                        border: Border.all(color: Cartoon.ink, width: 2.2),
+                        border: Border.all(color: Cartoon.ink, width: 1.6),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(
@@ -165,7 +165,7 @@ class ProfileIdentityCell extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Cartoon.ink, width: 1.8),
+                            border: Border.all(color: Cartoon.ink, width: 1.4),
                           ),
                           child: LevelBadge(level: level, size: 15),
                         ),

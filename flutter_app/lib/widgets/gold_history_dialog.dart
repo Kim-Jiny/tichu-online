@@ -24,9 +24,9 @@ Widget _goldDialogHeader(
         decoration: BoxDecoration(
           color: Cartoon.cream,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: const Center(child: GoldIcon(size: 28)),
@@ -59,9 +59,9 @@ Widget _goldDialogHeader(
           decoration: BoxDecoration(
             color: Cartoon.paper,
             borderRadius: BorderRadius.circular(13),
-            border: Border.all(color: Cartoon.ink, width: 2.5),
+            border: Border.all(color: Cartoon.ink, width: 2),
             boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
             ],
           ),
           child: const Icon(Icons.close_rounded, color: Cartoon.ink),
@@ -190,7 +190,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cartoon.ink, width: 2.5),
+        border: Border.all(color: Cartoon.ink, width: 2),
       ),
       child: Row(
         children: [
@@ -358,7 +358,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
@@ -380,7 +380,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
         decoration: BoxDecoration(
           color: on ? Cartoon.blue : Cartoon.paper,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
+          border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: [
             BoxShadow(color: Cartoon.ink, offset: Offset(0, on ? 3 : 2)),
           ],
@@ -407,8 +407,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         children: [
@@ -418,7 +417,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             decoration: BoxDecoration(
               color: tone.withValues(alpha: 0.18),
               shape: BoxShape.circle,
-              border: Border.all(color: Cartoon.ink, width: 2),
+              border: Border.all(color: Cartoon.ink, width: 1.5),
             ),
             child: Icon(
               positive ? Icons.south_west_rounded : Icons.north_east_rounded,
@@ -464,7 +463,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             decoration: BoxDecoration(
               color: tone,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Cartoon.ink, width: 2),
+              border: Border.all(color: Cartoon.ink, width: 1.5),
             ),
             child: Text(
               '${positive ? '+' : ''}${formatGold(delta)}',
@@ -574,8 +573,7 @@ Widget _buildGoldGuideItem({
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Cartoon.ink, width: 2.2),
-      boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+      border: Border.all(color: Cartoon.ink, width: 1.6),
     ),
     child: Row(
       children: [
@@ -585,7 +583,7 @@ Widget _buildGoldGuideItem({
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(color: Cartoon.ink, width: 2),
+            border: Border.all(color: Cartoon.ink, width: 1.5),
           ),
           child: Icon(icon, size: 21, color: accent),
         ),

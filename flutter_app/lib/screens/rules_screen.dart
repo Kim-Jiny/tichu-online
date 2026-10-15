@@ -81,14 +81,11 @@ class _RulesScreenState extends State<RulesScreen> {
                             decoration: BoxDecoration(
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Cartoon.ink,
-                                width: 2.5,
-                              ),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Cartoon.ink,
-                                  offset: Offset(0, 3),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -145,14 +142,8 @@ class _RulesScreenState extends State<RulesScreen> {
                                 borderRadius: BorderRadius.circular(13),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 2.2,
+                                  width: 1.6,
                                 ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Cartoon.ink,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
                               ),
                               child: Text(
                                 e.title,
@@ -196,7 +187,7 @@ class _RulesScreenState extends State<RulesScreen> {
         decoration: BoxDecoration(
           color: selected ? gameTypeColor(key) : Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: [
             BoxShadow(color: Cartoon.ink, offset: Offset(0, selected ? 4 : 2)),
           ],
@@ -1007,7 +998,7 @@ class _RulesScreenState extends State<RulesScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 4),
+          decoration: Cartoon.panelDecoration(radius: 22, shadowOffset: 2.5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1092,7 +1083,7 @@ class _SpecialRule extends StatelessWidget {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1320,7 +1311,7 @@ class _ExampleBlock extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1402,7 +1393,7 @@ class _TichuDeclarationRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1484,7 +1475,7 @@ class _MightyDeckPreview extends StatelessWidget {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1760,7 +1751,7 @@ class _FlowDemo extends StatelessWidget {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1860,7 +1851,7 @@ class _SectionBadge extends StatelessWidget {
       height: 34,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -2007,7 +1998,7 @@ class _CardGuide extends StatelessWidget {
       decoration: BoxDecoration(
         color: Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2.2),
+        border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

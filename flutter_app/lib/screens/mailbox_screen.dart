@@ -198,14 +198,11 @@ class _MailboxScreenState extends State<MailboxScreen> {
                             decoration: BoxDecoration(
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: Cartoon.ink,
-                                width: 2.5,
-                              ),
+                              border: Border.all(color: Cartoon.ink, width: 2),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Cartoon.ink,
-                                  offset: Offset(0, 3),
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -391,14 +388,16 @@ class _MailboxScreenState extends State<MailboxScreen> {
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 4))],
+        boxShadow: const [
+          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2.5)),
+        ],
       ),
       child: Material(
         color: fill,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: const BorderSide(color: Cartoon.ink, width: 2),
         ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -425,7 +424,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.red,
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Cartoon.ink, width: 2),
+                      border: Border.all(color: Cartoon.ink, width: 1.5),
                     ),
                     // Says which of the two it is: still unopened, or opened
                     // and still holding something.
@@ -475,7 +474,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.yellow,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Cartoon.ink, width: 2),
+                          border: Border.all(color: Cartoon.ink, width: 1.5),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -557,7 +556,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                   decoration: BoxDecoration(
                     color: Cartoon.cream,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Cartoon.ink, width: 2.2),
+                    border: Border.all(color: Cartoon.ink, width: 1.6),
                   ),
                   child: Row(
                     children: [
@@ -629,7 +628,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: Cartoon.ink, width: 2),
+      border: Border.all(color: Cartoon.ink, width: 1.5),
     ),
     child: Text(label, style: Cartoon.text(size: 13, color: color)),
   );

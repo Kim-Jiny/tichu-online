@@ -146,7 +146,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(size * 0.34),
-        border: Border.all(color: Cartoon.ink, width: 2),
+        border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(size * 0.3),
@@ -244,9 +244,9 @@ class _FriendsScreenState extends State<FriendsScreen>
         decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 2.5),
+          border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
           ],
         ),
         child: Icon(icon, color: color, size: 24),
@@ -339,7 +339,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                               borderRadius: BorderRadius.circular(9),
                               border: Border.all(
                                 color: Cartoon.ink,
-                                width: 1.8,
+                                width: 1.4,
                               ),
                             ),
                             child: Text(
@@ -366,7 +366,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 decoration: BoxDecoration(
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                 ),
                 child: Row(
                   children: [
@@ -500,7 +500,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                         decoration: BoxDecoration(
                           color: Cartoon.cream,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Cartoon.ink, width: 2),
+                          border: Border.all(color: Cartoon.ink, width: 1.5),
                         ),
                         child: Text(row, style: Cartoon.text(size: 14)),
                       ),
@@ -520,14 +520,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                               borderRadius: BorderRadius.circular(11),
                               border: Border.all(
                                 color: Cartoon.ink,
-                                width: 2.2,
+                                width: 1.6,
                               ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Cartoon.ink,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
                             ),
                             child: const Icon(
                               Icons.refresh_rounded,
@@ -601,7 +595,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
-                                  width: 1.8,
+                                  width: 1.4,
                                 ),
                               ),
                               child: Text(
@@ -658,14 +652,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                                   borderRadius: BorderRadius.circular(11),
                                   border: Border.all(
                                     color: Cartoon.ink,
-                                    width: 2.2,
+                                    width: 1.6,
                                   ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Cartoon.ink,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
                                 child: const Icon(
                                   Icons.chat_bubble_rounded,
@@ -690,7 +678,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                         color: Cartoon.ink,
-                                        width: 1.8,
+                                        width: 1.4,
                                       ),
                                     ),
                                     child: Text(
@@ -719,7 +707,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                             borderRadius: BorderRadius.circular(16),
                             side: const BorderSide(
                               color: Cartoon.ink,
-                              width: 2.5,
+                              width: 2,
                             ),
                           ),
                           color: Cartoon.paper,
@@ -832,10 +820,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: Cartoon.ink, width: 2.2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
+            border: Border.all(color: Cartoon.ink, width: 1.6),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -986,10 +971,10 @@ class _FriendsScreenState extends State<FriendsScreen>
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
+          border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: onTap == null
               ? null
-              : const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+              : const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.5))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1121,7 +1106,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           decoration: BoxDecoration(
             color: Cartoon.cream,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Cartoon.ink, width: 2),
+            border: Border.all(color: Cartoon.ink, width: 1.5),
           ),
           child: Text(text, style: Cartoon.text(size: 14)),
         ),
@@ -1142,10 +1127,7 @@ class _FriendsScreenState extends State<FriendsScreen>
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Cartoon.ink, width: 2.2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          border: Border.all(color: Cartoon.ink, width: 1.6),
         ),
         child: Text(label, style: Cartoon.text(size: 14, color: Colors.white)),
       ),
@@ -1291,7 +1273,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                         ),
                         decoration: Cartoon.panelDecoration(
                           radius: 16,
-                          shadowOffset: 3,
+                          shadowOffset: 2,
                         ),
                         child: Row(
                           children: [
@@ -1403,9 +1385,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 ),
                 decoration: const BoxDecoration(
                   color: Cartoon.paper,
-                  border: Border(
-                    top: BorderSide(color: Cartoon.ink, width: 2.5),
-                  ),
+                  border: Border(top: BorderSide(color: Cartoon.ink, width: 2)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -1464,9 +1444,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                         decoration: BoxDecoration(
                           color: Cartoon.orange,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Cartoon.ink, width: 2.5),
+                          border: Border.all(color: Cartoon.ink, width: 2),
                           boxShadow: const [
-                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                           ],
                         ),
                         child: const Icon(
@@ -1522,7 +1502,7 @@ class _FriendsScreenState extends State<FriendsScreen>
             decoration: BoxDecoration(
               color: Cartoon.cream,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Cartoon.ink, width: 2),
+              border: Border.all(color: Cartoon.ink, width: 1.5),
             ),
             child: Text(label, style: Cartoon.text(size: 12.5)),
           ),
@@ -1596,10 +1576,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                       ? const Radius.circular(4)
                       : const Radius.circular(18),
                 ),
-                border: Border.all(color: Cartoon.ink, width: 2.2),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                ],
+                border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
               child: Text(
                 message,

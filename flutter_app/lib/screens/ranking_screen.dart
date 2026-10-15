@@ -153,7 +153,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         ? gameTypeColor(key)
                         : Cartoon.paper,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Cartoon.ink, width: 2.5),
+                    border: Border.all(color: Cartoon.ink, width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: Cartoon.ink,
@@ -209,9 +209,9 @@ class _RankingScreenState extends State<RankingScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.paper,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
                 child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
@@ -252,10 +252,7 @@ class _RankingScreenState extends State<RankingScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.paper,
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Cartoon.ink, width: 2.2),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                ],
+                border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
               child: Row(
                 children: [
@@ -332,10 +329,7 @@ class _RankingScreenState extends State<RankingScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.paper,
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Cartoon.ink, width: 2.2),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                ],
+                border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
               child: const Icon(Icons.refresh_rounded, color: Cartoon.ink),
             ),
@@ -458,7 +452,7 @@ class _RankingScreenState extends State<RankingScreen> {
         if (rest.isNotEmpty) ...[
           const SizedBox(height: 14),
           Container(
-            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 4),
+            decoration: Cartoon.panelDecoration(radius: 20, shadowOffset: 2.5),
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
@@ -493,7 +487,7 @@ class _RankingScreenState extends State<RankingScreen> {
       decoration: Cartoon.panelDecoration(
         color: const Color(0xFFFFF6DD),
         radius: 22,
-        shadowOffset: 4,
+        shadowOffset: 2.5,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -556,9 +550,9 @@ class _RankingScreenState extends State<RankingScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
+                border: Border.all(color: Cartoon.ink, width: 2),
                 boxShadow: const [
-                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
+                  BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),
               child: ClipRRect(
@@ -586,7 +580,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-                border: Border.all(color: Cartoon.ink, width: 2.5),
+                border: Border.all(color: Cartoon.ink, width: 2),
               ),
               child: Cartoon.outlinedText('$rank', size: 26),
             ),
@@ -624,7 +618,7 @@ class _RankingScreenState extends State<RankingScreen> {
           decoration: Cartoon.panelDecoration(
             color: const Color(0xFFE9E1FF),
             radius: 20,
-            shadowOffset: 4,
+            shadowOffset: 2.5,
           ),
           child: Row(
             children: [
@@ -635,7 +629,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF7E57C2),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Cartoon.ink, width: 2.5),
+                  border: Border.all(color: Cartoon.ink, width: 2),
                 ),
                 child: FittedBox(
                   child: Padding(
@@ -674,7 +668,7 @@ class _RankingScreenState extends State<RankingScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF7E57C2),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Cartoon.ink, width: 1.8),
+                            border: Border.all(color: Cartoon.ink, width: 1.4),
                           ),
                           child: const Text(
                             'ME',

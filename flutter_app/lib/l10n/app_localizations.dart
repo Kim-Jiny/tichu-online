@@ -9351,12 +9351,6 @@ abstract class L10n {
   /// **'Accept'**
   String get missionsPick;
 
-  /// No description provided for @missionsDrop.
-  ///
-  /// In en, this message translates to:
-  /// **'Give up'**
-  String get missionsDrop;
-
   /// No description provided for @missionsPicked.
   ///
   /// In en, this message translates to:
@@ -9864,7 +9858,7 @@ abstract class L10n {
   /// No description provided for @missionsHelpCapBody.
   ///
   /// In en, this message translates to:
-  /// **'You can pick up to {max} missions a day (resets at midnight Korea time). Giving one up doesn\'t give the pick back.'**
+  /// **'You can pick up to {max} missions a day (resets at midnight Korea time). A mission can\'t be swapped once you pick it, so choose carefully.'**
   String missionsHelpCapBody(String max);
 
   /// No description provided for @missionsHelpStreakTitle.
@@ -9944,30 +9938,6 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Balance {n}'**
   String tokenHistoryBalance(String n);
-
-  /// No description provided for @missionsDropConfirmTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Give up this mission?'**
-  String get missionsDropConfirmTitle;
-
-  /// No description provided for @missionsDropConfirmBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Giving up won\'t give back today\'s pick, so you may not be able to choose another one today.'**
-  String get missionsDropConfirmBody;
-
-  /// No description provided for @missionsDropConfirmYes.
-  ///
-  /// In en, this message translates to:
-  /// **'Give up'**
-  String get missionsDropConfirmYes;
-
-  /// No description provided for @missionsDropConfirmNo.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep going'**
-  String get missionsDropConfirmNo;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

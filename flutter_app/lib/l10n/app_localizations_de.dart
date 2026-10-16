@@ -5341,9 +5341,6 @@ class L10nDe extends L10n {
   String get missionsPick => 'Annehmen';
 
   @override
-  String get missionsDrop => 'Aufgeben';
-
-  @override
   String get missionsPicked => 'Aktiv';
 
   @override
@@ -5636,7 +5633,7 @@ class L10nDe extends L10n {
 
   @override
   String missionsHelpCapBody(String max) {
-    return 'Du kannst pro Tag bis zu $max Missionen wählen (Reset um Mitternacht koreanischer Zeit). Aufgeben gibt die Wahl nicht zurück.';
+    return 'Du kannst pro Tag bis zu $max Missionen wählen (Reset um Mitternacht koreanischer Zeit). Eine gewählte Mission lässt sich nicht tauschen – wähle mit Bedacht.';
   }
 
   @override
@@ -5685,17 +5682,4 @@ class L10nDe extends L10n {
   String tokenHistoryBalance(String n) {
     return 'Guthaben $n';
   }
-
-  @override
-  String get missionsDropConfirmTitle => 'Diese Mission aufgeben?';
-
-  @override
-  String get missionsDropConfirmBody =>
-      'Aufgeben gibt die heutige Wahl nicht zurück – du kannst heute eventuell keine neue Mission mehr wählen.';
-
-  @override
-  String get missionsDropConfirmYes => 'Aufgeben';
-
-  @override
-  String get missionsDropConfirmNo => 'Weitermachen';
 }

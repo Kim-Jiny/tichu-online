@@ -42,10 +42,7 @@ async function main() {
   check('같은 미션 중복 선택 불가', (await missions.pick(nick, easy[0].key)).reason === 'already_picked');
   const fourth = easy[3] || offered('tichu').find((m) => !easy.includes(m));
   check('하루에 3개까지만 고른다', (await missions.pick(nick, fourth.key)).reason === 'too_many');
-  await missions.drop(nick, easy[2].key);
-  check('포기해도 오늘 고른 수는 돌아오지 않는다', (await missions.pick(nick, fourth.key)).reason === 'too_many');
-  st = await missions.getState(nick);
-  check('포기한 건 진행 목록에서 빠지고 고른 수는 그대로', st.picksToday === 3 && !st.active.some((m) => m.key === easy[2].key));
+  check('포기 기능은 없다', typeof missions.drop === 'undefined');
 
   // 이벤트로 진행 → 완료 → 토큰.
   const evOf = (key) => defs.MISSION_BY_KEY.get(key).event;

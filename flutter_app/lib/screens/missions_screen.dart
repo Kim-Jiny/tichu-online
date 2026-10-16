@@ -505,52 +505,11 @@ class _MissionsScreenState extends State<MissionsScreen> {
                   ),
                 ),
               const Spacer(),
-              if (!m.done)
-                CartoonPressable(
-                  scale: 0.92,
-                  onTap: () => _confirmDrop(game, m.key),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    child: Text(
-                      l10n.missionsDrop,
-                      style: Cartoon.text(
-                        size: 13,
-                        color: Cartoon.ink.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ],
       ),
     );
-  }
-
-  /// 포기해도 오늘 고른 수는 돌아오지 않으니, 실수로 누르지 않게 한 번 묻는다.
-  Future<void> _confirmDrop(GameService game, String key) async {
-    final l10n = L10n.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.missionsDropConfirmTitle),
-        content: Text(l10n.missionsDropConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.missionsDropConfirmNo),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.missionsDropConfirmYes),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) game.dropMission(key);
   }
 
   /// 'YYYY-MM-DD' → 'M/D'.

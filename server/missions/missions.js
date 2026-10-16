@@ -456,15 +456,6 @@ async function pick(nickname, missionKey) {
   }
 }
 
-async function drop(nickname, missionKey) {
-  const r = await pool.query(
-    `UPDATE tc_user_missions SET status = 'dropped'
-      WHERE nickname = $1 AND mission_key = $2 AND status = 'active'`,
-    [nickname, missionKey]
-  );
-  return { success: r.rowCount > 0 };
-}
-
 async function reroll(nickname, game) {
   if (!defs.GAMES.includes(game)) return { success: false, reason: 'unknown_game' };
   const { day } = await kstToday();
@@ -900,7 +891,6 @@ module.exports = {
   deleteUser,
   getState,
   pick,
-  drop,
   reroll,
   record,
   getShop,

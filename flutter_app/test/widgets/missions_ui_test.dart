@@ -92,7 +92,6 @@ class _FakeGame extends ChangeNotifier implements GameService {
   @override
   void pickMission(String key) => calls.add('pick:$key');
   @override
-  void dropMission(String key) => calls.add('drop:$key');
   @override
   void rerollMissions(String game) => calls.add('reroll:$game');
   @override
@@ -258,19 +257,8 @@ void main() {
     await t.tap(find.text('새로고침 (1회 남음)').first);
     await t.pump();
     expect(game.calls, contains('reroll:tichu'));
-    await t.tap(find.text('포기'));
-    await t.pump(const Duration(milliseconds: 400));
-    // 바로 포기되지 않고 한 번 묻는다.
-    expect(game.calls.where((c) => c.startsWith('drop:')), isEmpty);
-    expect(find.text('이 미션을 포기할까요?'), findsOneWidget);
-    await t.tap(find.text('계속하기'));
-    await t.pump(const Duration(milliseconds: 400));
-    expect(game.calls.where((c) => c.startsWith('drop:')), isEmpty);
-    await t.tap(find.text('포기'));
-    await t.pump(const Duration(milliseconds: 400));
-    await t.tap(find.text('포기하기'));
-    await t.pump(const Duration(milliseconds: 400));
-    expect(game.calls, contains('drop:tichu_bomb30'));
+    // 포기 버튼은 없다.
+    expect(find.text('포기'), findsNothing);
   });
 
   testWidgets('토큰 알약을 누르면 내역이 열리고 더 보기가 동작한다', (t) async {

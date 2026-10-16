@@ -3131,7 +3131,6 @@
   "missionsActiveEmpty": "Pick a mission from today's offers below",
   "missionsOffersHeader": "Today's offers",
   "missionsPick": "Accept",
-  "missionsDrop": "Give up",
   "missionsPicked": "Active",
   "missionsDone": "Done",
   "missionsReroll": "Refresh ({n} left)",
@@ -3299,7 +3298,7 @@
   },
   "missionsHelpHumansBody": "Rooms with only bots or a single human, and games you only watch, don't count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.",
   "missionsHelpCapTitle": "Missions per day",
-  "missionsHelpCapBody": "You can pick up to {max} missions a day (resets at midnight Korea time). Giving one up doesn't give the pick back.",
+  "missionsHelpCapBody": "You can pick up to {max} missions a day (resets at midnight Korea time). A mission can't be swapped once you pick it, so choose carefully.",
   "missionsHelpStreakTitle": "Streak bonus",
   "missionsHelpStreakBody": "Complete at least one mission a day to keep your streak. Reach {target} days for {bonus} bonus tokens. Skip a day and it starts over.",
   "@missionsHelpStreakBody": {
@@ -3384,9 +3383,5 @@
         "type": "String"
       }
     }
-  },
-  "missionsDropConfirmTitle": "Give up this mission?",
-  "missionsDropConfirmBody": "Giving up won't give back today's pick, so you may not be able to choose another one today.",
-  "missionsDropConfirmYes": "Give up",
-  "missionsDropConfirmNo": "Keep going"
+  }
 }

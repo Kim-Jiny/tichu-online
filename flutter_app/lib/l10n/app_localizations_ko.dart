@@ -5187,9 +5187,6 @@ class L10nKo extends L10n {
   String get missionsPick => '받기';
 
   @override
-  String get missionsDrop => '포기';
-
-  @override
   String get missionsPicked => '진행 중';
 
   @override
@@ -5474,7 +5471,7 @@ class L10nKo extends L10n {
 
   @override
   String missionsHelpCapBody(String max) {
-    return '미션은 하루에 최대 $max개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 포기해도 고른 수는 돌아오지 않아요.';
+    return '미션은 하루에 최대 $max개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 한 번 고른 미션은 바꿀 수 없으니 신중하게 골라 주세요.';
   }
 
   @override
@@ -5522,17 +5519,4 @@ class L10nKo extends L10n {
   String tokenHistoryBalance(String n) {
     return '보유 $n';
   }
-
-  @override
-  String get missionsDropConfirmTitle => '이 미션을 포기할까요?';
-
-  @override
-  String get missionsDropConfirmBody =>
-      '포기해도 오늘 고른 수는 돌아오지 않아요. 오늘은 새 미션을 더 고를 수 없을 수도 있어요.';
-
-  @override
-  String get missionsDropConfirmYes => '포기하기';
-
-  @override
-  String get missionsDropConfirmNo => '계속하기';
 }

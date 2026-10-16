@@ -1853,7 +1853,6 @@
   "missionsActiveEmpty": "Wähle unten eine Mission aus",
   "missionsOffersHeader": "Heutige Auswahl",
   "missionsPick": "Annehmen",
-  "missionsDrop": "Aufgeben",
   "missionsPicked": "Aktiv",
   "missionsDone": "Erledigt",
   "missionsReroll": "Neu mischen ({n} übrig)",
@@ -2021,7 +2020,7 @@
   },
   "missionsHelpHumansBody": "Räume nur mit Bots oder nur einem Menschen sowie Zuschauen zählen nicht. „Spiel beenden“ und „Spiel gewinnen“ zählen nur, wenn du bis zum Ende bleibst.",
   "missionsHelpCapTitle": "Missionen pro Tag",
-  "missionsHelpCapBody": "Du kannst pro Tag bis zu {max} Missionen wählen (Reset um Mitternacht koreanischer Zeit). Aufgeben gibt die Wahl nicht zurück.",
+  "missionsHelpCapBody": "Du kannst pro Tag bis zu {max} Missionen wählen (Reset um Mitternacht koreanischer Zeit). Eine gewählte Mission lässt sich nicht tauschen – wähle mit Bedacht.",
   "missionsHelpStreakTitle": "Serien-Bonus",
   "missionsHelpStreakBody": "Schließe täglich mindestens eine Mission ab, um die Serie zu halten. Bei {target} Tagen gibt es {bonus} Bonus-Token. Wer einen Tag auslässt, beginnt von vorn.",
   "@missionsHelpStreakBody": {
@@ -2106,9 +2105,5 @@
         "type": "String"
       }
     }
-  },
-  "missionsDropConfirmTitle": "Diese Mission aufgeben?",
-  "missionsDropConfirmBody": "Aufgeben gibt die heutige Wahl nicht zurück – du kannst heute eventuell keine neue Mission mehr wählen.",
-  "missionsDropConfirmYes": "Aufgeben",
-  "missionsDropConfirmNo": "Weitermachen"
+  }
 }

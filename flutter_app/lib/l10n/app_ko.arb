@@ -1853,7 +1853,6 @@
   "missionsActiveEmpty": "아래 후보에서 미션을 받아 보세요",
   "missionsOffersHeader": "오늘의 후보",
   "missionsPick": "받기",
-  "missionsDrop": "포기",
   "missionsPicked": "진행 중",
   "missionsDone": "완료",
   "missionsReroll": "새로고침 ({n}회 남음)",
@@ -2021,7 +2020,7 @@
   },
   "missionsHelpHumansBody": "봇만 있거나 사람이 한 명뿐인 방, 관전 중인 판은 인정되지 않아요. \"한 판 끝까지 하기·이기기\" 미션은 중간에 나가지 않고 끝까지 마친 판만 인정돼요.",
   "missionsHelpCapTitle": "하루에 고를 수 있는 미션",
-  "missionsHelpCapBody": "미션은 하루에 최대 {max}개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 포기해도 고른 수는 돌아오지 않아요.",
+  "missionsHelpCapBody": "미션은 하루에 최대 {max}개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 한 번 고른 미션은 바꿀 수 없으니 신중하게 골라 주세요.",
   "missionsHelpStreakTitle": "연속 달성 보너스",
   "missionsHelpStreakBody": "하루에 미션을 1개 이상 깨면 연속으로 쳐요. {target}일을 채우면 보너스 토큰 {bonus}개를 줘요. 하루를 건너뛰면 처음부터 다시 시작해요.",
   "@missionsHelpStreakBody": {
@@ -2106,9 +2105,5 @@
         "type": "String"
       }
     }
-  },
-  "missionsDropConfirmTitle": "이 미션을 포기할까요?",
-  "missionsDropConfirmBody": "포기해도 오늘 고른 수는 돌아오지 않아요. 오늘은 새 미션을 더 고를 수 없을 수도 있어요.",
-  "missionsDropConfirmYes": "포기하기",
-  "missionsDropConfirmNo": "계속하기"
+  }
 }

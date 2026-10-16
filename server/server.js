@@ -3679,9 +3679,6 @@ async function handleMessage(ws, data) {
     case 'pick_mission':
       await handlePickMission(ws, data);
       break;
-    case 'drop_mission':
-      await handleDropMission(ws, data);
-      break;
     case 'reroll_missions':
       await handleRerollMissions(ws, data);
       break;
@@ -9268,11 +9265,6 @@ async function replyMissionAction(ws, type, result) {
 async function handlePickMission(ws, data) {
   if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
   await replyMissionAction(ws, 'mission_action_result', await missions.pick(ws.nickname, String(data.key || '')));
-}
-
-async function handleDropMission(ws, data) {
-  if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
-  await replyMissionAction(ws, 'mission_action_result', await missions.drop(ws.nickname, String(data.key || '')));
 }
 
 async function handleRerollMissions(ws, data) {

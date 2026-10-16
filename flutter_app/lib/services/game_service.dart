@@ -3787,8 +3787,6 @@ class GameService extends ChangeNotifier {
 
   void pickMission(String key) =>
       _network.send({'type': 'pick_mission', 'key': key});
-  void dropMission(String key) =>
-      _network.send({'type': 'drop_mission', 'key': key});
   void rerollMissions(String game) =>
       _network.send({'type': 'reroll_missions', 'game': game});
 

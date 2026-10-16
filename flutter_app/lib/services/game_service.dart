@@ -725,7 +725,13 @@ class GameService extends ChangeNotifier {
       // Watching a room with nothing being played yet: that is the waiting
       // room, and it is the same waiting room the players are looking at.
       // Only a running match needs the game screens.
-      if (!hasActiveGame && !hasSpectatorGameState) {
+      // 끝난 판의 결과 화면(game_end)도 아직 상태가 남아 있는 동안은 게임 화면이다.
+      // 봇끼리 빨리 끝난 판에 들어오면 결과가 아니라 대기실이 보이던 문제.
+      final hasAnyBoard =
+          llGameState != null ||
+          skGameState != null ||
+          mightyGameState != null;
+      if (!hasActiveGame && !hasSpectatorGameState && !hasAnyBoard) {
         return AppDestination.waitingRoom;
       }
       if (currentGameType == 'skull_king') return AppDestination.skGame;

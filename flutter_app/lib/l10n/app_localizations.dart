@@ -10227,12 +10227,6 @@ abstract class L10n {
   /// **'Enter the code'**
   String get couponEnterCode;
 
-  /// No description provided for @appForceUpdateVersionLine.
-  ///
-  /// In en, this message translates to:
-  /// **'Your version {current}  →  Required {required}'**
-  String appForceUpdateVersionLine(String current, String required);
-
   /// No description provided for @appForceUpdateLater.
   ///
   /// In en, this message translates to:

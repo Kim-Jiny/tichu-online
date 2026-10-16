@@ -754,8 +754,6 @@ class _EntryScreenState extends State<_EntryScreen> {
   GameService? _gameService;
   bool _eulaListenerAttached = false;
   bool _forceUpdate = false;
-  String? _currentVersion;
-  String? _requiredVersion;
   bool _forceUpdateListenerAttached = false;
 
   @override
@@ -955,8 +953,6 @@ class _EntryScreenState extends State<_EntryScreen> {
         if (mounted) {
           setState(() {
             _forceUpdate = true;
-            _currentVersion = info.version;
-            _requiredVersion = minVersion;
           });
         }
       }
@@ -1021,8 +1017,6 @@ class _EntryScreenState extends State<_EntryScreen> {
         // A store link is useless in a browser — it used to send web users to
         // Google Play regardless of platform.
         onPressed: kIsWeb ? _reloadWebPage : _openStore,
-        currentVersion: _currentVersion,
-        requiredVersion: _requiredVersion,
       );
     }
 

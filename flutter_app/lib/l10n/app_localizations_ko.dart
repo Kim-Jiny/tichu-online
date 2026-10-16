@@ -5670,10 +5670,5 @@ class L10nKo extends L10n {
   String get couponEnterCode => '코드를 입력해 주세요';
 
   @override
-  String appForceUpdateVersionLine(String current, String required) {
-    return '내 버전 $current  →  필요한 버전 $required';
-  }
-
-  @override
   String get appForceUpdateLater => '업데이트 후에 다시 만나요!';
 }

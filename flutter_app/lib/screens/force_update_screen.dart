@@ -13,22 +13,14 @@ class ForceUpdateScreen extends StatelessWidget {
     super.key,
     required this.isWeb,
     required this.onPressed,
-    this.currentVersion,
-    this.requiredVersion,
   });
 
   final bool isWeb;
   final VoidCallback onPressed;
 
-  /// 내 앱 버전과 서버가 요구하는 최소 버전(둘 다 알 때만 보여 준다).
-  final String? currentVersion;
-  final String? requiredVersion;
-
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    final showVersions =
-        (currentVersion ?? '').isNotEmpty && (requiredVersion ?? '').isNotEmpty;
     return Scaffold(
       body: CartoonBackground(
         child: SafeArea(
@@ -83,35 +75,6 @@ class ForceUpdateScreen extends StatelessWidget {
                                 height: 1.5,
                               ),
                             ),
-                            if (showVersions && !isWeb) ...[
-                              const SizedBox(height: 14),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Cartoon.cream,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Cartoon.ink.withValues(alpha: 0.4),
-                                    width: 1.4,
-                                  ),
-                                ),
-                                child: Text(
-                                  l10n.appForceUpdateVersionLine(
-                                    currentVersion!,
-                                    requiredVersion!,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  style: Cartoon.userText(
-                                    size: 12.5,
-                                    weight: FontWeight.w700,
-                                    color: Cartoon.ink.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),

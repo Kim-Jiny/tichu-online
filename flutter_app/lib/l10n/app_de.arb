@@ -2154,16 +2154,5 @@
   "couponClipboardEmpty": "Nichts zum Einfügen kopiert",
   "couponRedeemedTitle": "Gutschein eingelöst!",
   "couponEnterCode": "Bitte gib den Code ein",
-  "appForceUpdateVersionLine": "Deine Version {current}  →  Benötigt {required}",
-  "appForceUpdateLater": "Bis gleich nach dem Update!",
-  "@appForceUpdateVersionLine": {
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "required": {
-        "type": "String"
-      }
-    }
-  }
+  "appForceUpdateLater": "Bis gleich nach dem Update!"
 }

@@ -5871,10 +5871,5 @@ class L10nDe extends L10n {
   String get couponEnterCode => 'Bitte gib den Code ein';
 
   @override
-  String appForceUpdateVersionLine(String current, String required) {
-    return 'Deine Version $current  →  Benötigt $required';
-  }
-
-  @override
   String get appForceUpdateLater => 'Bis gleich nach dem Update!';
 }

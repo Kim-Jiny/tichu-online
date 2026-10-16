@@ -3432,16 +3432,5 @@
   "couponClipboardEmpty": "Nothing copied to paste",
   "couponRedeemedTitle": "Coupon redeemed!",
   "couponEnterCode": "Enter the code",
-  "appForceUpdateVersionLine": "Your version {current}  →  Required {required}",
-  "appForceUpdateLater": "See you after the update!",
-  "@appForceUpdateVersionLine": {
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "required": {
-        "type": "String"
-      }
-    }
-  }
+  "appForceUpdateLater": "See you after the update!"
 }

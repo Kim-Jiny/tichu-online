@@ -3408,5 +3408,13 @@
   "missionLlBaronWin": "Win a Baron showdown",
   "missionLlRoundWin3": "Win 3 rounds",
   "missionLlLastStanding": "Win a round by knocking out everyone",
-  "missionLlKnockOut3": "Knock out 3 opponents"
+  "missionLlKnockOut3": "Knock out 3 opponents",
+  "missionCompletedMulti": "{n} missions complete!",
+  "@missionCompletedMulti": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  }
 }

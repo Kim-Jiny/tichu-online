@@ -2300,17 +2300,45 @@ class _LobbyScreenState extends State<LobbyScreen> {
         },
         box: box,
       ),
-      // 미션 — 토큰을 모아 토큰 상점에서 꾸미기를 산다.
-      _buildIconButton(
-        icon: Icons.task_alt_rounded,
-        color: const Color(0xFFFF8A65),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MissionsScreen()),
-          );
-        },
-        box: box,
+      // 미션 — 토큰을 모아 토큰 상점에서 꾸미기를 산다. 새로 깬 미션이 있으면 뱃지.
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          _buildIconButton(
+            icon: Icons.task_alt_rounded,
+            color: const Color(0xFFFF8A65),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MissionsScreen()),
+              );
+            },
+            box: box,
+          ),
+          if (game.missionBadgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE53935),
+                  borderRadius: const BorderRadius.all(Radius.circular(999)),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(
+                  game.missionBadgeCount > 9 ? '9+' : '${game.missionBadgeCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
       // Own profile, in the slot the rulebook used to sit in. The rulebook
       // moved into settings: it is read once and then never again, while your

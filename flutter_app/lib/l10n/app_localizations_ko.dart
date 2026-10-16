@@ -5614,4 +5614,9 @@ class L10nKo extends L10n {
 
   @override
   String get missionLlKnockOut3 => '상대 3명 탈락시키기';
+
+  @override
+  String missionCompletedMulti(String n) {
+    return '미션 $n개 완료!';
+  }
 }

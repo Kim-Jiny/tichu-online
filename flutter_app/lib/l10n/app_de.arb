@@ -2130,5 +2130,13 @@
   "missionLlBaronWin": "Ein Baron-Duell gewinnen",
   "missionLlRoundWin3": "3 Runden gewinnen",
   "missionLlLastStanding": "Eine Runde gewinnen, indem alle anderen ausscheiden",
-  "missionLlKnockOut3": "3 Gegner ausschalten"
+  "missionLlKnockOut3": "3 Gegner ausschalten",
+  "missionCompletedMulti": "{n} Missionen geschafft!",
+  "@missionCompletedMulti": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  }
 }

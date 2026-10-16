@@ -5782,4 +5782,9 @@ class L10nDe extends L10n {
 
   @override
   String get missionLlKnockOut3 => '3 Gegner ausschalten';
+
+  @override
+  String missionCompletedMulti(String n) {
+    return '$n Missionen geschafft!';
+  }
 }

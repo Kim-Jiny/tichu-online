@@ -577,11 +577,28 @@ class GameService extends ChangeNotifier {
   bool tokenHistoryLoading = false;
   bool tokenHistoryFailed = false;
 
-  /// 서버가 밀어 주는 "미션 완료" 알림. 화면 어디서든 토스트로 띄운다.
-  final StreamController<MissionCompletion> _missionCompletions =
-      StreamController<MissionCompletion>.broadcast();
-  Stream<MissionCompletion> get missionCompletions =>
-      _missionCompletions.stream;
+  // 미션을 깨면 서버가 알려 준다. 게임 중에는 방해하지 않고 모아 두었다가, 로비(대기실)로
+  // 나오면 한 번에 알림으로 띄운다. 미션 탭의 뱃지는 미션 화면을 열 때까지 남는다.
+  final List<MissionCompletion> _pendingMissionToasts = [];
+
+  /// 아직 미션 화면에서 확인하지 않은 완료 수(로비 미션 탭의 뱃지).
+  int missionBadgeCount = 0;
+
+  bool get hasPendingMissionToasts => _pendingMissionToasts.isNotEmpty;
+
+  /// 알림으로 띄우려고 모아 둔 완료들을 꺼내 간다(꺼낸 건 비운다).
+  List<MissionCompletion> takePendingMissionCompletions() {
+    final out = List<MissionCompletion>.of(_pendingMissionToasts);
+    _pendingMissionToasts.clear();
+    return out;
+  }
+
+  /// 미션 화면을 열면 뱃지를 지운다.
+  void clearMissionBadge() {
+    if (missionBadgeCount == 0) return;
+    missionBadgeCount = 0;
+    notifyListeners();
+  }
 
   /// 토큰 잔액 — 미션 화면과 상점 중 더 최근에 받은 쪽.
   int get tokenBalance =>
@@ -2496,7 +2513,9 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'mission_completed':
-        _missionCompletions.add(MissionCompletion.fromJson(data));
+        _pendingMissionToasts.add(MissionCompletion.fromJson(data));
+        missionBadgeCount++;
+        notifyListeners();
         // 진행·잔액이 바뀌었으니 다음에 열 때 새로 받도록 다시 요청해 둔다.
         _network.send({'type': 'get_missions'});
         break;
@@ -3494,6 +3513,8 @@ class GameService extends ChangeNotifier {
     missionsState = null;
     tokenShopState = null;
     missionsLoading = false;
+    _pendingMissionToasts.clear();
+    missionBadgeCount = 0;
     tokenHistory = const [];
     tokenHistoryHasMore = false;
     attendanceError = null;
@@ -5250,7 +5271,6 @@ class GameService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
-    _missionCompletions.close();
     _matchIncomingTimer?.cancel();
     if (_shareInviteLinkCompleter != null &&
         !_shareInviteLinkCompleter!.isCompleted) {

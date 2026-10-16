@@ -10130,6 +10130,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Knock out 3 opponents'**
   String get missionLlKnockOut3;
+
+  /// No description provided for @missionCompletedMulti.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} missions complete!'**
+  String missionCompletedMulti(String n);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

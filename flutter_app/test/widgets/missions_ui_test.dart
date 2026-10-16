@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -10,10 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tichu_online/l10n/app_localizations.dart';
+import 'package:tichu_online/app_navigation.dart';
 import 'package:tichu_online/models/missions.dart';
 import 'package:tichu_online/screens/missions_screen.dart';
 import 'package:tichu_online/screens/token_shop_screen.dart';
 import 'package:tichu_online/services/game_service.dart';
+import 'package:tichu_online/widgets/mission_toast.dart';
 import 'package:tichu_online/widgets/seat_chat_bubble.dart';
 import 'package:tichu_online/widgets/token_cosmetics.dart';
 
@@ -40,7 +41,27 @@ class _FakeGame extends ChangeNotifier implements GameService {
   int get tokenBalance =>
       tokenShopState?.balance ?? missionsState?.balance ?? 0;
   @override
-  Stream<MissionCompletion> get missionCompletions => const Stream.empty();
+  int missionBadgeCount = 0;
+  @override
+  void clearMissionBadge() {
+    missionBadgeCount = 0;
+    calls.add('clear_badge');
+  }
+
+  final List<MissionCompletion> pending = [];
+  @override
+  bool get hasPendingMissionToasts => pending.isNotEmpty;
+  @override
+  List<MissionCompletion> takePendingMissionCompletions() {
+    final out = List<MissionCompletion>.of(pending);
+    pending.clear();
+    return out;
+  }
+
+  @override
+  bool get isLoggedIn => true;
+  @override
+  AppDestination currentDestination = AppDestination.lobby;
 
   @override
   List<TokenHistoryEntry> tokenHistory = [
@@ -293,6 +314,98 @@ void main() {
     await t.tap(find.text('120'));
     await t.pump(const Duration(milliseconds: 500));
     expect(find.textContaining('아직 토큰 내역이 없어요'), findsOneWidget);
+  });
+
+  testWidgets('미션 화면을 열면 알림 뱃지가 지워진다', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    final game = _FakeGame(_state(), _shop())..missionBadgeCount = 2;
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 600));
+    expect(game.calls, contains('clear_badge'));
+    expect(game.missionBadgeCount, 0);
+  });
+
+  Widget hostApp(_FakeGame game) => ChangeNotifierProvider<GameService>.value(
+    value: game,
+    child: MaterialApp(
+      navigatorKey: appNavigatorKey,
+      locale: const Locale('ko'),
+      localizationsDelegates: const [
+        L10n.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: L10n.supportedLocales,
+      builder: (context, child) => MissionToastHost(child: child!),
+      home: const Scaffold(body: Text('lobby')),
+    ),
+  );
+
+  testWidgets('게임 중에는 알림을 미루고, 로비로 나오면 합쳐서 한 번만 띄운다', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    final game = _FakeGame(_state(), _shop())
+      ..currentDestination = AppDestination.game;
+    await t.pumpWidget(hostApp(game));
+    await t.pump();
+
+    game.pending.addAll([
+      const MissionCompletion(
+        key: 'tichu_play',
+        tokens: 1,
+        streakBonus: 0,
+        balance: 1,
+      ),
+      const MissionCompletion(
+        key: 'tichu_small',
+        tokens: 2,
+        streakBonus: 5,
+        balance: 8,
+      ),
+    ]);
+    game.notifyListeners();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.textContaining('미션 2개 완료'), findsNothing); // 아직 게임 중
+
+    game.currentDestination = AppDestination.lobby;
+    game.notifyListeners();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.text('미션 2개 완료!'), findsOneWidget);
+    expect(find.text('토큰 +3'), findsOneWidget); // 1 + 2
+    expect(find.text('연속 달성 보너스 +5'), findsOneWidget);
+    expect(game.pending, isEmpty);
+
+    // 시간이 지나면 사라지고, 같은 알림이 다시 뜨지 않는다.
+    await t.pump(const Duration(seconds: 5));
+    await t.pump();
+    expect(find.text('미션 2개 완료!'), findsNothing);
+    game.notifyListeners();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.text('미션 2개 완료!'), findsNothing);
+  });
+
+  testWidgets('한 개만 깼으면 미션 이름을 보여 준다', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 900));
+    final game = _FakeGame(_state(), _shop());
+    await t.pumpWidget(hostApp(game));
+    await t.pump();
+    game.pending.add(
+      const MissionCompletion(
+        key: 'tichu_large',
+        tokens: 4,
+        streakBonus: 0,
+        balance: 4,
+      ),
+    );
+    game.notifyListeners();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.textContaining('라지 티츄 성공하기'), findsOneWidget);
+    expect(find.text('토큰 +4'), findsOneWidget);
+    await t.pump(const Duration(seconds: 5));
   });
 
   testWidgets('이용 안내: ? 버튼으로 열리고 핵심 규칙이 들어 있다', (t) async {

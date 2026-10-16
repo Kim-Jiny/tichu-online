@@ -2130,5 +2130,13 @@
   "missionLlBaronWin": "남작 대결에서 이기기",
   "missionLlRoundWin3": "라운드 3번 이기기",
   "missionLlLastStanding": "상대를 모두 탈락시키고 라운드 이기기",
-  "missionLlKnockOut3": "상대 3명 탈락시키기"
+  "missionLlKnockOut3": "상대 3명 탈락시키기",
+  "missionCompletedMulti": "미션 {n}개 완료!",
+  "@missionCompletedMulti": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  }
 }

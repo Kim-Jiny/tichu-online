@@ -43,7 +43,10 @@ class _MissionsScreenState extends State<MissionsScreen> {
     final game = context.read<GameService>();
     _seenActionSeq = game.missionActionSeq;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) game.requestMissions();
+      if (mounted) {
+        game.clearMissionBadge();
+        game.requestMissions();
+      }
       _maybeShowHelpFirstTime();
     });
   }

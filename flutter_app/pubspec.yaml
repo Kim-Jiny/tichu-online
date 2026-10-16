@@ -143,6 +143,7 @@ flutter:
     - assets/bots/
     - assets/icon.webp
     - assets/dragon_head.webp
+    - assets/dragon_full.webp
     - assets/splash.webp
     - assets/dragon_icon.webp
 

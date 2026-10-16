@@ -2053,9 +2053,9 @@
   },
   "shopAdRewardDone": "You've collected all of today's ad rewards",
   "shopAdPreparing": "Getting the ad ready…",
-  "appForceUpdateTitle": "Update Required",
-  "appForceUpdateBody": "A new version has been released.\nPlease update to continue using the app.",
-  "appForceUpdateButton": "Update",
+  "appForceUpdateTitle": "A new version is out!",
+  "appForceUpdateBody": "To keep Tichu fun and stable,\nyou'll need to update. It only takes a moment!",
+  "appForceUpdateButton": "Go to update",
   "appEulaSubtitle": "Terms of Service",
   "appEulaLoadFailed": "Unable to load Terms of Service. Please check your network connection.",
   "appEulaAgree": "I agree to the Terms of Service",
@@ -2703,7 +2703,7 @@
   "goldBankRequestTimeout": "No response from the server. Please try again shortly.",
   "goldBankUnavailable": "Bank transfer is not available yet.",
   "goldBankManualNotice": "Bank transfers are not processed automatically. An admin confirms the payment before the gold is granted, so it can take a while.",
-  "appForceUpdateBodyWeb": "A new version has been deployed.\nReload the page to continue.",
+  "appForceUpdateBodyWeb": "A new version has been deployed.\nReload to keep playing right away!",
   "appForceUpdateButtonWeb": "Reload",
   "loginGetTheApp": "Also available as an app",
   "goldHistoryBankDeposit": "Bank transfer confirmed",
@@ -3431,5 +3431,17 @@
   "couponClearCode": "Clear",
   "couponClipboardEmpty": "Nothing copied to paste",
   "couponRedeemedTitle": "Coupon redeemed!",
-  "couponEnterCode": "Enter the code"
+  "couponEnterCode": "Enter the code",
+  "appForceUpdateVersionLine": "Your version {current}  →  Required {required}",
+  "appForceUpdateLater": "See you after the update!",
+  "@appForceUpdateVersionLine": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "required": {
+        "type": "String"
+      }
+    }
+  }
 }

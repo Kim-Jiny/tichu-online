@@ -3744,14 +3744,14 @@ class L10nEn extends L10n {
   String get shopAdPreparing => 'Getting the ad ready…';
 
   @override
-  String get appForceUpdateTitle => 'Update Required';
+  String get appForceUpdateTitle => 'A new version is out!';
 
   @override
   String get appForceUpdateBody =>
-      'A new version has been released.\nPlease update to continue using the app.';
+      'To keep Tichu fun and stable,\nyou\'ll need to update. It only takes a moment!';
 
   @override
-  String get appForceUpdateButton => 'Update';
+  String get appForceUpdateButton => 'Go to update';
 
   @override
   String get appEulaSubtitle => 'Terms of Service';
@@ -4736,7 +4736,7 @@ class L10nEn extends L10n {
 
   @override
   String get appForceUpdateBodyWeb =>
-      'A new version has been deployed.\nReload the page to continue.';
+      'A new version has been deployed.\nReload to keep playing right away!';
 
   @override
   String get appForceUpdateButtonWeb => 'Reload';
@@ -5819,4 +5819,12 @@ class L10nEn extends L10n {
 
   @override
   String get couponEnterCode => 'Enter the code';
+
+  @override
+  String appForceUpdateVersionLine(String current, String required) {
+    return 'Your version $current  →  Required $required';
+  }
+
+  @override
+  String get appForceUpdateLater => 'See you after the update!';
 }

@@ -6702,19 +6702,19 @@ abstract class L10n {
   /// No description provided for @appForceUpdateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Update Required'**
+  /// **'A new version is out!'**
   String get appForceUpdateTitle;
 
   /// No description provided for @appForceUpdateBody.
   ///
   /// In en, this message translates to:
-  /// **'A new version has been released.\nPlease update to continue using the app.'**
+  /// **'To keep Tichu fun and stable,\nyou\'ll need to update. It only takes a moment!'**
   String get appForceUpdateBody;
 
   /// No description provided for @appForceUpdateButton.
   ///
   /// In en, this message translates to:
-  /// **'Update'**
+  /// **'Go to update'**
   String get appForceUpdateButton;
 
   /// No description provided for @appEulaSubtitle.
@@ -8400,7 +8400,7 @@ abstract class L10n {
   /// No description provided for @appForceUpdateBodyWeb.
   ///
   /// In en, this message translates to:
-  /// **'A new version has been deployed.\nReload the page to continue.'**
+  /// **'A new version has been deployed.\nReload to keep playing right away!'**
   String get appForceUpdateBodyWeb;
 
   /// No description provided for @appForceUpdateButtonWeb.
@@ -10226,6 +10226,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Enter the code'**
   String get couponEnterCode;
+
+  /// No description provided for @appForceUpdateVersionLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your version {current}  →  Required {required}'**
+  String appForceUpdateVersionLine(String current, String required);
+
+  /// No description provided for @appForceUpdateLater.
+  ///
+  /// In en, this message translates to:
+  /// **'See you after the update!'**
+  String get appForceUpdateLater;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

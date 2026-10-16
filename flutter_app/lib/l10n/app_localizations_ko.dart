@@ -3655,13 +3655,13 @@ class L10nKo extends L10n {
   String get shopAdPreparing => '광고를 준비하고 있어요…';
 
   @override
-  String get appForceUpdateTitle => '업데이트가 필요합니다';
+  String get appForceUpdateTitle => '새 버전이 나왔어요!';
 
   @override
-  String get appForceUpdateBody => '새로운 버전이 출시되었습니다.\n원활한 이용을 위해 업데이트해주세요.';
+  String get appForceUpdateBody => '더 재밌고 안정적인 티츄를 위해\n업데이트가 꼭 필요해요. 잠깐이면 돼요!';
 
   @override
-  String get appForceUpdateButton => '업데이트';
+  String get appForceUpdateButton => '업데이트하러 가기';
 
   @override
   String get appEulaSubtitle => '이용약관';
@@ -4618,7 +4618,7 @@ class L10nKo extends L10n {
       '계좌이체는 자동 처리되지 않습니다. 관리자가 입금을 확인한 뒤 골드를 지급하므로 시간이 걸릴 수 있습니다.';
 
   @override
-  String get appForceUpdateBodyWeb => '새 버전이 배포되었습니다.\n새로고침하면 바로 이용할 수 있습니다.';
+  String get appForceUpdateBodyWeb => '새 버전이 배포됐어요.\n새로고침하면 바로 이어서 즐길 수 있어요!';
 
   @override
   String get appForceUpdateButtonWeb => '새로고침';
@@ -5668,4 +5668,12 @@ class L10nKo extends L10n {
 
   @override
   String get couponEnterCode => '코드를 입력해 주세요';
+
+  @override
+  String appForceUpdateVersionLine(String current, String required) {
+    return '내 버전 $current  →  필요한 버전 $required';
+  }
+
+  @override
+  String get appForceUpdateLater => '업데이트 후에 다시 만나요!';
 }

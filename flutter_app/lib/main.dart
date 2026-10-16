@@ -27,6 +27,7 @@ import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/invite_link_service.dart';
 import 'theme/cartoon.dart';
+import 'screens/force_update_screen.dart';
 import 'widgets/mission_toast.dart';
 import 'widgets/draggable_chat_panel.dart';
 import 'services/session_service.dart';
@@ -753,6 +754,8 @@ class _EntryScreenState extends State<_EntryScreen> {
   GameService? _gameService;
   bool _eulaListenerAttached = false;
   bool _forceUpdate = false;
+  String? _currentVersion;
+  String? _requiredVersion;
   bool _forceUpdateListenerAttached = false;
 
   @override
@@ -949,7 +952,13 @@ class _EntryScreenState extends State<_EntryScreen> {
     try {
       final info = await PackageInfo.fromPlatform();
       if (_compareVersions(info.version, minVersion) < 0) {
-        if (mounted) setState(() => _forceUpdate = true);
+        if (mounted) {
+          setState(() {
+            _forceUpdate = true;
+            _currentVersion = info.version;
+            _requiredVersion = minVersion;
+          });
+        }
       }
     } catch (_) {}
   }
@@ -1007,72 +1016,13 @@ class _EntryScreenState extends State<_EntryScreen> {
     }
 
     if (_eulaAccepted && _forceUpdate) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset('assets/icon.webp', width: 80, height: 80),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  L10n.of(context).appForceUpdateTitle,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  // On the web there is nothing to install: the page always
-                  // serves the newest bundle (index.html and the bootstrap
-                  // are no-store), so reloading IS the update. This only ever
-                  // fires for a tab that has been sitting open since before a
-                  // deploy.
-                  kIsWeb
-                      ? L10n.of(context).appForceUpdateBodyWeb
-                      : L10n.of(context).appForceUpdateBody,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    // A store link is useless in a browser — it used to send
-                    // web users to Google Play regardless of platform.
-                    onPressed: kIsWeb ? _reloadWebPage : _openStore,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7E57C2),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      kIsWeb
-                          ? L10n.of(context).appForceUpdateButtonWeb
-                          : L10n.of(context).appForceUpdateButton,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return ForceUpdateScreen(
+        isWeb: kIsWeb,
+        // A store link is useless in a browser — it used to send web users to
+        // Google Play regardless of platform.
+        onPressed: kIsWeb ? _reloadWebPage : _openStore,
+        currentVersion: _currentVersion,
+        requiredVersion: _requiredVersion,
       );
     }
 

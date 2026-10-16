@@ -26,6 +26,9 @@ const DAILY_REROLLS = 1;
 const STREAK_BONUS_DAYS = 7;
 const STREAK_BONUS_TOKENS = 10;
 
+/** 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지). */
+const MIN_HUMANS = 2;
+
 const GAMES = ['tichu', 'mighty', 'skull_king', 'love_letter'];
 
 /**
@@ -92,6 +95,7 @@ module.exports = {
   DAILY_REROLLS,
   STREAK_BONUS_DAYS,
   STREAK_BONUS_TOKENS,
+  MIN_HUMANS,
   GAMES,
   MISSIONS,
   MISSION_BY_KEY,

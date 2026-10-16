@@ -78,6 +78,8 @@ class MissionsState {
     required this.todayEarned,
     required this.dailyCap,
     required this.maxActive,
+    required this.lifetimeDays,
+    required this.minHumans,
     required this.streak,
     required this.streakDoneToday,
     required this.streakTarget,
@@ -91,6 +93,10 @@ class MissionsState {
   final int todayEarned;
   final int dailyCap;
   final int maxActive;
+
+  /// 받은 미션이 유효한 날 수, 그리고 미션으로 인정되는 최소 사람 수.
+  final int lifetimeDays;
+  final int minHumans;
   final int streak;
   final bool streakDoneToday;
   final int streakTarget;
@@ -123,6 +129,8 @@ class MissionsState {
       todayEarned: _int(j['todayEarned']),
       dailyCap: _int(j['dailyCap'], 10),
       maxActive: _int(j['maxActive'], 3),
+      lifetimeDays: _int(j['lifetimeDays'], 3),
+      minHumans: _int(j['minHumans'], 2),
       streak: _int(j['streak']),
       streakDoneToday: j['streakDoneToday'] == true,
       streakTarget: _int(j['streakTarget'], 7),

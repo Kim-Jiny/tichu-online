@@ -5444,4 +5444,57 @@ class L10nKo extends L10n {
 
   @override
   String get tokenVariantBubblePremium3 => '번개';
+
+  @override
+  String get missionsHelpTitle => '미션 이용 안내';
+
+  @override
+  String get missionsHelpTokenTitle => '미션 토큰';
+
+  @override
+  String get missionsHelpTokenBody =>
+      '토큰은 미션을 깨야만 얻을 수 있어요. 토큰 상점에서만 쓸 수 있고, 돈이나 골드로는 살 수 없어요.';
+
+  @override
+  String get missionsHelpAcceptTitle => '먼저 \"받기\"를 눌러야 해요';
+
+  @override
+  String missionsHelpAcceptBody(String max, String days) {
+    return '오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 동시에 $max개까지 받을 수 있고, 받은 날부터 $days일 안에 깨야 해요.';
+  }
+
+  @override
+  String missionsHelpHumansTitle(String n) {
+    return '사람이 $n명 이상인 판만 인정돼요';
+  }
+
+  @override
+  String get missionsHelpHumansBody =>
+      '봇만 있거나 사람이 한 명뿐인 방, 관전 중인 판은 인정되지 않아요. \"한 판 끝까지 하기·이기기\" 미션은 중간에 나가지 않고 끝까지 마친 판만 인정돼요.';
+
+  @override
+  String get missionsHelpCapTitle => '하루에 얻는 토큰 한도';
+
+  @override
+  String missionsHelpCapBody(String cap) {
+    return '하루에 미션으로 얻을 수 있는 토큰은 최대 $cap개예요. 한도를 넘기면 미션은 완료되지만 토큰은 더 오르지 않아요.';
+  }
+
+  @override
+  String get missionsHelpStreakTitle => '연속 달성 보너스';
+
+  @override
+  String missionsHelpStreakBody(String target, String bonus) {
+    return '하루에 미션을 1개 이상 깨면 연속으로 쳐요. $target일을 채우면 보너스 토큰 $bonus개를 줘요. 하루를 건너뛰면 처음부터 다시 시작해요.';
+  }
+
+  @override
+  String get missionsHelpResetTitle => '매일 바뀌어요';
+
+  @override
+  String get missionsHelpResetBody =>
+      '오늘의 후보는 매일 새로 나와요(한국 시간 자정). 마음에 안 들면 게임마다 하루 한 번 새로고침할 수 있어요.';
+
+  @override
+  String get missionsHelpClose => '알겠어요';
 }

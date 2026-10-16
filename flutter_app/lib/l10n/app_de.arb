@@ -2040,5 +2040,53 @@
   "tokenVariantBubbleBasic3": "Gelber Stern",
   "tokenVariantBubblePremium1": "Drachenflamme",
   "tokenVariantBubblePremium2": "Kirschblüte",
-  "tokenVariantBubblePremium3": "Blitz"
+  "tokenVariantBubblePremium3": "Blitz",
+  "missionsHelpTitle": "So funktionieren Missionen",
+  "missionsHelpTokenTitle": "Missions-Token",
+  "missionsHelpTokenBody": "Token gibt es nur für abgeschlossene Missionen und sie lassen sich nur im Token-Shop ausgeben. Mit Geld oder Gold kann man sie nicht kaufen.",
+  "missionsHelpAcceptTitle": "Erst die Mission annehmen",
+  "missionsHelpAcceptBody": "Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Du kannst {max} gleichzeitig haben, jede gilt {days} Tage.",
+  "@missionsHelpAcceptBody": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpHumansTitle": "Nur Spiele mit mindestens {n} Menschen zählen",
+  "@missionsHelpHumansTitle": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpHumansBody": "Räume nur mit Bots oder nur einem Menschen sowie Zuschauen zählen nicht. „Spiel beenden“ und „Spiel gewinnen“ zählen nur, wenn du bis zum Ende bleibst.",
+  "missionsHelpCapTitle": "Tägliches Token-Limit",
+  "missionsHelpCapBody": "Pro Tag sind höchstens {cap} Token aus Missionen möglich. Darüber hinaus wird die Mission zwar abgeschlossen, bringt aber keine Token mehr.",
+  "@missionsHelpCapBody": {
+    "placeholders": {
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpStreakTitle": "Serien-Bonus",
+  "missionsHelpStreakBody": "Schließe täglich mindestens eine Mission ab, um die Serie zu halten. Bei {target} Tagen gibt es {bonus} Bonus-Token. Wer einen Tag auslässt, beginnt von vorn.",
+  "@missionsHelpStreakBody": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpResetTitle": "Tägliche Erneuerung",
+  "missionsHelpResetBody": "Die Auswahl erneuert sich täglich um Mitternacht (koreanische Zeit). Pro Spiel kannst du sie einmal am Tag neu mischen.",
+  "missionsHelpClose": "Verstanden"
 }

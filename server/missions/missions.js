@@ -288,6 +288,7 @@ async function getState(nickname) {
     dailyCap: defs.DAILY_TOKEN_CAP,
     maxActive: defs.MAX_ACTIVE,
     lifetimeDays: defs.MISSION_LIFETIME_DAYS,
+    minHumans: defs.MIN_HUMANS,
     resetAtUtc,
     streak,
     streakDoneToday: doneToday,

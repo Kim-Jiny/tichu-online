@@ -9818,6 +9818,90 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Lightning'**
   String get tokenVariantBubblePremium3;
+
+  /// No description provided for @missionsHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How missions work'**
+  String get missionsHelpTitle;
+
+  /// No description provided for @missionsHelpTokenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission tokens'**
+  String get missionsHelpTokenTitle;
+
+  /// No description provided for @missionsHelpTokenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tokens can only be earned by completing missions and only be spent in the token shop. They can\'t be bought with money or gold.'**
+  String get missionsHelpTokenBody;
+
+  /// No description provided for @missionsHelpAcceptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept a mission first'**
+  String get missionsHelpAcceptTitle;
+
+  /// No description provided for @missionsHelpAcceptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. You can hold {max} at a time and each lasts {days} days.'**
+  String missionsHelpAcceptBody(String max, String days);
+
+  /// No description provided for @missionsHelpHumansTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only games with {n}+ people count'**
+  String missionsHelpHumansTitle(String n);
+
+  /// No description provided for @missionsHelpHumansBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms with only bots or a single human, and games you only watch, don\'t count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.'**
+  String get missionsHelpHumansBody;
+
+  /// No description provided for @missionsHelpCapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily token limit'**
+  String get missionsHelpCapTitle;
+
+  /// No description provided for @missionsHelpCapBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You can earn up to {cap} tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.'**
+  String missionsHelpCapBody(String cap);
+
+  /// No description provided for @missionsHelpStreakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak bonus'**
+  String get missionsHelpStreakTitle;
+
+  /// No description provided for @missionsHelpStreakBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete at least one mission a day to keep your streak. Reach {target} days for {bonus} bonus tokens. Skip a day and it starts over.'**
+  String missionsHelpStreakBody(String target, String bonus);
+
+  /// No description provided for @missionsHelpResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resets daily'**
+  String get missionsHelpResetTitle;
+
+  /// No description provided for @missionsHelpResetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers refresh every day at midnight Korea time. You can refresh each game\'s offers once a day.'**
+  String get missionsHelpResetBody;
+
+  /// No description provided for @missionsHelpClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get missionsHelpClose;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

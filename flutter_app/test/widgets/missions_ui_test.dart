@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tichu_online/l10n/app_localizations.dart';
 import 'package:tichu_online/models/missions.dart';
 import 'package:tichu_online/screens/missions_screen.dart';
@@ -135,6 +136,8 @@ Future<void> _snap(WidgetTester t, GlobalKey key, String name) async {
 }
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({'missions_help_seen': true}));
+
   testWidgets('미션 화면: 진행 중·후보·연속·새로고침', (t) async {
     await t.binding.setSurfaceSize(const Size(420, 1500));
     final game = _FakeGame(_state(), _shop());
@@ -163,6 +166,39 @@ void main() {
     await t.tap(find.text('포기'));
     await t.pump();
     expect(game.calls, contains('drop:tichu_bomb30'));
+  });
+
+  testWidgets('이용 안내: ? 버튼으로 열리고 핵심 규칙이 들어 있다', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    final game = _FakeGame(_state(), _shop());
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.text('미션 이용 안내'), findsNothing);
+    await t.tap(find.text('?'));
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.text('미션 이용 안내'), findsOneWidget);
+    expect(find.text('먼저 "받기"를 눌러야 해요'), findsOneWidget);
+    expect(find.textContaining('받기 전에 한 플레이는 인정되지 않아요'), findsOneWidget);
+    expect(find.text('사람이 2명 이상인 판만 인정돼요'), findsOneWidget);
+    await t.tap(find.text('알겠어요').first);
+    await t.pump(const Duration(milliseconds: 400));
+    expect(find.text('미션 이용 안내'), findsNothing);
+  });
+
+  testWidgets('이용 안내: 처음 들어오면 한 번만 저절로 뜬다', (t) async {
+    SharedPreferences.setMockInitialValues({});
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    final game = _FakeGame(_state(), _shop());
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.text('미션 이용 안내'), findsOneWidget);
+    await t.tap(find.text('알겠어요').first);
+    await t.pump(const Duration(milliseconds: 400));
+    // 다시 들어오면 뜨지 않는다.
+    await t.pumpWidget(const SizedBox());
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 800));
+    expect(find.text('미션 이용 안내'), findsNothing);
   });
 
   testWidgets('미션 화면: 동시에 3개가 차면 받기가 막힌다', (t) async {

@@ -5569,4 +5569,57 @@ class L10nEn extends L10n {
 
   @override
   String get tokenVariantBubblePremium3 => 'Lightning';
+
+  @override
+  String get missionsHelpTitle => 'How missions work';
+
+  @override
+  String get missionsHelpTokenTitle => 'Mission tokens';
+
+  @override
+  String get missionsHelpTokenBody =>
+      'Tokens can only be earned by completing missions and only be spent in the token shop. They can\'t be bought with money or gold.';
+
+  @override
+  String get missionsHelpAcceptTitle => 'Accept a mission first';
+
+  @override
+  String missionsHelpAcceptBody(String max, String days) {
+    return 'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. You can hold $max at a time and each lasts $days days.';
+  }
+
+  @override
+  String missionsHelpHumansTitle(String n) {
+    return 'Only games with $n+ people count';
+  }
+
+  @override
+  String get missionsHelpHumansBody =>
+      'Rooms with only bots or a single human, and games you only watch, don\'t count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.';
+
+  @override
+  String get missionsHelpCapTitle => 'Daily token limit';
+
+  @override
+  String missionsHelpCapBody(String cap) {
+    return 'You can earn up to $cap tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.';
+  }
+
+  @override
+  String get missionsHelpStreakTitle => 'Streak bonus';
+
+  @override
+  String missionsHelpStreakBody(String target, String bonus) {
+    return 'Complete at least one mission a day to keep your streak. Reach $target days for $bonus bonus tokens. Skip a day and it starts over.';
+  }
+
+  @override
+  String get missionsHelpResetTitle => 'Resets daily';
+
+  @override
+  String get missionsHelpResetBody =>
+      'Offers refresh every day at midnight Korea time. You can refresh each game\'s offers once a day.';
+
+  @override
+  String get missionsHelpClose => 'Got it';
 }

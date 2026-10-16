@@ -3318,5 +3318,53 @@
   "tokenVariantBubbleBasic3": "Yellow star",
   "tokenVariantBubblePremium1": "Dragon flame",
   "tokenVariantBubblePremium2": "Cherry blossom",
-  "tokenVariantBubblePremium3": "Lightning"
+  "tokenVariantBubblePremium3": "Lightning",
+  "missionsHelpTitle": "How missions work",
+  "missionsHelpTokenTitle": "Mission tokens",
+  "missionsHelpTokenBody": "Tokens can only be earned by completing missions and only be spent in the token shop. They can't be bought with money or gold.",
+  "missionsHelpAcceptTitle": "Accept a mission first",
+  "missionsHelpAcceptBody": "Only missions you accepted from today's offers make progress; play before accepting doesn't count. You can hold {max} at a time and each lasts {days} days.",
+  "@missionsHelpAcceptBody": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpHumansTitle": "Only games with {n}+ people count",
+  "@missionsHelpHumansTitle": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpHumansBody": "Rooms with only bots or a single human, and games you only watch, don't count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.",
+  "missionsHelpCapTitle": "Daily token limit",
+  "missionsHelpCapBody": "You can earn up to {cap} tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.",
+  "@missionsHelpCapBody": {
+    "placeholders": {
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpStreakTitle": "Streak bonus",
+  "missionsHelpStreakBody": "Complete at least one mission a day to keep your streak. Reach {target} days for {bonus} bonus tokens. Skip a day and it starts over.",
+  "@missionsHelpStreakBody": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsHelpResetTitle": "Resets daily",
+  "missionsHelpResetBody": "Offers refresh every day at midnight Korea time. You can refresh each game's offers once a day.",
+  "missionsHelpClose": "Got it"
 }

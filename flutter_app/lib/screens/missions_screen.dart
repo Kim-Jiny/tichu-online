@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/missions.dart';
@@ -42,7 +43,37 @@ class _MissionsScreenState extends State<MissionsScreen> {
     _seenActionSeq = game.missionActionSeq;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) game.requestMissions();
+      _maybeShowHelpFirstTime();
     });
+  }
+
+  static const _helpSeenKey = 'missions_help_seen';
+
+  /// 처음 들어왔을 때 한 번만 이용 안내를 자동으로 띄운다. 이후에는 ? 버튼으로.
+  Future<void> _maybeShowHelpFirstTime() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_helpSeenKey) == true || !mounted) return;
+      await prefs.setBool(_helpSeenKey, true);
+      if (mounted) _showHelp();
+    } catch (_) {
+      // 저장소를 못 읽어도 화면은 정상이다(안내는 ? 버튼으로 볼 수 있다).
+    }
+  }
+
+  void _showHelp() {
+    final st = context.read<GameService>().missionsState;
+    showDialog<void>(
+      context: context,
+      builder: (_) => MissionsHelpDialog(
+        maxActive: st?.maxActive ?? 3,
+        lifetimeDays: st?.lifetimeDays ?? 3,
+        minHumans: st?.minHumans ?? 2,
+        dailyCap: st?.dailyCap ?? 10,
+        streakTarget: st?.streakTarget ?? 7,
+        streakBonus: st?.streakBonus ?? 10,
+      ),
+    );
   }
 
   void _showActionError(GameService game) {
@@ -132,6 +163,25 @@ class _MissionsScreenState extends State<MissionsScreen> {
                 ),
               ),
             ),
+            CartoonPressable(
+              scale: 0.9,
+              onTap: _showHelp,
+              child: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Cartoon.paper,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Text('?', style: Cartoon.text(size: 24)),
+              ),
+            ),
+            const SizedBox(width: 8),
             TokenBalanceChip(balance: game.tokenBalance),
             const SizedBox(width: 8),
             Semantics(
@@ -665,6 +715,160 @@ class TokenCoin extends StatelessWidget {
         Icons.star_rounded,
         size: size * 0.66,
         color: const Color(0xFFFFF4C9),
+      ),
+    );
+  }
+}
+
+/// 미션 이용 안내 — 받기를 눌러야 진행된다, 사람 2명 이상인 판만 인정된다 같은 규칙.
+class MissionsHelpDialog extends StatelessWidget {
+  const MissionsHelpDialog({
+    super.key,
+    required this.maxActive,
+    required this.lifetimeDays,
+    required this.minHumans,
+    required this.dailyCap,
+    required this.streakTarget,
+    required this.streakBonus,
+  });
+
+  final int maxActive;
+  final int lifetimeDays;
+  final int minHumans;
+  final int dailyCap;
+  final int streakTarget;
+  final int streakBonus;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final items = <(IconData, Color, String, String)>[
+      (
+        Icons.touch_app_rounded,
+        const Color(0xFFFF9A1F),
+        l10n.missionsHelpAcceptTitle,
+        l10n.missionsHelpAcceptBody(
+          maxActive.toString(),
+          lifetimeDays.toString(),
+        ),
+      ),
+      (
+        Icons.groups_rounded,
+        const Color(0xFF4DA3FF),
+        l10n.missionsHelpHumansTitle(minHumans.toString()),
+        l10n.missionsHelpHumansBody,
+      ),
+      (
+        Icons.star_rounded,
+        const Color(0xFFFFB300),
+        l10n.missionsHelpTokenTitle,
+        l10n.missionsHelpTokenBody,
+      ),
+      (
+        Icons.speed_rounded,
+        const Color(0xFFE5484D),
+        l10n.missionsHelpCapTitle,
+        l10n.missionsHelpCapBody(dailyCap.toString()),
+      ),
+      (
+        Icons.local_fire_department_rounded,
+        const Color(0xFFE0720A),
+        l10n.missionsHelpStreakTitle,
+        l10n.missionsHelpStreakBody(
+          streakTarget.toString(),
+          streakBonus.toString(),
+        ),
+      ),
+      (
+        Icons.refresh_rounded,
+        const Color(0xFF3DBE6A),
+        l10n.missionsHelpResetTitle,
+        l10n.missionsHelpResetBody,
+      ),
+    ];
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 640),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          decoration: Cartoon.panelDecoration(radius: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(l10n.missionsHelpTitle, style: Cartoon.text(size: 22)),
+              const SizedBox(height: 10),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (final (icon, color, title, body) in items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: BorderRadius.circular(11),
+                                  border: Border.all(
+                                    color: Cartoon.ink,
+                                    width: 1.8,
+                                  ),
+                                ),
+                                child: Icon(
+                                  icon,
+                                  size: 20,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: Cartoon.userText(
+                                        size: 14.5,
+                                        weight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      body,
+                                      style: Cartoon.userText(
+                                        size: 12.5,
+                                        weight: FontWeight.w600,
+                                        color: Cartoon.ink.withValues(
+                                          alpha: 0.75,
+                                        ),
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              CartoonButton(
+                height: 46,
+                onPressed: () => Navigator.pop(context),
+                child: CartoonButton.label(l10n.missionsHelpClose, size: 18),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

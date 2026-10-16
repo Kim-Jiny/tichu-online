@@ -5606,4 +5606,57 @@ class L10nDe extends L10n {
 
   @override
   String get tokenVariantBubblePremium3 => 'Blitz';
+
+  @override
+  String get missionsHelpTitle => 'So funktionieren Missionen';
+
+  @override
+  String get missionsHelpTokenTitle => 'Missions-Token';
+
+  @override
+  String get missionsHelpTokenBody =>
+      'Token gibt es nur für abgeschlossene Missionen und sie lassen sich nur im Token-Shop ausgeben. Mit Geld oder Gold kann man sie nicht kaufen.';
+
+  @override
+  String get missionsHelpAcceptTitle => 'Erst die Mission annehmen';
+
+  @override
+  String missionsHelpAcceptBody(String max, String days) {
+    return 'Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Du kannst $max gleichzeitig haben, jede gilt $days Tage.';
+  }
+
+  @override
+  String missionsHelpHumansTitle(String n) {
+    return 'Nur Spiele mit mindestens $n Menschen zählen';
+  }
+
+  @override
+  String get missionsHelpHumansBody =>
+      'Räume nur mit Bots oder nur einem Menschen sowie Zuschauen zählen nicht. „Spiel beenden“ und „Spiel gewinnen“ zählen nur, wenn du bis zum Ende bleibst.';
+
+  @override
+  String get missionsHelpCapTitle => 'Tägliches Token-Limit';
+
+  @override
+  String missionsHelpCapBody(String cap) {
+    return 'Pro Tag sind höchstens $cap Token aus Missionen möglich. Darüber hinaus wird die Mission zwar abgeschlossen, bringt aber keine Token mehr.';
+  }
+
+  @override
+  String get missionsHelpStreakTitle => 'Serien-Bonus';
+
+  @override
+  String missionsHelpStreakBody(String target, String bonus) {
+    return 'Schließe täglich mindestens eine Mission ab, um die Serie zu halten. Bei $target Tagen gibt es $bonus Bonus-Token. Wer einen Tag auslässt, beginnt von vorn.';
+  }
+
+  @override
+  String get missionsHelpResetTitle => 'Tägliche Erneuerung';
+
+  @override
+  String get missionsHelpResetBody =>
+      'Die Auswahl erneuert sich täglich um Mitternacht (koreanische Zeit). Pro Spiel kannst du sie einmal am Tag neu mischen.';
+
+  @override
+  String get missionsHelpClose => 'Verstanden';
 }

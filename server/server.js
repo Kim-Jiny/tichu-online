@@ -9181,8 +9181,7 @@ async function handleGetWallet(ws) {
 // 판정은 전부 여기서 한다. 앱이 "깼다"고 알리는 메시지는 없다 — 엔진이 남긴
 // 이벤트(game.drainMissionEvents)와 판 결과만 센다.
 
-/** 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지). */
-const MISSION_MIN_HUMANS = 2;
+const MISSION_MIN_HUMANS = missionDefs.MIN_HUMANS;
 
 /** 다른 사람에게 보여 줄 장착 상태(닉네임별 캐시). 로그인·구매·장착 때 갱신한다. */
 const tokenEquipsByNick = new Map();

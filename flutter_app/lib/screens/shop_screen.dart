@@ -253,6 +253,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   @override
   void dispose() {
+    _hideAttendanceBubble();
     _inventoryTabs?.removeListener(_handleInventoryTabChanged);
     _shopTabs?.removeListener(_handleShopTabChanged);
     _rewardedAd?.dispose();
@@ -263,9 +264,92 @@ class _ShopScreenState extends State<ShopScreen> {
     super.dispose();
   }
 
+  // 상점에 들어왔는데 오늘 출석을 아직 안 받았으면 출석 칩 아래에 말풍선으로 알린다.
+  final LayerLink _attendanceLink = LayerLink();
+  OverlayEntry? _attendanceBubble;
+  bool _attendanceBubbleShown = false;
+
+  void _hideAttendanceBubble() {
+    _attendanceBubble?.remove();
+    _attendanceBubble = null;
+  }
+
+  void _maybeShowAttendanceBubble(GameService game) {
+    if (_attendanceBubbleShown || kIsWeb) return;
+    final a = game.attendanceState;
+    if (a == null || a['claimedToday'] == true) return;
+    _attendanceBubbleShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final l10n = L10n.of(context);
+      final reward = (a['todayRewardGold'] as num?)?.toInt() ?? 50;
+      final text =
+          '${l10n.attendanceBannerTitle((a['todayDay'] as num?)?.toInt() ?? 1)}\n${l10n.attendanceBannerSubtitle(reward)}';
+      _attendanceBubble = OverlayEntry(
+        builder: (ctx) => Positioned(
+          left: 0,
+          top: 0,
+          child: CompositedTransformFollower(
+            link: _attendanceLink,
+            showWhenUnlinked: false,
+            targetAnchor: Alignment.bottomRight,
+            followerAnchor: Alignment.topRight,
+            offset: const Offset(4, 6),
+            child: Material(
+              type: MaterialType.transparency,
+              child: GestureDetector(
+                onTap: () {
+                  _hideAttendanceBubble();
+                  _showAttendanceDialog(game);
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 14),
+                      child: CustomPaint(
+                        size: const Size(16, 9),
+                        painter: _BubbleTailPainter(),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Cartoon.paper,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Cartoon.ink, width: 2),
+                      ),
+                      child: Text(
+                        text,
+                        textAlign: TextAlign.center,
+                        style: Cartoon.userText(
+                          size: 13,
+                          weight: FontWeight.w800,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      Overlay.of(context).insert(_attendanceBubble!);
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) _hideAttendanceBubble();
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    _maybeShowAttendanceBubble(context.watch<GameService>());
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final baseScale = MediaQuery.of(context).textScaler.scale(1.0);
     final adjustedScale = isAndroid
@@ -445,20 +529,26 @@ class _ShopScreenState extends State<ShopScreen> {
                 ),
                 const Spacer(),
                 if (attendance != null) ...[
-                  rewardChip(
-                    icon: attendanceClaimed
-                        ? Icons.event_available_rounded
-                        : Icons.calendar_month_rounded,
-                    color: attendanceClaimed
-                        ? Cartoon.green
-                        : Cartoon.orangeDeep,
-                    tooltip: attendanceClaimed
-                        ? l10n.attendanceBannerCompletedSubtitle
-                        : l10n.attendanceBannerTitle(
-                            (attendance['todayDay'] as int?) ?? 1,
-                          ),
-                    dot: !attendanceClaimed,
-                    onTap: () => _showAttendanceDialog(game),
+                  CompositedTransformTarget(
+                    link: _attendanceLink,
+                    child: rewardChip(
+                      icon: attendanceClaimed
+                          ? Icons.event_available_rounded
+                          : Icons.calendar_month_rounded,
+                      color: attendanceClaimed
+                          ? Cartoon.green
+                          : Cartoon.orangeDeep,
+                      tooltip: attendanceClaimed
+                          ? l10n.attendanceBannerCompletedSubtitle
+                          : l10n.attendanceBannerTitle(
+                              (attendance['todayDay'] as int?) ?? 1,
+                            ),
+                      dot: !attendanceClaimed,
+                      onTap: () {
+                        _hideAttendanceBubble();
+                        _showAttendanceDialog(game);
+                      },
+                    ),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -4871,4 +4961,26 @@ class _AttendanceFxState extends State<_AttendanceFx>
       ],
     );
   }
+}
+
+/// 말풍선 위쪽 꼬리(테두리 있는 삼각형).
+class _BubbleTailPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, size.height)
+      ..lineTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height);
+    canvas.drawPath(Path.from(path)..close(), Paint()..color = Cartoon.paper);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Cartoon.ink
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -669,8 +669,15 @@ input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; bo
     <a href="/tc-backstage/shop/history" class="${activePage === 'shop-history' ? 'active' : ''}" onclick="closeSidebar()">상점 구매</a>
     <a href="/tc-backstage/campaigns" class="${activePage === 'campaigns' ? 'active' : ''}" onclick="closeSidebar()">마케팅 푸시</a>
     <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
-    <a href="/tc-backstage/missions" class="${activePage === 'missions' ? 'active' : ''}" onclick="closeSidebar()">미션·토큰</a>
     <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">미션</div>
+    <a href="/tc-backstage/missions" class="${activePage === 'missions-overview' ? 'active' : ''}" onclick="closeSidebar()">미션 현황</a>
+    <a href="/tc-backstage/missions/manage" class="${activePage === 'missions-manage' ? 'active' : ''}" onclick="closeSidebar()">미션 관리</a>
+    <a href="/tc-backstage/missions/shop" class="${activePage === 'missions-shop' ? 'active' : ''}" onclick="closeSidebar()">토큰 상점</a>
+    <a href="/tc-backstage/missions/grant" class="${activePage === 'missions-grant' ? 'active' : ''}" onclick="closeSidebar()">토큰 지급·회수</a>
+    <a href="/tc-backstage/missions/ledger" class="${activePage === 'missions-ledger' ? 'active' : ''}" onclick="closeSidebar()">토큰 장부</a>
   </div>
   <div class="nav-section">
     <div class="nav-section-label">매출</div>
@@ -4296,6 +4303,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const ipQuery = url.searchParams.get('ip') || '';
     const appVersion = url.searchParams.get('ver') || '';
     const data = await getUsers(search, page, 20, { sort, minRating, minGames, minLeaves, platform, ipQuery , appVersion });
+    const tokenBalances = await missions.getBalances(data.rows.map((u) => u.nickname));
     const adminCount = data.rows.filter(u => u.is_admin && !u.is_deleted).length;
     const deletedCount = data.rows.filter(u => u.is_deleted).length;
     const highRiskUsers = data.rows.filter(u => (u.leave_count || 0) >= 3).length;
@@ -4383,7 +4391,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <tr>
           ${sortHeader('닉네임', 'nickname')}<th>권한</th>
           <th class="col-hide-sm">기기</th><th class="col-hide-sm">IP</th>
-          ${sortHeader('앱 버전', 'version')}${sortHeader('Lv', 'level')}${sortHeader('골드', 'gold')}
+          ${sortHeader('앱 버전', 'version')}${sortHeader('Lv', 'level')}${sortHeader('골드', 'gold')}<th>토큰</th>
           ${sortHeader('레이팅', 'rating')}${sortHeader('게임', 'games')}${sortHeader('이탈', 'leaves')}
           ${sortHeader('최근 접속', 'login')}
           ${sortHeader('가입', 'joined', { hideSm: true })}<th></th>
@@ -4401,6 +4409,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${u.level || 1}</td>
           <td style="color:#ff9800;font-weight:600">${(u.gold || 0).toLocaleString()}
             <form method="POST" action="/tc-backstage/users/${encodeURIComponent(u.nickname)}/gold" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
+              <input type="number" name="amount" placeholder="+/-" style="width:55px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;font-size:11px" required>
+              <button type="submit" class="btn btn-primary" style="font-size:10px;padding:2px 6px">Go</button>
+            </form>
+          </td>
+          <td style="color:#0f6c5c;font-weight:600">${formatNumber(tokenBalances.get(u.nickname) || 0)}
+            <form method="POST" action="/tc-backstage/missions/grant" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
+              <input type="hidden" name="nicknames" value="${escapeHtml(u.nickname)}">
+              <input type="hidden" name="send_push" value="1">
+              <input type="hidden" name="back" value="${escapeHtml(req.url || '/tc-backstage/users')}">
               <input type="number" name="amount" placeholder="+/-" style="width:55px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;font-size:11px" required>
               <button type="submit" class="btn btn-primary" style="font-size:10px;padding:2px 6px">Go</button>
             </form>
@@ -4564,8 +4581,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">지급</button>
             </form>
           </div>
-          <div class="label">미션 토큰</div><div class="value" style="font-weight:600">${formatNumber(await missions.getBalance(user.nickname))}
-            <a href="/tc-backstage/missions?tab=grant&nickname=${encodeURIComponent(user.nickname)}" class="btn btn-secondary" style="font-size:11px;padding:4px 10px;margin-left:10px;text-decoration:none">조회·지급</a>
+          <div class="label">미션 토큰</div><div class="value" style="color:#0f6c5c;font-weight:600">${formatNumber(await missions.getBalance(user.nickname))}
+            <form method="POST" action="/tc-backstage/missions/grant" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
+              <input type="hidden" name="nicknames" value="${escapeHtml(user.nickname)}">
+              <input type="hidden" name="send_push" value="1">
+              <input type="hidden" name="back" value="/tc-backstage/users/${encodeURIComponent(user.nickname)}">
+              <input type="number" name="amount" placeholder="+/-" style="width:80px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px" required>
+              <input type="text" name="memo" placeholder="사유(선택)" maxlength="50" style="width:120px;padding:4px 8px;border-radius:6px;border:1px solid #ddd;font-size:12px">
+              <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">지급</button>
+            </form>
+            <a href="/tc-backstage/missions/ledger?nickname=${encodeURIComponent(user.nickname)}" style="font-size:12px;margin-left:10px">장부</a>
           </div>
           <div class="label">레이팅</div><div class="value" style="font-weight:600">${user.rating}</div>
           <div class="label">시즌 레이팅</div><div class="value">${user.season_rating || 1000}</div>
@@ -5016,168 +5041,178 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   // from a notice, and it can carry a payout, which is what separates it from
   // an inquiry reply.
   // ───────── 미션 · 토큰 ─────────
-  // 한 페이지를 탭으로 나눈다: 현황 / 미션 / 토큰 상점 / 지급·회수 / 장부.
-  if (pathname === '/tc-backstage/missions' && method === 'GET') {
-    const TABS = [
-      ['overview', '현황'],
-      ['missions', '미션 관리'],
-      ['shop', '토큰 상점'],
-      ['grant', '토큰 지급·회수'],
-      ['ledger', '토큰 장부'],
-    ];
-    const tab = TABS.some(([k]) => k === url.searchParams.get('tab')) ? url.searchParams.get('tab') : 'overview';
+  // 사이드바에 "미션" 묶음을 따로 두고, 화면마다 주소를 나눈다.
+  //   /missions 현황 · /missions/manage 미션 관리 · /missions/shop 토큰 상점
+  //   /missions/grant 토큰 지급·회수 · /missions/ledger 토큰 장부
+  const MISSION_PAGES = {
+    '/tc-backstage/missions': 'overview',
+    '/tc-backstage/missions/manage': 'manage',
+    '/tc-backstage/missions/shop': 'shop',
+    '/tc-backstage/missions/grant': 'grant',
+    '/tc-backstage/missions/ledger': 'ledger',
+  };
+  const missionBase = (page) => (page === 'overview' ? '/tc-backstage/missions' : `/tc-backstage/missions/${page}`);
+  if (MISSION_PAGES[pathname] && method === 'GET') {
+    const page = MISSION_PAGES[pathname];
     const notice = url.searchParams.get('msg');
     const failed = url.searchParams.get('r') === 'fail';
     const L = missionLabels;
     const defs = missions.defs;
-    const pct = (a, b) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '-');
-    const input = 'padding:6px 9px;border:1px solid #ddd;border-radius:7px;font-size:13px';
-
-    const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">${TABS.map(([k, label]) =>
-      `<a href="/tc-backstage/missions?tab=${k}" class="btn ${k === tab ? 'btn-primary' : 'btn-secondary'}" style="text-decoration:none">${label}</a>`).join('')}</div>`;
+    const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : null);
+    const pctText = (a, b) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '-');
+    const input = 'padding:7px 10px;border:1px solid #d8d4cb;border-radius:8px;font-size:13px;background:#fff';
+    const tierColor = { 1: '#2e8b57', 2: '#3e7fd6', 3: '#c0563f' };
+    const tierChip = (t) => `<span class="badge" style="background:${tierColor[t] || '#888'};color:#fff">${L.TIER_LABEL_KO[t] || t}</span>`;
+    const gameIcon = { tichu: '🀄', mighty: '♠', skull_king: '☠', love_letter: '✉' };
+    const sectionTitle = (text, sub = '') => `<div style="display:flex;align-items:baseline;gap:10px;margin:26px 0 10px"><h2 style="font-size:17px;font-weight:800">${text}</h2>${sub ? `<span class="muted" style="font-size:12.5px">${sub}</span>` : ''}</div>`;
+    const note = (text) => `<div class="soft-panel" style="margin-bottom:16px;font-size:13px;line-height:1.7;color:#4a4f57">${text}</div>`;
+    const bar = (value, color = '#0f6c5c') => `<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:60px;height:8px;border-radius:999px;background:#ece6dc;overflow:hidden"><div style="height:100%;width:${value ?? 0}%;background:${color}"></div></div><span style="font-size:12.5px;min-width:34px;text-align:right">${value == null ? '-' : `${value}%`}</span></div>`;
 
     let body = '';
-    if (tab === 'overview') {
+    let title = '';
+    let subtitle = '';
+    if (page === 'overview') {
+      title = '미션 현황';
+      subtitle = '오늘 얼마나 참여했고, 어떤 미션이 잘 깨지는지 한눈에 봅니다.';
       const ov = await missions.adminOverview();
       const totalPicked = ov.missions.reduce((n, m) => n + m.picked, 0);
       const totalDone = ov.missions.reduce((n, m) => n + m.done, 0);
       body = `
         ${summaryStrip([
-          { label: '오늘 미션을 고른 유저', value: formatNumber(ov.today.pickers_today), meta: `오늘 고른 미션 ${formatNumber(ov.today.picked_today)}개` },
-          { label: '오늘 완료', value: formatNumber(ov.today.done_today), meta: '오늘(KST) 완료 처리된 미션' },
-          { label: '오늘 지급된 토큰', value: formatNumber(ov.totals.issued_today), valueColor: '#2e8b57', meta: '미션·보너스·운영자 지급 합계' },
-          { label: '누적 지급 토큰', value: formatNumber(ov.totals.issued_total), meta: `상점에서 쓴 토큰 ${formatNumber(ov.totals.spent_shop)}` },
-          { label: '토큰 보유 유저', value: formatNumber(ov.holders.holders), meta: `미사용 잔액 합계 ${formatNumber(ov.holders.outstanding)}` },
-          { label: '전체 완료율', value: pct(totalDone, totalPicked), meta: `고른 ${formatNumber(totalPicked)} · 완료 ${formatNumber(totalDone)}` },
+          { label: '오늘 참여한 유저', value: formatNumber(ov.today.pickers_today), meta: `오늘 고른 미션 ${formatNumber(ov.today.picked_today)}개` },
+          { label: '오늘 완료된 미션', value: formatNumber(ov.today.done_today) },
+          { label: '오늘 지급된 토큰', value: formatNumber(ov.totals.issued_today), valueColor: '#2e8b57' },
+          { label: '전체 완료율', value: pctText(totalDone, totalPicked), meta: `고른 ${formatNumber(totalPicked)} · 완료 ${formatNumber(totalDone)}` },
         ])}
-        <div class="card">
-          <h3>미션별 현황</h3>
-          <p class="muted" style="font-size:12.5px;margin-bottom:10px">완료율이 너무 낮은 미션은 보상을 올리거나 목표를 낮추고, 너무 높은 미션은 보상을 낮추는 식으로 조정하세요 (미션 관리 탭).</p>
+        ${summaryStrip([
+          { label: '누적 지급 토큰', value: formatNumber(ov.totals.issued_total) },
+          { label: '상점에서 쓴 토큰', value: formatNumber(ov.totals.spent_shop) },
+          { label: '토큰 보유 유저', value: formatNumber(ov.holders.holders) },
+          { label: '아직 안 쓴 토큰', value: formatNumber(ov.holders.outstanding), meta: '모든 유저 잔액 합계' },
+        ])}
+        ${note('완료율이 너무 낮은 미션은 <b>미션 관리</b>에서 보상을 올리거나 숨기고, 너무 쉽게 깨지는 미션은 보상을 낮추세요. 완료율은 "고른 수 대비 완료"입니다(기간이 지나 만료된 것도 고른 수에 들어갑니다).')}
+        ${defs.GAMES.map((g) => `
+          ${sectionTitle(`${gameIcon[g] || ''} ${L.GAME_LABEL_KO[g]}`)}
           <div class="table-wrap"><table>
-            <tr><th>미션</th><th>게임</th><th>난이도</th><th>보상</th><th>고른 수</th><th>완료</th><th>완료율</th><th>진행 중</th><th>만료</th><th>포기</th><th>상태</th></tr>
-            ${ov.missions.map((m) => `<tr${m.enabled ? '' : ' style="opacity:.5"'}>
-              <td>${escapeHtml(L.MISSION_LABEL_KO[m.key] || m.key)}</td>
-              <td>${L.GAME_LABEL_KO[m.game] || m.game}</td>
-              <td>${L.TIER_LABEL_KO[m.tier] || m.tier}</td>
-              <td style="text-align:right">${m.effectiveTokens}</td>
+            <tr><th>미션</th><th>난이도</th><th style="text-align:right">보상</th><th style="text-align:right">고른 수</th><th style="text-align:right">완료</th><th style="min-width:150px">완료율</th><th style="text-align:right">진행 중</th></tr>
+            ${ov.missions.filter((m) => m.game === g).map((m) => `<tr${m.enabled ? '' : ' style="opacity:.5"'}>
+              <td>${escapeHtml(L.MISSION_LABEL_KO[m.key] || m.key)}${m.enabled ? '' : ' <span class="badge" style="background:#eee;color:#666">숨김</span>'}</td>
+              <td>${tierChip(m.tier)}</td>
+              <td style="text-align:right;font-weight:700">${m.effectiveTokens}</td>
               <td style="text-align:right">${formatNumber(m.picked)}</td>
               <td style="text-align:right;font-weight:700;color:#0f6c5c">${formatNumber(m.done)}</td>
-              <td style="text-align:right">${pct(m.done, m.picked)}</td>
+              <td>${bar(pct(m.done, m.picked))}</td>
               <td style="text-align:right">${formatNumber(m.active)}</td>
-              <td style="text-align:right">${formatNumber(m.expired)}</td>
-              <td style="text-align:right">${formatNumber(m.dropped)}</td>
-              <td>${m.enabled ? '노출' : '<span class="badge" style="background:#eee;color:#666">숨김</span>'}</td>
             </tr>`).join('')}
-          </table></div>
-        </div>`;
-    } else if (tab === 'missions') {
+          </table></div>`).join('')}`;
+    } else if (page === 'manage') {
+      title = '미션 관리';
+      subtitle = '게임별로 미션을 켜고 끄고, 보상 토큰을 조정합니다.';
       const ov = await missions.adminOverview();
+      const saved = (m) => `<form method="POST" action="/tc-backstage/missions/mission" style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap">
+          <input type="hidden" name="key" value="${m.key}">
+          <label style="font-size:12.5px;color:#666;display:flex;align-items:center;gap:5px">보상
+            <input type="number" name="tokens" min="0" max="100" value="${m.effectiveTokens !== m.tokens ? m.effectiveTokens : ''}" placeholder="${m.tokens}" style="width:64px;${input}"></label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" name="enabled" value="1" ${m.enabled ? 'checked' : ''}> 노출</label>
+          <button type="submit" class="btn btn-primary" style="font-size:12px;padding:6px 14px">저장</button>
+        </form>`;
       body = `
-        <div class="card">
-          <h3>미션 관리</h3>
-          <p class="muted" style="font-size:12.5px;margin-bottom:10px">
-            <b>숨김</b>으로 바꾸면 그 미션은 오늘의 후보에서 빠집니다. 이미 고른 유저의 진행 중인 미션은 그대로 이어집니다.
-            <b>보상</b>은 비워 두면 기본값을 씁니다. 바꾸면 이후 완료분부터 적용됩니다. (후보는 유저별로 정해지므로, 숨김·복원은 최대 30초 뒤부터 반영됩니다.)
-          </p>
-          <div class="table-wrap"><table>
-            <tr><th>미션</th><th>게임</th><th>난이도</th><th>목표</th><th>기본 보상</th><th>현재 보상 / 노출</th><th></th></tr>
-            ${ov.missions.map((m) => `<tr${m.enabled ? '' : ' style="opacity:.6"'}>
-              <td>${escapeHtml(L.MISSION_LABEL_KO[m.key] || m.key)}<div class="muted mono" style="font-size:11px">${m.key}</div></td>
-              <td>${L.GAME_LABEL_KO[m.game] || m.game}</td>
-              <td>${L.TIER_LABEL_KO[m.tier] || m.tier}</td>
-              <td style="text-align:right">${m.target}</td>
-              <td style="text-align:right">${m.tokens}</td>
-              <td>
-                <form method="POST" action="/tc-backstage/missions/mission" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                  <input type="hidden" name="key" value="${m.key}">
-                  <input type="number" name="tokens" min="0" max="100" value="${m.effectiveTokens !== m.tokens ? m.effectiveTokens : ''}" placeholder="${m.tokens}" style="width:70px;${input}">
-                  <label style="font-size:13px;display:flex;align-items:center;gap:4px"><input type="checkbox" name="enabled" value="1" ${m.enabled ? 'checked' : ''}> 노출</label>
-                  <button type="submit" class="btn btn-primary" style="font-size:12px;padding:5px 12px">저장</button>
-                </form>
-              </td>
-              <td></td>
-            </tr>`).join('')}
-          </table></div>
-        </div>`;
-    } else if (tab === 'shop') {
+        ${note(`<b>노출을 끄면</b> 그 미션은 오늘의 후보에서 빠집니다. 이미 고른 유저의 진행 중인 미션은 그대로 이어집니다.<br>
+          <b>보상</b> 칸을 비워 두면 기본값(칸에 흐리게 보이는 숫자)을 씁니다. 바꾸면 이후 완료분부터 적용됩니다.<br>
+          <span class="muted">후보는 유저마다 정해져 있어서, 노출을 바꾸면 최대 30초 뒤부터 반영됩니다.</span>`)}
+        ${defs.GAMES.map((g) => `
+          ${sectionTitle(`${gameIcon[g] || ''} ${L.GAME_LABEL_KO[g]}`)}
+          <div class="card" style="padding:0 0 4px">
+            ${ov.missions.filter((m) => m.game === g).map((m) => `
+              <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 4px;border-bottom:1px solid #f0ede6${m.enabled ? '' : ';opacity:.6'}">
+                <div style="min-width:240px;flex:1">
+                  <div style="font-weight:700;font-size:14px">${escapeHtml(L.MISSION_LABEL_KO[m.key] || m.key)}</div>
+                  <div style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${tierChip(m.tier)}
+                    <span class="muted" style="font-size:12px">목표 ${m.target} · 기본 보상 ${m.tokens}</span>
+                    <span class="muted mono" style="font-size:11px">${m.key}</span></div>
+                </div>
+                ${saved(m)}
+              </div>`).join('')}
+          </div>`).join('')}`;
+    } else if (page === 'shop') {
+      title = '토큰 상점';
+      subtitle = '토큰으로만 살 수 있는 상품의 가격과 판매 여부를 정합니다.';
       const ov = await missions.adminOverview();
+      const groups = [
+        ['room_highlight', '방 목록 강조'],
+        ['bubble_basic', '말풍선 스타일 (기본)'],
+        ['bubble_premium', '말풍선 스타일 (상위)'],
+      ];
       body = `
-        <div class="card">
-          <h3>토큰 상점</h3>
-          <p class="muted" style="font-size:12.5px;margin-bottom:10px">
-            토큰은 돈·골드로 살 수 없고 미션으로만 얻습니다. 전부 ${defs.SHOP_DAYS}일 기간제입니다.
-            <b>판매 중지</b>로 바꾸면 상점 목록에서 사라지지만, 이미 산 유저는 남은 기간 동안 계속 쓸 수 있습니다.
-            가격을 바꾸면 이후 구매부터 적용됩니다.
-          </p>
-          <div class="table-wrap"><table>
-            <tr><th>상품</th><th>기본 가격</th><th>구매 수</th><th>쓰인 토큰</th><th>현재 가격 / 판매</th></tr>
-            ${ov.products.map((p) => `<tr${p.enabled ? '' : ' style="opacity:.6"'}>
-              <td>${escapeHtml(L.PRODUCT_LABEL_KO[p.key] || p.key)}<div class="muted mono" style="font-size:11px">${p.key}</div></td>
-              <td style="text-align:right">${p.price}</td>
-              <td style="text-align:right">${formatNumber(p.buys)}</td>
-              <td style="text-align:right">${formatNumber(p.spent)}</td>
-              <td>
-                <form method="POST" action="/tc-backstage/missions/product" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${note(`토큰은 돈·골드로 살 수 없고 미션으로만 얻습니다. 전부 <b>${defs.SHOP_DAYS}일 기간제</b>이고, 다시 사면 기간이 늘어납니다.<br>
+          <b>판매 중지</b>로 바꾸면 상점 목록에서 사라지지만, 이미 산 유저는 남은 기간 동안 계속 씁니다. 가격을 바꾸면 이후 구매부터 적용됩니다.`)}
+        ${groups.map(([kind, label]) => `
+          ${sectionTitle(label)}
+          <div class="card" style="padding:0 0 4px">
+            ${ov.products.filter((p) => p.kind === kind).map((p) => `
+              <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 4px;border-bottom:1px solid #f0ede6${p.enabled ? '' : ';opacity:.6'}">
+                <div style="min-width:220px;flex:1">
+                  <div style="font-weight:700;font-size:14px">${escapeHtml((L.PRODUCT_LABEL_KO[p.key] || p.key).split(' · ')[1] || p.key)}</div>
+                  <div class="muted" style="font-size:12px;margin-top:4px">기본 ${p.price}토큰 · 구매 ${formatNumber(p.buys)}회 · 쓰인 토큰 ${formatNumber(p.spent)} <span class="mono" style="font-size:11px">${p.key}</span></div>
+                </div>
+                <form method="POST" action="/tc-backstage/missions/product" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                   <input type="hidden" name="key" value="${p.key}">
-                  <input type="number" name="price" min="1" max="100000" value="${p.effectivePrice !== p.price ? p.effectivePrice : ''}" placeholder="${p.price}" style="width:80px;${input}">
-                  <label style="font-size:13px;display:flex;align-items:center;gap:4px"><input type="checkbox" name="enabled" value="1" ${p.enabled ? 'checked' : ''}> 판매 중</label>
-                  <button type="submit" class="btn btn-primary" style="font-size:12px;padding:5px 12px">저장</button>
+                  <label style="font-size:12.5px;color:#666;display:flex;align-items:center;gap:5px">가격
+                    <input type="number" name="price" min="1" max="100000" value="${p.effectivePrice !== p.price ? p.effectivePrice : ''}" placeholder="${p.price}" style="width:76px;${input}"></label>
+                  <label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" name="enabled" value="1" ${p.enabled ? 'checked' : ''}> 판매 중</label>
+                  <button type="submit" class="btn btn-primary" style="font-size:12px;padding:6px 14px">저장</button>
                 </form>
-              </td>
-            </tr>`).join('')}
-          </table></div>
-        </div>`;
-    } else if (tab === 'grant') {
+              </div>`).join('')}
+          </div>`).join('')}`;
+    } else if (page === 'grant') {
+      title = '토큰 지급 · 회수';
+      subtitle = '유저에게 토큰을 직접 주거나 거둡니다. 유저 목록에서도 바로 지급할 수 있어요.';
       const target = (url.searchParams.get('nickname') || '').trim();
       const summary = target ? await missions.adminUserSummary(target) : null;
       body = `
+        ${note('닉네임은 쉼표나 줄바꿈으로 여러 명 적을 수 있습니다. 양수는 <b>지급</b>, 음수는 <b>회수</b>(잔액 아래로는 내려가지 않음). 누가 왜 했는지가 토큰 장부에 남습니다.')}
         <div class="card">
-          <h3>토큰 지급 · 회수</h3>
-          <p class="muted" style="font-size:12.5px;margin-bottom:12px">
-            닉네임을 쉼표나 줄바꿈으로 여러 명 적을 수 있습니다. 양수는 <b>지급</b>, 음수는 <b>회수</b>(잔액 아래로는 내려가지 않습니다).
-            누가 왜 했는지가 토큰 장부에 남습니다. 지급에는 하루 한도가 없습니다.
-          </p>
-          <form method="POST" action="/tc-backstage/missions/grant" style="display:grid;gap:12px;max-width:560px"
+          <h3>지급 · 회수</h3>
+          <form method="POST" action="/tc-backstage/missions/grant" style="display:grid;gap:14px;max-width:560px"
                 onsubmit="return confirm('입력한 내용대로 토큰을 지급·회수할까요?')">
-            <label>닉네임<br><textarea name="nicknames" rows="3" required placeholder="닉네임1, 닉네임2" style="width:100%;${input}">${escapeHtml(target)}</textarea></label>
-            <label>수량 (회수는 음수)<br><input type="number" name="amount" required placeholder="예: 10 또는 -5" style="width:180px;${input}"></label>
-            <label>사유 메모 (장부에 남음)<br><input type="text" name="memo" maxlength="50" placeholder="예: 이벤트 보상, 오지급 회수" style="width:100%;${input}"></label>
+            <label style="font-size:13px;font-weight:700">닉네임<br><textarea name="nicknames" rows="3" required placeholder="닉네임1, 닉네임2" style="width:100%;margin-top:5px;${input}">${escapeHtml(target)}</textarea></label>
+            <label style="font-size:13px;font-weight:700">수량 <span class="muted" style="font-weight:400">(회수는 음수)</span><br><input type="number" name="amount" required placeholder="예: 10 또는 -5" style="width:180px;margin-top:5px;${input}"></label>
+            <label style="font-size:13px;font-weight:700">사유 메모 <span class="muted" style="font-weight:400">(장부에 남음)</span><br><input type="text" name="memo" maxlength="50" placeholder="예: 이벤트 보상, 오지급 회수" style="width:100%;margin-top:5px;${input}"></label>
             <label style="font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" name="send_push" value="1" checked> 지급할 때 알림 푸시 보내기</label>
             <div><button type="submit" class="btn btn-primary">실행</button></div>
           </form>
         </div>
+        ${sectionTitle('유저 토큰 조회')}
         <div class="card">
-          <h3>유저 토큰 조회</h3>
-          <form method="GET" action="/tc-backstage/missions" style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-            <input type="hidden" name="tab" value="grant">
+          <form method="GET" action="/tc-backstage/missions/grant" style="display:flex;gap:8px;align-items:center;margin-bottom:14px">
             <input type="text" name="nickname" value="${escapeHtml(target)}" placeholder="닉네임" style="${input}">
             <button type="submit" class="btn btn-secondary">조회</button>
           </form>
           ${summary ? `
             <div class="fact"><span class="k">잔액</span><span class="v">${formatNumber(summary.balance)}</span></div>
             <div class="fact"><span class="k">누적 획득</span><span class="v">${formatNumber(summary.totalEarned)}</span></div>
-            <div class="fact"><span class="k">진행 중 미션</span><span class="v">${summary.active.length
-              ? summary.active.map((a) => `${escapeHtml(L.MISSION_LABEL_KO[a.mission_key] || a.mission_key)} (${a.progress}/${a.target}, ~${a.expires_day})`).join('<br>')
+            <div class="fact"><span class="k">진행 중 미션</span><span class="v" style="text-align:right">${summary.active.length
+              ? summary.active.map((a) => `${escapeHtml(L.MISSION_LABEL_KO[a.mission_key] || a.mission_key)} <span class="muted">(${a.progress}/${a.target}, ~${a.expires_day})</span>`).join('<br>')
               : '없음'}</span></div>
-            <div class="fact"><span class="k">보유 상품</span><span class="v">${summary.owned.length
-              ? summary.owned.map((o) => `${escapeHtml(L.PRODUCT_LABEL_KO[o.product_key] || o.product_key)} (~${formatDate(o.expires_at).slice(0, 12)})`).join('<br>')
+            <div class="fact"><span class="k">보유 상품</span><span class="v" style="text-align:right">${summary.owned.length
+              ? summary.owned.map((o) => `${escapeHtml(L.PRODUCT_LABEL_KO[o.product_key] || o.product_key)} <span class="muted">(~${formatDate(o.expires_at).slice(0, 12)})</span>`).join('<br>')
               : '없음'}</span></div>
-            <p style="margin-top:10px"><a href="/tc-backstage/users/${encodeURIComponent(target)}">유저 상세 보기</a> ·
-              <a href="/tc-backstage/missions?tab=ledger&nickname=${encodeURIComponent(target)}">이 유저의 장부</a></p>`
+            <p style="margin-top:12px;font-size:13px"><a href="/tc-backstage/users/${encodeURIComponent(target)}">유저 상세</a> ·
+              <a href="/tc-backstage/missions/ledger?nickname=${encodeURIComponent(target)}">이 유저의 장부</a></p>`
             : '<div class="muted" style="font-size:13px">닉네임을 입력하면 잔액과 진행 상황을 보여 줍니다.</div>'}
         </div>`;
     } else {
+      title = '토큰 장부';
+      subtitle = '토큰이 언제 누구에게 왜 오갔는지의 기록입니다.';
       const nickname = (url.searchParams.get('nickname') || '').trim().slice(0, 50);
       const reason = L.REASON_LABEL_KO[url.searchParams.get('reason')] ? url.searchParams.get('reason') : '';
-      const page = parseInt(url.searchParams.get('page') || '1', 10) || 1;
-      const data = await missions.adminLedger({ nickname, reason, page, limit: 50 });
-      const qs = (extra = {}) => new URLSearchParams({ tab: 'ledger', ...(nickname ? { nickname } : {}), ...(reason ? { reason } : {}), ...extra }).toString();
+      const pg = parseInt(url.searchParams.get('page') || '1', 10) || 1;
+      const data = await missions.adminLedger({ nickname, reason, page: pg, limit: 50 });
+      const qs = (extra = {}) => new URLSearchParams({ ...(nickname ? { nickname } : {}), ...(reason ? { reason } : {}), ...extra }).toString();
       const pages = Math.max(1, Math.ceil(data.total / data.limit));
       body = `
         <div class="card">
-          <h3>토큰 장부</h3>
-          <form method="GET" action="/tc-backstage/missions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-            <input type="hidden" name="tab" value="ledger">
+          <form method="GET" action="/tc-backstage/missions/ledger" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
             <input type="text" name="nickname" value="${escapeHtml(nickname)}" placeholder="닉네임" style="${input}">
             <select name="reason" style="${input}">
               <option value="">전체 사유</option>
@@ -5187,7 +5222,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             <span class="muted" style="font-size:12.5px">총 ${formatNumber(data.total)}건</span>
           </form>
           <div class="table-wrap"><table>
-            <tr><th>시각</th><th>닉네임</th><th>증감</th><th>사유</th><th>상세</th></tr>
+            <tr><th>시각</th><th>닉네임</th><th style="text-align:right">증감</th><th>사유</th><th>상세</th></tr>
             ${data.rows.length ? data.rows.map((r) => `<tr>
               <td style="white-space:nowrap">${formatDate(r.created_at)}</td>
               <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname)}</a></td>
@@ -5200,20 +5235,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             </tr>`).join('') : '<tr><td colspan="5" class="empty">장부가 비어 있습니다</td></tr>'}
           </table></div>
           <div class="pagination">
-            ${page > 1 ? `<a href="/tc-backstage/missions?${qs({ page: String(page - 1) })}">이전</a>` : ''}
-            <a class="active">${page} / ${pages}</a>
-            ${page < pages ? `<a href="/tc-backstage/missions?${qs({ page: String(page + 1) })}">다음</a>` : ''}
+            ${pg > 1 ? `<a href="/tc-backstage/missions/ledger?${qs({ page: String(pg - 1) })}">이전</a>` : ''}
+            <a class="active">${pg} / ${pages}</a>
+            ${pg < pages ? `<a href="/tc-backstage/missions/ledger?${qs({ page: String(pg + 1) })}">다음</a>` : ''}
           </div>
         </div>`;
     }
 
     const content = `
-      ${pageHeader('미션 · 토큰',
-        '미션을 깨면 <b>미션 토큰</b>을 줍니다. 토큰은 미션으로만 얻고 <b>토큰 상점</b>에서만 쓸 수 있어요(돈·골드로 살 수 없음). 판정은 서버가 하며, 사람이 2명 이상인 판만 인정합니다.')}
+      ${pageHeader(title, subtitle)}
       ${notice ? `<div class="card" style="background:${failed ? '#ffebee' : '#e8f5e9'};border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};margin-bottom:14px;font-weight:600;padding:12px 14px;white-space:pre-line">${escapeHtml(notice)}</div>` : ''}
-      ${tabBar}
       ${body}`;
-    return html(res, layout('미션·토큰', content, 'missions'));
+    return html(res, layout(title, content, `missions-${page}`));
   }
 
   if (pathname === '/tc-backstage/missions/mission' && method === 'POST') {
@@ -5223,7 +5256,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { enabled: body.enabled === '1', tokens: body.tokens },
       sessionInfo.session.username || 'admin',
     );
-    return redirect(res, `/tc-backstage/missions?tab=missions&r=${r.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(r.success ? '저장했습니다.' : `저장하지 못했습니다 (${r.reason})`)}`);
+    return redirect(res, `${missionBase('manage')}?r=${r.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(r.success ? '저장했습니다.' : `저장하지 못했습니다 (${r.reason})`)}`);
   }
 
   if (pathname === '/tc-backstage/missions/product' && method === 'POST') {
@@ -5233,7 +5266,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { enabled: body.enabled === '1', price: body.price },
       sessionInfo.session.username || 'admin',
     );
-    return redirect(res, `/tc-backstage/missions?tab=shop&r=${r.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(r.success ? '저장했습니다.' : `저장하지 못했습니다 (${r.reason})`)}`);
+    return redirect(res, `${missionBase('shop')}?r=${r.success ? 'ok' : 'fail'}&msg=${encodeURIComponent(r.success ? '저장했습니다.' : `저장하지 못했습니다 (${r.reason})`)}`);
   }
 
   if (pathname === '/tc-backstage/missions/grant' && method === 'POST') {
@@ -5241,8 +5274,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const amount = parseInt(body.amount, 10);
     const nicknames = [...new Set(String(body.nicknames || '').split(/[,\n]/).map((n) => n.trim()).filter(Boolean))].slice(0, 100);
     const memo = String(body.memo || '').trim();
+    // 유저 목록·상세에서 바로 지급할 때는 그 화면으로 되돌아간다.
+    const back = typeof body.back === 'string' && body.back.startsWith('/tc-backstage/users') ? body.back : null;
+    const done = (ok, msg) => {
+      if (back) return redirect(res, back);
+      return redirect(res, `${missionBase('grant')}?r=${ok ? 'ok' : 'fail'}&msg=${encodeURIComponent(msg)}`);
+    };
     if (!nicknames.length || !Number.isFinite(amount) || amount === 0) {
-      return redirect(res, '/tc-backstage/missions?tab=grant&r=fail&msg=' + encodeURIComponent('닉네임과 0이 아닌 수량을 입력하세요.'));
+      return done(false, '닉네임과 0이 아닌 수량을 입력하세요.');
     }
     const REASONS = {
       no_user: '없는 닉네임', bad_amount: '수량 오류', too_large: '수량이 너무 큼(10만 이하)',
@@ -5276,7 +5315,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         lines.push(`✗ ${nickname}: ${REASONS[r.reason] || r.reason}`);
       }
     }
-    return redirect(res, `/tc-backstage/missions?tab=grant&r=${okCount === nicknames.length ? 'ok' : 'fail'}&msg=${encodeURIComponent(lines.join('\n'))}`);
+    return done(okCount === nicknames.length, lines.join('\n'));
   }
 
   if (pathname === '/tc-backstage/mail' && method === 'GET') {

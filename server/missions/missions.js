@@ -247,6 +247,18 @@ async function getBalance(nickname, db = pool) {
   return r.rows[0] ? r.rows[0].balance : 0;
 }
 
+/** 여러 유저의 토큰 잔액(관리자 목록용) — { nickname → balance } 맵. */
+async function getBalances(nicknames) {
+  const out = new Map();
+  if (!nicknames || !nicknames.length) return out;
+  const r = await pool.query(
+    'SELECT nickname, balance FROM tc_token_balance WHERE nickname = ANY($1)',
+    [nicknames]
+  );
+  for (const row of r.rows) out.set(row.nickname, row.balance);
+  return out;
+}
+
 /** 오늘(KST) 이미 고른 미션 수. 포기한 것도 센다. */
 async function picksToday(nickname, db = pool) {
   const r = await db.query(
@@ -863,6 +875,7 @@ module.exports = {
   equip,
   getEquippedKeys,
   getBalance,
+  getBalances,
   offersFor,
   defs,
 };

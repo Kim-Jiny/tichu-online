@@ -152,12 +152,14 @@ async function main() {
     const cookie = (loginRes.headers['set-cookie'] || [])[0]?.split(';')[0];
     check('관리자 로그인', loginRes.status === 302 && !!cookie);
 
-    for (const [tab, needle] of [['overview', '미션별 현황'], ['missions', '미션 관리'], ['shop', '토큰 상점'], ['grant', '토큰 지급'], ['ledger', '토큰 장부']]) {
-      const r = await req('GET', `/tc-backstage/missions?tab=${tab}`, null, cookie);
-      check(`관리자 ${tab} 탭이 열린다`, r.status === 200 && r.body.includes(needle), String(r.status));
+    for (const [path, needle] of [['/tc-backstage/missions', '미션 현황'], ['/tc-backstage/missions/manage', '미션 관리'], ['/tc-backstage/missions/shop', '토큰 상점'], ['/tc-backstage/missions/grant', '토큰 지급'], ['/tc-backstage/missions/ledger', '토큰 장부']]) {
+      const r = await req('GET', path, null, cookie);
+      check(`관리자 ${path} 가 열린다`, r.status === 200 && r.body.includes(needle), String(r.status));
     }
     const side = await req('GET', '/tc-backstage/missions', null, cookie);
-    check('사이드바에 미션·토큰 메뉴', side.body.includes('미션·토큰'));
+    check('사이드바에 "미션" 묶음이 따로 있다', side.body.includes('nav-section-label">미션<') && side.body.includes('/tc-backstage/missions/manage') && side.body.includes('/tc-backstage/missions/ledger'));
+    const home = await req('GET', '/tc-backstage/stats', null, cookie);
+    check('다른 페이지 사이드바에도 미션 묶음', home.body.includes('/tc-backstage/missions/shop'));
 
     // 지급 / 회수.
     const g1 = await req('POST', '/tc-backstage/missions/grant', { nicknames: `${a.nickname}\n없는사람`, amount: '25', memo: 'e2e 지급' }, cookie);
@@ -166,14 +168,21 @@ async function main() {
     a.send({ type: 'get_token_shop' });
     const sh2 = await a.waitFor('token_shop');
     check('지급한 만큼 잔액 증가 (90 → 115)', sh2.balance === 115, String(sh2.balance));
+    // (이후 빠른 지급 +3, +1 은 아래 잔액 검사에 반영한다)
     const g2 = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '-1000' }, cookie);
     check('잔액보다 많이 회수는 거절', decodeURIComponent(g2.headers.location).includes('잔액 부족'));
     const g3 = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '-15', memo: '오지급' }, cookie);
     check('회수', decodeURIComponent(g3.headers.location).includes('잔액 100'), decodeURIComponent(g3.headers.location));
-    const led = await req('GET', `/tc-backstage/missions?tab=ledger&nickname=${encodeURIComponent(a.nickname)}`, null, cookie);
+    const led = await req('GET', `/tc-backstage/missions/ledger?nickname=${encodeURIComponent(a.nickname)}`, null, cookie);
     check('장부에 지급·회수가 남는다', led.body.includes('운영자 지급') && led.body.includes('운영자 회수') && led.body.includes('e2e_admin'));
     const udet = await req('GET', `/tc-backstage/users/${encodeURIComponent(a.nickname)}`, null, cookie);
-    check('유저 상세에 미션 토큰 줄', udet.status === 200 && udet.body.includes('미션 토큰'), String(udet.status));
+    check('유저 상세에 미션 토큰 줄과 바로 지급 칸', udet.status === 200 && udet.body.includes('미션 토큰') && udet.body.includes('name="back"'), String(udet.status));
+    const ulist = await req('GET', `/tc-backstage/users?q=${encodeURIComponent(a.nickname)}`, null, cookie);
+    check('유저 목록에 토큰 열과 바로 지급 칸', ulist.status === 200 && ulist.body.includes('<th>토큰</th>') && ulist.body.includes('/tc-backstage/missions/grant'), String(ulist.status));
+    const quick = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '3', back: `/tc-backstage/users?q=${encodeURIComponent(a.nickname)}` }, cookie);
+    check('목록에서 지급하면 목록으로 되돌아온다', quick.status === 302 && quick.headers.location.startsWith('/tc-backstage/users'), quick.headers.location);
+    const evil = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '1', back: 'https://evil.example/' }, cookie);
+    check('엉뚱한 주소로는 돌려보내지 않는다', !evil.headers.location.startsWith('http'), evil.headers.location);
     const noauth = await req('GET', '/tc-backstage/missions');
     check('로그인 없이는 못 연다', noauth.status === 302);
 

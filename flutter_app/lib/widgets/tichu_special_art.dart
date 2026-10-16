@@ -5,7 +5,7 @@ import '../theme/cartoon.dart';
 /// 티츄 특수 카드(용·봉황·개·참새) 그림. 테두리를 잘라 낸 일러스트를 카드 면에 가득 채운다.
 ///
 /// 참새는 숫자 1 카드라서(스트레이트의 맨 앞이다) 그림만으로는 몇인지 알 수 없다 —
-/// 모서리에 숫자 1 뱃지를 얹는다. 다른 특수 카드에는 숫자가 없다.
+/// 오른쪽 아래 모서리에 숫자 1 뱃지를 하나 얹는다. 다른 특수 카드에는 숫자가 없다.
 class TichuSpecialArt extends StatelessWidget {
   const TichuSpecialArt(this.cardId, {super.key});
 
@@ -38,13 +38,6 @@ class TichuSpecialArt extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             image,
-            Positioned(
-              left: inset,
-              top: inset,
-              child: _NumberBadge(size: badge),
-            ),
-            // 아래 오른쪽에도 — 겹쳐 펼친 손패에서는 보통 왼쪽 위만 보이지만, 카드를 거꾸로
-            // 쥔 것처럼 읽히는 일은 없도록 마주 보는 모서리에 하나 더 둔다.
             Positioned(
               right: inset,
               bottom: inset,

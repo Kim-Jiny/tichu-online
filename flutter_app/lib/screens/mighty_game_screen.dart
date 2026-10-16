@@ -1936,7 +1936,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             // NOTE: the kitty-exchange panel is rendered at the top of the body
             // Stack (above the contract bar) so it can overlap it on small screens.
             if (showBottomOverlay)
-              Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(width: double.infinity, child: bottomOverlay),
+              ),
           ],
         );
       },

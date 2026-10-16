@@ -396,7 +396,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
           ),
           if (bottomOverlay != null)
-            Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(width: double.infinity, child: bottomOverlay),
+            ),
         ],
       ),
     );

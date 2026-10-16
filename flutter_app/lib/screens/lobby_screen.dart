@@ -1757,9 +1757,58 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  // 앱을 켠 뒤 로비에서 받을 출석 보상이 있으면 한 번만 알려 준다(빨간 점만으론 놓친다).
+  static bool _attendanceToastShown = false;
+
+  void _maybeShowAttendanceToast(GameService game) {
+    if (_attendanceToastShown || kIsWeb) return;
+    final a = game.attendanceState;
+    if (a == null ||
+        a['claimedToday'] == true ||
+        game.currentDestination != AppDestination.lobby ||
+        _inRoom) {
+      return;
+    }
+    _attendanceToastShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final l10n = L10n.of(context);
+      final day = (a['todayDay'] as num?)?.toInt() ?? 1;
+      final reward = (a['todayRewardGold'] as num?)?.toInt() ?? 50;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          content: GestureDetector(
+            onTap: () {
+              messenger.hideCurrentSnackBar();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShopScreen()),
+              );
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.card_giftcard_rounded, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${l10n.attendanceBannerTitle(day)} ${l10n.attendanceBannerSubtitle(reward)}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    _maybeShowAttendanceToast(context.watch<GameService>());
     // Same call the game screen makes: the landscape variants are built for a
     // tablet held sideways, and the app no longer rotates at all, so on the web
     // they are the only place that code runs — untested by everyone else. It

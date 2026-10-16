@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 
 /// Keeps the last thing each player said, for a couple of seconds, so a chat
 /// line is visible on the seat itself without opening the chat panel.
@@ -22,6 +23,10 @@ class SeatChatBubbles {
   final VoidCallback _onChanged;
 
   static const duration = Duration(milliseconds: 2200);
+
+  /// 긴 문장은 읽을 시간이 더 필요하다 — 글자 수에 따라 2.2초~5초.
+  static Duration durationFor(String text) =>
+      Duration(milliseconds: (2200 + text.runes.length * 70).clamp(2200, 5000));
 
   final Map<String, String> _texts = {};
   final Map<String, Timer> _timers = {};
@@ -53,7 +58,7 @@ class SeatChatBubbles {
       if (game.isBlocked(sender)) continue;
       _timers[sender]?.cancel();
       _texts[sender] = text;
-      _timers[sender] = Timer(duration, () {
+      _timers[sender] = Timer(durationFor(text), () {
         _texts.remove(sender);
         _timers.remove(sender);
         _onChanged();
@@ -100,10 +105,11 @@ class SeatChatBubble extends StatelessWidget {
   /// two of them could be read as either one's.
   final bool tail;
 
-  static const _fill = Color(0xE1FFFFFF); // white, 88%
-  static const _fillOpaque = Color(0xFFFFFFFF);
-  static const _border = Color(0xFFE6DDD8);
-  static const tailHeight = 6.0;
+  static const _fill = Color(0xE6FFFBF2); // 크림 종이, 90%
+  static const _fillOpaque = Color(0xFFFFFBF2);
+  static const _border = Cartoon.ink;
+  static const _borderWidth = 1.8;
+  static const tailHeight = 7.0;
 
   /// Board bubbles sit over cards and seats, so translucency made them hard to
   /// read; waiting-room seats keep it so the banner underneath still shows.
@@ -114,41 +120,58 @@ class SeatChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final body = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: _bodyFill,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: _border),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border, width: _borderWidth),
       ),
       child: Text(
         text,
         maxLines: maxLines,
         overflow: TextOverflow.ellipsis,
         textAlign: textAlign,
-        style: TextStyle(
-          fontSize: fontSize,
+        style: Cartoon.userText(
+          size: fontSize,
+          weight: FontWeight.w800,
           height: 1.2,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF4A3A32),
         ),
       ),
     );
-    if (!tail) return IgnorePointer(child: body);
+    // 나타날 때 꼬리 끝(말한 좌석)에서 통 튀어나온다.
+    Widget pop(Widget child) => TweenAnimationBuilder<double>(
+      key: ValueKey(text),
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutBack,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0.0, 1.0),
+        child: Transform.scale(
+          scale: 0.55 + 0.45 * t,
+          alignment: Alignment.bottomCenter,
+          child: child,
+        ),
+      ),
+      child: child,
+    );
+    if (!tail) return IgnorePointer(child: pop(body));
     return IgnorePointer(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          body,
-          // Pulled up by a pixel so its base paints over the body's bottom
-          // border — otherwise a line runs across where the two meet.
-          Transform.translate(
-            offset: const Offset(0, -1),
-            child: CustomPaint(
-              size: const Size(12, tailHeight),
-              painter: _TailPainter(_bodyFill),
+      child: pop(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            body,
+            // Pulled up so its base paints over the body's bottom border —
+            // otherwise a line runs across where the two meet.
+            Transform.translate(
+              offset: const Offset(0, -_borderWidth),
+              child: CustomPaint(
+                size: const Size(14, tailHeight),
+                painter: _TailPainter(_bodyFill),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -365,20 +388,22 @@ class _TailPainter extends CustomPainter {
       ..lineTo(size.width / 2, size.height)
       ..close();
     canvas.drawPath(path, Paint()..color = fill);
-    // Cover the body's border where the tail joins it.
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, 2), Paint()..color = fill);
+    // 몸통 테두리가 꼬리와 만나는 자리를 덮는다.
+    canvas.drawRect(
+      Rect.fromLTWH(1, 0, size.width - 2, SeatChatBubble._borderWidth + 0.5),
+      Paint()..color = fill,
+    );
     final edge = Paint()
       ..color = SeatChatBubble._border
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawLine(
-      const Offset(0, 0),
-      Offset(size.width / 2, size.height),
-      edge,
-    );
-    canvas.drawLine(
-      Offset(size.width, 0),
-      Offset(size.width / 2, size.height),
+      ..strokeWidth = SeatChatBubble._borderWidth
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, 0)
+        ..lineTo(size.width / 2, size.height)
+        ..lineTo(size.width, 0),
       edge,
     );
   }

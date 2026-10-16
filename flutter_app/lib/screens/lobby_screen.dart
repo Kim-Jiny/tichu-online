@@ -2021,17 +2021,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
               children: [
                 Expanded(
                   child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: ConstrainedBox(
-                      // Capped so it does not sprawl on a wide window, and
-                      // free to shrink below that on a narrow one.
-                      constraints: BoxConstraints(
-                        maxHeight: isLandscape ? 36 : _headerButtonMax,
-                        maxWidth: _headerLogoMaxWidth,
-                      ),
-                      child: Image.asset(
-                        'assets/dragon_icon.webp',
-                        fit: BoxFit.contain,
+                    alignment: Alignment.bottomLeft,
+                    child: Transform.translate(
+                      offset: const Offset(0, 7),
+                      child: ConstrainedBox(
+                        // Capped so it does not sprawl on a wide window, and
+                        // free to shrink below that on a narrow one.
+                        constraints: BoxConstraints(
+                          maxHeight: isLandscape ? 36 : _headerButtonMax,
+                          maxWidth: _headerLogoMaxWidth,
+                        ),
+                        child: Image.asset(
+                          'assets/dragon_icon.webp',
+                          fit: BoxFit.contain,
+                          alignment: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ),
@@ -2076,15 +2080,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
           children: [
             Expanded(
               child: Align(
-                alignment: Alignment.centerLeft,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxHeight: 44,
-                    maxWidth: 150,
-                  ),
-                  child: Image.asset(
-                    'assets/dragon_icon.webp',
-                    fit: BoxFit.contain,
+                alignment: Alignment.bottomLeft,
+                // 패널 아래 선에 맞춰 하단 정렬 — 패딩만큼 내려 선 위에 걸터앉게.
+                child: Transform.translate(
+                  offset: const Offset(0, 7),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 44,
+                      maxWidth: 150,
+                    ),
+                    child: Image.asset(
+                      'assets/dragon_icon.webp',
+                      fit: BoxFit.contain,
+                      alignment: Alignment.bottomCenter,
+                    ),
                   ),
                 ),
               ),

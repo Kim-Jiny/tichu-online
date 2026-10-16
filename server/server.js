@@ -8653,6 +8653,7 @@ fillerRooms.init({
   broadcastRoomState: (id) => broadcastRoomState(id),
   broadcastRoomList: () => broadcastRoomList(),
   sendGameStateToAll: (id) => sendGameStateToAll(id),
+  scheduleAutoReturnToRoom: (id) => scheduleAutoReturnToRoom(id),
   broadcastGameEvent: (id, e) => broadcastGameEvent(id, e),
   playerStillNeedsToAct,
 });

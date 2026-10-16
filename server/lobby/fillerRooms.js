@@ -359,6 +359,12 @@ function tickRoom(info) {
   const result = room.game.handleAction(info.hostId, action);
   if (!result || !result.success) return;
   if (result.broadcast) deps.broadcastGameEvent(room.id, result.broadcast);
+  // 방장 차례의 마지막 수로 판이 끝나는 경우 — 봇 경로는 스스로 3초 뒤 대기실
+  // 복귀를 예약하지만 여기는 그 길을 안 거쳐서, 안 걸면 결과 화면에 영원히 머문다.
+  // (결과 저장은 일부러 하지 않는다: 실제 플레이어가 없는 방이다.)
+  if (room.game && room.game.state === 'game_end') {
+    deps.scheduleAutoReturnToRoom(room.id);
+  }
   deps.sendGameStateToAll(room.id);
 }
 

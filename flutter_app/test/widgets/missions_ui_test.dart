@@ -510,6 +510,8 @@ void main() {
       expect(find.text(n), findsOneWidget, reason: n);
     }
     expect(find.text('장착 중'), findsOneWidget);
+    // 안 산 상품에는 장착 버튼이 아예 없다 — 가진 1개만 '장착 중'(장착 버튼 1개).
+    expect(find.text('장착'), findsNothing);
     expect(find.text('연장'), findsWidgets);
     // 구매 버튼: 5개(나머지 1개는 이미 가짐) × 외곽선 글자 2겹.
     expect(find.text('구매'), findsNWidgets(10));

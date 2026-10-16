@@ -324,8 +324,8 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                 : null,
           ),
           const SizedBox(height: 6),
-          // 버튼은 늘 두 개 — 안 가진 상품은 '장착'이 흐리게 비활성이라, 사기 전후로
-          // 카드 크기가 변하지 않는다.
+          // 안 가진 상품은 구매 버튼 하나, 가진 상품은 연장 + 장착 두 개가 한 줄에 나란히 —
+          // 줄 높이가 같아서 사기 전후로 카드 크기는 변하지 않는다.
           Row(
             children: [
               Expanded(
@@ -340,8 +340,10 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              Expanded(child: _equipButton(l10n, game, p)),
+              if (p.owned) ...[
+                const SizedBox(width: 6),
+                Expanded(child: _equipButton(l10n, game, p)),
+              ],
             ],
           ),
         ],
@@ -349,31 +351,25 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
     );
   }
 
-  /// 장착 버튼 — 가진 상품만 눌린다. 장착 중이면 초록, 아니면 크림색, 안 가졌으면 흐리게.
+  /// 장착 버튼 — 가진 상품에만 나온다. 장착 중이면 초록, 아니면 크림색.
   Widget _equipButton(L10n l10n, GameService game, TokenProduct p) {
-    final enabled = p.owned;
-    return Opacity(
-      opacity: enabled ? 1 : 0.4,
-      child: CartoonPressable(
-        scale: enabled ? 0.95 : 1.0,
-        onTap: enabled
-            ? () => game.equipTokenItem(p.slot, p.equipped ? null : p.key)
-            : null,
-        child: Container(
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: p.equipped ? const Color(0xFF3DBE6A) : Cartoon.paper,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Cartoon.ink, width: 1.8),
-          ),
-          child: Text(
-            p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
-            maxLines: 1,
-            style: Cartoon.text(
-              size: 13.5,
-              color: p.equipped ? Colors.white : Cartoon.ink,
-            ),
+    return CartoonPressable(
+      scale: 0.95,
+      onTap: () => game.equipTokenItem(p.slot, p.equipped ? null : p.key),
+      child: Container(
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: p.equipped ? const Color(0xFF3DBE6A) : Cartoon.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Cartoon.ink, width: 1.8),
+        ),
+        child: Text(
+          p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
+          maxLines: 1,
+          style: Cartoon.text(
+            size: 13.5,
+            color: p.equipped ? Colors.white : Cartoon.ink,
           ),
         ),
       ),

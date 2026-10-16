@@ -4893,11 +4893,18 @@ class _AttendanceFx extends StatefulWidget {
 
 class _AttendanceFxState extends State<_AttendanceFx>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1900),
-  );
+  // late 지연 초기화로 두면 한 번도 안 쓰고 닫힐 때 dispose 안에서 처음 만들어져 터진다.
+  late final AnimationController _c;
   int _burst = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1900),
+    );
+  }
 
   @override
   void didUpdateWidget(_AttendanceFx old) {

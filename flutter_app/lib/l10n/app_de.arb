@@ -31,8 +31,20 @@
   "kickAfkConfirmTitleIdle": "{nickname} reagiert nicht. Entfernen?",
   "kickAfkConfirmBody": "Ein Bot übernimmt den Platz, die Partie läuft weiter. Für die Person wird ein Spielabbruch vermerkt.",
   "kickAfkConfirmAction": "Entfernen",
-  "@kickAfkConfirmTitleOffline": {"placeholders": {"nickname": {"type": "String"}}},
-  "@kickAfkConfirmTitleIdle": {"placeholders": {"nickname": {"type": "String"}}},
+  "@kickAfkConfirmTitleOffline": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "@kickAfkConfirmTitleIdle": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
   "commonTotal": "Gesamt",
   "commonSave": "Speichern",
   "commonClose": "Schließen",
@@ -1674,7 +1686,16 @@
   },
   "midJoinNoticeLeft": "{player} ist ausgestiegen — {bot} übernimmt",
   "midJoinNoticeKicked": "{player} war abwesend — {bot} übernimmt den Platz",
-  "@midJoinNoticeKicked": {"placeholders": {"player": {"type": "String"}, "bot": {"type": "String"}}},
+  "@midJoinNoticeKicked": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      },
+      "bot": {
+        "type": "String"
+      }
+    }
+  },
   "@midJoinNoticeLeft": {
     "placeholders": {
       "player": {
@@ -1816,5 +1837,208 @@
   "settingsDeleteNicknameHint": "Spitzname eingeben",
   "mailboxClaimAll": "Alle abholen",
   "lobbyNeedMorePlayers": "Noch {count} zum Starten",
-  "lobbyRoomInfoSeats": "Plätze"
+  "lobbyRoomInfoSeats": "Plätze",
+  "missionsTitle": "Missionen",
+  "missionsTokenName": "Missions-Token",
+  "missionsTokenCount": "{n}",
+  "@missionsTokenCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsTodayEarned": "Heute verdient {earned}/{cap}",
+  "@missionsTodayEarned": {
+    "placeholders": {
+      "earned": {
+        "type": "String"
+      },
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsActiveHeader": "In Arbeit ({n}/{max})",
+  "@missionsActiveHeader": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsActiveEmpty": "Wähle unten eine Mission aus",
+  "missionsOffersHeader": "Heutige Auswahl",
+  "missionsPick": "Annehmen",
+  "missionsDrop": "Aufgeben",
+  "missionsPicked": "Aktiv",
+  "missionsDone": "Erledigt",
+  "missionsReroll": "Neu mischen ({n} übrig)",
+  "@missionsReroll": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsRerollUsed": "Heute keine Auswahl mehr",
+  "missionsExpiresOn": "Bis {date}",
+  "@missionsExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsRewardTokens": "+{n}",
+  "@missionsRewardTokens": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakTitle": "Serie",
+  "missionsStreakProgress": "{n}/{target} Tage",
+  "@missionsStreakProgress": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakHint": "Schließe täglich mindestens eine Mission ab. Bei {target} Tagen gibt es {bonus} Bonus-Token!",
+  "@missionsStreakHint": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakToday": "Heute geschafft",
+  "missionsRules": "Nur Spiele mit mindestens 2 Menschen zählen. Bis zu {cap} Token pro Tag.",
+  "@missionsRules": {
+    "placeholders": {
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsTierEasy": "Leicht",
+  "missionsTierNormal": "Mittel",
+  "missionsTierHard": "Schwer",
+  "missionsOpenShop": "Token-Shop",
+  "missionsErrTooMany": "Du kannst höchstens {max} gleichzeitig haben",
+  "@missionsErrTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsErrAlready": "Bereits angenommen",
+  "missionsErrGeneric": "Etwas ist schiefgelaufen. Versuche es gleich erneut",
+  "missionsLoadFailed": "Missionen konnten nicht geladen werden",
+  "missionsRetry": "Neu laden",
+  "missionCompletedToast": "Mission geschafft! {name}",
+  "@missionCompletedToast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "missionCompletedTokens": "Token +{n}",
+  "@missionCompletedTokens": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionCompletedCapped": "Tageslimit für Token erreicht",
+  "missionCompletedStreak": "Serien-Bonus +{n}",
+  "@missionCompletedStreak": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsGameTichu": "Tichu",
+  "missionsGameMighty": "Mighty",
+  "missionsGameSkullKing": "Skull King",
+  "missionsGameLoveLetter": "Love Letter",
+  "missionTichuPlay": "Ein Tichu-Spiel zu Ende spielen",
+  "missionTichuWin": "Ein Tichu-Spiel gewinnen",
+  "missionTichuSmall": "Ein kleines Tichu schaffen",
+  "missionTichuLarge": "Ein großes Tichu schaffen",
+  "missionTichuOnetwo": "Mit deinem Team Erster und Zweiter werden",
+  "missionTichuDogFinish": "Als Erster oder Zweiter mit dem Hund aussteigen",
+  "missionTichuBomb30": "30 Punkte mit Bomben gewinnen",
+  "missionMightyPlay": "Ein Mighty-Spiel zu Ende spielen",
+  "missionMightyWin": "Ein Mighty-Spiel gewinnen",
+  "missionMightyBid20": "Mit einem 20-Punkte-Gebot gewinnen",
+  "missionMightyNt": "Mit einem No-Trump-Gebot gewinnen",
+  "missionMightyAll20": "Als Spielerpartei alle 20 Punktkarten holen",
+  "missionMightyFriend7": "Als Freund in einer Runde mindestens 7 Punkte holen",
+  "missionSkPlay": "Ein Skull-King-Spiel zu Ende spielen",
+  "missionSkWin": "Ein Skull-King-Spiel gewinnen",
+  "missionSkPirates2": "Mit dem Skull King zwei Piraten in einem Stich fangen",
+  "missionSkMermaidKing": "Den Skull King mit einer Meerjungfrau fangen",
+  "missionSkTenWin": "Einen Stich mit einer 10 gewinnen",
+  "missionLlPlay": "Ein Love-Letter-Spiel zu Ende spielen",
+  "missionLlWin": "Ein Love-Letter-Spiel gewinnen",
+  "tokenShopTitle": "Token-Shop",
+  "tokenShopBalance": "Deine Token",
+  "tokenShopHint": "Nur mit Missions-Token erhältlich. Alles gilt 30 Tage, erneutes Kaufen verlängert.",
+  "tokenShopKindRoomHighlight": "Raum-Hervorhebung",
+  "tokenShopKindBubble": "Sprechblasen-Stil",
+  "tokenShopKindBubblePremium": "Sprechblasen-Stil (Premium)",
+  "tokenShopKindRoomHighlightDesc": "Dein Raum fällt in der Raumliste auf",
+  "tokenShopKindBubbleDesc": "Deine Sprechblase über dem Platz sieht besonders aus",
+  "tokenShopBuy": "Kaufen",
+  "tokenShopExtend": "30 Tage verlängern",
+  "tokenShopOwnedUntil": "Bis {date}",
+  "@tokenShopOwnedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenShopEquip": "Ausrüsten",
+  "tokenShopEquipped": "Ausgerüstet",
+  "tokenShopUnequip": "Ablegen",
+  "tokenShopNotEnough": "Nicht genug Token",
+  "tokenShopBought": "Gekauft",
+  "tokenShopPreview": "Vorschau",
+  "tokenShopPreviewText": "Hallo zusammen!",
+  "tokenShopRoomPreviewName": "Beispielraum",
+  "tokenShopDays": "{n} Tage",
+  "@tokenShopDays": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenVariantRoomHighlight1": "Goldener Rahmen",
+  "tokenVariantRoomHighlight2": "Funkelnder Stern",
+  "tokenVariantRoomHighlight3": "Rosa Schleife",
+  "tokenVariantBubbleBasic1": "Rosa Herz",
+  "tokenVariantBubbleBasic2": "Mintwolke",
+  "tokenVariantBubbleBasic3": "Gelber Stern",
+  "tokenVariantBubblePremium1": "Drachenflamme",
+  "tokenVariantBubblePremium2": "Kirschblüte",
+  "tokenVariantBubblePremium3": "Blitz"
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import 'token_cosmetics.dart';
 
 /// Keeps the last thing each player said, for a couple of seconds, so a chat
 /// line is visible on the seat itself without opening the chat panel.
@@ -29,6 +30,8 @@ class SeatChatBubbles {
       Duration(milliseconds: (2200 + text.runes.length * 70).clamp(2200, 5000));
 
   final Map<String, String> _texts = {};
+  // 보낸 사람이 장착한 말풍선 모양의 키(토큰 상점). 없으면 기본 모양.
+  final Map<String, String> _styleKeys = {};
   final Map<String, Timer> _timers = {};
   int _seq = -1;
 
@@ -58,8 +61,15 @@ class SeatChatBubbles {
       if (game.isBlocked(sender)) continue;
       _timers[sender]?.cancel();
       _texts[sender] = text;
+      final bubble = m['bubble'];
+      if (bubble is String && bubble.isNotEmpty) {
+        _styleKeys[sender] = bubble;
+      } else {
+        _styleKeys.remove(sender);
+      }
       _timers[sender] = Timer(durationFor(text), () {
         _texts.remove(sender);
+        _styleKeys.remove(sender);
         _timers.remove(sender);
         _onChanged();
       });
@@ -73,12 +83,16 @@ class SeatChatBubbles {
 
   String? textFor(String nickname) => _texts[nickname];
 
+  /// 그 사람이 지금 띄운 말풍선의 모양 키(기본 모양이면 null).
+  String? styleFor(String nickname) => _styleKeys[nickname];
+
   void dispose() {
     for (final t in _timers.values) {
       t.cancel();
     }
     _timers.clear();
     _texts.clear();
+    _styleKeys.clear();
   }
 }
 
@@ -93,6 +107,7 @@ class SeatChatBubble extends StatelessWidget {
     this.maxLines = 2,
     this.tail = false,
     this.opaque = false,
+    this.styleKey,
   });
 
   final String text;
@@ -115,17 +130,25 @@ class SeatChatBubble extends StatelessWidget {
   /// read; waiting-room seats keep it so the banner underneath still shows.
   final bool opaque;
 
-  Color get _bodyFill => opaque ? _fillOpaque : _fill;
+  /// 토큰 상점 말풍선 모양. null 이거나 모르는 키면 기본 모양.
+  final String? styleKey;
+
+  BubbleStyle? get _style => bubbleStyleFor(styleKey);
+
+  Color get _bodyFill => _style?.tailFill ?? (opaque ? _fillOpaque : _fill);
 
   @override
   Widget build(BuildContext context) {
-    final body = Container(
+    final style = _style;
+    final plainBody = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: _bodyFill,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _border, width: _borderWidth),
-      ),
+      decoration: style != null
+          ? style.decoration(borderWidth: _borderWidth)
+          : BoxDecoration(
+              color: _bodyFill,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _border, width: _borderWidth),
+            ),
       child: Text(
         text,
         maxLines: maxLines,
@@ -135,9 +158,24 @@ class SeatChatBubble extends StatelessWidget {
           size: fontSize,
           weight: FontWeight.w800,
           height: 1.2,
+          color: style?.text ?? Cartoon.ink,
         ),
       ),
     );
+    // 장착한 모양이 있으면 왼쪽 위 모서리에 작은 표식이 붙는다.
+    final body = style == null
+        ? plainBody
+        : Stack(
+            clipBehavior: Clip.none,
+            children: [
+              plainBody,
+              Positioned(
+                left: -6,
+                top: -8,
+                child: BubbleBadge(style: style, size: 16),
+              ),
+            ],
+          );
     // 나타날 때 꼬리 끝(말한 좌석)에서 통 튀어나온다.
     Widget pop(Widget child) => TweenAnimationBuilder<double>(
       key: ValueKey(text),
@@ -167,7 +205,7 @@ class SeatChatBubble extends StatelessWidget {
               offset: const Offset(0, -_borderWidth),
               child: CustomPaint(
                 size: const Size(14, tailHeight),
-                painter: _TailPainter(_bodyFill),
+                painter: _TailPainter(_bodyFill, _style?.border ?? _border),
               ),
             ),
           ],
@@ -195,6 +233,7 @@ class SeatBubbleAnchor extends StatefulWidget {
     this.fontSize = 11,
     this.maxLines = 1,
     this.gap = 2,
+    this.styleKey,
   });
 
   /// The seat the bubble belongs to.
@@ -214,6 +253,9 @@ class SeatBubbleAnchor extends StatefulWidget {
 
   /// Space between the seat's top edge and the bubble's tail.
   final double gap;
+
+  /// 말한 사람이 장착한 말풍선 모양의 키(없으면 기본 모양).
+  final String? styleKey;
 
   @override
   State<SeatBubbleAnchor> createState() => _SeatBubbleAnchorState();
@@ -265,6 +307,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
   void didUpdateWidget(covariant SeatBubbleAnchor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text ||
+        oldWidget.styleKey != widget.styleKey ||
         oldWidget.suppressed != widget.suppressed) {
       _scheduleSync();
     }
@@ -363,6 +406,7 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
                     textAlign: TextAlign.center,
                     tail: true,
                     opaque: true,
+                    styleKey: widget.styleKey,
                   ),
                 ),
               ),
@@ -376,9 +420,10 @@ class _SeatBubbleAnchorState extends State<SeatBubbleAnchor> {
 }
 
 class _TailPainter extends CustomPainter {
-  const _TailPainter(this.fill);
+  const _TailPainter(this.fill, this.edgeColor);
 
   final Color fill;
+  final Color edgeColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -394,7 +439,7 @@ class _TailPainter extends CustomPainter {
       Paint()..color = fill,
     );
     final edge = Paint()
-      ..color = SeatChatBubble._border
+      ..color = edgeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = SeatChatBubble._borderWidth
       ..strokeJoin = StrokeJoin.round
@@ -410,5 +455,5 @@ class _TailPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TailPainter oldDelegate) =>
-      oldDelegate.fill != fill;
+      oldDelegate.fill != fill || oldDelegate.edgeColor != edgeColor;
 }

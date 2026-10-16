@@ -37,6 +37,9 @@ class Room {
   /// enterable while this is above zero.
   final int botSeatCount;
 
+  /// 토큰 상점 '방 목록 강조' — 방장이 장착한 모양의 키(없으면 null).
+  final String? highlight;
+
   /// Whether the spectate view should offer the break-in button at all.
   bool get canJoinInProgress =>
       allowMidGameJoin && gameInProgress && botSeatCount > 0;
@@ -61,6 +64,7 @@ class Room {
     this.randomSeating = false,
     this.allowMidGameJoin = false,
     this.botSeatCount = 0,
+    this.highlight,
   }) : effectiveMaxPlayers = effectiveMaxPlayers ?? maxPlayers;
 
   bool get isSkullKing => gameType == 'skull_king';
@@ -105,6 +109,7 @@ class Room {
       allowMidGameJoin: json['allowMidGameJoin'] == true,
       // Absent from an older server's payload — treat as "no bot seats known"
       // so the break-in button stays hidden rather than failing on tap.
+      highlight: json['highlight'] as String?,
       botSeatCount: json['botSeatCount'] is int
           ? json['botSeatCount'] as int
           : (json['botSeatCount'] is num

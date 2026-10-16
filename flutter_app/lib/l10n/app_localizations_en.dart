@@ -5274,4 +5274,299 @@ class L10nEn extends L10n {
 
   @override
   String get lobbyRoomInfoSeats => 'Seats';
+
+  @override
+  String get missionsTitle => 'Missions';
+
+  @override
+  String get missionsTokenName => 'Mission tokens';
+
+  @override
+  String missionsTokenCount(String n) {
+    return '$n';
+  }
+
+  @override
+  String missionsTodayEarned(String earned, String cap) {
+    return 'Earned today $earned/$cap';
+  }
+
+  @override
+  String missionsActiveHeader(String n, String max) {
+    return 'In progress ($n/$max)';
+  }
+
+  @override
+  String get missionsActiveEmpty => 'Pick a mission from today\'s offers below';
+
+  @override
+  String get missionsOffersHeader => 'Today\'s offers';
+
+  @override
+  String get missionsPick => 'Accept';
+
+  @override
+  String get missionsDrop => 'Give up';
+
+  @override
+  String get missionsPicked => 'Active';
+
+  @override
+  String get missionsDone => 'Done';
+
+  @override
+  String missionsReroll(String n) {
+    return 'Refresh ($n left)';
+  }
+
+  @override
+  String get missionsRerollUsed => 'No refreshes left today';
+
+  @override
+  String missionsExpiresOn(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String missionsRewardTokens(String n) {
+    return '+$n';
+  }
+
+  @override
+  String get missionsStreakTitle => 'Streak';
+
+  @override
+  String missionsStreakProgress(String n, String target) {
+    return '$n/$target days';
+  }
+
+  @override
+  String missionsStreakHint(String target, String bonus) {
+    return 'Complete at least one mission a day. Hit $target days for $bonus bonus tokens!';
+  }
+
+  @override
+  String get missionsStreakToday => 'Done for today';
+
+  @override
+  String missionsRules(String cap) {
+    return 'Only games with 2+ human players count. Up to $cap tokens a day.';
+  }
+
+  @override
+  String get missionsTierEasy => 'Easy';
+
+  @override
+  String get missionsTierNormal => 'Normal';
+
+  @override
+  String get missionsTierHard => 'Hard';
+
+  @override
+  String get missionsOpenShop => 'Token shop';
+
+  @override
+  String missionsErrTooMany(String max) {
+    return 'You can have $max at a time';
+  }
+
+  @override
+  String get missionsErrAlready => 'Already accepted';
+
+  @override
+  String get missionsErrGeneric => 'Something went wrong. Try again shortly';
+
+  @override
+  String get missionsLoadFailed => 'Couldn\'t load missions';
+
+  @override
+  String get missionsRetry => 'Reload';
+
+  @override
+  String missionCompletedToast(String name) {
+    return 'Mission complete! $name';
+  }
+
+  @override
+  String missionCompletedTokens(String n) {
+    return 'Tokens +$n';
+  }
+
+  @override
+  String get missionCompletedCapped => 'Daily token limit reached';
+
+  @override
+  String missionCompletedStreak(String n) {
+    return 'Streak bonus +$n';
+  }
+
+  @override
+  String get missionsGameTichu => 'Tichu';
+
+  @override
+  String get missionsGameMighty => 'Mighty';
+
+  @override
+  String get missionsGameSkullKing => 'Skull King';
+
+  @override
+  String get missionsGameLoveLetter => 'Love Letter';
+
+  @override
+  String get missionTichuPlay => 'Finish a game of Tichu';
+
+  @override
+  String get missionTichuWin => 'Win a game of Tichu';
+
+  @override
+  String get missionTichuSmall => 'Make a Small Tichu';
+
+  @override
+  String get missionTichuLarge => 'Make a Grand Tichu';
+
+  @override
+  String get missionTichuOnetwo => 'Finish 1st and 2nd with your team';
+
+  @override
+  String get missionTichuDogFinish =>
+      'Go out 1st or 2nd with the Dog as your last card';
+
+  @override
+  String get missionTichuBomb30 => 'Win 30 points with bombs';
+
+  @override
+  String get missionMightyPlay => 'Finish a game of Mighty';
+
+  @override
+  String get missionMightyWin => 'Win a game of Mighty';
+
+  @override
+  String get missionMightyBid20 => 'Succeed with a 20-point bid';
+
+  @override
+  String get missionMightyNt => 'Succeed with a No Trump bid';
+
+  @override
+  String get missionMightyAll20 =>
+      'Take all 20 point cards as the declaring team';
+
+  @override
+  String get missionMightyFriend7 =>
+      'As the friend, take 7 or more points in a round';
+
+  @override
+  String get missionSkPlay => 'Finish a game of Skull King';
+
+  @override
+  String get missionSkWin => 'Win a game of Skull King';
+
+  @override
+  String get missionSkPirates2 =>
+      'Capture two pirates with the Skull King in one trick';
+
+  @override
+  String get missionSkMermaidKing => 'Capture the Skull King with a Mermaid';
+
+  @override
+  String get missionSkTenWin => 'Win a trick with a number 10';
+
+  @override
+  String get missionLlPlay => 'Finish a game of Love Letter';
+
+  @override
+  String get missionLlWin => 'Win a game of Love Letter';
+
+  @override
+  String get tokenShopTitle => 'Token shop';
+
+  @override
+  String get tokenShopBalance => 'Your tokens';
+
+  @override
+  String get tokenShopHint =>
+      'Only bought with mission tokens. Everything lasts 30 days, and buying again extends it.';
+
+  @override
+  String get tokenShopKindRoomHighlight => 'Room highlight';
+
+  @override
+  String get tokenShopKindBubble => 'Bubble style';
+
+  @override
+  String get tokenShopKindBubblePremium => 'Bubble style (premium)';
+
+  @override
+  String get tokenShopKindRoomHighlightDesc =>
+      'Your room stands out in the room list';
+
+  @override
+  String get tokenShopKindBubbleDesc =>
+      'Your chat bubble above your seat gets a special look';
+
+  @override
+  String get tokenShopBuy => 'Buy';
+
+  @override
+  String get tokenShopExtend => 'Extend 30 days';
+
+  @override
+  String tokenShopOwnedUntil(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get tokenShopEquip => 'Equip';
+
+  @override
+  String get tokenShopEquipped => 'Equipped';
+
+  @override
+  String get tokenShopUnequip => 'Unequip';
+
+  @override
+  String get tokenShopNotEnough => 'Not enough tokens';
+
+  @override
+  String get tokenShopBought => 'Purchased';
+
+  @override
+  String get tokenShopPreview => 'Preview';
+
+  @override
+  String get tokenShopPreviewText => 'Hello there!';
+
+  @override
+  String get tokenShopRoomPreviewName => 'Sample room';
+
+  @override
+  String tokenShopDays(String n) {
+    return '$n days';
+  }
+
+  @override
+  String get tokenVariantRoomHighlight1 => 'Golden frame';
+
+  @override
+  String get tokenVariantRoomHighlight2 => 'Twinkling star';
+
+  @override
+  String get tokenVariantRoomHighlight3 => 'Pink ribbon';
+
+  @override
+  String get tokenVariantBubbleBasic1 => 'Pink heart';
+
+  @override
+  String get tokenVariantBubbleBasic2 => 'Mint cloud';
+
+  @override
+  String get tokenVariantBubbleBasic3 => 'Yellow star';
+
+  @override
+  String get tokenVariantBubblePremium1 => 'Dragon flame';
+
+  @override
+  String get tokenVariantBubblePremium2 => 'Cherry blossom';
+
+  @override
+  String get tokenVariantBubblePremium3 => 'Lightning';
 }

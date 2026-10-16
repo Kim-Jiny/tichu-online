@@ -5155,4 +5155,293 @@ class L10nKo extends L10n {
 
   @override
   String get lobbyRoomInfoSeats => '자리';
+
+  @override
+  String get missionsTitle => '미션';
+
+  @override
+  String get missionsTokenName => '미션 토큰';
+
+  @override
+  String missionsTokenCount(String n) {
+    return '$n개';
+  }
+
+  @override
+  String missionsTodayEarned(String earned, String cap) {
+    return '오늘 번 토큰 $earned/$cap';
+  }
+
+  @override
+  String missionsActiveHeader(String n, String max) {
+    return '진행 중 ($n/$max)';
+  }
+
+  @override
+  String get missionsActiveEmpty => '아래 후보에서 미션을 받아 보세요';
+
+  @override
+  String get missionsOffersHeader => '오늘의 후보';
+
+  @override
+  String get missionsPick => '받기';
+
+  @override
+  String get missionsDrop => '포기';
+
+  @override
+  String get missionsPicked => '진행 중';
+
+  @override
+  String get missionsDone => '완료';
+
+  @override
+  String missionsReroll(String n) {
+    return '새로고침 ($n회 남음)';
+  }
+
+  @override
+  String get missionsRerollUsed => '오늘 새로고침 끝';
+
+  @override
+  String missionsExpiresOn(String date) {
+    return '$date까지';
+  }
+
+  @override
+  String missionsRewardTokens(String n) {
+    return '+$n';
+  }
+
+  @override
+  String get missionsStreakTitle => '연속 달성';
+
+  @override
+  String missionsStreakProgress(String n, String target) {
+    return '$n/$target일';
+  }
+
+  @override
+  String missionsStreakHint(String target, String bonus) {
+    return '하루에 미션을 1개 이상 깨면 이어져요. $target일을 채우면 보너스 토큰 $bonus개!';
+  }
+
+  @override
+  String get missionsStreakToday => '오늘 달성 완료';
+
+  @override
+  String missionsRules(String cap) {
+    return '사람이 2명 이상 있는 판만 인정돼요. 하루 최대 $cap토큰까지 얻어요.';
+  }
+
+  @override
+  String get missionsTierEasy => '쉬움';
+
+  @override
+  String get missionsTierNormal => '보통';
+
+  @override
+  String get missionsTierHard => '어려움';
+
+  @override
+  String get missionsOpenShop => '토큰 상점';
+
+  @override
+  String missionsErrTooMany(String max) {
+    return '동시에 $max개까지만 받을 수 있어요';
+  }
+
+  @override
+  String get missionsErrAlready => '이미 받은 미션이에요';
+
+  @override
+  String get missionsErrGeneric => '처리하지 못했어요. 잠시 뒤 다시 해 주세요';
+
+  @override
+  String get missionsLoadFailed => '미션을 불러오지 못했어요';
+
+  @override
+  String get missionsRetry => '다시 불러오기';
+
+  @override
+  String missionCompletedToast(String name) {
+    return '미션 완료! $name';
+  }
+
+  @override
+  String missionCompletedTokens(String n) {
+    return '토큰 +$n';
+  }
+
+  @override
+  String get missionCompletedCapped => '오늘 얻을 수 있는 토큰을 다 얻었어요';
+
+  @override
+  String missionCompletedStreak(String n) {
+    return '연속 달성 보너스 +$n';
+  }
+
+  @override
+  String get missionsGameTichu => '티츄';
+
+  @override
+  String get missionsGameMighty => '마이티';
+
+  @override
+  String get missionsGameSkullKing => '스컬킹';
+
+  @override
+  String get missionsGameLoveLetter => '러브레터';
+
+  @override
+  String get missionTichuPlay => '티츄 한 판 끝까지 하기';
+
+  @override
+  String get missionTichuWin => '티츄 한 판 이기기';
+
+  @override
+  String get missionTichuSmall => '스몰 티츄 성공하기';
+
+  @override
+  String get missionTichuLarge => '라지 티츄 성공하기';
+
+  @override
+  String get missionTichuOnetwo => '우리 팀이 1·2등 하기';
+
+  @override
+  String get missionTichuDogFinish => '개 카드로 마무리해 1·2등으로 패 털기';
+
+  @override
+  String get missionTichuBomb30 => '폭탄으로 점수 30점 얻기';
+
+  @override
+  String get missionMightyPlay => '마이티 한 판 끝까지 하기';
+
+  @override
+  String get missionMightyWin => '마이티 한 판 이기기';
+
+  @override
+  String get missionMightyBid20 => '비딩 20점으로 성공하기';
+
+  @override
+  String get missionMightyNt => '노트럼프 비딩으로 성공하기';
+
+  @override
+  String get missionMightyAll20 => '여당으로 점수 카드 20장 모두 먹기';
+
+  @override
+  String get missionMightyFriend7 => '친구로 참여해 점수 7점 이상 먹기';
+
+  @override
+  String get missionSkPlay => '스컬킹 한 판 끝까지 하기';
+
+  @override
+  String get missionSkWin => '스컬킹 한 판 이기기';
+
+  @override
+  String get missionSkPirates2 => '스컬킹으로 해적 두 명 한 번에 잡기';
+
+  @override
+  String get missionSkMermaidKing => '인어로 스컬킹 잡기';
+
+  @override
+  String get missionSkTenWin => '숫자 10 카드로 트릭 이기기';
+
+  @override
+  String get missionLlPlay => '러브레터 한 판 끝까지 하기';
+
+  @override
+  String get missionLlWin => '러브레터 한 판 이기기';
+
+  @override
+  String get tokenShopTitle => '토큰 상점';
+
+  @override
+  String get tokenShopBalance => '보유 토큰';
+
+  @override
+  String get tokenShopHint =>
+      '미션을 깨서 모은 토큰으로만 살 수 있어요. 전부 30일 동안 쓸 수 있고, 다시 사면 기간이 늘어나요.';
+
+  @override
+  String get tokenShopKindRoomHighlight => '방 목록 강조';
+
+  @override
+  String get tokenShopKindBubble => '말풍선 스타일';
+
+  @override
+  String get tokenShopKindBubblePremium => '말풍선 스타일 (상위)';
+
+  @override
+  String get tokenShopKindRoomHighlightDesc => '내가 만든 방이 방 목록에서 눈에 띄어요';
+
+  @override
+  String get tokenShopKindBubbleDesc => '내 채팅 말풍선이 좌석 위에서 특별한 모양으로 떠요';
+
+  @override
+  String get tokenShopBuy => '구매';
+
+  @override
+  String get tokenShopExtend => '30일 연장';
+
+  @override
+  String tokenShopOwnedUntil(String date) {
+    return '$date까지';
+  }
+
+  @override
+  String get tokenShopEquip => '장착';
+
+  @override
+  String get tokenShopEquipped => '장착 중';
+
+  @override
+  String get tokenShopUnequip => '해제';
+
+  @override
+  String get tokenShopNotEnough => '토큰이 모자라요';
+
+  @override
+  String get tokenShopBought => '구매했어요';
+
+  @override
+  String get tokenShopPreview => '미리보기';
+
+  @override
+  String get tokenShopPreviewText => '안녕하세요!';
+
+  @override
+  String get tokenShopRoomPreviewName => '예시 방';
+
+  @override
+  String tokenShopDays(String n) {
+    return '$n일';
+  }
+
+  @override
+  String get tokenVariantRoomHighlight1 => '금빛 테두리';
+
+  @override
+  String get tokenVariantRoomHighlight2 => '반짝이는 별';
+
+  @override
+  String get tokenVariantRoomHighlight3 => '분홍 리본';
+
+  @override
+  String get tokenVariantBubbleBasic1 => '분홍 하트';
+
+  @override
+  String get tokenVariantBubbleBasic2 => '민트 구름';
+
+  @override
+  String get tokenVariantBubbleBasic3 => '노랑 별';
+
+  @override
+  String get tokenVariantBubblePremium1 => '용의 불꽃';
+
+  @override
+  String get tokenVariantBubblePremium2 => '벚꽃';
+
+  @override
+  String get tokenVariantBubblePremium3 => '번개';
 }

@@ -52,6 +52,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _withSeatBubble(String nickname, Widget seat) {
     return SeatBubbleAnchor(
       text: _seatChat.textFor(nickname),
+      styleKey: _seatChat.styleFor(nickname),
       suppressed: _chatOpen,
       child: seat,
     );
@@ -2151,8 +2152,8 @@ class _GameScreenState extends State<GameScreen> {
         color: urgent
             ? const Color(0xFFFFC9C4)
             : isMyTurn
-                ? const Color(0xFFFFF1B8)
-                : Cartoon.paper,
+            ? const Color(0xFFFFF1B8)
+            : Cartoon.paper,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),

@@ -31,8 +31,20 @@
   "kickAfkConfirmTitleIdle": "응답이 없는 {nickname}님을 강퇴할까요?",
   "kickAfkConfirmBody": "빈자리는 봇이 이어받고 게임은 그대로 진행됩니다. 강퇴된 분에게는 중도탈주가 기록됩니다.",
   "kickAfkConfirmAction": "강퇴하기",
-  "@kickAfkConfirmTitleOffline": {"placeholders": {"nickname": {"type": "String"}}},
-  "@kickAfkConfirmTitleIdle": {"placeholders": {"nickname": {"type": "String"}}},
+  "@kickAfkConfirmTitleOffline": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "@kickAfkConfirmTitleIdle": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
   "commonTotal": "합계",
   "commonSave": "저장",
   "commonClose": "닫기",
@@ -1674,7 +1686,16 @@
   },
   "midJoinNoticeLeft": "{player}님이 중도탈주하여 {bot}이(가) 대신합니다",
   "midJoinNoticeKicked": "{player}님이 자리를 비워 {bot}(으)로 교체되었습니다",
-  "@midJoinNoticeKicked": {"placeholders": {"player": {"type": "String"}, "bot": {"type": "String"}}},
+  "@midJoinNoticeKicked": {
+    "placeholders": {
+      "player": {
+        "type": "String"
+      },
+      "bot": {
+        "type": "String"
+      }
+    }
+  },
   "@midJoinNoticeLeft": {
     "placeholders": {
       "player": {
@@ -1816,5 +1837,208 @@
   "settingsDeleteNicknameHint": "닉네임 입력",
   "mailboxClaimAll": "모두 받기",
   "lobbyNeedMorePlayers": "{count}명 더 모이면 시작할 수 있어요",
-  "lobbyRoomInfoSeats": "자리"
+  "lobbyRoomInfoSeats": "자리",
+  "missionsTitle": "미션",
+  "missionsTokenName": "미션 토큰",
+  "missionsTokenCount": "{n}개",
+  "@missionsTokenCount": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsTodayEarned": "오늘 번 토큰 {earned}/{cap}",
+  "@missionsTodayEarned": {
+    "placeholders": {
+      "earned": {
+        "type": "String"
+      },
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsActiveHeader": "진행 중 ({n}/{max})",
+  "@missionsActiveHeader": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsActiveEmpty": "아래 후보에서 미션을 받아 보세요",
+  "missionsOffersHeader": "오늘의 후보",
+  "missionsPick": "받기",
+  "missionsDrop": "포기",
+  "missionsPicked": "진행 중",
+  "missionsDone": "완료",
+  "missionsReroll": "새로고침 ({n}회 남음)",
+  "@missionsReroll": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsRerollUsed": "오늘 새로고침 끝",
+  "missionsExpiresOn": "{date}까지",
+  "@missionsExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsRewardTokens": "+{n}",
+  "@missionsRewardTokens": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakTitle": "연속 달성",
+  "missionsStreakProgress": "{n}/{target}일",
+  "@missionsStreakProgress": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakHint": "하루에 미션을 1개 이상 깨면 이어져요. {target}일을 채우면 보너스 토큰 {bonus}개!",
+  "@missionsStreakHint": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "bonus": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsStreakToday": "오늘 달성 완료",
+  "missionsRules": "사람이 2명 이상 있는 판만 인정돼요. 하루 최대 {cap}토큰까지 얻어요.",
+  "@missionsRules": {
+    "placeholders": {
+      "cap": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsTierEasy": "쉬움",
+  "missionsTierNormal": "보통",
+  "missionsTierHard": "어려움",
+  "missionsOpenShop": "토큰 상점",
+  "missionsErrTooMany": "동시에 {max}개까지만 받을 수 있어요",
+  "@missionsErrTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsErrAlready": "이미 받은 미션이에요",
+  "missionsErrGeneric": "처리하지 못했어요. 잠시 뒤 다시 해 주세요",
+  "missionsLoadFailed": "미션을 불러오지 못했어요",
+  "missionsRetry": "다시 불러오기",
+  "missionCompletedToast": "미션 완료! {name}",
+  "@missionCompletedToast": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "missionCompletedTokens": "토큰 +{n}",
+  "@missionCompletedTokens": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionCompletedCapped": "오늘 얻을 수 있는 토큰을 다 얻었어요",
+  "missionCompletedStreak": "연속 달성 보너스 +{n}",
+  "@missionCompletedStreak": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "missionsGameTichu": "티츄",
+  "missionsGameMighty": "마이티",
+  "missionsGameSkullKing": "스컬킹",
+  "missionsGameLoveLetter": "러브레터",
+  "missionTichuPlay": "티츄 한 판 끝까지 하기",
+  "missionTichuWin": "티츄 한 판 이기기",
+  "missionTichuSmall": "스몰 티츄 성공하기",
+  "missionTichuLarge": "라지 티츄 성공하기",
+  "missionTichuOnetwo": "우리 팀이 1·2등 하기",
+  "missionTichuDogFinish": "개 카드로 마무리해 1·2등으로 패 털기",
+  "missionTichuBomb30": "폭탄으로 점수 30점 얻기",
+  "missionMightyPlay": "마이티 한 판 끝까지 하기",
+  "missionMightyWin": "마이티 한 판 이기기",
+  "missionMightyBid20": "비딩 20점으로 성공하기",
+  "missionMightyNt": "노트럼프 비딩으로 성공하기",
+  "missionMightyAll20": "여당으로 점수 카드 20장 모두 먹기",
+  "missionMightyFriend7": "친구로 참여해 점수 7점 이상 먹기",
+  "missionSkPlay": "스컬킹 한 판 끝까지 하기",
+  "missionSkWin": "스컬킹 한 판 이기기",
+  "missionSkPirates2": "스컬킹으로 해적 두 명 한 번에 잡기",
+  "missionSkMermaidKing": "인어로 스컬킹 잡기",
+  "missionSkTenWin": "숫자 10 카드로 트릭 이기기",
+  "missionLlPlay": "러브레터 한 판 끝까지 하기",
+  "missionLlWin": "러브레터 한 판 이기기",
+  "tokenShopTitle": "토큰 상점",
+  "tokenShopBalance": "보유 토큰",
+  "tokenShopHint": "미션을 깨서 모은 토큰으로만 살 수 있어요. 전부 30일 동안 쓸 수 있고, 다시 사면 기간이 늘어나요.",
+  "tokenShopKindRoomHighlight": "방 목록 강조",
+  "tokenShopKindBubble": "말풍선 스타일",
+  "tokenShopKindBubblePremium": "말풍선 스타일 (상위)",
+  "tokenShopKindRoomHighlightDesc": "내가 만든 방이 방 목록에서 눈에 띄어요",
+  "tokenShopKindBubbleDesc": "내 채팅 말풍선이 좌석 위에서 특별한 모양으로 떠요",
+  "tokenShopBuy": "구매",
+  "tokenShopExtend": "30일 연장",
+  "tokenShopOwnedUntil": "{date}까지",
+  "@tokenShopOwnedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenShopEquip": "장착",
+  "tokenShopEquipped": "장착 중",
+  "tokenShopUnequip": "해제",
+  "tokenShopNotEnough": "토큰이 모자라요",
+  "tokenShopBought": "구매했어요",
+  "tokenShopPreview": "미리보기",
+  "tokenShopPreviewText": "안녕하세요!",
+  "tokenShopRoomPreviewName": "예시 방",
+  "tokenShopDays": "{n}일",
+  "@tokenShopDays": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenVariantRoomHighlight1": "금빛 테두리",
+  "tokenVariantRoomHighlight2": "반짝이는 별",
+  "tokenVariantRoomHighlight3": "분홍 리본",
+  "tokenVariantBubbleBasic1": "분홍 하트",
+  "tokenVariantBubbleBasic2": "민트 구름",
+  "tokenVariantBubbleBasic3": "노랑 별",
+  "tokenVariantBubblePremium1": "용의 불꽃",
+  "tokenVariantBubblePremium2": "벚꽃",
+  "tokenVariantBubblePremium3": "번개"
 }

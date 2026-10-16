@@ -9302,6 +9302,522 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Seats'**
   String get lobbyRoomInfoSeats;
+
+  /// No description provided for @missionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Missions'**
+  String get missionsTitle;
+
+  /// No description provided for @missionsTokenName.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission tokens'**
+  String get missionsTokenName;
+
+  /// No description provided for @missionsTokenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}'**
+  String missionsTokenCount(String n);
+
+  /// No description provided for @missionsTodayEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned today {earned}/{cap}'**
+  String missionsTodayEarned(String earned, String cap);
+
+  /// No description provided for @missionsActiveHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress ({n}/{max})'**
+  String missionsActiveHeader(String n, String max);
+
+  /// No description provided for @missionsActiveEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a mission from today\'s offers below'**
+  String get missionsActiveEmpty;
+
+  /// No description provided for @missionsOffersHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s offers'**
+  String get missionsOffersHeader;
+
+  /// No description provided for @missionsPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get missionsPick;
+
+  /// No description provided for @missionsDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Give up'**
+  String get missionsDrop;
+
+  /// No description provided for @missionsPicked.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get missionsPicked;
+
+  /// No description provided for @missionsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get missionsDone;
+
+  /// No description provided for @missionsReroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh ({n} left)'**
+  String missionsReroll(String n);
+
+  /// No description provided for @missionsRerollUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'No refreshes left today'**
+  String get missionsRerollUsed;
+
+  /// No description provided for @missionsExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String missionsExpiresOn(String date);
+
+  /// No description provided for @missionsRewardTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'+{n}'**
+  String missionsRewardTokens(String n);
+
+  /// No description provided for @missionsStreakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get missionsStreakTitle;
+
+  /// No description provided for @missionsStreakProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}/{target} days'**
+  String missionsStreakProgress(String n, String target);
+
+  /// No description provided for @missionsStreakHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete at least one mission a day. Hit {target} days for {bonus} bonus tokens!'**
+  String missionsStreakHint(String target, String bonus);
+
+  /// No description provided for @missionsStreakToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Done for today'**
+  String get missionsStreakToday;
+
+  /// No description provided for @missionsRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Only games with 2+ human players count. Up to {cap} tokens a day.'**
+  String missionsRules(String cap);
+
+  /// No description provided for @missionsTierEasy.
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get missionsTierEasy;
+
+  /// No description provided for @missionsTierNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get missionsTierNormal;
+
+  /// No description provided for @missionsTierHard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get missionsTierHard;
+
+  /// No description provided for @missionsOpenShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Token shop'**
+  String get missionsOpenShop;
+
+  /// No description provided for @missionsErrTooMany.
+  ///
+  /// In en, this message translates to:
+  /// **'You can have {max} at a time'**
+  String missionsErrTooMany(String max);
+
+  /// No description provided for @missionsErrAlready.
+  ///
+  /// In en, this message translates to:
+  /// **'Already accepted'**
+  String get missionsErrAlready;
+
+  /// No description provided for @missionsErrGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try again shortly'**
+  String get missionsErrGeneric;
+
+  /// No description provided for @missionsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load missions'**
+  String get missionsLoadFailed;
+
+  /// No description provided for @missionsRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get missionsRetry;
+
+  /// No description provided for @missionCompletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission complete! {name}'**
+  String missionCompletedToast(String name);
+
+  /// No description provided for @missionCompletedTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Tokens +{n}'**
+  String missionCompletedTokens(String n);
+
+  /// No description provided for @missionCompletedCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily token limit reached'**
+  String get missionCompletedCapped;
+
+  /// No description provided for @missionCompletedStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak bonus +{n}'**
+  String missionCompletedStreak(String n);
+
+  /// No description provided for @missionsGameTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Tichu'**
+  String get missionsGameTichu;
+
+  /// No description provided for @missionsGameMighty.
+  ///
+  /// In en, this message translates to:
+  /// **'Mighty'**
+  String get missionsGameMighty;
+
+  /// No description provided for @missionsGameSkullKing.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King'**
+  String get missionsGameSkullKing;
+
+  /// No description provided for @missionsGameLoveLetter.
+  ///
+  /// In en, this message translates to:
+  /// **'Love Letter'**
+  String get missionsGameLoveLetter;
+
+  /// No description provided for @missionTichuPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a game of Tichu'**
+  String get missionTichuPlay;
+
+  /// No description provided for @missionTichuWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a game of Tichu'**
+  String get missionTichuWin;
+
+  /// No description provided for @missionTichuSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a Small Tichu'**
+  String get missionTichuSmall;
+
+  /// No description provided for @missionTichuLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a Grand Tichu'**
+  String get missionTichuLarge;
+
+  /// No description provided for @missionTichuOnetwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish 1st and 2nd with your team'**
+  String get missionTichuOnetwo;
+
+  /// No description provided for @missionTichuDogFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Go out 1st or 2nd with the Dog as your last card'**
+  String get missionTichuDogFinish;
+
+  /// No description provided for @missionTichuBomb30.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 30 points with bombs'**
+  String get missionTichuBomb30;
+
+  /// No description provided for @missionMightyPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a game of Mighty'**
+  String get missionMightyPlay;
+
+  /// No description provided for @missionMightyWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a game of Mighty'**
+  String get missionMightyWin;
+
+  /// No description provided for @missionMightyBid20.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed with a 20-point bid'**
+  String get missionMightyBid20;
+
+  /// No description provided for @missionMightyNt.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed with a No Trump bid'**
+  String get missionMightyNt;
+
+  /// No description provided for @missionMightyAll20.
+  ///
+  /// In en, this message translates to:
+  /// **'Take all 20 point cards as the declaring team'**
+  String get missionMightyAll20;
+
+  /// No description provided for @missionMightyFriend7.
+  ///
+  /// In en, this message translates to:
+  /// **'As the friend, take 7 or more points in a round'**
+  String get missionMightyFriend7;
+
+  /// No description provided for @missionSkPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a game of Skull King'**
+  String get missionSkPlay;
+
+  /// No description provided for @missionSkWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a game of Skull King'**
+  String get missionSkWin;
+
+  /// No description provided for @missionSkPirates2.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture two pirates with the Skull King in one trick'**
+  String get missionSkPirates2;
+
+  /// No description provided for @missionSkMermaidKing.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture the Skull King with a Mermaid'**
+  String get missionSkMermaidKing;
+
+  /// No description provided for @missionSkTenWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a trick with a number 10'**
+  String get missionSkTenWin;
+
+  /// No description provided for @missionLlPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a game of Love Letter'**
+  String get missionLlPlay;
+
+  /// No description provided for @missionLlWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a game of Love Letter'**
+  String get missionLlWin;
+
+  /// No description provided for @tokenShopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Token shop'**
+  String get tokenShopTitle;
+
+  /// No description provided for @tokenShopBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tokens'**
+  String get tokenShopBalance;
+
+  /// No description provided for @tokenShopHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only bought with mission tokens. Everything lasts 30 days, and buying again extends it.'**
+  String get tokenShopHint;
+
+  /// No description provided for @tokenShopKindRoomHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Room highlight'**
+  String get tokenShopKindRoomHighlight;
+
+  /// No description provided for @tokenShopKindBubble.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubble style'**
+  String get tokenShopKindBubble;
+
+  /// No description provided for @tokenShopKindBubblePremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubble style (premium)'**
+  String get tokenShopKindBubblePremium;
+
+  /// No description provided for @tokenShopKindRoomHighlightDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your room stands out in the room list'**
+  String get tokenShopKindRoomHighlightDesc;
+
+  /// No description provided for @tokenShopKindBubbleDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your chat bubble above your seat gets a special look'**
+  String get tokenShopKindBubbleDesc;
+
+  /// No description provided for @tokenShopBuy.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy'**
+  String get tokenShopBuy;
+
+  /// No description provided for @tokenShopExtend.
+  ///
+  /// In en, this message translates to:
+  /// **'Extend 30 days'**
+  String get tokenShopExtend;
+
+  /// No description provided for @tokenShopOwnedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String tokenShopOwnedUntil(String date);
+
+  /// No description provided for @tokenShopEquip.
+  ///
+  /// In en, this message translates to:
+  /// **'Equip'**
+  String get tokenShopEquip;
+
+  /// No description provided for @tokenShopEquipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipped'**
+  String get tokenShopEquipped;
+
+  /// No description provided for @tokenShopUnequip.
+  ///
+  /// In en, this message translates to:
+  /// **'Unequip'**
+  String get tokenShopUnequip;
+
+  /// No description provided for @tokenShopNotEnough.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough tokens'**
+  String get tokenShopNotEnough;
+
+  /// No description provided for @tokenShopBought.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased'**
+  String get tokenShopBought;
+
+  /// No description provided for @tokenShopPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get tokenShopPreview;
+
+  /// No description provided for @tokenShopPreviewText.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello there!'**
+  String get tokenShopPreviewText;
+
+  /// No description provided for @tokenShopRoomPreviewName.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample room'**
+  String get tokenShopRoomPreviewName;
+
+  /// No description provided for @tokenShopDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days'**
+  String tokenShopDays(String n);
+
+  /// No description provided for @tokenVariantRoomHighlight1.
+  ///
+  /// In en, this message translates to:
+  /// **'Golden frame'**
+  String get tokenVariantRoomHighlight1;
+
+  /// No description provided for @tokenVariantRoomHighlight2.
+  ///
+  /// In en, this message translates to:
+  /// **'Twinkling star'**
+  String get tokenVariantRoomHighlight2;
+
+  /// No description provided for @tokenVariantRoomHighlight3.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink ribbon'**
+  String get tokenVariantRoomHighlight3;
+
+  /// No description provided for @tokenVariantBubbleBasic1.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink heart'**
+  String get tokenVariantBubbleBasic1;
+
+  /// No description provided for @tokenVariantBubbleBasic2.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint cloud'**
+  String get tokenVariantBubbleBasic2;
+
+  /// No description provided for @tokenVariantBubbleBasic3.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow star'**
+  String get tokenVariantBubbleBasic3;
+
+  /// No description provided for @tokenVariantBubblePremium1.
+  ///
+  /// In en, this message translates to:
+  /// **'Dragon flame'**
+  String get tokenVariantBubblePremium1;
+
+  /// No description provided for @tokenVariantBubblePremium2.
+  ///
+  /// In en, this message translates to:
+  /// **'Cherry blossom'**
+  String get tokenVariantBubblePremium2;
+
+  /// No description provided for @tokenVariantBubblePremium3.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightning'**
+  String get tokenVariantBubblePremium3;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

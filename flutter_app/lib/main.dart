@@ -27,6 +27,7 @@ import 'services/network_service.dart';
 import 'services/game_service.dart';
 import 'services/invite_link_service.dart';
 import 'theme/cartoon.dart';
+import 'widgets/mission_toast.dart';
 import 'widgets/draggable_chat_panel.dart';
 import 'services/session_service.dart';
 import 'services/locale_service.dart';
@@ -503,7 +504,9 @@ class TichuApp extends StatelessWidget {
               ),
               child: child ?? const SizedBox.shrink(),
             );
-            return _isDesktopWeb ? _WebMinHeight(child: scaled) : scaled;
+            final sized = _isDesktopWeb ? _WebMinHeight(child: scaled) : scaled;
+            // 미션을 깨면 어느 화면에서든 알림이 내려온다.
+            return MissionToastHost(child: sized);
           },
           // 앱 전체 기본을 카툰으로: 화면마다 따로 씌우지 않은 다이얼로그·시트·
           // 버튼·입력칸도 같은 모양이 된다.

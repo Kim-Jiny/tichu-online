@@ -425,6 +425,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   Widget _withSeatBubble(String nickname, Widget seat) {
     return SeatBubbleAnchor(
       text: _seatChat.textFor(nickname),
+      styleKey: _seatChat.styleFor(nickname),
       suppressed: _chatOpen,
       child: seat,
     );

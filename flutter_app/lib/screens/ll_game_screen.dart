@@ -279,6 +279,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   Widget _withSeatBubble(String nickname, Widget seat) {
     return SeatBubbleAnchor(
       text: _seatChat.textFor(nickname),
+      styleKey: _seatChat.styleFor(nickname),
       suppressed: _chatOpen,
       child: seat,
     );

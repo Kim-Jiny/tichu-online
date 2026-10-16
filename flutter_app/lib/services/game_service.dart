@@ -12,6 +12,7 @@ import '../models/game_state.dart';
 import '../models/sk_game_state.dart';
 import '../models/ll_game_state.dart';
 import '../models/shop_visual.dart';
+import '../models/missions.dart';
 import '../models/mighty_game_state.dart';
 import 'analytics_service.dart';
 import 'network_service.dart';
@@ -564,6 +565,21 @@ class GameService extends ChangeNotifier {
   //          weekRewards: List<int>, resetAtUtc: ISO, totalClaims }
   Map<String, dynamic>? attendanceState;
   bool attendanceLoading = false;
+
+  // 미션 · 토큰 · 토큰 상점. 판정은 서버가 하고 앱은 상태를 받아 보여 준다.
+  MissionsState? missionsState;
+  TokenShopState? tokenShopState;
+  bool missionsLoading = false;
+
+  /// 서버가 밀어 주는 "미션 완료" 알림. 화면 어디서든 토스트로 띄운다.
+  final StreamController<MissionCompletion> _missionCompletions =
+      StreamController<MissionCompletion>.broadcast();
+  Stream<MissionCompletion> get missionCompletions =>
+      _missionCompletions.stream;
+
+  /// 토큰 잔액 — 미션 화면과 상점 중 더 최근에 받은 쪽.
+  int get tokenBalance =>
+      tokenShopState?.balance ?? missionsState?.balance ?? 0;
   String? attendanceError;
   bool attendanceClaiming = false; // true while a claim_attendance is in flight
   List<Map<String, dynamic>> adminReportGroup = [];
@@ -1885,6 +1901,8 @@ class GameService extends ChangeNotifier {
           'message': data['message'] ?? '',
           'timestamp':
               data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
+          // 토큰 상점 '말풍선 스타일' — 보낸 사람이 장착한 모양의 키.
+          if (data['bubble'] is String) 'bubble': data['bubble'],
         };
         chatMessages.add(msg);
         liveChatSeq++;
@@ -2442,6 +2460,57 @@ class GameService extends ChangeNotifier {
           adminTodayMatchesError =
               data['message'] as String? ?? 'admin_matches_load_failed';
         }
+        notifyListeners();
+        break;
+      case 'missions_state':
+        missionsLoading = false;
+        if (data['success'] == true) {
+          missionsState = MissionsState.fromJson(data);
+          // 상점 잔액도 같이 맞춘다(한 곳에서 번 토큰이 다른 곳에 바로 보이게).
+          final shop = tokenShopState;
+          if (shop != null && shop.balance != missionsState!.balance) {
+            tokenShopState = TokenShopState(
+              balance: missionsState!.balance,
+              products: shop.products,
+            );
+          }
+        }
+        notifyListeners();
+        break;
+      case 'mission_action_result':
+        if (data['success'] == true && data['state'] is Map) {
+          missionsState = MissionsState.fromJson(
+            Map<String, dynamic>.from(data['state'] as Map),
+          );
+        }
+        missionActionReason = data['success'] == true
+            ? null
+            : (data['reason'] as String? ?? 'error');
+        missionActionSeq++;
+        notifyListeners();
+        break;
+      case 'mission_completed':
+        _missionCompletions.add(MissionCompletion.fromJson(data));
+        // 진행·잔액이 바뀌었으니 다음에 열 때 새로 받도록 다시 요청해 둔다.
+        _network.send({'type': 'get_missions'});
+        break;
+      case 'token_shop':
+        if (data['success'] == true) {
+          tokenShopState = TokenShopState.fromJson(data);
+        }
+        notifyListeners();
+        break;
+      case 'token_buy_result':
+      case 'token_equip_result':
+        if (data['shop'] is Map) {
+          tokenShopState = TokenShopState.fromJson(
+            Map<String, dynamic>.from(data['shop'] as Map),
+          );
+        }
+        tokenShopReason = data['success'] == true
+            ? null
+            : (data['reason'] as String? ?? 'error');
+        tokenShopResultSeq++;
         notifyListeners();
         break;
       case 'attendance_state_result':
@@ -3401,6 +3470,9 @@ class GameService extends ChangeNotifier {
     profilePrivateHidePhoto = false;
     attendanceState = null;
     attendanceLoading = false;
+    missionsState = null;
+    tokenShopState = null;
+    missionsLoading = false;
     attendanceError = null;
     attendanceClaiming = false;
     adRewardRemaining = 0;
@@ -3676,6 +3748,33 @@ class GameService extends ChangeNotifier {
   }
 
   // Daily attendance — pure read, cheap; safe to call on screen open.
+  /// 마지막 미션 동작(받기·포기·새로고침)이 실패한 이유. 성공하면 null.
+  String? missionActionReason;
+  int missionActionSeq = 0;
+
+  /// 마지막 토큰 상점 동작(구매·장착)이 실패한 이유, 그리고 결과가 올 때마다 오르는 번호.
+  String? tokenShopReason;
+  int tokenShopResultSeq = 0;
+
+  void requestMissions() {
+    missionsLoading = true;
+    notifyListeners();
+    _network.send({'type': 'get_missions'});
+  }
+
+  void pickMission(String key) =>
+      _network.send({'type': 'pick_mission', 'key': key});
+  void dropMission(String key) =>
+      _network.send({'type': 'drop_mission', 'key': key});
+  void rerollMissions(String game) =>
+      _network.send({'type': 'reroll_missions', 'game': game});
+
+  void requestTokenShop() => _network.send({'type': 'get_token_shop'});
+  void buyTokenItem(String key) =>
+      _network.send({'type': 'buy_token_item', 'key': key});
+  void equipTokenItem(String slot, String? key) =>
+      _network.send({'type': 'equip_token_item', 'slot': slot, 'key': key});
+
   void requestAttendanceState() {
     attendanceLoading = true;
     attendanceError = null;
@@ -5115,6 +5214,7 @@ class GameService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
+    _missionCompletions.close();
     _matchIncomingTimer?.cancel();
     if (_shareInviteLinkCompleter != null &&
         !_shareInviteLinkCompleter!.isCompleted) {

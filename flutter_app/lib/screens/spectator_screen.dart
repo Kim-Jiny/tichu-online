@@ -181,6 +181,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Widget _wrapWithBubble(String nickname, Widget seat) {
     return SeatBubbleAnchor(
       text: _seatChat.textFor(nickname),
+      styleKey: _seatChat.styleFor(nickname),
       suppressed: _chatOpen,
       child: seat,
     );

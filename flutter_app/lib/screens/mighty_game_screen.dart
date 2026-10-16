@@ -2071,6 +2071,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               // 말풍선은 좌석 Stack 안이 아니라 오버레이에 그린다 —
               // 안쪽에 두면 나중에 그려지는 좌석·카드가 그대로 덮는다.
               text: _seatChat.textFor(player.name),
+              styleKey: _seatChat.styleFor(player.name),
               suppressed: _chatOpen,
               child: Stack(
                 clipBehavior: Clip.none,

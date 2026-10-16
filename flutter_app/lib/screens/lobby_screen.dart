@@ -13,11 +13,13 @@ import '../services/locale_service.dart';
 import '../services/session_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
+import 'missions_screen.dart';
 import 'ranking_screen.dart';
 import 'rules_screen.dart';
 import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
+import '../widgets/token_cosmetics.dart';
 import '../widgets/cartoon_icons.dart';
 import '../widgets/connection_overlay.dart';
 import '../widgets/level_badge.dart';
@@ -802,7 +804,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   /// it actually has and clamps between the two.
   static const double _headerButtonMax = 44;
   static const double _headerButtonMin = 34;
-  static const int _headerButtonCount = 5;
+  static const int _headerButtonCount = 6;
   static const double _headerButtonGap = 5;
 
   /// What the logo is guaranteed, and what it may not exceed. It is the
@@ -2169,6 +2171,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       l10n.shopTitle,
       l10n.friendsTitle,
       l10n.rankingTitle,
+      l10n.missionsTitle,
       l10n.lobbyMyProfile,
       l10n.settingsTitle,
     ];
@@ -2293,6 +2296,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const RankingScreen()),
+          );
+        },
+        box: box,
+      ),
+      // 미션 — 토큰을 모아 토큰 상점에서 꾸미기를 산다.
+      _buildIconButton(
+        icon: Icons.task_alt_rounded,
+        color: const Color(0xFFFF8A65),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MissionsScreen()),
           );
         },
         box: box,
@@ -2835,6 +2850,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       badgeText = l10n.lobbyTichuBadge;
     }
 
+    // 토큰 상점 '방 목록 강조' — 방장이 장착했으면 줄에 틀과 표식이 붙는다.
+    final highlight = roomHighlightFor(room.highlight);
+
     return Material(
       // A match already running greys the whole cell instead of wearing a
       // "게임 중" chip. The state belongs to the room, not to one corner of
@@ -2862,10 +2880,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
           setState(() => _inRoom = true);
         },
         borderRadius: BorderRadius.circular(16),
-        child: Container(
+        child: MaybeRoomHighlight(
+          style: highlight,
+          child: Container(
           // 진행 중인 방은 옅게 가라앉힌다. 그림자가 없으니 반투명이어도 된다.
           decoration: BoxDecoration(
-            color: isInProgress ? const Color(0x14000000) : null,
+            color: highlight == null && isInProgress
+                ? const Color(0x14000000)
+                : null,
             borderRadius: BorderRadius.circular(16),
           ),
           // Clip the contents to the card's INNER curve instead of asking the
@@ -3123,6 +3145,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );
@@ -3475,7 +3498,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       bottom: 6,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: SeatChatBubble(text: text),
+        child: SeatChatBubble(text: text, styleKey: _seatChat.styleFor(nickname)),
       ),
     );
   }

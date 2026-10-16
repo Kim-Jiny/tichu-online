@@ -163,6 +163,7 @@ class _CornerMarks extends CustomPainter {
         text: '1',
         style: TextStyle(
           fontSize: m * 1.15,
+          fontFamily: 'Jua',
           fontWeight: FontWeight.w900,
           color: Cartoon.ink,
           height: 1,

@@ -5578,9 +5578,8 @@ class L10nEn extends L10n {
   String get missionsHelpAcceptTitle => 'Accept a mission first';
 
   @override
-  String missionsHelpAcceptBody(String days) {
-    return 'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Each lasts $days days from the day you accept it.';
-  }
+  String get missionsHelpAcceptBody =>
+      'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Finish it the same day (until midnight Korea time) – tomorrow it\'s gone and you start from zero.';
 
   @override
   String missionsHelpHumansTitle(String n) {
@@ -5645,4 +5644,7 @@ class L10nEn extends L10n {
   String tokenHistoryBalance(String n) {
     return 'Balance $n';
   }
+
+  @override
+  String get missionsExpiresToday => 'Until midnight today';
 }

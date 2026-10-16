@@ -9834,8 +9834,8 @@ abstract class L10n {
   /// No description provided for @missionsHelpAcceptBody.
   ///
   /// In en, this message translates to:
-  /// **'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Each lasts {days} days from the day you accept it.'**
-  String missionsHelpAcceptBody(String days);
+  /// **'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Finish it the same day (until midnight Korea time) – tomorrow it\'s gone and you start from zero.'**
+  String get missionsHelpAcceptBody;
 
   /// No description provided for @missionsHelpHumansTitle.
   ///
@@ -9938,6 +9938,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Balance {n}'**
   String tokenHistoryBalance(String n);
+
+  /// No description provided for @missionsExpiresToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Until midnight today'**
+  String get missionsExpiresToday;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -68,7 +68,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
       context: context,
       builder: (_) => MissionsHelpDialog(
         dailyPicks: st?.dailyPicks ?? 3,
-        lifetimeDays: st?.lifetimeDays ?? 3,
+        lifetimeDays: st?.lifetimeDays ?? 1,
         minHumans: st?.minHumans ?? 2,
         streakTarget: st?.streakTarget ?? 7,
         streakBonus: st?.streakBonus ?? 10,
@@ -498,7 +498,9 @@ class _MissionsScreenState extends State<MissionsScreen> {
               const SizedBox(width: 8),
               if (m.expiresDay != null && !m.done)
                 Text(
-                  l10n.missionsExpiresOn(_shortDate(m.expiresDay!)),
+                  st.lifetimeDays <= 1
+                      ? l10n.missionsExpiresToday
+                      : l10n.missionsExpiresOn(_shortDate(m.expiresDay!)),
                   style: Cartoon.userText(
                     size: 11.5,
                     color: Cartoon.ink.withValues(alpha: 0.55),
@@ -672,7 +674,7 @@ class MissionsHelpDialog extends StatelessWidget {
         Icons.touch_app_rounded,
         const Color(0xFFFF9A1F),
         l10n.missionsHelpAcceptTitle,
-        l10n.missionsHelpAcceptBody(lifetimeDays.toString()),
+        l10n.missionsHelpAcceptBody,
       ),
       (
         Icons.groups_rounded,

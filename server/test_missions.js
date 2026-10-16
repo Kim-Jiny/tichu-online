@@ -44,6 +44,11 @@ async function main() {
   check('하루에 3개까지만 고른다', (await missions.pick(nick, fourth.key)).reason === 'too_many');
   check('포기 기능은 없다', typeof missions.drop === 'undefined');
 
+  // 당일 미션: 고른 날 안에만 유효하다.
+  const exp = await pool.query(`SELECT picked_day, expires_day FROM tc_user_missions WHERE nickname = $1`, [nick]);
+  check('고른 날 = 만료일(당일 미션)', exp.rows.length > 0 && exp.rows.every((r) => String(r.picked_day) === String(r.expires_day)), JSON.stringify(exp.rows[0]));
+  check('유효 일수 1', defs.MISSION_LIFETIME_DAYS === 1 && st.lifetimeDays === 1);
+
   // 이벤트로 진행 → 완료 → 토큰.
   const evOf = (key) => defs.MISSION_BY_KEY.get(key).event;
   const done = await missions.record(nick, evOf(easy[0].key));

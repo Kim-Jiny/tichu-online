@@ -131,7 +131,7 @@ class MissionsState {
       balance: _int(j['balance']),
       picksToday: _int(j['picksToday']),
       dailyPicks: _int(j['dailyPicks'], 3),
-      lifetimeDays: _int(j['lifetimeDays'], 3),
+      lifetimeDays: _int(j['lifetimeDays'], 1),
       minHumans: _int(j['minHumans'], 2),
       streak: _int(j['streak']),
       streakDoneToday: j['streakDoneToday'] == true,

@@ -13,8 +13,11 @@
  */
 const DAILY_PICKS = 3;
 
-/** 고른 미션이 유효한 날 수(고른 날 포함). 어려운 미션은 하루 안에 못 깰 수 있다. */
-const MISSION_LIFETIME_DAYS = 3;
+/**
+ * 고른 미션이 유효한 날 수(고른 날 포함). 1 이면 당일 미션 — 고른 날(KST) 안에 깨야 하고,
+ * 자정이 지나면 사라져 다음 날은 진행도 0 에서 새로 시작한다.
+ */
+const MISSION_LIFETIME_DAYS = 1;
 
 /** 게임별로 하루에 보여 주는 후보 수. */
 const OFFERS_PER_GAME = 3;

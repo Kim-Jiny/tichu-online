@@ -5453,9 +5453,8 @@ class L10nKo extends L10n {
   String get missionsHelpAcceptTitle => '먼저 \"받기\"를 눌러야 해요';
 
   @override
-  String missionsHelpAcceptBody(String days) {
-    return '오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 받은 날부터 $days일 안에 깨야 해요.';
-  }
+  String get missionsHelpAcceptBody =>
+      '오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 받은 당일(한국 시간 자정까지)에 깨야 하고, 다음 날이 되면 사라져서 0부터 다시 시작해요.';
 
   @override
   String missionsHelpHumansTitle(String n) {
@@ -5519,4 +5518,7 @@ class L10nKo extends L10n {
   String tokenHistoryBalance(String n) {
     return '보유 $n';
   }
+
+  @override
+  String get missionsExpiresToday => '오늘 자정까지';
 }

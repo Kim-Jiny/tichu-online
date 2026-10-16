@@ -2009,7 +2009,7 @@
   "missionsHelpTokenTitle": "Missions-Token",
   "missionsHelpTokenBody": "Token gibt es nur für abgeschlossene Missionen und sie lassen sich nur im Token-Shop ausgeben. Mit Geld oder Gold kann man sie nicht kaufen.",
   "missionsHelpAcceptTitle": "Erst die Mission annehmen",
-  "missionsHelpAcceptBody": "Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Jede gilt {days} Tage ab dem Tag der Annahme.",
+  "missionsHelpAcceptBody": "Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Schließe sie am selben Tag ab (bis Mitternacht koreanischer Zeit) – morgen sind sie weg und du beginnst bei null.",
   "missionsHelpHumansTitle": "Nur Spiele mit mindestens {n} Menschen zählen",
   "@missionsHelpHumansTitle": {
     "placeholders": {
@@ -2070,13 +2070,6 @@
       }
     }
   },
-  "@missionsHelpAcceptBody": {
-    "placeholders": {
-      "days": {
-        "type": "String"
-      }
-    }
-  },
   "@missionsHelpCapBody": {
     "placeholders": {
       "max": {
@@ -2105,5 +2098,6 @@
         "type": "String"
       }
     }
-  }
+  },
+  "missionsExpiresToday": "Bis heute Mitternacht"
 }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/cartoon.dart';
@@ -296,4 +297,85 @@ Widget? cartoonIconForAsset(String asset, {double? width, double? height}) {
     return HostCrown(size: width ?? 34);
   }
   return null;
+}
+
+/// 룰북: 빨간 표지에 하얀 책장, 가운데 노란 별이 박힌 책.
+class RulebookIcon extends StatelessWidget {
+  const RulebookIcon({super.key, this.size = 28});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _RulebookPainter()),
+  );
+}
+
+class _RulebookPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final sw = (s * 0.075).clamp(1.2, 2.6);
+    final pad = sw / 2 + 0.3;
+    double x(double t) => pad + (s - pad * 2) * t;
+    double y(double t) => pad + (s - pad * 2) * t;
+    final line = _line(sw);
+
+    // 책장(오른쪽·아래로 살짝 드러난 하얀 면)
+    final pages = RRect.fromLTRBR(
+      x(0.20),
+      y(0.12),
+      x(0.94),
+      y(0.90),
+      Radius.circular(s * 0.07),
+    );
+    canvas.drawRRect(pages, _fill(const Color(0xFFFFFBF2)));
+    canvas.drawRRect(pages, line);
+    // 책장 결
+    final pageLine = _line(sw * 0.6)
+      ..color = Cartoon.ink.withValues(alpha: 0.35);
+    canvas.drawLine(
+      Offset(x(0.30), y(0.96)),
+      Offset(x(0.88), y(0.96)),
+      pageLine,
+    );
+
+    // 표지
+    final cover = RRect.fromLTRBR(
+      x(0.06),
+      y(0.06),
+      x(0.84),
+      y(0.84),
+      Radius.circular(s * 0.09),
+    );
+    canvas.drawRRect(cover, _fill(const Color(0xFFFF5A5F)));
+    canvas.drawRRect(cover, line);
+    // 책등
+    canvas.drawLine(Offset(x(0.20), y(0.08)), Offset(x(0.20), y(0.82)), line);
+
+    // 별
+    final cx = x(0.53), cy = y(0.45), r = s * 0.19, r2 = r * 0.45;
+    final star = Path();
+    for (var i = 0; i < 10; i++) {
+      final rad = i.isEven ? r : r2;
+      final a = -3.14159265 / 2 + i * 3.14159265 / 5;
+      final px = cx + rad * _cos(a), py = cy + rad * _sin(a);
+      if (i == 0) {
+        star.moveTo(px, py);
+      } else {
+        star.lineTo(px, py);
+      }
+    }
+    star.close();
+    canvas.drawPath(star, _fill(const Color(0xFFFFD84D)));
+    canvas.drawPath(star, _line(sw * 0.8));
+  }
+
+  double _cos(double a) => math.cos(a);
+  double _sin(double a) => math.sin(a);
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

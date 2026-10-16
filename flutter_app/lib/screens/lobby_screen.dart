@@ -14,6 +14,7 @@ import '../services/session_service.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import 'ranking_screen.dart';
+import 'rules_screen.dart';
 import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
@@ -2085,6 +2086,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
+            // 룰북 — 골드 왼쪽 빈자리에. 설정 안에도 그대로 있다.
+            CartoonPressable(
+              scale: 0.9,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RulesScreen()),
+              ),
+              child: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Cartoon.cream,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Cartoon.ink, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: const RulebookIcon(size: 30),
+              ),
+            ),
+            const SizedBox(width: 8),
             CartoonPressable(
               scale: 0.93,
               onTap: () => showGoldHistoryDialog(context, game),

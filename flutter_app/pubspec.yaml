@@ -128,7 +128,7 @@ flutter:
   # WebP throughout. These are photographic card illustrations, and as PNG they
   # came to 16.5MB — fine on a phone where they load off local storage, ruinous
   # on the web where every one is an HTTP download (the login screen alone
-  # pulled a 1.4MB dragonIcon over 2.7s). At q90 the same art is 2.4MB with no
+  # pulled a 1.4MB dragon icon over 2.7s). At q90 the same art is 2.4MB with no
   # visible difference at the sizes they render, and the mobile bundle gets
   # ~14MB smaller as a side effect.
   #
@@ -142,9 +142,9 @@ flutter:
     - assets/icons/
     - assets/bots/
     - assets/icon.webp
-    - assets/logo2.webp
+    - assets/dragon_head.webp
     - assets/splash.webp
-    - assets/dragonIcon.webp
+    - assets/dragon_icon.webp
 
   fonts:
     # 카툰 UI 제목/버튼용. 앱 문자열 글자만 남긴 서브셋 (assets/fonts/README.md)

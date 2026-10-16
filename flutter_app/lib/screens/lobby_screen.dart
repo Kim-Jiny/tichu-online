@@ -2030,7 +2030,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         maxWidth: _headerLogoMaxWidth,
                       ),
                       child: Image.asset(
-                        'assets/logo2.webp',
+                        'assets/dragon_head.webp',
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -2082,7 +2082,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     maxHeight: 44,
                     maxWidth: 150,
                   ),
-                  child: Image.asset('assets/logo2.webp', fit: BoxFit.contain),
+                  child: Image.asset('assets/dragon_head.webp', fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -2614,7 +2614,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             CartoonFloat(
               amplitude: 8,
               child: Image.asset(
-                'assets/dragonIcon.webp',
+                'assets/dragon_icon.webp',
                 width: 96,
                 height: 96,
                 color: Colors.white.withValues(alpha: 0.35),

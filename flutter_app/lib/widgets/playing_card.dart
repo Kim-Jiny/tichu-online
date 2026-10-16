@@ -257,7 +257,7 @@ class PlayingCard extends StatelessWidget {
     final iconSize = (width * 0.45).clamp(14.0, 36.0);
     return Center(
       child: Image.asset(
-        'assets/dragonIcon.webp',
+        'assets/dragon_icon.webp',
         width: iconSize,
         height: iconSize,
         fit: BoxFit.contain,

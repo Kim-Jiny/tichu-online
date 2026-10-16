@@ -41,25 +41,27 @@ async function main() {
   for (const m of easy.slice(0, 3)) check(`선택 ${m.key}`, (await missions.pick(nick, m.key)).success);
   check('같은 미션 중복 선택 불가', (await missions.pick(nick, easy[0].key)).reason === 'already_picked');
   const fourth = easy[3] || offered('tichu').find((m) => !easy.includes(m));
-  check('동시에 3개까지만', (await missions.pick(nick, fourth.key)).reason === 'too_many');
+  check('하루에 3개까지만 고른다', (await missions.pick(nick, fourth.key)).reason === 'too_many');
+  await missions.drop(nick, easy[2].key);
+  check('포기해도 오늘 고른 수는 돌아오지 않는다', (await missions.pick(nick, fourth.key)).reason === 'too_many');
+  st = await missions.getState(nick);
+  check('포기한 건 진행 목록에서 빠지고 고른 수는 그대로', st.picksToday === 3 && !st.active.some((m) => m.key === easy[2].key));
 
   // 이벤트로 진행 → 완료 → 토큰.
   const evOf = (key) => defs.MISSION_BY_KEY.get(key).event;
   const done = await missions.record(nick, evOf(easy[0].key));
   check('이벤트로 미션 완료', done.length === 1 && done[0].key === easy[0].key && done[0].tokens === 1, JSON.stringify(done));
   st = await missions.getState(nick);
-  check('토큰 +1, 오늘 번 토큰 1', st.balance === 1 && st.todayEarned === 1);
+  check('토큰 +1, 오늘 고른 미션 3개', st.balance === 1 && st.picksToday === 3 && st.dailyPicks === 3);
   check('완료한 미션도 오늘은 목록에 보인다', st.active.some((m) => m.key === easy[0].key && m.status === 'done'));
   check('같은 이벤트가 다시 와도 두 번 주지 않음', (await missions.record(nick, evOf(easy[0].key))).length === 0);
   check('연속 1일째', st.streak === 1 && st.streakDoneToday === true);
 
-  // 하루 상한.
-  await pool.query(`UPDATE tc_token_ledger SET delta = 9 WHERE nickname = $1 AND reason = 'mission'`, [nick]);
-  await pool.query(`UPDATE tc_token_balance SET balance = 9 WHERE nickname = $1`, [nick]);
+  // 하루 토큰 상한은 없다 — 연달아 깨면 깬 만큼 다 받는다.
+  await pool.query(`UPDATE tc_token_balance SET balance = 50 WHERE nickname = $1`, [nick]);
   const done2 = await missions.record(nick, evOf(easy[1].key));
-  check('하루 상한(10)을 넘으면 남은 만큼만', done2.length === 1 && done2[0].tokens === 1, JSON.stringify(done2));
-  const done3 = await missions.record(nick, evOf(easy[2].key));
-  check('상한이 다 찼으면 미션은 끝나도 토큰 0', done3.length === 1 && done3[0].tokens === 0, JSON.stringify(done3));
+  check('상한 없이 그대로 지급', done2.length === 1 && done2[0].tokens === 1, JSON.stringify(done2));
+  check('잔액 51', (await missions.getBalance(nick)) === 51);
 
   // 목표가 큰 미션(폭탄 30점)은 누적.
   await pool.query('DELETE FROM tc_user_missions WHERE nickname = $1', [nick]);
@@ -90,6 +92,7 @@ async function main() {
   const d = await missions.record(n2, 'tichu.game_end');
   check('7일째 미션 완료 시 보너스 토큰', d[0] && d[0].streakBonus === defs.STREAK_BONUS_TOKENS, JSON.stringify(d));
   st = await missions.getState(n2);
+  check('보너스는 5개', defs.STREAK_BONUS_TOKENS === 5);
   check('보너스까지 합쳐 잔액', st.balance === 1 + defs.STREAK_BONUS_TOKENS, String(st.balance));
   check('주기가 다시 시작', st.streak === 0 || st.streak === 7 ? true : false);
 
@@ -125,6 +128,39 @@ async function main() {
   // 토큰으로 얻은 장부.
   const led = await pool.query(`SELECT COUNT(*)::int AS n FROM tc_token_ledger WHERE nickname = $1 AND reason = 'shop'`, [n3]);
   check('구매는 장부에 남는다', led.rows[0].n >= 3);
+
+  // ── 관리자: 지급·회수, 조정 ──
+  const n4 = '운영테스트';
+  await pool.query(`CREATE TABLE IF NOT EXISTS tc_users (id SERIAL PRIMARY KEY, nickname VARCHAR(50), is_deleted BOOLEAN DEFAULT FALSE)`);
+  await pool.query(`INSERT INTO tc_users (nickname) VALUES ($1)`, [n4]);
+  check('없는 닉네임에는 지급 안 됨', (await missions.adminGrant('없는사람', 5, '', 'admin')).reason === 'no_user');
+  check('0 은 거절', (await missions.adminGrant(n4, 0, '', 'admin')).reason === 'bad_amount');
+  const gr = await missions.adminGrant(n4, 30, '이벤트', 'tester');
+  check('지급 후 잔액 30', gr.success && gr.balance === 30, JSON.stringify(gr));
+  check('하루 한도 없이 연달아 지급', (await missions.adminGrant(n4, 500, '', 'tester')).balance === 530);
+  check('잔액보다 많이 회수하면 거절', (await missions.adminGrant(n4, -9999, '', 'tester')).reason === 'insufficient');
+  check('회수', (await missions.adminGrant(n4, -30, '오지급', 'tester')).balance === 500);
+  const ledger = await missions.adminLedger({ nickname: n4 });
+  check('장부에 지급·회수와 누가 했는지가 남는다', ledger.total === 3 && ledger.rows.some((r) => r.reason === 'admin_revoke' && r.ref.startsWith('tester')), JSON.stringify(ledger.rows[0]));
+  const sum = await missions.adminUserSummary(n4);
+  check('유저 요약', sum.balance === 500);
+
+  await missions.adminSetMission('tichu_play', { enabled: false, tokens: '' }, 'tester');
+  let hidden = true;
+  for (let d = 0; d < 12; d++) {
+    if (missions.offersFor(`probe${d}`, '2026-10-16', 'tichu', 0).includes('tichu_play')) hidden = false;
+  }
+  check('숨긴 미션은 어떤 유저의 후보에도 안 나온다', hidden);
+  await missions.adminSetMission('tichu_play', { enabled: true, tokens: '9' }, 'tester');
+  check('보상 조정이 유효 값에 반영', missions.effectiveMission('tichu_play').tokens === 9 && missions.effectiveMission('tichu_play').defaultTokens === 1);
+  check('잘못된 보상(음수)은 거절', (await missions.adminSetMission('tichu_play', { enabled: true, tokens: '-1' }, 't')).reason === 'bad_tokens');
+  await missions.adminSetProduct('bubble_basic_1', { enabled: true, price: '70' }, 'tester');
+  check('가격 조정 반영', missions.effectiveProduct('bubble_basic_1').price === 70);
+  await missions.adminSetProduct('bubble_basic_1', { enabled: false, price: '' }, 'tester');
+  await pool.query(`UPDATE tc_token_balance SET balance = 300 WHERE nickname = $1`, [n4]);
+  check('판매 중지한 상품은 못 산다', (await missions.buy(n4, 'bubble_basic_1')).reason === 'not_for_sale');
+  const ov = await missions.adminOverview();
+  check('개요가 미션·상품 전부를 낸다', ov.missions.length === defs.MISSIONS.length && ov.products.length === 9);
 
   await pool.end();
   await admin.query(`DROP DATABASE ${DB}`);

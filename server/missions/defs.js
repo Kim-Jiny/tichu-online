@@ -7,13 +7,13 @@
  * 판정은 서버가 한다 — 앱이 "깼다"고 알리는 길은 없다.
  */
 
-/** 하루에 미션으로 받을 수 있는 토큰 상한(KST 하루). */
-const DAILY_TOKEN_CAP = 10;
+/**
+ * 하루(KST)에 고를 수 있는 미션 수. 하루에 이만큼만 고를 수 있으니 토큰을 따로
+ * 막지 않아도 하루 획득량은 자연히 정해진다. 포기해도 고른 수는 돌아오지 않는다.
+ */
+const DAILY_PICKS = 3;
 
-/** 한 번에 진행할 수 있는 미션 수. */
-const MAX_ACTIVE = 3;
-
-/** 받은 미션이 유효한 날 수(받은 날 포함). 어려운 미션은 하루 안에 못 깰 수 있다. */
+/** 고른 미션이 유효한 날 수(고른 날 포함). 어려운 미션은 하루 안에 못 깰 수 있다. */
 const MISSION_LIFETIME_DAYS = 3;
 
 /** 게임별로 하루에 보여 주는 후보 수. */
@@ -24,7 +24,7 @@ const DAILY_REROLLS = 1;
 
 /** 하루 1개 이상 달성한 날이 이 일수만큼 이어지면 보너스. */
 const STREAK_BONUS_DAYS = 7;
-const STREAK_BONUS_TOKENS = 10;
+const STREAK_BONUS_TOKENS = 5;
 
 /** 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지). */
 const MIN_HUMANS = 2;
@@ -88,8 +88,7 @@ for (const [kind, { price, slot }] of Object.entries(PRODUCT_KINDS)) {
 const PRODUCT_BY_KEY = new Map(PRODUCTS.map((p) => [p.key, p]));
 
 module.exports = {
-  DAILY_TOKEN_CAP,
-  MAX_ACTIVE,
+  DAILY_PICKS,
   MISSION_LIFETIME_DAYS,
   OFFERS_PER_GAME,
   DAILY_REROLLS,

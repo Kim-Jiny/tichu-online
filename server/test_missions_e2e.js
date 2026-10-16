@@ -122,6 +122,93 @@ async function main() {
     await sleep(600);
     const mine2 = b.last.room_list && b.last.room_list.rooms.find((r) => r.name === '강조방');
     check('해제하면 highlight 없음', mine2 && !mine2.highlight, JSON.stringify(mine2));
+
+    // ───────── 관리자 화면 ─────────
+    const bcrypt = require(require.resolve('bcrypt', { paths: [__dirname] }));
+    await pool.query(
+      `INSERT INTO admin_accounts (username, password) VALUES ('e2e_admin', $1)
+       ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password`,
+      [await bcrypt.hash('adminpass1!', 4)],
+    );
+    const http = require('http');
+    const req = (method, path, body, cookie) => new Promise((resolve, reject) => {
+      const data = body ? new URLSearchParams(body).toString() : null;
+      const r = http.request({
+        host: 'localhost', port: PORT, path, method,
+        headers: {
+          ...(cookie ? { Cookie: cookie } : {}),
+          ...(data ? { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(data) } : {}),
+        },
+      }, (res) => {
+        let buf = '';
+        res.on('data', (c) => { buf += c; });
+        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: buf }));
+      });
+      r.on('error', reject);
+      if (data) r.write(data);
+      r.end();
+    });
+    const loginRes = await req('POST', '/tc-backstage/login', { username: 'e2e_admin', password: 'adminpass1!' });
+    const cookie = (loginRes.headers['set-cookie'] || [])[0]?.split(';')[0];
+    check('관리자 로그인', loginRes.status === 302 && !!cookie);
+
+    for (const [tab, needle] of [['overview', '미션별 현황'], ['missions', '미션 관리'], ['shop', '토큰 상점'], ['grant', '토큰 지급'], ['ledger', '토큰 장부']]) {
+      const r = await req('GET', `/tc-backstage/missions?tab=${tab}`, null, cookie);
+      check(`관리자 ${tab} 탭이 열린다`, r.status === 200 && r.body.includes(needle), String(r.status));
+    }
+    const side = await req('GET', '/tc-backstage/missions', null, cookie);
+    check('사이드바에 미션·토큰 메뉴', side.body.includes('미션·토큰'));
+
+    // 지급 / 회수.
+    const g1 = await req('POST', '/tc-backstage/missions/grant', { nicknames: `${a.nickname}\n없는사람`, amount: '25', memo: 'e2e 지급' }, cookie);
+    check('지급 요청은 결과 페이지로 돌아온다', g1.status === 302 && decodeURIComponent(g1.headers.location).includes(`✓ ${a.nickname}`) && decodeURIComponent(g1.headers.location).includes('✗ 없는사람'), decodeURIComponent(g1.headers.location || ''));
+    a.forget('token_shop');
+    a.send({ type: 'get_token_shop' });
+    const sh2 = await a.waitFor('token_shop');
+    check('지급한 만큼 잔액 증가 (90 → 115)', sh2.balance === 115, String(sh2.balance));
+    const g2 = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '-1000' }, cookie);
+    check('잔액보다 많이 회수는 거절', decodeURIComponent(g2.headers.location).includes('잔액 부족'));
+    const g3 = await req('POST', '/tc-backstage/missions/grant', { nicknames: a.nickname, amount: '-15', memo: '오지급' }, cookie);
+    check('회수', decodeURIComponent(g3.headers.location).includes('잔액 100'), decodeURIComponent(g3.headers.location));
+    const led = await req('GET', `/tc-backstage/missions?tab=ledger&nickname=${encodeURIComponent(a.nickname)}`, null, cookie);
+    check('장부에 지급·회수가 남는다', led.body.includes('운영자 지급') && led.body.includes('운영자 회수') && led.body.includes('e2e_admin'));
+    const udet = await req('GET', `/tc-backstage/users/${encodeURIComponent(a.nickname)}`, null, cookie);
+    check('유저 상세에 미션 토큰 줄', udet.status === 200 && udet.body.includes('미션 토큰'), String(udet.status));
+    const noauth = await req('GET', '/tc-backstage/missions');
+    check('로그인 없이는 못 연다', noauth.status === 302);
+
+    // 미션을 숨기면 후보에서 빠진다.
+    a.send({ type: 'get_missions' });
+    await sleep(500);
+    const cand = a.last.missions_state.offers.tichu.missions[0].key;
+    await req('POST', '/tc-backstage/missions/mission', { key: cand, tokens: '' }, cookie); // enabled 체크 없음 = 숨김
+    await sleep(100);
+    a.forget('missions_state');
+    a.send({ type: 'get_missions' });
+    const st2 = await a.waitFor('missions_state');
+    check('숨긴 미션은 오늘의 후보에서 빠진다', !st2.offers.tichu.missions.some((m) => m.key === cand), cand);
+    await req('POST', '/tc-backstage/missions/mission', { key: cand, enabled: '1', tokens: '7' }, cookie);
+    a.forget('missions_state');
+    a.send({ type: 'get_missions' });
+    const st3 = await a.waitFor('missions_state');
+    const back = st3.offers.tichu.missions.find((m) => m.key === cand);
+    check('다시 노출하면 돌아오고 바꾼 보상이 보인다', back && back.tokens === 7, JSON.stringify(back));
+
+    // 상품 가격/판매.
+    await req('POST', '/tc-backstage/missions/product', { key: 'room_highlight_1', enabled: '1', price: '77' }, cookie);
+    a.forget('token_shop');
+    a.send({ type: 'get_token_shop' });
+    const sh3 = await a.waitFor('token_shop');
+    check('상품 가격 변경이 상점에 반영', sh3.products.find((p) => p.key === 'room_highlight_1').price === 77);
+    await req('POST', '/tc-backstage/missions/product', { key: 'room_highlight_3', price: '' }, cookie); // 판매 중지
+    a.forget('token_shop');
+    a.send({ type: 'get_token_shop' });
+    const sh4 = await a.waitFor('token_shop');
+    check('판매 중지한 상품은 목록에서 빠진다', !sh4.products.some((p) => p.key === 'room_highlight_3'));
+    a.forget('token_buy_result');
+    a.send({ type: 'buy_token_item', key: 'room_highlight_3' });
+    const nb2 = await a.waitFor('token_buy_result');
+    check('판매 중지한 상품은 살 수 없다', !nb2.success && nb2.reason === 'not_for_sale', JSON.stringify(nb2).slice(0, 120));
   } finally {
     srv.kill();
     await sleep(400);

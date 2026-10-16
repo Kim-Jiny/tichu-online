@@ -18,6 +18,48 @@ function init(p) {
   pool = p;
 }
 
+// ───────────────────────────── 관리자 조정(켜기/끄기·보상·가격) ─────────────────────────────
+
+const OVERRIDE_TTL_MS = 30000;
+const overrides = { missions: new Map(), products: new Map(), loadedAt: 0 };
+
+/** 조정값을 짧게 캐시해 둔다. 관리자가 바꾸면 곧바로 다시 읽는다. */
+async function loadOverrides(force = false, db = pool) {
+  if (!force && Date.now() - overrides.loadedAt < OVERRIDE_TTL_MS) return;
+  const [m, p] = await Promise.all([
+    db.query('SELECT mission_key, enabled, tokens FROM tc_mission_overrides'),
+    db.query('SELECT product_key, enabled, price FROM tc_token_product_overrides'),
+  ]);
+  overrides.missions = new Map(m.rows.map((r) => [r.mission_key, r]));
+  overrides.products = new Map(p.rows.map((r) => [r.product_key, r]));
+  overrides.loadedAt = Date.now();
+}
+
+/** 기본 정의 위에 관리자 조정을 얹은 값. */
+function effectiveMission(key) {
+  const def = defs.MISSION_BY_KEY.get(key);
+  if (!def) return null;
+  const o = overrides.missions.get(key);
+  return {
+    ...def,
+    enabled: o ? o.enabled !== false : true,
+    tokens: o && o.tokens != null ? o.tokens : def.tokens,
+    defaultTokens: def.tokens,
+  };
+}
+
+function effectiveProduct(key) {
+  const def = defs.PRODUCT_BY_KEY.get(key);
+  if (!def) return null;
+  const o = overrides.products.get(key);
+  return {
+    ...def,
+    enabled: o ? o.enabled !== false : true,
+    price: o && o.price != null ? o.price : def.price,
+    defaultPrice: def.price,
+  };
+}
+
 /** 마이그레이션에서 부른다. */
 async function ensureSchema(client) {
   await client.query(`
@@ -74,6 +116,26 @@ async function ensureSchema(client) {
       nickname VARCHAR(50) PRIMARY KEY,
       last_day DATE,
       streak INT NOT NULL DEFAULT 0
+    )
+  `);
+
+  // 관리자가 켜고 끄거나 보상·가격을 바꾼 것. 행이 없으면 defs.js 의 기본값 그대로다.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS tc_mission_overrides (
+      mission_key VARCHAR(40) PRIMARY KEY,
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      tokens INT,
+      updated_by VARCHAR(50),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS tc_token_product_overrides (
+      product_key VARCHAR(40) PRIMARY KEY,
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      price INT,
+      updated_by VARCHAR(50),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -157,7 +219,7 @@ function mulberry32(seed) {
  * 켜도 같은 후보가 나온다. 쉬움·보통·어려움이 하나씩 섞이게 뽑는다.
  */
 function offersFor(nickname, day, game, rerollsUsed) {
-  const pool = defs.MISSIONS.filter((m) => m.game === game);
+  const pool = defs.MISSIONS.filter((m) => m.game === game && effectiveMission(m.key).enabled);
   const rnd = mulberry32(hash32(`${nickname}|${day}|${game}|${rerollsUsed}`));
   const byTier = { 1: [], 2: [], 3: [] };
   for (const m of pool) (byTier[m.tier] || (byTier[m.tier] = [])).push(m);
@@ -185,14 +247,14 @@ async function getBalance(nickname, db = pool) {
   return r.rows[0] ? r.rows[0].balance : 0;
 }
 
-async function todayEarned(nickname, db = pool) {
+/** 오늘(KST) 이미 고른 미션 수. 포기한 것도 센다. */
+async function picksToday(nickname, db = pool) {
   const r = await db.query(
-    `SELECT COALESCE(SUM(delta), 0) AS s FROM tc_token_ledger
-      WHERE nickname = $1 AND reason = 'mission'
-        AND kst_day = DATE(timezone('Asia/Seoul', NOW()))`,
+    `SELECT COUNT(*)::int AS n FROM tc_user_missions
+      WHERE nickname = $1 AND picked_day = DATE(timezone('Asia/Seoul', NOW()))`,
     [nickname]
   );
-  return parseInt(r.rows[0].s, 10) || 0;
+  return r.rows[0].n;
 }
 
 async function expireOld(nickname, db = pool) {
@@ -205,7 +267,7 @@ async function expireOld(nickname, db = pool) {
 }
 
 function missionRow(row) {
-  const def = defs.MISSION_BY_KEY.get(row.mission_key);
+  const def = effectiveMission(row.mission_key);
   return {
     id: row.id,
     key: row.mission_key,
@@ -220,11 +282,12 @@ function missionRow(row) {
 }
 
 async function getState(nickname) {
+  await loadOverrides();
   await expireOld(nickname);
   const { day, resetAtUtc } = await kstToday();
-  const [balance, earned, activeRes, rerollRes, streakRes] = await Promise.all([
+  const [balance, picked, activeRes, rerollRes, streakRes] = await Promise.all([
     getBalance(nickname),
-    todayEarned(nickname),
+    picksToday(nickname),
     pool.query(
       `SELECT id, mission_key, progress, target, status,
               to_char(expires_day, 'YYYY-MM-DD') AS expires_day_text
@@ -262,7 +325,7 @@ async function getState(nickname) {
     offers[game] = {
       rerollsLeft: Math.max(0, defs.DAILY_REROLLS - used),
       missions: offersFor(nickname, day, game, used).map((key) => {
-        const d = defs.MISSION_BY_KEY.get(key);
+        const d = effectiveMission(key);
         return {
           key,
           game,
@@ -284,9 +347,8 @@ async function getState(nickname) {
   }
   return {
     balance,
-    todayEarned: earned,
-    dailyCap: defs.DAILY_TOKEN_CAP,
-    maxActive: defs.MAX_ACTIVE,
+    picksToday: picked,
+    dailyPicks: defs.DAILY_PICKS,
     lifetimeDays: defs.MISSION_LIFETIME_DAYS,
     minHumans: defs.MIN_HUMANS,
     resetAtUtc,
@@ -304,6 +366,7 @@ async function getState(nickname) {
 async function pick(nickname, missionKey) {
   const def = defs.MISSION_BY_KEY.get(missionKey);
   if (!def) return { success: false, reason: 'unknown_mission' };
+  await loadOverrides();
   await expireOld(nickname);
   const { day } = await kstToday();
   const client = await pool.connect();
@@ -328,7 +391,7 @@ async function pick(nickname, missionKey) {
       await client.query('ROLLBACK');
       return { success: false, reason: 'already_picked' };
     }
-    if (act.rows.length >= defs.MAX_ACTIVE) {
+    if ((await picksToday(nickname, client)) >= defs.DAILY_PICKS) {
       await client.query('ROLLBACK');
       return { success: false, reason: 'too_many' };
     }
@@ -383,6 +446,7 @@ async function record(nickname, event, amount = 1) {
   if (!nickname || !(amount > 0)) return [];
   const eventKeys = defs.MISSIONS.filter((m) => m.event === event).map((m) => m.key);
   if (!eventKeys.length) return [];
+  await loadOverrides();
   const client = await pool.connect();
   const completed = [];
   try {
@@ -401,7 +465,7 @@ async function record(nickname, event, amount = 1) {
         await client.query('UPDATE tc_user_missions SET progress = $2 WHERE id = $1', [row.id, next]);
         continue;
       }
-      const def = defs.MISSION_BY_KEY.get(row.mission_key);
+      const def = effectiveMission(row.mission_key);
       const granted = await grantMissionTokens(client, nickname, def.tokens, row.mission_key);
       await client.query(
         `UPDATE tc_user_missions
@@ -439,13 +503,9 @@ async function addTokens(client, nickname, delta, reason, ref) {
   );
 }
 
-/** 하루 상한을 넘으면 남은 만큼만 준다. 받은 양을 돌려준다. */
 async function grantMissionTokens(client, nickname, tokens, ref) {
-  const earned = await todayEarned(nickname, client);
-  const room = Math.max(0, defs.DAILY_TOKEN_CAP - earned);
-  const granted = Math.min(tokens, room);
-  if (granted > 0) await addTokens(client, nickname, granted, 'mission', ref);
-  return granted;
+  if (tokens > 0) await addTokens(client, nickname, tokens, 'mission', ref);
+  return tokens;
 }
 
 /** 오늘 처음 깬 미션이면 연속 일수를 올리고, 7일째면 보너스를 준다. */
@@ -462,7 +522,7 @@ async function bumpStreak(client, nickname) {
   let streak = row && row.continues ? row.streak + 1 : 1;
   let bonus = 0;
   if (streak >= defs.STREAK_BONUS_DAYS) {
-    // 보너스는 하루 상한과 별개다(연속 달성에 대한 보상이므로 reason 도 따로).
+    // 연속 달성에 대한 보상이라 reason 을 따로 남긴다.
     await addTokens(client, nickname, defs.STREAK_BONUS_TOKENS, 'streak', null);
     bonus = defs.STREAK_BONUS_TOKENS;
     streak = 0;
@@ -489,6 +549,7 @@ async function getOwned(nickname, db = pool) {
 }
 
 async function getShop(nickname) {
+  await loadOverrides();
   const [balance, owned, eq] = await Promise.all([
     getBalance(nickname),
     getOwned(nickname),
@@ -500,21 +561,27 @@ async function getShop(nickname) {
   }
   return {
     balance,
-    products: defs.PRODUCTS.map((p) => ({
-      key: p.key,
-      kind: p.kind,
-      variant: p.variant,
-      price: p.price,
-      days: p.days,
-      ownedUntil: owned.has(p.key) ? owned.get(p.key).toISOString() : null,
-      equipped: equipped[p.slot] === p.key,
-    })),
+    // 판매를 끈 상품은 목록에서 빠진다(이미 가진 건 계속 보인다).
+    products: defs.PRODUCTS.map((p) => effectiveProduct(p.key))
+      .filter((p) => p.enabled || owned.has(p.key))
+      .map((p) => ({
+        key: p.key,
+        kind: p.kind,
+        variant: p.variant,
+        price: p.price,
+        days: p.days,
+        ownedUntil: owned.has(p.key) ? owned.get(p.key).toISOString() : null,
+        equipped: equipped[p.slot] === p.key,
+        canBuy: p.enabled,
+      })),
   };
 }
 
 async function buy(nickname, productKey) {
-  const p = defs.PRODUCT_BY_KEY.get(productKey);
-  if (!p) return { success: false, reason: 'unknown_product' };
+  if (!defs.PRODUCT_BY_KEY.has(productKey)) return { success: false, reason: 'unknown_product' };
+  await loadOverrides();
+  const p = effectiveProduct(productKey);
+  if (!p.enabled) return { success: false, reason: 'not_for_sale' };
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -598,8 +665,191 @@ async function getEquippedKeys(nickname) {
   return out;
 }
 
+// ───────────────────────────── 관리자 ─────────────────────────────
+
+async function nicknameExists(nickname) {
+  const r = await pool.query(
+    'SELECT 1 FROM tc_users WHERE nickname = $1 AND is_deleted IS NOT TRUE LIMIT 1',
+    [nickname]
+  );
+  return r.rowCount > 0;
+}
+
+/**
+ * 토큰을 지급(+)하거나 회수(-)한다. 운영자가 직접 하는 일이라 다른 제한은 없다.
+ * 회수는 잔액 아래로 내려가지 않는다. 장부에는 누가 왜 했는지 남긴다.
+ */
+async function adminGrant(nickname, delta, memo, adminName) {
+  const amount = Math.trunc(Number(delta));
+  if (!Number.isFinite(amount) || amount === 0) return { success: false, reason: 'bad_amount' };
+  if (Math.abs(amount) > 100000) return { success: false, reason: 'too_large' };
+  if (!(await nicknameExists(nickname))) return { success: false, reason: 'no_user' };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1)', [hash32(`mission|${nickname}`)]);
+    const bal = await client.query(
+      'SELECT balance FROM tc_token_balance WHERE nickname = $1 FOR UPDATE',
+      [nickname]
+    );
+    const balance = bal.rows[0] ? bal.rows[0].balance : 0;
+    if (amount < 0 && balance + amount < 0) {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'insufficient', balance };
+    }
+    const ref = `${adminName || 'admin'}${memo ? `: ${String(memo).slice(0, 50)}` : ''}`.slice(0, 80);
+    await addTokens(client, nickname, amount, amount > 0 ? 'admin_grant' : 'admin_revoke', ref);
+    await client.query('COMMIT');
+    return { success: true, balance: balance + amount };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('admin token grant error:', err.message);
+    return { success: false, reason: 'error' };
+  } finally {
+    client.release();
+  }
+}
+
+async function adminSetMission(key, { enabled, tokens }, adminName) {
+  const def = defs.MISSION_BY_KEY.get(key);
+  if (!def) return { success: false, reason: 'unknown_mission' };
+  const t = tokens === '' || tokens == null ? null : Math.trunc(Number(tokens));
+  if (t != null && (!Number.isFinite(t) || t < 0 || t > 100)) return { success: false, reason: 'bad_tokens' };
+  await pool.query(
+    `INSERT INTO tc_mission_overrides (mission_key, enabled, tokens, updated_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (mission_key) DO UPDATE
+       SET enabled = EXCLUDED.enabled, tokens = EXCLUDED.tokens,
+           updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+    [key, enabled !== false, t, adminName || 'admin']
+  );
+  await loadOverrides(true);
+  return { success: true };
+}
+
+async function adminSetProduct(key, { enabled, price }, adminName) {
+  if (!defs.PRODUCT_BY_KEY.has(key)) return { success: false, reason: 'unknown_product' };
+  const pr = price === '' || price == null ? null : Math.trunc(Number(price));
+  if (pr != null && (!Number.isFinite(pr) || pr < 1 || pr > 100000)) return { success: false, reason: 'bad_price' };
+  await pool.query(
+    `INSERT INTO tc_token_product_overrides (product_key, enabled, price, updated_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (product_key) DO UPDATE
+       SET enabled = EXCLUDED.enabled, price = EXCLUDED.price,
+           updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+    [key, enabled !== false, pr, adminName || 'admin']
+  );
+  await loadOverrides(true);
+  return { success: true };
+}
+
+/** 관리자 화면: 미션별 고른/완료한 수와 오늘·누적 토큰. */
+async function adminOverview() {
+  await loadOverrides();
+  const [perMission, today, totals, holders, shop] = await Promise.all([
+    pool.query(
+      `SELECT mission_key,
+              COUNT(*)::int AS picked,
+              COUNT(*) FILTER (WHERE status = 'done')::int AS done,
+              COUNT(*) FILTER (WHERE status = 'active')::int AS active,
+              COUNT(*) FILTER (WHERE status = 'expired')::int AS expired,
+              COUNT(*) FILTER (WHERE status = 'dropped')::int AS dropped
+         FROM tc_user_missions GROUP BY mission_key`
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE picked_day = DATE(timezone('Asia/Seoul', NOW())))::int AS picked_today,
+         COUNT(*) FILTER (WHERE status = 'done'
+           AND DATE(timezone('Asia/Seoul', done_at::timestamptz)) = DATE(timezone('Asia/Seoul', NOW())))::int AS done_today,
+         COUNT(DISTINCT nickname) FILTER (WHERE picked_day = DATE(timezone('Asia/Seoul', NOW())))::int AS pickers_today
+       FROM tc_user_missions`
+    ),
+    pool.query(
+      `SELECT
+         COALESCE(SUM(delta) FILTER (WHERE kst_day = DATE(timezone('Asia/Seoul', NOW())) AND delta > 0), 0)::int AS issued_today,
+         COALESCE(SUM(delta) FILTER (WHERE delta > 0), 0)::int AS issued_total,
+         COALESCE(-SUM(delta) FILTER (WHERE reason = 'shop'), 0)::int AS spent_shop
+       FROM tc_token_ledger`
+    ),
+    pool.query(`SELECT COUNT(*)::int AS holders, COALESCE(SUM(balance),0)::int AS outstanding FROM tc_token_balance WHERE balance > 0`),
+    pool.query(
+      `SELECT ref AS product_key, COUNT(*)::int AS buys, COALESCE(-SUM(delta), 0)::int AS spent
+         FROM tc_token_ledger WHERE reason = 'shop' GROUP BY ref`
+    ),
+  ]);
+  const by = new Map(perMission.rows.map((r) => [r.mission_key, r]));
+  const shopBy = new Map(shop.rows.map((r) => [r.product_key, r]));
+  return {
+    today: today.rows[0],
+    totals: totals.rows[0],
+    holders: holders.rows[0],
+    missions: defs.MISSIONS.map((m) => {
+      const e = effectiveMission(m.key);
+      const s = by.get(m.key) || { picked: 0, done: 0, active: 0, expired: 0, dropped: 0 };
+      return { ...m, enabled: e.enabled, effectiveTokens: e.tokens, ...s };
+    }),
+    products: defs.PRODUCTS.map((p) => {
+      const e = effectiveProduct(p.key);
+      const s = shopBy.get(p.key) || { buys: 0, spent: 0 };
+      return { ...p, enabled: e.enabled, effectivePrice: e.price, buys: s.buys, spent: s.spent };
+    }),
+  };
+}
+
+/** 토큰 장부 조회(닉네임·사유로 거른다). */
+async function adminLedger({ nickname, reason, page = 1, limit = 50 } = {}) {
+  const where = [];
+  const params = [];
+  if (nickname) { params.push(`%${nickname}%`); where.push(`nickname ILIKE $${params.length}`); }
+  if (reason) { params.push(reason); where.push(`reason = $${params.length}`); }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const lim = Math.max(1, Math.min(parseInt(limit, 10) || 50, 200));
+  const pg = Math.max(1, parseInt(page, 10) || 1);
+  const [rows, count] = await Promise.all([
+    pool.query(
+      `SELECT id, nickname, delta, reason, ref, created_at
+         FROM tc_token_ledger ${whereSql}
+        ORDER BY id DESC LIMIT ${lim} OFFSET ${(pg - 1) * lim}`,
+      params
+    ),
+    pool.query(`SELECT COUNT(*)::int AS n FROM tc_token_ledger ${whereSql}`, params),
+  ]);
+  return { rows: rows.rows, total: count.rows[0].n, page: pg, limit: lim };
+}
+
+/** 한 유저의 토큰 현황(잔액·누적·진행 중 미션·보유 상품). */
+async function adminUserSummary(nickname) {
+  const [bal, active, owned] = await Promise.all([
+    pool.query('SELECT balance, total_earned FROM tc_token_balance WHERE nickname = $1', [nickname]),
+    pool.query(
+      `SELECT mission_key, progress, target, status, to_char(expires_day,'YYYY-MM-DD') AS expires_day
+         FROM tc_user_missions WHERE nickname = $1 AND status = 'active' ORDER BY id`,
+      [nickname]
+    ),
+    pool.query(
+      `SELECT product_key, expires_at FROM tc_token_owned WHERE nickname = $1 AND expires_at > NOW() ORDER BY product_key`,
+      [nickname]
+    ),
+  ]);
+  return {
+    balance: bal.rows[0] ? bal.rows[0].balance : 0,
+    totalEarned: bal.rows[0] ? bal.rows[0].total_earned : 0,
+    active: active.rows,
+    owned: owned.rows,
+  };
+}
+
 module.exports = {
   init,
+  loadOverrides,
+  effectiveMission,
+  effectiveProduct,
+  adminGrant,
+  adminSetMission,
+  adminSetProduct,
+  adminOverview,
+  adminLedger,
+  adminUserSummary,
   ensureSchema,
   renameUser,
   deleteUser,

@@ -551,6 +551,21 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           math.min(height >= 700 ? 220.0 : 196.0, maxSeatRadiusY),
         );
 
+        // 패를 보고 있는 사람을 내 앞(아래)으로 돌려 앉힌다. 4인만, 승인돼 실제로
+        // 패가 보일 때만 — 요청 중에 자리가 움직이면 어지럽다.
+        var rotation = 0;
+        final viewingId = _viewingPlayerId;
+        if (playerCount >= 4 && viewingId != null) {
+          final vi = players.indexWhere(
+            (p) => p is Map && (p['id']?.toString() ?? '') == viewingId,
+          );
+          if (vi >= 0 &&
+              game.approvedCardViews.contains(viewingId) &&
+              (players[vi] as Map)['canSeeCards'] == true) {
+            rotation = vi;
+          }
+        }
+
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -558,12 +573,18 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
             for (int i = 0; i < playerCount && i < anglesDeg.length; i++) ...[
               () {
                 final p = players[i] as Map<String, dynamic>;
-                final angle = anglesDeg[i] * math.pi / 180;
+                final slot = playerCount >= 4
+                    ? (i - rotation + playerCount) % playerCount
+                    : i;
+                final angle = anglesDeg[slot] * math.pi / 180;
                 final seatLeft =
                     centerX + seatRadiusX * math.cos(angle) - seatWidth / 2;
                 final seatTop =
                     centerY + seatRadiusY * math.sin(angle) - seatHeight / 2;
-                return Positioned(
+                return AnimatedPositioned(
+                  key: ValueKey('ring-seat-${p['id'] ?? i}'),
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutCubic,
                   left: seatLeft,
                   top: seatTop,
                   width: seatWidth,

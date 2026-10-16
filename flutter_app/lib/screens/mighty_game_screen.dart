@@ -4118,8 +4118,49 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     MightyGameStateData state,
     MightyPlayer viewingPlayer,
   ) {
+    // 이름·닫기는 손패 창 밖(바로 위)에 알약으로 빼서 창 높이를 줄였다.
+    final nameChip = GestureDetector(
+      onTap: () => setState(() => _viewingPlayerId = null),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.fromLTRB(12, 3, 6, 3),
+        decoration: BoxDecoration(
+          color: Cartoon.paper,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: Cartoon.ink, width: 1.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+                overflow: TextOverflow.ellipsis,
+                style: Cartoon.userText(size: 13),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
+          ],
+        ),
+      ),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        nameChip,
+        _spectatorHandPanel(state, viewingPlayer),
+      ],
+    );
+  }
+
+  Widget _spectatorHandPanel(
+    MightyGameStateData state,
+    MightyPlayer viewingPlayer,
+  ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      width: double.infinity,
       decoration: const BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -4128,38 +4169,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                const SizedBox(width: 32),
-                Expanded(
-                  child: Text(
-                    L10n.of(context).skGamePlayerHand(viewingPlayer.name),
-                    textAlign: TextAlign.center,
-                    style: Cartoon.userText(size: 14),
-                  ),
-                ),
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IconButton(
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    padding: EdgeInsets.zero,
-                    splashRadius: 18,
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      size: 20,
-                      color: Cartoon.ink,
-                    ),
-                    onPressed: () => setState(() => _viewingPlayerId = null),
-                  ),
-                ),
-              ],
-            ),
-          ),
           if (viewingPlayer.cards.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),

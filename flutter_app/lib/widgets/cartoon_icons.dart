@@ -749,3 +749,113 @@ class _RuleGlyphPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RuleGlyphPainter old) => old.kind != kind;
 }
+
+/// 쿠폰 아이콘: 양옆이 움푹 파인 노란 티켓, 가운데 점선, 왼쪽에 큼직한 별.
+/// 살짝 기울어 있어서 "뜯어 쓰는 쿠폰"처럼 보인다.
+class CouponGlyph extends StatelessWidget {
+  const CouponGlyph({super.key, this.size = 24});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _CouponPainter()),
+  );
+}
+
+class _CouponPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final sw = (s * 0.075).clamp(1.2, 2.6);
+    final line = _line(sw);
+    canvas.save();
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.rotate(-0.16);
+    // 티켓 몸통: 폭 0.94s · 높이 0.62s. 좌우 가운데에 반원 홈.
+    final w = s * 0.94 - sw;
+    final h = s * 0.62 - sw;
+    final r = s * 0.10; // 모서리 둥글기
+    final notch = s * 0.095; // 홈 반지름
+    final left = -w / 2, right = w / 2, top = -h / 2, bottom = h / 2;
+    final body = Path()
+      ..moveTo(left + r, top)
+      ..lineTo(right - r, top)
+      ..arcToPoint(Offset(right, top + r), radius: Radius.circular(r))
+      ..lineTo(right, -notch)
+      ..arcToPoint(
+        Offset(right, notch),
+        radius: Radius.circular(notch),
+        clockwise: false,
+      )
+      ..lineTo(right, bottom - r)
+      ..arcToPoint(Offset(right - r, bottom), radius: Radius.circular(r))
+      ..lineTo(left + r, bottom)
+      ..arcToPoint(Offset(left, bottom - r), radius: Radius.circular(r))
+      ..lineTo(left, notch)
+      ..arcToPoint(
+        Offset(left, -notch),
+        radius: Radius.circular(notch),
+        clockwise: false,
+      )
+      ..lineTo(left, top + r)
+      ..arcToPoint(Offset(left + r, top), radius: Radius.circular(r))
+      ..close();
+    // 바닥 그림자(단색)
+    canvas.drawPath(body.shift(Offset(0, sw * 0.9)), _fill(Cartoon.ink));
+    canvas.drawPath(body, _fill(Cartoon.yellow));
+    // 아래쪽 절반을 살짝 진하게 — 통통한 느낌
+    canvas.save();
+    canvas.clipPath(body);
+    canvas.drawRect(
+      Rect.fromLTRB(left, h * 0.18, right, bottom),
+      _fill(const Color(0xFFFFC21A)),
+    );
+    canvas.restore();
+    canvas.drawPath(body, line);
+    // 점선(오른쪽 1/3 지점)
+    final dx = w * 0.18;
+    final dash = Paint()
+      ..color = Cartoon.ink.withValues(alpha: 0.55)
+      ..strokeWidth = sw * 0.7
+      ..strokeCap = StrokeCap.round;
+    final span = h - r * 1.4;
+    const n = 5;
+    for (var i = 0; i < n; i++) {
+      final y0 = -span / 2 + span * (i / n) + span / n * 0.15;
+      final y1 = y0 + span / n * 0.55;
+      canvas.drawLine(Offset(dx, y0), Offset(dx, y1), dash);
+    }
+    // 왼쪽의 별
+    final cx = -w * 0.10;
+    final cy = 0.0;
+    final star = Path();
+    final R = h * 0.31;
+    final rr = R * 0.45;
+    for (var i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? R : rr;
+      final p = Offset(cx + rad * math.cos(a), cy + rad * math.sin(a));
+      if (i == 0) {
+        star.moveTo(p.dx, p.dy);
+      } else {
+        star.lineTo(p.dx, p.dy);
+      }
+    }
+    star.close();
+    canvas.drawPath(star, _fill(Cartoon.orange));
+    canvas.drawPath(star, line..strokeWidth = sw * 0.85);
+    // 별 하이라이트
+    canvas.drawCircle(
+      Offset(cx - R * 0.18, cy - R * 0.3),
+      R * 0.11,
+      _fill(Colors.white.withValues(alpha: 0.85)),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

@@ -2863,7 +2863,7 @@
   },
   "couponSectionTitle": "Coupon",
   "couponRedeemTitle": "Redeem a coupon",
-  "couponRedeemHint": "Enter the code exactly as it appears. Capitals and spaces do not matter.",
+  "couponRedeemHint": "Type the code exactly as shown. Capital letters and spaces don't matter.",
   "couponCodeLabel": "Coupon code",
   "couponRedeemButton": "Redeem",
   "couponRewardGold": "Received {amount} gold",
@@ -3426,5 +3426,10 @@
   "missionLlLastStanding": "Win a game in a landslide (nobody else has a victory token)",
   "missionLlKnockOut6": "Knock out 10 opponents",
   "missionsPickHint": "Pick today's missions!",
-  "serviceAdRewardSuccessLast": "You got 50 gold! That was today's last ad reward – see you tomorrow"
+  "serviceAdRewardSuccessLast": "You got 50 gold! That was today's last ad reward – see you tomorrow",
+  "couponPaste": "Paste",
+  "couponClearCode": "Clear",
+  "couponClipboardEmpty": "Nothing copied to paste",
+  "couponRedeemedTitle": "Coupon redeemed!",
+  "couponEnterCode": "Enter the code"
 }

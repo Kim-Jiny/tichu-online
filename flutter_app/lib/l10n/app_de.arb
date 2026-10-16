@@ -1734,7 +1734,7 @@
   "shopSaleWindow": "Verkauf {window}",
   "couponSectionTitle": "Gutschein",
   "couponRedeemTitle": "Gutschein einlösen",
-  "couponRedeemHint": "Gib den Code genau so ein, wie er dasteht. Groß- und Kleinschreibung sowie Leerzeichen sind egal.",
+  "couponRedeemHint": "Gib den Code so ein, wie er dasteht. Groß-/Kleinschreibung und Leerzeichen spielen keine Rolle.",
   "couponCodeLabel": "Gutscheincode",
   "couponRedeemButton": "Einlösen",
   "couponRewardGold": "{amount} Gold erhalten",
@@ -2148,5 +2148,10 @@
   "missionLlLastStanding": "Ein Spiel haushoch gewinnen (kein anderer hat einen Siegmarker)",
   "missionLlKnockOut6": "10 Gegner ausschalten",
   "missionsPickHint": "Wähle deine Missionen für heute!",
-  "serviceAdRewardSuccessLast": "Du hast 50 Gold bekommen! Das war die letzte Werbebelohnung für heute – bis morgen"
+  "serviceAdRewardSuccessLast": "Du hast 50 Gold bekommen! Das war die letzte Werbebelohnung für heute – bis morgen",
+  "couponPaste": "Einfügen",
+  "couponClearCode": "Löschen",
+  "couponClipboardEmpty": "Nichts zum Einfügen kopiert",
+  "couponRedeemedTitle": "Gutschein eingelöst!",
+  "couponEnterCode": "Bitte gib den Code ein"
 }

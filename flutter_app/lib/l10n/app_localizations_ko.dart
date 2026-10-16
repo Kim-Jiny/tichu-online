@@ -4797,7 +4797,7 @@ class L10nKo extends L10n {
   String get couponRedeemTitle => '쿠폰 등록';
 
   @override
-  String get couponRedeemHint => '보이는 그대로 입력하세요. 대소문자와 공백은 상관없습니다.';
+  String get couponRedeemHint => '쿠폰에 적힌 코드를 그대로 입력하세요. 대소문자와 띄어쓰기는 상관없어요.';
 
   @override
   String get couponCodeLabel => '쿠폰 코드';
@@ -5653,4 +5653,19 @@ class L10nKo extends L10n {
   @override
   String get serviceAdRewardSuccessLast =>
       '50골드를 받았어요! 오늘 광고 보상은 모두 받았어요. 내일 또 만나요';
+
+  @override
+  String get couponPaste => '붙여넣기';
+
+  @override
+  String get couponClearCode => '지우기';
+
+  @override
+  String get couponClipboardEmpty => '복사해 둔 코드가 없어요';
+
+  @override
+  String get couponRedeemedTitle => '쿠폰이 등록됐어요!';
+
+  @override
+  String get couponEnterCode => '코드를 입력해 주세요';
 }

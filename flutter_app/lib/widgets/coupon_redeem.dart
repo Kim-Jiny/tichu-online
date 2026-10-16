@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/cartoon.dart';
 import '../services/game_service.dart';
+import 'cartoon_icons.dart';
 
 /// Whether this build may offer to redeem a code.
 ///
@@ -24,22 +27,13 @@ import '../services/game_service.dart';
 bool get couponRedeemAllowed =>
     kIsWeb || defaultTargetPlatform != TargetPlatform.iOS;
 
-/// The coupon artwork, sized like an [Icon] of the same [size].
+/// 쿠폰 아이콘 — 직접 그린 카툰 티켓(별 + 점선), [Icon] 과 같은 크기 규칙.
 ///
-/// The master is drawn on a black field, so the shipped webp has that keyed
-/// out — dropping the raw PNG onto the cream ticket would have put a black
-/// square on it. See assets_src/README.md.
+/// 예전에는 검은 바탕을 지운 webp 그림을 썼다. 벡터로 바꾼 건 다른 카툰 아이콘(룰북·자물쇠
+/// 등)과 선 굵기·색을 맞추고, 어느 크기에서도 선명하게 하려는 것이다.
 Widget couponIcon({double size = 20, double opacity = 1}) {
-  return Opacity(
-    opacity: opacity,
-    child: Image.asset(
-      'assets/icons/coupon.webp',
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
-    ),
-  );
+  final icon = CouponGlyph(size: size);
+  return opacity >= 1 ? icon : Opacity(opacity: opacity, child: icon);
 }
 
 /// The redeem dialog. Returns true when something was actually granted.
@@ -63,16 +57,62 @@ class _CouponRedeemDialog extends StatefulWidget {
   State<_CouponRedeemDialog> createState() => _CouponRedeemDialogState();
 }
 
-class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
+/// 입력하는 대로 대문자로 바꾸고 공백(복사하다 딸려 온 띄어쓰기·줄바꿈)은 뺀다.
+/// 서버도 같은 규칙으로 정규화하지만(normalizeCouponCode), 화면에서 먼저 정리해
+/// 보이는 글자와 실제로 보내는 글자가 같게 한다.
+class _CouponCodeFormatter extends TextInputFormatter {
+  const _CouponCodeFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final cleaned = newValue.text.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+    if (cleaned == newValue.text) return newValue;
+    // 지운 글자 수만큼 커서를 당긴다.
+    final removed = newValue.text.length - cleaned.length;
+    final offset = (newValue.selection.baseOffset - removed).clamp(
+      0,
+      cleaned.length,
+    );
+    return TextEditingValue(
+      text: cleaned,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
+}
+
+class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
+    with SingleTickerProviderStateMixin {
   late final TextEditingController _controller = TextEditingController(
-    text: widget.presetCode ?? '',
+    text: widget.presetCode == null
+        ? ''
+        : widget.presetCode!.replaceAll(RegExp(r'\s+'), '').toUpperCase(),
+  );
+  // 틀렸을 때 입력 칸이 좌우로 떨린다.
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
   );
   bool _busy = false;
   String? _error;
   String? _success;
+  int _burst = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      // 고치기 시작하면 이전 오류는 지운다.
+      if (_error != null && mounted) setState(() => _error = null);
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
+    _shake.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -106,7 +146,12 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
   Future<void> _submit() async {
     final l10n = L10n.of(context);
     final code = _controller.text.trim();
-    if (code.isEmpty || _busy) return;
+    if (_busy) return;
+    if (code.isEmpty) {
+      setState(() => _error = l10n.couponEnterCode);
+      _shake.forward(from: 0);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -118,122 +163,341 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog> {
       _busy = false;
       if (out.success) {
         _success = _rewardLine(context, l10n, out);
+        _burst++;
       } else {
         // A silent timeout has no server message of its own.
         _error = out.message ?? l10n.commonError;
       }
     });
+    if (!out.success) _shake.forward(from: 0);
+  }
+
+  /// 클립보드의 코드를 입력 칸에 넣는다(공백·소문자는 정리).
+  Future<void> _paste() async {
+    final l10n = L10n.of(context);
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
+    final text = (data?.text ?? '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .toUpperCase();
+    if (text.isEmpty) {
+      setState(() => _error = l10n.couponClipboardEmpty);
+      _shake.forward(from: 0);
+      return;
+    }
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final done = _success != null;
-    return AlertDialog(
-      scrollable: true,
-      title: Row(
-        children: [
-          couponIcon(size: 22),
-          const SizedBox(width: 8),
-          Text(l10n.couponRedeemTitle, style: Cartoon.text(size: 21)),
-        ],
-      ),
-      content: SizedBox(
-        width: 320,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final hasText = _controller.text.trim().isNotEmpty;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Stack(
           children: [
-            if (done) ...[
-              Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF66BB6A),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _success!,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF3E312A),
-                      ),
+            SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                decoration: Cartoon.panelDecoration(radius: 26),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CartoonFloat(amplitude: 3, child: couponIcon(size: 36)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            done
+                                ? l10n.couponRedeemedTitle
+                                : l10n.couponRedeemTitle,
+                            style: Cartoon.text(size: 23),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                enabled: !_busy,
-                textCapitalization: TextCapitalization.characters,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                // Typed text is dark and monospaced; the placeholder is light
-                // and italic. With both in the field's default style the
-                // example read as a code already filled in, and people tapped
-                // Redeem on it.
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                  color: Color(0xFF3E312A),
+                    const SizedBox(height: 14),
+                    if (done) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1C9),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Cartoon.ink, width: 1.8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: Color(0xFF3DBE6A),
+                              size: 30,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _success!,
+                                style: Cartoon.userText(
+                                  size: 16,
+                                  weight: FontWeight.w800,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      CartoonButton(
+                        height: 50,
+                        color: Cartoon.green,
+                        onPressed: () => Navigator.pop(context, true),
+                        child: CartoonButton.label(
+                          l10n.commonConfirm,
+                          size: 19,
+                        ),
+                      ),
+                    ] else ...[
+                      // 코드 입력 칸: 쿠폰 티켓처럼 크림색 바탕에 큰 글자.
+                      AnimatedBuilder(
+                        animation: _shake,
+                        builder: (context, child) {
+                          final t = _shake.value;
+                          final dx = t == 0
+                              ? 0.0
+                              : math.sin(t * math.pi * 6) * 9 * (1 - t);
+                          return Transform.translate(
+                            offset: Offset(dx, 0),
+                            child: child,
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8E6),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: _error != null ? Cartoon.red : Cartoon.ink,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.couponCodeLabel,
+                                style: Cartoon.text(
+                                  size: 13,
+                                  color: Cartoon.ink.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _controller,
+                                      autofocus: true,
+                                      enabled: !_busy,
+                                      textCapitalization:
+                                          TextCapitalization.characters,
+                                      textInputAction: TextInputAction.done,
+                                      autocorrect: false,
+                                      enableSuggestions: false,
+                                      inputFormatters: const [
+                                        _CouponCodeFormatter(),
+                                      ],
+                                      onSubmitted: (_) => _submit(),
+                                      cursorColor: Cartoon.orangeDeep,
+                                      // 입력한 글자는 진한 굵은 고정폭, 예시 글자는 연하고 기울임 —
+                                      // 예시가 이미 채워진 코드로 보여 그대로 등록을 누르는 일이 없게.
+                                      style: const TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 2.5,
+                                        color: Cartoon.ink,
+                                      ),
+                                      decoration: InputDecoration(
+                                        isDense: true,
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        disabledBorder: InputBorder.none,
+                                        filled: false,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              vertical: 8,
+                                            ),
+                                        hintText: 'WELCOME2026',
+                                        hintStyle: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w400,
+                                          fontStyle: FontStyle.italic,
+                                          letterSpacing: 1.6,
+                                          color: Cartoon.ink.withValues(
+                                            alpha: 0.25,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // 글자가 있으면 지우기, 없으면 붙여넣기.
+                                  if (hasText)
+                                    _miniButton(
+                                      Icons.close_rounded,
+                                      l10n.couponClearCode,
+                                      _busy ? null : _controller.clear,
+                                    )
+                                  else
+                                    _miniButton(
+                                      Icons.content_paste_rounded,
+                                      l10n.couponPaste,
+                                      _busy ? null : _paste,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 160),
+                        alignment: Alignment.topCenter,
+                        child: _error == null
+                            ? const SizedBox(width: double.infinity)
+                            : Padding(
+                                padding: const EdgeInsets.fromLTRB(6, 8, 6, 0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(
+                                      Icons.error_rounded,
+                                      size: 17,
+                                      color: Cartoon.red,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        _error!,
+                                        style: Cartoon.userText(
+                                          size: 13,
+                                          weight: FontWeight.w700,
+                                          color: const Color(0xFFD64550),
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.couponRedeemHint,
+                        textAlign: TextAlign.center,
+                        style: Cartoon.userText(
+                          size: 12,
+                          weight: FontWeight.w600,
+                          color: Cartoon.ink.withValues(alpha: 0.55),
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: CartoonButton(
+                              height: 48,
+                              color: const Color(0xFF9AA5B1),
+                              onPressed: _busy
+                                  ? null
+                                  : () => Navigator.pop(context, false),
+                              child: CartoonButton.label(
+                                l10n.commonCancel,
+                                size: 17,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 3,
+                            child: CartoonButton(
+                              height: 48,
+                              color: Cartoon.orange,
+                              onPressed: (_busy || !hasText) ? null : _submit,
+                              child: _busy
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : CartoonButton.label(
+                                      l10n.couponRedeemButton,
+                                      size: 19,
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                decoration: InputDecoration(
-                  labelText: l10n.couponCodeLabel,
-                  hintText: 'WELCOME2026',
-                  hintStyle: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 1.2,
-                    color: const Color(0xFF3E312A).withValues(alpha: 0.28),
+              ),
+            ),
+            // 등록에 성공하면 색종이.
+            if (_burst > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CartoonConfetti(
+                    key: ValueKey('coupon-burst-$_burst'),
+                    seed: _burst,
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  errorText: _error,
-                  errorMaxLines: 3,
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.couponRedeemHint,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF9A8E8A)),
-              ),
-            ],
           ],
         ),
       ),
-      actions: done
-          ? [
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(l10n.commonConfirm),
-              ),
-            ]
-          : [
-              TextButton(
-                onPressed: _busy ? null : () => Navigator.pop(context, false),
-                child: Text(l10n.commonCancel),
-              ),
-              ElevatedButton(
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.couponRedeemButton),
-              ),
-            ],
+    );
+  }
+
+  /// 입력 칸 오른쪽의 작은 둥근 버튼(지우기·붙여넣기).
+  Widget _miniButton(IconData icon, String tooltip, VoidCallback? onTap) {
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: CartoonPressable(
+        scale: 0.88,
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          margin: const EdgeInsets.only(left: 4),
+          decoration: BoxDecoration(
+            color: onTap == null ? const Color(0xFFE6DFD6) : Cartoon.yellow,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: Cartoon.ink, width: 1.8),
+          ),
+          child: Icon(icon, size: 21, color: Cartoon.ink),
+        ),
+      ),
     );
   }
 }

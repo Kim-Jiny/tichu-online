@@ -4916,7 +4916,7 @@ class L10nEn extends L10n {
 
   @override
   String get couponRedeemHint =>
-      'Enter the code exactly as it appears. Capitals and spaces do not matter.';
+      'Type the code exactly as shown. Capital letters and spaces don\'t matter.';
 
   @override
   String get couponCodeLabel => 'Coupon code';
@@ -5804,4 +5804,19 @@ class L10nEn extends L10n {
   @override
   String get serviceAdRewardSuccessLast =>
       'You got 50 gold! That was today\'s last ad reward – see you tomorrow';
+
+  @override
+  String get couponPaste => 'Paste';
+
+  @override
+  String get couponClearCode => 'Clear';
+
+  @override
+  String get couponClipboardEmpty => 'Nothing copied to paste';
+
+  @override
+  String get couponRedeemedTitle => 'Coupon redeemed!';
+
+  @override
+  String get couponEnterCode => 'Enter the code';
 }

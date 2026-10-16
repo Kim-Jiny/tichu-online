@@ -4951,7 +4951,7 @@ class L10nDe extends L10n {
 
   @override
   String get couponRedeemHint =>
-      'Gib den Code genau so ein, wie er dasteht. Groß- und Kleinschreibung sowie Leerzeichen sind egal.';
+      'Gib den Code so ein, wie er dasteht. Groß-/Kleinschreibung und Leerzeichen spielen keine Rolle.';
 
   @override
   String get couponCodeLabel => 'Gutscheincode';
@@ -5854,4 +5854,19 @@ class L10nDe extends L10n {
   @override
   String get serviceAdRewardSuccessLast =>
       'Du hast 50 Gold bekommen! Das war die letzte Werbebelohnung für heute – bis morgen';
+
+  @override
+  String get couponPaste => 'Einfügen';
+
+  @override
+  String get couponClearCode => 'Löschen';
+
+  @override
+  String get couponClipboardEmpty => 'Nichts zum Einfügen kopiert';
+
+  @override
+  String get couponRedeemedTitle => 'Gutschein eingelöst!';
+
+  @override
+  String get couponEnterCode => 'Bitte gib den Code ein';
 }

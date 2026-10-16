@@ -8682,7 +8682,7 @@ abstract class L10n {
   /// No description provided for @couponRedeemHint.
   ///
   /// In en, this message translates to:
-  /// **'Enter the code exactly as it appears. Capitals and spaces do not matter.'**
+  /// **'Type the code exactly as shown. Capital letters and spaces don\'t matter.'**
   String get couponRedeemHint;
 
   /// No description provided for @couponCodeLabel.
@@ -10196,6 +10196,36 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'You got 50 gold! That was today\'s last ad reward – see you tomorrow'**
   String get serviceAdRewardSuccessLast;
+
+  /// No description provided for @couponPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get couponPaste;
+
+  /// No description provided for @couponClearCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get couponClearCode;
+
+  /// No description provided for @couponClipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing copied to paste'**
+  String get couponClipboardEmpty;
+
+  /// No description provided for @couponRedeemedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon redeemed!'**
+  String get couponRedeemedTitle;
+
+  /// No description provided for @couponEnterCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code'**
+  String get couponEnterCode;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

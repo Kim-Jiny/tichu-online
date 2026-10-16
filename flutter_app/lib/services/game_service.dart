@@ -2164,6 +2164,15 @@ class GameService extends ChangeNotifier {
           'message': data['message'] as String? ?? '',
           'createdAt': data['createdAt']?.toString() ?? '',
         };
+        // 보낸 사람의 말풍선 모양(토큰 상점). 없으면 기본 모양으로 돌아간다.
+        if (sender.isNotEmpty) {
+          final b = data['bubble'];
+          if (b is String && b.isNotEmpty) {
+            _chatBubbleKeys[sender] = b;
+          } else {
+            _chatBubbleKeys.remove(sender);
+          }
+        }
         dmMessages.putIfAbsent(partner, () => []);
         // Avoid duplicate
         final isNewMessage = !dmMessages[partner]!.any(
@@ -2198,6 +2207,18 @@ class GameService extends ChangeNotifier {
       case 'dm_history':
         final nickname = data['nickname'] as String? ?? '';
         final messages = data['messages'] as List? ?? [];
+        // 대화 두 사람이 지금 장착한 말풍선 모양.
+        final bubbles = data['bubbles'];
+        if (bubbles is Map) {
+          for (final nick in {nickname, playerName}) {
+            final b = bubbles[nick];
+            if (b is String && b.isNotEmpty) {
+              _chatBubbleKeys[nick] = b;
+            } else if (nick.isNotEmpty) {
+              _chatBubbleKeys.remove(nick);
+            }
+          }
+        }
         final parsed = messages.map((m) {
           final raw = Map<String, dynamic>.from(m as Map);
           // Normalize DB column names to match dm_message format

@@ -3423,7 +3423,7 @@ class L10nKo extends L10n {
   String get shopGuideAdRewardValue => '+50 골드';
 
   @override
-  String get shopGuideAdRewardDesc => '광고 시청으로 하루 최대 5번까지 추가 골드를 받을 수 있습니다.';
+  String get shopGuideAdRewardDesc => '광고를 보면 하루에 최대 5번까지 골드를 더 받을 수 있어요.';
 
   @override
   String get shopGuideSeasonReward => '시즌 보상';
@@ -3641,7 +3641,7 @@ class L10nKo extends L10n {
   String get shopNicknameChangeButton => '변경';
 
   @override
-  String get shopAdCannotShow => '광고를 표시할 수 없습니다';
+  String get shopAdCannotShow => '지금은 광고를 보여 드릴 수 없어요. 잠시 뒤에 다시 시도해 주세요';
 
   @override
   String shopAdWatchForGold(int current, int max) {
@@ -3649,10 +3649,10 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get shopAdRewardDone => '오늘의 광고 보상 완료';
+  String get shopAdRewardDone => '오늘의 광고 보상을 모두 받았어요';
 
   @override
-  String get shopAdPreparing => '광고 준비 중...';
+  String get shopAdPreparing => '광고를 준비하고 있어요…';
 
   @override
   String get appForceUpdateTitle => '업데이트가 필요합니다';
@@ -3763,7 +3763,7 @@ class L10nKo extends L10n {
   String get serviceNicknameChangeFailed => '닉네임 변경에 실패했습니다';
 
   @override
-  String get serviceRewardFailed => '보상 지급에 실패했습니다';
+  String get serviceRewardFailed => '보상을 드리지 못했어요. 잠시 뒤에 다시 시도해 주세요';
 
   @override
   String get serviceRoomRestoreFallback => '방 정보를 복구하지 못해 로비로 이동했습니다.';
@@ -3775,10 +3775,10 @@ class L10nKo extends L10n {
   String get serviceInviteCooldown => '이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요';
 
   @override
-  String get serviceAdShowFailed => '광고를 표시할 수 없습니다';
+  String get serviceAdShowFailed => '지금은 광고를 보여 드릴 수 없어요. 잠시 뒤에 다시 시도해 주세요';
 
   @override
-  String get serviceAdLoadFailed => '광고를 불러올 수 없습니다';
+  String get serviceAdLoadFailed => '광고를 불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요';
 
   @override
   String serviceInquiryReply(String title) {
@@ -3805,7 +3805,7 @@ class L10nKo extends L10n {
 
   @override
   String serviceAdRewardSuccess(int remaining) {
-    return '50골드를 받았습니다! (남은 횟수: $remaining)';
+    return '50골드를 받았어요! 오늘 $remaining번 더 받을 수 있어요';
   }
 
   @override
@@ -4089,10 +4089,10 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get attendanceAdNotReady => '광고 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+  String get attendanceAdNotReady => '광고를 준비하고 있어요. 잠시 뒤에 다시 시도해 주세요.';
 
   @override
-  String get attendanceAdLoading => '광고 준비 중…';
+  String get attendanceAdLoading => '광고를 준비하고 있어요…';
 
   @override
   String get goldHistoryIapRefund => '골드 환불';
@@ -5649,4 +5649,8 @@ class L10nKo extends L10n {
 
   @override
   String get missionsPickHint => '오늘의 미션을 선택하세요!';
+
+  @override
+  String get serviceAdRewardSuccessLast =>
+      '50골드를 받았어요! 오늘 광고 보상은 모두 받았어요. 내일 또 만나요';
 }

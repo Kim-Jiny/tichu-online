@@ -8,6 +8,7 @@ import '../utils/chat_day.dart';
 import '../utils/friend_order.dart';
 import '../utils/last_seen.dart';
 import '../services/game_service.dart';
+import '../widgets/token_cosmetics.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../theme/cartoon.dart';
 import '../widgets/profile_avatar.dart';
@@ -1524,6 +1525,16 @@ class _FriendsScreenState extends State<FriendsScreen>
     bool showAvatar = false,
   }) {
     final message = msg['message'] as String? ?? '';
+    // 보낸 사람이 장착한 말풍선 모양(토큰 상점) — 없으면 기본 모양.
+    final bubbleStyle = bubbleStyleFor(
+      context.read<GameService>().chatBubbleFor(msg['sender'] as String? ?? ''),
+    );
+    final bubbleRadius = BorderRadius.only(
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: isMine ? const Radius.circular(18) : const Radius.circular(4),
+      bottomRight: isMine ? const Radius.circular(4) : const Radius.circular(18),
+    );
     final dt = _dmSentAt(msg);
     final timeStr = dt == null
         ? ''
@@ -1563,26 +1574,23 @@ class _FriendsScreenState extends State<FriendsScreen>
             child: Container(
               margin: const EdgeInsets.only(bottom: 3),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMine ? Cartoon.orange : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: isMine
-                      ? const Radius.circular(18)
-                      : const Radius.circular(4),
-                  bottomRight: isMine
-                      ? const Radius.circular(4)
-                      : const Radius.circular(18),
-                ),
-                border: Border.all(color: Cartoon.ink, width: 1.6),
-              ),
+              decoration: bubbleStyle != null
+                  ? bubbleStyle.decoration(
+                      borderWidth: 1.8,
+                      borderRadius: bubbleRadius,
+                    )
+                  : BoxDecoration(
+                      color: isMine ? Cartoon.orange : Colors.white,
+                      borderRadius: bubbleRadius,
+                      border: Border.all(color: Cartoon.ink, width: 1.6),
+                    ),
               child: Text(
                 message,
                 style: Cartoon.userText(
                   size: 15,
                   weight: FontWeight.w600,
-                  color: isMine ? Colors.white : Cartoon.ink,
+                  color:
+                      bubbleStyle?.text ?? (isMine ? Colors.white : Cartoon.ink),
                   height: 1.35,
                 ),
               ),

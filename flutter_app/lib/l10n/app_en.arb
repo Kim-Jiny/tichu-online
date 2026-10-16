@@ -1910,7 +1910,7 @@
   "shopGuideRankedLossDesc": "Ranked loss rewards are also 2x compared to normal games.",
   "shopGuideAdReward": "Ad Reward",
   "shopGuideAdRewardValue": "+50 Gold",
-  "shopGuideAdRewardDesc": "Watch ads to earn bonus gold up to 5 times per day.",
+  "shopGuideAdRewardDesc": "Watch an ad to earn extra gold, up to 5 times a day.",
   "shopGuideSeasonReward": "Season Reward",
   "shopGuideSeasonRewardValue": "Extra",
   "shopGuideSeasonRewardDesc": "Bonus gold is awarded at the end of the season based on your ranking.",
@@ -2039,7 +2039,7 @@
   "shopNicknameChangeHint": "New nickname",
   "shopNicknameChangeValidation": "Nickname must be 2-10 characters",
   "shopNicknameChangeButton": "Change",
-  "shopAdCannotShow": "Unable to show the ad",
+  "shopAdCannotShow": "We can't show an ad right now. Please try again in a moment",
   "shopAdWatchForGold": "Watch ad for 50 Gold ({current}/{max})",
   "@shopAdWatchForGold": {
     "placeholders": {
@@ -2051,8 +2051,8 @@
       }
     }
   },
-  "shopAdRewardDone": "Daily ad rewards complete",
-  "shopAdPreparing": "Ad is getting ready...",
+  "shopAdRewardDone": "You've collected all of today's ad rewards",
+  "shopAdPreparing": "Getting the ad ready…",
   "appForceUpdateTitle": "Update Required",
   "appForceUpdateBody": "A new version has been released.\nPlease update to continue using the app.",
   "appForceUpdateButton": "Update",
@@ -2089,12 +2089,12 @@
   "serviceNoticesLoadFailed": "Failed to load notices",
   "serviceNicknameChanged": "Nickname has been changed",
   "serviceNicknameChangeFailed": "Nickname change failed",
-  "serviceRewardFailed": "Failed to grant reward",
+  "serviceRewardFailed": "We couldn't give your reward. Please try again in a moment",
   "serviceRoomRestoreFallback": "Could not restore room info. Returning to lobby.",
   "serviceInviteInGame": "Cannot send room invites during a game",
   "serviceInviteCooldown": "Invite already sent. Please try again shortly",
-  "serviceAdShowFailed": "Unable to show the ad",
-  "serviceAdLoadFailed": "Unable to load the ad",
+  "serviceAdShowFailed": "We can't show an ad right now. Please try again in a moment",
+  "serviceAdLoadFailed": "We couldn't load the ad. Please try again in a moment",
   "serviceInquiryReply": "Inquiry reply received: {title}",
   "@serviceInquiryReply": {
     "placeholders": {
@@ -2131,7 +2131,7 @@
       }
     }
   },
-  "serviceAdRewardSuccess": "Received 50 Gold! (Remaining: {remaining})",
+  "serviceAdRewardSuccess": "You got 50 gold! You can earn it {remaining} more times today",
   "@serviceAdRewardSuccess": {
     "placeholders": {
       "remaining": {
@@ -2411,8 +2411,8 @@
       }
     }
   },
-  "attendanceAdNotReady": "Ad is still loading. Please try again in a moment.",
-  "attendanceAdLoading": "Loading ad…",
+  "attendanceAdNotReady": "The ad is still getting ready. Please try again in a moment.",
+  "attendanceAdLoading": "Getting the ad ready…",
   "goldHistoryIapRefund": "Gold refund",
   "goldHistoryLeaveDefeat": "Forfeit loss",
   "goldHistoryRankedWin": "Ranked win",
@@ -3425,5 +3425,6 @@
   "missionLlRoundWin": "Win 8 rounds",
   "missionLlLastStanding": "Win a game in a landslide (nobody else has a victory token)",
   "missionLlKnockOut6": "Knock out 10 opponents",
-  "missionsPickHint": "Pick today's missions!"
+  "missionsPickHint": "Pick today's missions!",
+  "serviceAdRewardSuccessLast": "You got 50 gold! That was today's last ad reward – see you tomorrow"
 }

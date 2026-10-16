@@ -126,6 +126,8 @@ String localizeChatBanned(int remainingMinutes, L10n l10n) {
 
 /// Localize the ad reward success message.
 String localizeAdRewardSuccess(int remaining, L10n l10n) {
+  // 오늘 마지막 보상이면 "0번 더" 대신 마무리 인사.
+  if (remaining <= 0) return l10n.serviceAdRewardSuccessLast;
   return l10n.serviceAdRewardSuccess(remaining);
 }
 

@@ -11136,6 +11136,8 @@ async function handleSendDm(ws, data) {
     sendTo(ws, { type: 'dm_error', message: resultMessage(result, ws.locale) });
     return;
   }
+  // 보낸 사람이 장착한 말풍선 모양(토큰 상점)도 함께 보낸다 — 받는 쪽 친구 채팅에도 그대로 보인다.
+  const senderBubble = (ws.tokenEquips && ws.tokenEquips.bubble) || null;
   const dmMsg = {
     type: 'dm_message',
     id: result.id,
@@ -11143,6 +11145,7 @@ async function handleSendDm(ws, data) {
     receiver: targetNickname,
     message,
     createdAt: result.createdAt,
+    ...(senderBubble ? { bubble: senderBubble } : {}),
   };
   sendTo(ws, dmMsg);
   // Real-time delivery to target
@@ -11158,7 +11161,15 @@ async function handleGetDmHistory(ws, data) {
   if (!targetNickname) return;
   const beforeId = data.beforeId || null;
   const messages = await getDmHistory(ws.nickname, targetNickname, beforeId);
-  sendTo(ws, { type: 'dm_history', nickname: targetNickname, messages });
+  // 두 사람이 지금 장착한 말풍선 모양 — 지난 대화도 그 모양으로 그려진다.
+  const bubbles = {};
+  for (const nick of [ws.nickname, targetNickname]) {
+    try {
+      const eq = tokenEquipsByNick.get(nick) || await missions.getEquippedKeys(nick);
+      if (eq && eq.bubble) bubbles[nick] = eq.bubble;
+    } catch { /* 모양 없이 기본으로 */ }
+  }
+  sendTo(ws, { type: 'dm_history', nickname: targetNickname, messages, bubbles });
 }
 
 async function handleMarkDmRead(ws, data) {

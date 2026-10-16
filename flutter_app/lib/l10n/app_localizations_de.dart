@@ -3518,7 +3518,7 @@ class L10nDe extends L10n {
 
   @override
   String get shopGuideAdRewardDesc =>
-      'Sieh dir Werbung an, um bis zu 5-mal pro Tag Bonusgold zu erhalten.';
+      'Sieh dir Werbung an und hol dir bis zu 5-mal pro Tag Bonusgold.';
 
   @override
   String get shopGuideSeasonReward => 'Saisonbelohnung';
@@ -3747,7 +3747,8 @@ class L10nDe extends L10n {
   String get shopNicknameChangeButton => 'Ändern';
 
   @override
-  String get shopAdCannotShow => 'Werbung kann nicht angezeigt werden';
+  String get shopAdCannotShow =>
+      'Im Moment können wir keine Werbung zeigen. Bitte versuche es gleich noch einmal';
 
   @override
   String shopAdWatchForGold(int current, int max) {
@@ -3755,10 +3756,11 @@ class L10nDe extends L10n {
   }
 
   @override
-  String get shopAdRewardDone => 'Tägliche Werbebelohnungen abgeschlossen';
+  String get shopAdRewardDone =>
+      'Du hast alle Werbebelohnungen von heute abgeholt';
 
   @override
-  String get shopAdPreparing => 'Werbung wird vorbereitet...';
+  String get shopAdPreparing => 'Werbung wird vorbereitet…';
 
   @override
   String get appForceUpdateTitle => 'Update erforderlich';
@@ -3888,7 +3890,8 @@ class L10nDe extends L10n {
   String get serviceNicknameChangeFailed => 'Nickname-Änderung fehlgeschlagen';
 
   @override
-  String get serviceRewardFailed => 'Belohnung konnte nicht vergeben werden';
+  String get serviceRewardFailed =>
+      'Wir konnten die Belohnung nicht vergeben. Bitte versuche es gleich noch einmal';
 
   @override
   String get serviceRoomRestoreFallback =>
@@ -3903,10 +3906,12 @@ class L10nDe extends L10n {
       'Einladung bereits gesendet. Bitte versuche es gleich noch einmal';
 
   @override
-  String get serviceAdShowFailed => 'Werbung kann nicht angezeigt werden';
+  String get serviceAdShowFailed =>
+      'Im Moment können wir keine Werbung zeigen. Bitte versuche es gleich noch einmal';
 
   @override
-  String get serviceAdLoadFailed => 'Werbung konnte nicht geladen werden';
+  String get serviceAdLoadFailed =>
+      'Die Werbung konnte nicht geladen werden. Bitte versuche es gleich noch einmal';
 
   @override
   String serviceInquiryReply(String title) {
@@ -3933,7 +3938,7 @@ class L10nDe extends L10n {
 
   @override
   String serviceAdRewardSuccess(int remaining) {
-    return '50 Gold erhalten! (Verbleibend: $remaining)';
+    return 'Du hast 50 Gold bekommen! Heute geht das noch $remaining-mal';
   }
 
   @override
@@ -4227,10 +4232,10 @@ class L10nDe extends L10n {
 
   @override
   String get attendanceAdNotReady =>
-      'Werbung wird geladen. Bitte gleich nochmal versuchen.';
+      'Die Werbung wird noch vorbereitet. Bitte versuche es gleich noch einmal.';
 
   @override
-  String get attendanceAdLoading => 'Anzeige wird geladen…';
+  String get attendanceAdLoading => 'Werbung wird vorbereitet…';
 
   @override
   String get goldHistoryIapRefund => 'Gold-Rückerstattung';
@@ -5845,4 +5850,8 @@ class L10nDe extends L10n {
 
   @override
   String get missionsPickHint => 'Wähle deine Missionen für heute!';
+
+  @override
+  String get serviceAdRewardSuccessLast =>
+      'Du hast 50 Gold bekommen! Das war die letzte Werbebelohnung für heute – bis morgen';
 }

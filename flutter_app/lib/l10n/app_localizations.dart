@@ -6276,7 +6276,7 @@ abstract class L10n {
   /// No description provided for @shopGuideAdRewardDesc.
   ///
   /// In en, this message translates to:
-  /// **'Watch ads to earn bonus gold up to 5 times per day.'**
+  /// **'Watch an ad to earn extra gold, up to 5 times a day.'**
   String get shopGuideAdRewardDesc;
 
   /// No description provided for @shopGuideSeasonReward.
@@ -6678,7 +6678,7 @@ abstract class L10n {
   /// No description provided for @shopAdCannotShow.
   ///
   /// In en, this message translates to:
-  /// **'Unable to show the ad'**
+  /// **'We can\'t show an ad right now. Please try again in a moment'**
   String get shopAdCannotShow;
 
   /// No description provided for @shopAdWatchForGold.
@@ -6690,13 +6690,13 @@ abstract class L10n {
   /// No description provided for @shopAdRewardDone.
   ///
   /// In en, this message translates to:
-  /// **'Daily ad rewards complete'**
+  /// **'You\'ve collected all of today\'s ad rewards'**
   String get shopAdRewardDone;
 
   /// No description provided for @shopAdPreparing.
   ///
   /// In en, this message translates to:
-  /// **'Ad is getting ready...'**
+  /// **'Getting the ad ready…'**
   String get shopAdPreparing;
 
   /// No description provided for @appForceUpdateTitle.
@@ -6918,7 +6918,7 @@ abstract class L10n {
   /// No description provided for @serviceRewardFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to grant reward'**
+  /// **'We couldn\'t give your reward. Please try again in a moment'**
   String get serviceRewardFailed;
 
   /// No description provided for @serviceRoomRestoreFallback.
@@ -6942,13 +6942,13 @@ abstract class L10n {
   /// No description provided for @serviceAdShowFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to show the ad'**
+  /// **'We can\'t show an ad right now. Please try again in a moment'**
   String get serviceAdShowFailed;
 
   /// No description provided for @serviceAdLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Unable to load the ad'**
+  /// **'We couldn\'t load the ad. Please try again in a moment'**
   String get serviceAdLoadFailed;
 
   /// No description provided for @serviceInquiryReply.
@@ -6984,7 +6984,7 @@ abstract class L10n {
   /// No description provided for @serviceAdRewardSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Received 50 Gold! (Remaining: {remaining})'**
+  /// **'You got 50 gold! You can earn it {remaining} more times today'**
   String serviceAdRewardSuccess(int remaining);
 
   /// No description provided for @lobbyLoveLetter.
@@ -7434,13 +7434,13 @@ abstract class L10n {
   /// No description provided for @attendanceAdNotReady.
   ///
   /// In en, this message translates to:
-  /// **'Ad is still loading. Please try again in a moment.'**
+  /// **'The ad is still getting ready. Please try again in a moment.'**
   String get attendanceAdNotReady;
 
   /// No description provided for @attendanceAdLoading.
   ///
   /// In en, this message translates to:
-  /// **'Loading ad…'**
+  /// **'Getting the ad ready…'**
   String get attendanceAdLoading;
 
   /// No description provided for @goldHistoryIapRefund.
@@ -10190,6 +10190,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Pick today\'s missions!'**
   String get missionsPickHint;
+
+  /// No description provided for @serviceAdRewardSuccessLast.
+  ///
+  /// In en, this message translates to:
+  /// **'You got 50 gold! That was today\'s last ad reward – see you tomorrow'**
+  String get serviceAdRewardSuccessLast;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

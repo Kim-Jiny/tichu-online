@@ -26,7 +26,11 @@ class BubbleStyle {
   /// 꼬리(말풍선 아래 삼각형)가 맞춰 칠할 색.
   Color get tailFill => fillEnd ?? fill;
 
-  Decoration decoration({double radius = 14, double borderWidth = 1.8}) =>
+  Decoration decoration({
+    double radius = 14,
+    double borderWidth = 1.8,
+    BorderRadius? borderRadius,
+  }) =>
       BoxDecoration(
         color: fillEnd == null ? fill : null,
         gradient: fillEnd == null
@@ -36,7 +40,7 @@ class BubbleStyle {
                 end: Alignment.bottomRight,
                 colors: [fill, fillEnd!],
               ),
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: borderRadius ?? BorderRadius.circular(radius),
         border: Border.all(color: border, width: borderWidth),
       );
 }

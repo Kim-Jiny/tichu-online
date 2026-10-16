@@ -3502,7 +3502,7 @@ class L10nEn extends L10n {
 
   @override
   String get shopGuideAdRewardDesc =>
-      'Watch ads to earn bonus gold up to 5 times per day.';
+      'Watch an ad to earn extra gold, up to 5 times a day.';
 
   @override
   String get shopGuideSeasonReward => 'Season Reward';
@@ -3729,7 +3729,8 @@ class L10nEn extends L10n {
   String get shopNicknameChangeButton => 'Change';
 
   @override
-  String get shopAdCannotShow => 'Unable to show the ad';
+  String get shopAdCannotShow =>
+      'We can\'t show an ad right now. Please try again in a moment';
 
   @override
   String shopAdWatchForGold(int current, int max) {
@@ -3737,10 +3738,10 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get shopAdRewardDone => 'Daily ad rewards complete';
+  String get shopAdRewardDone => 'You\'ve collected all of today\'s ad rewards';
 
   @override
-  String get shopAdPreparing => 'Ad is getting ready...';
+  String get shopAdPreparing => 'Getting the ad ready…';
 
   @override
   String get appForceUpdateTitle => 'Update Required';
@@ -3855,7 +3856,8 @@ class L10nEn extends L10n {
   String get serviceNicknameChangeFailed => 'Nickname change failed';
 
   @override
-  String get serviceRewardFailed => 'Failed to grant reward';
+  String get serviceRewardFailed =>
+      'We couldn\'t give your reward. Please try again in a moment';
 
   @override
   String get serviceRoomRestoreFallback =>
@@ -3869,10 +3871,12 @@ class L10nEn extends L10n {
       'Invite already sent. Please try again shortly';
 
   @override
-  String get serviceAdShowFailed => 'Unable to show the ad';
+  String get serviceAdShowFailed =>
+      'We can\'t show an ad right now. Please try again in a moment';
 
   @override
-  String get serviceAdLoadFailed => 'Unable to load the ad';
+  String get serviceAdLoadFailed =>
+      'We couldn\'t load the ad. Please try again in a moment';
 
   @override
   String serviceInquiryReply(String title) {
@@ -3899,7 +3903,7 @@ class L10nEn extends L10n {
 
   @override
   String serviceAdRewardSuccess(int remaining) {
-    return 'Received 50 Gold! (Remaining: $remaining)';
+    return 'You got 50 gold! You can earn it $remaining more times today';
   }
 
   @override
@@ -4193,10 +4197,10 @@ class L10nEn extends L10n {
 
   @override
   String get attendanceAdNotReady =>
-      'Ad is still loading. Please try again in a moment.';
+      'The ad is still getting ready. Please try again in a moment.';
 
   @override
-  String get attendanceAdLoading => 'Loading ad…';
+  String get attendanceAdLoading => 'Getting the ad ready…';
 
   @override
   String get goldHistoryIapRefund => 'Gold refund';
@@ -5796,4 +5800,8 @@ class L10nEn extends L10n {
 
   @override
   String get missionsPickHint => 'Pick today\'s missions!';
+
+  @override
+  String get serviceAdRewardSuccessLast =>
+      'You got 50 gold! That was today\'s last ad reward – see you tomorrow';
 }

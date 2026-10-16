@@ -61,22 +61,26 @@ class ShopVisual {
   static Map<String, Object> categoryDefault(String? category) {
     switch (category) {
       case 'banner':
-        return _legacyMap(Icons.flag, const Color(0xFFB24B5A),
-            const [Color(0xFFF6C1C9), Color(0xFFF3E7EA)],
-            const Color(0xFFE6DDD8));
+        return _legacyMap(Icons.flag, const Color(0xFFB24B5A), const [
+          Color(0xFFF6C1C9),
+          Color(0xFFF3E7EA),
+        ], const Color(0xFFE6DDD8));
       case 'title':
-        return _legacyMap(Icons.badge, const Color(0xFF6B5CA5),
-            const [Color(0xFFD9D0F2), Color(0xFFF1ECFA)],
-            const Color(0xFFE6DDD8));
+        return _legacyMap(Icons.badge, const Color(0xFF6B5CA5), const [
+          Color(0xFFD9D0F2),
+          Color(0xFFF1ECFA),
+        ], const Color(0xFFE6DDD8));
       case 'theme':
-        return _legacyMap(Icons.palette, const Color(0xFF3A7D5C),
-            const [Color(0xFFCDEBD8), Color(0xFFEFF8F2)],
-            const Color(0xFFE6DDD8));
+        return _legacyMap(Icons.palette, const Color(0xFF3A7D5C), const [
+          Color(0xFFCDEBD8),
+          Color(0xFFEFF8F2),
+        ], const Color(0xFFE6DDD8));
       case 'utility':
       default:
-        return _legacyMap(Icons.handyman, const Color(0xFFB46B00),
-            const [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
-            const Color(0xFFFFB74D));
+        return _legacyMap(Icons.handyman, const Color(0xFFB46B00), const [
+          Color(0xFFFFF3E0),
+          Color(0xFFFFE0B2),
+        ], const Color(0xFFFFB74D));
     }
   }
 }
@@ -88,8 +92,12 @@ class ShopVisualLayer {
   final _Background? _background;
 
   // ignore: library_private_types_in_public_api
-  const ShopVisualLayer({this.icon, this.iconColor, this.borderColor, _Background? background})
-      : _background = background;
+  const ShopVisualLayer({
+    this.icon,
+    this.iconColor,
+    this.borderColor,
+    this._background,
+  });
 
   static ShopVisualLayer? _fromJson(dynamic json) {
     if (json is! Map) return null;
@@ -183,7 +191,12 @@ Color? _parseColor(dynamic raw) {
   return Color(n);
 }
 
-Map<String, Object> _legacyMap(IconData icon, Color iconColor, List<Color> gradient, Color borderColor) {
+Map<String, Object> _legacyMap(
+  IconData icon,
+  Color iconColor,
+  List<Color> gradient,
+  Color borderColor,
+) {
   return {
     'icon': icon,
     'iconColor': iconColor,
@@ -199,54 +212,103 @@ Map<String, Object> _legacyMap(IconData icon, Color iconColor, List<Color> gradi
 IconData? _resolveIcon(dynamic raw) {
   if (raw is! String) return null;
   switch (raw) {
-    case 'auto_awesome': return Icons.auto_awesome;
-    case 'local_florist': return Icons.local_florist;
-    case 'spa': return Icons.spa;
-    case 'wb_twilight': return Icons.wb_twilight;
-    case 'emoji_events': return Icons.emoji_events;
-    case 'cake': return Icons.cake;
-    case 'shield': return Icons.shield;
-    case 'flash_on': return Icons.flash_on;
-    case 'local_fire_department': return Icons.local_fire_department;
-    case 'anchor': return Icons.anchor;
-    case 'psychology': return Icons.psychology;
-    case 'star': return Icons.star;
-    case 'theater_comedy': return Icons.theater_comedy;
-    case 'military_tech': return Icons.military_tech;
-    case 'workspace_premium': return Icons.workspace_premium;
-    case 'emoji_nature': return Icons.emoji_nature;
-    case 'security': return Icons.security;
-    case 'sentiment_very_dissatisfied': return Icons.sentiment_very_dissatisfied;
-    case 'visibility_off': return Icons.visibility_off;
-    case 'whatshot': return Icons.whatshot;
-    case 'ac_unit': return Icons.ac_unit;
-    case 'diamond': return Icons.diamond;
-    case 'blur_on': return Icons.blur_on;
-    case 'bolt': return Icons.bolt;
-    case 'style': return Icons.style;
-    case 'elderly': return Icons.elderly;
-    case 'cloud': return Icons.cloud;
-    case 'wb_sunny': return Icons.wb_sunny;
-    case 'coffee': return Icons.coffee;
-    case 'filter_vintage': return Icons.filter_vintage;
-    case 'nights_stay': return Icons.nights_stay;
-    case 'park': return Icons.park;
-    case 'waves': return Icons.waves;
-    case 'icecream': return Icons.icecream;
-    case 'brightness_7': return Icons.brightness_7;
-    case 'healing': return Icons.healing;
-    case 'local_hospital': return Icons.local_hospital;
-    case 'analytics': return Icons.analytics;
-    case 'restart_alt': return Icons.restart_alt;
-    case 'handyman': return Icons.handyman;
-    case 'flag': return Icons.flag;
-    case 'badge': return Icons.badge;
-    case 'palette': return Icons.palette;
-    case 'card_giftcard': return Icons.card_giftcard;
-    case 'celebration': return Icons.celebration;
-    case 'verified': return Icons.verified;
-    case 'rocket_launch': return Icons.rocket_launch;
-    case 'pets': return Icons.pets;
-    default: return null;
+    case 'auto_awesome':
+      return Icons.auto_awesome;
+    case 'local_florist':
+      return Icons.local_florist;
+    case 'spa':
+      return Icons.spa;
+    case 'wb_twilight':
+      return Icons.wb_twilight;
+    case 'emoji_events':
+      return Icons.emoji_events;
+    case 'cake':
+      return Icons.cake;
+    case 'shield':
+      return Icons.shield;
+    case 'flash_on':
+      return Icons.flash_on;
+    case 'local_fire_department':
+      return Icons.local_fire_department;
+    case 'anchor':
+      return Icons.anchor;
+    case 'psychology':
+      return Icons.psychology;
+    case 'star':
+      return Icons.star;
+    case 'theater_comedy':
+      return Icons.theater_comedy;
+    case 'military_tech':
+      return Icons.military_tech;
+    case 'workspace_premium':
+      return Icons.workspace_premium;
+    case 'emoji_nature':
+      return Icons.emoji_nature;
+    case 'security':
+      return Icons.security;
+    case 'sentiment_very_dissatisfied':
+      return Icons.sentiment_very_dissatisfied;
+    case 'visibility_off':
+      return Icons.visibility_off;
+    case 'whatshot':
+      return Icons.whatshot;
+    case 'ac_unit':
+      return Icons.ac_unit;
+    case 'diamond':
+      return Icons.diamond;
+    case 'blur_on':
+      return Icons.blur_on;
+    case 'bolt':
+      return Icons.bolt;
+    case 'style':
+      return Icons.style;
+    case 'elderly':
+      return Icons.elderly;
+    case 'cloud':
+      return Icons.cloud;
+    case 'wb_sunny':
+      return Icons.wb_sunny;
+    case 'coffee':
+      return Icons.coffee;
+    case 'filter_vintage':
+      return Icons.filter_vintage;
+    case 'nights_stay':
+      return Icons.nights_stay;
+    case 'park':
+      return Icons.park;
+    case 'waves':
+      return Icons.waves;
+    case 'icecream':
+      return Icons.icecream;
+    case 'brightness_7':
+      return Icons.brightness_7;
+    case 'healing':
+      return Icons.healing;
+    case 'local_hospital':
+      return Icons.local_hospital;
+    case 'analytics':
+      return Icons.analytics;
+    case 'restart_alt':
+      return Icons.restart_alt;
+    case 'handyman':
+      return Icons.handyman;
+    case 'flag':
+      return Icons.flag;
+    case 'badge':
+      return Icons.badge;
+    case 'palette':
+      return Icons.palette;
+    case 'card_giftcard':
+      return Icons.card_giftcard;
+    case 'celebration':
+      return Icons.celebration;
+    case 'verified':
+      return Icons.verified;
+    case 'rocket_launch':
+      return Icons.rocket_launch;
+    case 'pets':
+      return Icons.pets;
+    default:
+      return null;
   }
 }

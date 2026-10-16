@@ -2490,8 +2490,8 @@ class GameService extends ChangeNotifier {
             attendanceState = {
               ...?attendanceState,
               'claimedToday': true,
-              if (newStreak != null) 'cycleClaimedDays': newStreak,
-              if (newStreak != null) 'todayDay': newStreak,
+              'cycleClaimedDays': ?newStreak,
+              'todayDay': ?newStreak,
             };
           }
           // Reflect the new gold balance immediately.
@@ -3652,8 +3652,9 @@ class GameService extends ChangeNotifier {
 
   void requestAdminTodayMatches({bool? ranked, int limit = 100}) {
     // Reuse cached data when filter unchanged.
-    if (_adminTodayMatchesRanked == ranked && adminTodayMatches.isNotEmpty)
+    if (_adminTodayMatchesRanked == ranked && adminTodayMatches.isNotEmpty) {
       return;
+    }
     _adminTodayMatchesRanked = ranked;
     adminTodayMatchesLoading = true;
     adminTodayMatchesError = null;
@@ -4640,7 +4641,7 @@ class GameService extends ChangeNotifier {
       'type': 'report_user',
       'nickname': nickname,
       'reason': reason,
-      if (reasonCode != null) 'reasonCode': reasonCode,
+      'reasonCode': ?reasonCode,
     });
   }
 

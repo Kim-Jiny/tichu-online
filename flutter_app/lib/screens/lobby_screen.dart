@@ -315,8 +315,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // active and fires again on the server-confirm notify, once truly on lobby.
     if (_inRoom ||
         game.hasRoom ||
-        game.currentDestination != AppDestination.lobby)
+        game.currentDestination != AppDestination.lobby) {
       return;
+    }
     Map<String, dynamic>? reply;
     for (final it in game.inquiries) {
       final status = it['status']?.toString() ?? '';

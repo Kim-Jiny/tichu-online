@@ -40,11 +40,12 @@ class _RankingScreenState extends State<RankingScreen> {
               if (mounted) setState(() => _bannerAdLoaded = true);
             },
             onAdFailedToLoad: (_, _) {
-              if (mounted)
+              if (mounted) {
                 setState(() {
                   _bannerAd = null;
                   _bannerAdLoaded = false;
                 });
+              }
             },
           );
     _bannerAd?.load();

@@ -68,11 +68,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (mounted) setState(() => _bannerAdLoaded = true);
             },
             onAdFailedToLoad: (_, _) {
-              if (mounted)
+              if (mounted) {
                 setState(() {
                   _bannerAd = null;
                   _bannerAdLoaded = false;
                 });
+              }
             },
           );
     _bannerAd?.load();
@@ -476,7 +477,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 game.submitInquiry(selectedCategory, title, content);
                 Navigator.pop(dialogCtx);
                 ScaffoldMessenger.of(
-                  this.context,
+                  context,
                 ).showSnackBar(SnackBar(content: Text(l10n.inquirySubmitted)));
               },
               style: ElevatedButton.styleFrom(

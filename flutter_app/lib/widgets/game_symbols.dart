@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme/cartoon.dart';
 
 // 네 게임의 로고 — 직접 그린 카툰 벡터. 굵은 갈색 테두리 + 단색 몸통.
-// 티츄(용 얼굴) · 스컬킹(왕관 쓴 해골) · 러브레터(하트 봉인 편지) · 마이티(스페이드 카드와 별).
+// 티츄(초록 용 얼굴) · 스컬킹(왕관 쓴 해골) · 러브레터(하트 봉인 편지) · 마이티(스페이드 카드와 별).
 
 class GameSymbol extends StatelessWidget {
   const GameSymbol(this.gameType, {super.key, this.size = 28});
@@ -73,86 +73,135 @@ class _SymbolPainter extends CustomPainter {
     Paint Function(Color) fill,
     void Function(Path, Color) shape,
   ) {
-    const dark = Color(0xFFB71C1C);
-    // 옆 지느러미(뾰족한 귀)
+    // 앱 심볼처럼: 초록 용 얼굴 + 황금 갈기·뿔 + 큰 갈색 눈 + 흰 수염.
+    const green = Color(0xFF4CAF3F);
+    const greenLight = Color(0xFF9BD66B);
+    const gold = Color(0xFFFFC928);
+    const pink = Color(0xFFFF8A80);
+    // 갈기(머리 뒤 황금 불꽃)
+    final mane = Path()
+      ..moveTo(x(0.10), y(0.62))
+      ..lineTo(x(0.04), y(0.40))
+      ..lineTo(x(0.16), y(0.44))
+      ..lineTo(x(0.14), y(0.22))
+      ..lineTo(x(0.28), y(0.34))
+      ..lineTo(x(0.34), y(0.12))
+      ..lineTo(x(0.44), y(0.28))
+      ..lineTo(x(0.5), y(0.04))
+      ..lineTo(x(0.56), y(0.28))
+      ..lineTo(x(0.66), y(0.12))
+      ..lineTo(x(0.72), y(0.34))
+      ..lineTo(x(0.86), y(0.22))
+      ..lineTo(x(0.84), y(0.44))
+      ..lineTo(x(0.96), y(0.40))
+      ..lineTo(x(0.90), y(0.62))
+      ..close();
+    shape(mane, gold);
+    // 귀
     for (final left in [true, false]) {
       final d = left ? 1.0 : -1.0;
       final cx = left ? 0.0 : 1.0;
-      final fin = Path()
-        ..moveTo(x(cx + d * 0.22), y(0.46))
-        ..lineTo(x(cx + d * 0.06), y(0.40))
-        ..lineTo(x(cx + d * 0.14), y(0.54))
-        ..lineTo(x(cx + d * 0.06), y(0.66))
-        ..lineTo(x(cx + d * 0.22), y(0.68))
+      final ear = Path()
+        ..moveTo(x(cx + d * 0.24), y(0.36))
+        ..lineTo(x(cx + d * 0.05), y(0.30))
+        ..lineTo(x(cx + d * 0.10), y(0.58))
+        ..lineTo(x(cx + d * 0.26), y(0.58))
         ..close();
-      shape(fin, dark);
+      shape(ear, green);
+      final inner = Path()
+        ..moveTo(x(cx + d * 0.20), y(0.40))
+        ..lineTo(x(cx + d * 0.07), y(0.31))
+        ..lineTo(x(cx + d * 0.12), y(0.52))
+        ..lineTo(x(cx + d * 0.22), y(0.52))
+        ..close();
+      canvas.drawPath(inner, fill(pink));
     }
-    // 뿔: 뒤로 휘어진 긴 뿔
+    // 뿔
     for (final left in [true, false]) {
       final d = left ? 1.0 : -1.0;
       final cx = left ? 0.0 : 1.0;
       final horn = Path()
         ..moveTo(x(cx + d * 0.30), y(0.30))
-        ..quadraticBezierTo(x(cx + d * 0.20), y(0.10), x(cx + d * 0.06), y(0.0))
+        ..quadraticBezierTo(x(cx + d * 0.22), y(0.14), x(cx + d * 0.26), y(0.0))
         ..quadraticBezierTo(
           x(cx + d * 0.44),
-          y(0.04),
-          x(cx + d * 0.44),
+          y(0.10),
+          x(cx + d * 0.42),
           y(0.30),
         )
         ..close();
-      shape(horn, _yellow);
+      shape(horn, const Color(0xFFE0A100));
     }
-    // 얼굴: 위는 둥글고 아래로 좁아지는 역삼각 턱
+    // 얼굴
     final face = Path()
-      ..moveTo(x(0.20), y(0.50))
-      ..quadraticBezierTo(x(0.20), y(0.22), x(0.5), y(0.22))
-      ..quadraticBezierTo(x(0.80), y(0.22), x(0.80), y(0.50))
-      ..quadraticBezierTo(x(0.80), y(0.80), x(0.5), y(0.97))
-      ..quadraticBezierTo(x(0.20), y(0.80), x(0.20), y(0.50))
+      ..moveTo(x(0.16), y(0.52))
+      ..quadraticBezierTo(x(0.16), y(0.24), x(0.5), y(0.24))
+      ..quadraticBezierTo(x(0.84), y(0.24), x(0.84), y(0.52))
+      ..quadraticBezierTo(x(0.86), y(0.84), x(0.5), y(0.88))
+      ..quadraticBezierTo(x(0.14), y(0.84), x(0.16), y(0.52))
       ..close();
-    shape(face, _red);
-    // 이마 무늬
-    final crest = Path()
-      ..moveTo(x(0.5), y(0.24))
-      ..lineTo(x(0.43), y(0.38))
-      ..lineTo(x(0.57), y(0.38))
+    shape(face, green);
+    // 이마 황금 불꽃
+    final tuft = Path()
+      ..moveTo(x(0.38), y(0.32))
+      ..quadraticBezierTo(x(0.46), y(0.20), x(0.5), y(0.10))
+      ..quadraticBezierTo(x(0.54), y(0.20), x(0.62), y(0.32))
+      ..quadraticBezierTo(x(0.5), y(0.28), x(0.38), y(0.32))
       ..close();
-    shape(crest, dark);
-    // 눈: 노란 눈 + 세로 눈동자 + 화난 눈썹
+    shape(tuft, gold);
+    // 주둥이
+    final snout = RRect.fromLTRBR(
+      x(0.28),
+      y(0.60),
+      x(0.72),
+      y(0.90),
+      Radius.circular(s * 0.15),
+    );
+    canvas.drawRRect(snout, fill(greenLight));
+    canvas.drawRRect(snout, line);
+    canvas.drawCircle(p(0.43, 0.68), s * 0.026, fill(Cartoon.ink));
+    canvas.drawCircle(p(0.57, 0.68), s * 0.026, fill(Cartoon.ink));
+    final mouth = Path()
+      ..moveTo(x(0.40), y(0.78))
+      ..quadraticBezierTo(x(0.5), y(0.86), x(0.60), y(0.78));
+    canvas.drawPath(mouth, line);
+    // 눈
+    for (final cx in [0.34, 0.66]) {
+      canvas.drawCircle(p(cx, 0.47), s * 0.105, fill(_paper));
+      canvas.drawCircle(p(cx, 0.47), s * 0.105, line);
+      canvas.drawCircle(p(cx, 0.48), s * 0.075, fill(const Color(0xFF7B4A1E)));
+      canvas.drawCircle(p(cx, 0.48), s * 0.04, fill(Cartoon.ink));
+      canvas.drawCircle(p(cx + 0.03, 0.44), s * 0.026, fill(Colors.white));
+    }
+    // 흰 수염(작은 소용돌이)
     for (final left in [true, false]) {
       final d = left ? 1.0 : -1.0;
       final cx = left ? 0.0 : 1.0;
-      final ex = cx + d * 0.33;
-      final eye = Path()
-        ..moveTo(x(ex - 0.14), y(0.50))
-        ..quadraticBezierTo(x(ex), y(0.36), x(ex + 0.14), y(0.50))
-        ..quadraticBezierTo(x(ex), y(0.60), x(ex - 0.14), y(0.50))
-        ..close();
-      shape(eye, _yellow);
-      canvas.drawLine(p(ex, 0.43), p(ex, 0.56), line);
-      // 눈썹(안쪽이 아래로)
-      final brow = Path()
-        ..moveTo(x(ex - 0.11 * d), y(0.36))
-        ..lineTo(x(ex + 0.11 * d), y(0.44));
-      canvas.drawPath(brow, line..strokeWidth = line.strokeWidth * 1.3);
-      line.strokeWidth = line.strokeWidth / 1.3;
+      final w = Path()
+        ..moveTo(x(cx + d * 0.30), y(0.64))
+        ..quadraticBezierTo(
+          x(cx + d * 0.14),
+          y(0.60),
+          x(cx + d * 0.10),
+          y(0.72),
+        )
+        ..quadraticBezierTo(
+          x(cx + d * 0.08),
+          y(0.80),
+          x(cx + d * 0.16),
+          y(0.78),
+        );
+      canvas.drawPath(w, line..strokeWidth = line.strokeWidth * 2.4);
+      canvas.drawPath(
+        w,
+        Paint()
+          ..color = _paper
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = line.strokeWidth / 2.4 * 1.2
+          ..strokeCap = StrokeCap.round,
+      );
+      line.strokeWidth = line.strokeWidth / 2.4;
     }
-    // 주둥이와 콧구멍, 송곳니
-    canvas.drawCircle(p(0.43, 0.70), s * 0.026, fill(Cartoon.ink));
-    canvas.drawCircle(p(0.57, 0.70), s * 0.026, fill(Cartoon.ink));
-    for (final fx in [0.40, 0.60]) {
-      final fang = Path()
-        ..moveTo(x(fx - 0.045), y(0.80))
-        ..lineTo(x(fx), y(0.91))
-        ..lineTo(x(fx + 0.045), y(0.80))
-        ..close();
-      shape(fang, _paper);
-    }
-    final mouth = Path()
-      ..moveTo(x(0.34), y(0.79))
-      ..quadraticBezierTo(x(0.5), y(0.84), x(0.66), y(0.79));
-    canvas.drawPath(mouth, line);
   }
 
   void _skull(

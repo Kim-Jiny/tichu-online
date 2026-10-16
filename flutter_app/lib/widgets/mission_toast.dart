@@ -9,7 +9,7 @@ import '../models/missions.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
 import '../utils/mission_text.dart';
-import '../screens/missions_screen.dart' show TokenCoin;
+import 'token_widgets.dart';
 
 /// 서버가 "미션 완료"를 밀어 줄 때 어느 화면에서든 위에서 내려오는 알림을 띄운다.
 /// 앱 전체를 한 번 감싸 두면 되고, 게임 중이든 로비든 같은 모양이다.

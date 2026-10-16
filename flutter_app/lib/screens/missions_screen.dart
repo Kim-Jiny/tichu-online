@@ -8,6 +8,7 @@ import '../services/game_service.dart';
 import '../theme/cartoon.dart';
 import '../utils/mission_text.dart';
 import '../widgets/game_type_icon.dart';
+import '../widgets/token_widgets.dart';
 import 'token_shop_screen.dart';
 
 const _games = ['tichu', 'mighty', 'skull_king', 'love_letter'];
@@ -659,58 +660,6 @@ class _MissionsScreenState extends State<MissionsScreen> {
             size: 14,
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 토큰 알약(잔액).
-class TokenBalanceChip extends StatelessWidget {
-  const TokenBalanceChip({super.key, required this.balance});
-  final int balance;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFE9A8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Cartoon.ink, width: 2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const TokenCoin(size: 24),
-          const SizedBox(width: 5),
-          Text('$balance', style: Cartoon.text(size: 17)),
-        ],
-      ),
-    );
-  }
-}
-
-/// 미션 토큰 그림 — 별이 박힌 금화.
-class TokenCoin extends StatelessWidget {
-  const TokenCoin({super.key, this.size = 20});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFFFFC43B),
-        border: Border.all(color: Cartoon.ink, width: size >= 22 ? 1.8 : 1.4),
-      ),
-      child: Icon(
-        Icons.star_rounded,
-        size: size * 0.66,
-        color: const Color(0xFFFFF4C9),
       ),
     );
   }

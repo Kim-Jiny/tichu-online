@@ -162,6 +162,16 @@ async function main() {
   const ov = await missions.adminOverview();
   check('개요가 미션·상품 전부를 낸다', ov.missions.length === defs.MISSIONS.length && ov.products.length === 9);
 
+  // ── 내 토큰 내역 ──
+  const hist = await missions.getHistory(n4, { limit: 2 });
+  check('내역은 최신순이고 한 장 더 있으면 hasMore', hist.rows.length === 2 && hist.hasMore === true && hist.rows[0].id > hist.rows[1].id, JSON.stringify(hist));
+  const hist2 = await missions.getHistory(n4, { before: hist.rows[1].id, limit: 50 });
+  check('이전 id 보다 오래된 것만 이어서 준다', hist2.rows.every((r) => r.id < hist.rows[1].id));
+  const mine = await missions.getHistory(n4, { limit: 50 });
+  check('운영자 지급·회수의 메모는 유저에게 숨긴다', mine.rows.filter((r) => r.reason.startsWith('admin')).every((r) => r.ref === null));
+  check('상점·미션 내역은 상품·미션 키를 준다', mine.rows.some((r) => r.reason === 'shop' ? r.ref === 'bubble_basic_1' || r.ref != null : true));
+  check('남의 내역은 안 섞인다', (await missions.getHistory('없는사람')).rows.length === 0);
+
   await pool.end();
   await admin.query(`DROP DATABASE ${DB}`);
   await admin.end();

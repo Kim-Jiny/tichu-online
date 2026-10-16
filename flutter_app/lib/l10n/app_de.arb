@@ -2084,5 +2084,27 @@
         "type": "String"
       }
     }
+  },
+  "tokenHistoryTitle": "Token-Verlauf",
+  "tokenHistoryEmpty": "Noch kein Verlauf. Er füllt sich, wenn du Missionen abschließt.",
+  "tokenHistoryMore": "Mehr laden",
+  "tokenHistoryStreak": "Serien-Bonus",
+  "tokenHistoryShop": "Gekauft: {name}",
+  "@tokenHistoryShop": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenHistoryAdminGrant": "Vom Team gutgeschrieben",
+  "tokenHistoryAdminRevoke": "Vom Team abgezogen",
+  "tokenHistoryBalance": "Guthaben {n}",
+  "@tokenHistoryBalance": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
   }
 }

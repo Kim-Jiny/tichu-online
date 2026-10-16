@@ -6,7 +6,7 @@ import '../models/missions.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
 import '../widgets/token_cosmetics.dart';
-import 'missions_screen.dart' show TokenBalanceChip, TokenCoin;
+import '../widgets/token_widgets.dart';
 
 const _kinds = ['room_highlight', 'bubble_basic', 'bubble_premium'];
 

@@ -5619,4 +5619,33 @@ class L10nEn extends L10n {
 
   @override
   String get missionsHelpClose => 'Got it';
+
+  @override
+  String get tokenHistoryTitle => 'Token history';
+
+  @override
+  String get tokenHistoryEmpty =>
+      'No token history yet. It builds up as you complete missions.';
+
+  @override
+  String get tokenHistoryMore => 'Load more';
+
+  @override
+  String get tokenHistoryStreak => 'Streak bonus';
+
+  @override
+  String tokenHistoryShop(String name) {
+    return 'Bought: $name';
+  }
+
+  @override
+  String get tokenHistoryAdminGrant => 'Granted by staff';
+
+  @override
+  String get tokenHistoryAdminRevoke => 'Taken back by staff';
+
+  @override
+  String tokenHistoryBalance(String n) {
+    return 'Balance $n';
+  }
 }

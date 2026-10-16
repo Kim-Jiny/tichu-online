@@ -42,7 +42,49 @@ class _FakeGame extends ChangeNotifier implements GameService {
   @override
   Stream<MissionCompletion> get missionCompletions => const Stream.empty();
 
+  @override
+  List<TokenHistoryEntry> tokenHistory = [
+    TokenHistoryEntry.fromJson({
+      'id': 9,
+      'delta': 5,
+      'reason': 'streak',
+      'ref': null,
+      'createdAt': '2026-10-16T01:02:03Z',
+    }),
+    TokenHistoryEntry.fromJson({
+      'id': 8,
+      'delta': 1,
+      'reason': 'mission',
+      'ref': 'tichu_play',
+      'createdAt': '2026-10-15T10:00:00Z',
+    }),
+    TokenHistoryEntry.fromJson({
+      'id': 7,
+      'delta': -60,
+      'reason': 'shop',
+      'ref': 'bubble_basic_2',
+      'createdAt': '2026-10-14T10:00:00Z',
+    }),
+    TokenHistoryEntry.fromJson({
+      'id': 6,
+      'delta': 20,
+      'reason': 'admin_grant',
+      'ref': null,
+      'createdAt': '2026-10-13T10:00:00Z',
+    }),
+  ];
+  @override
+  bool tokenHistoryHasMore = true;
+  @override
+  bool tokenHistoryLoading = false;
+  @override
+  bool tokenHistoryFailed = false;
+
   final calls = <String>[];
+  @override
+  void requestTokenHistory() => calls.add('history');
+  @override
+  void requestMoreTokenHistory() => calls.add('history_more');
   @override
   void requestMissions() => calls.add('requestMissions');
   @override
@@ -219,6 +261,40 @@ void main() {
     await t.tap(find.text('포기'));
     await t.pump();
     expect(game.calls, contains('drop:tichu_bomb30'));
+  });
+
+  testWidgets('토큰 알약을 누르면 내역이 열리고 더 보기가 동작한다', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    final game = _FakeGame(_state(), _shop());
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 800));
+    await t.tap(find.text('120'));
+    // 시트가 올라오는 애니메이션이 끝나야 버튼이 화면 안에 있다.
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 600));
+    expect(game.calls, contains('history'));
+    expect(find.text('토큰 내역'), findsOneWidget);
+    expect(find.text('연속 달성 보너스'), findsOneWidget);
+    expect(find.text('티츄 한 판 끝까지 하기'), findsWidgets);
+    expect(find.text('상점 구매: 민트 구름'), findsOneWidget);
+    expect(find.text('운영자 지급'), findsOneWidget);
+    expect(find.text('+5'), findsOneWidget);
+    expect(find.text('-60'), findsOneWidget);
+    await t.tap(find.text('더 보기').first);
+    await t.pump();
+    expect(game.calls, contains('history_more'));
+  });
+
+  testWidgets('내역이 비어 있으면 안내 문구', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 1200));
+    final game = _FakeGame(_state(), _shop())
+      ..tokenHistory = const []
+      ..tokenHistoryHasMore = false;
+    await t.pumpWidget(_app(game, const MissionsScreen()));
+    await t.pump(const Duration(milliseconds: 800));
+    await t.tap(find.text('120'));
+    await t.pump(const Duration(milliseconds: 500));
+    expect(find.textContaining('아직 토큰 내역이 없어요'), findsOneWidget);
   });
 
   testWidgets('이용 안내: ? 버튼으로 열리고 핵심 규칙이 들어 있다', (t) async {

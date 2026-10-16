@@ -5656,4 +5656,33 @@ class L10nDe extends L10n {
 
   @override
   String get missionsHelpClose => 'Verstanden';
+
+  @override
+  String get tokenHistoryTitle => 'Token-Verlauf';
+
+  @override
+  String get tokenHistoryEmpty =>
+      'Noch kein Verlauf. Er füllt sich, wenn du Missionen abschließt.';
+
+  @override
+  String get tokenHistoryMore => 'Mehr laden';
+
+  @override
+  String get tokenHistoryStreak => 'Serien-Bonus';
+
+  @override
+  String tokenHistoryShop(String name) {
+    return 'Gekauft: $name';
+  }
+
+  @override
+  String get tokenHistoryAdminGrant => 'Vom Team gutgeschrieben';
+
+  @override
+  String get tokenHistoryAdminRevoke => 'Vom Team abgezogen';
+
+  @override
+  String tokenHistoryBalance(String n) {
+    return 'Guthaben $n';
+  }
 }

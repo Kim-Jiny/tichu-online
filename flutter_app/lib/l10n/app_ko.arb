@@ -2084,5 +2084,27 @@
         "type": "String"
       }
     }
+  },
+  "tokenHistoryTitle": "토큰 내역",
+  "tokenHistoryEmpty": "아직 토큰 내역이 없어요. 미션을 깨면 여기에 쌓여요.",
+  "tokenHistoryMore": "더 보기",
+  "tokenHistoryStreak": "연속 달성 보너스",
+  "tokenHistoryShop": "상점 구매: {name}",
+  "@tokenHistoryShop": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenHistoryAdminGrant": "운영자 지급",
+  "tokenHistoryAdminRevoke": "운영자 회수",
+  "tokenHistoryBalance": "보유 {n}",
+  "@tokenHistoryBalance": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
   }
 }

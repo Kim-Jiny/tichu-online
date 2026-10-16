@@ -3688,6 +3688,9 @@ async function handleMessage(ws, data) {
     case 'get_token_shop':
       await handleGetTokenShop(ws);
       break;
+    case 'get_token_history':
+      await handleGetTokenHistory(ws, data);
+      break;
     case 'buy_token_item':
       await handleBuyTokenItem(ws, data);
       break;
@@ -9275,6 +9278,18 @@ async function handleDropMission(ws, data) {
 async function handleRerollMissions(ws, data) {
   if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
   await replyMissionAction(ws, 'mission_action_result', await missions.reroll(ws.nickname, String(data.game || '')));
+}
+
+async function handleGetTokenHistory(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'token_history', success: false });
+  try {
+    const before = data.before == null ? null : Number(data.before);
+    const h = await missions.getHistory(ws.nickname, { before });
+    sendTo(ws, { type: 'token_history', success: true, append: before != null, ...h });
+  } catch (e) {
+    console.error('[missions] history failed:', e.message);
+    sendTo(ws, { type: 'token_history', success: false });
+  }
 }
 
 async function handleGetTokenShop(ws) {

@@ -5494,4 +5494,32 @@ class L10nKo extends L10n {
 
   @override
   String get missionsHelpClose => '알겠어요';
+
+  @override
+  String get tokenHistoryTitle => '토큰 내역';
+
+  @override
+  String get tokenHistoryEmpty => '아직 토큰 내역이 없어요. 미션을 깨면 여기에 쌓여요.';
+
+  @override
+  String get tokenHistoryMore => '더 보기';
+
+  @override
+  String get tokenHistoryStreak => '연속 달성 보너스';
+
+  @override
+  String tokenHistoryShop(String name) {
+    return '상점 구매: $name';
+  }
+
+  @override
+  String get tokenHistoryAdminGrant => '운영자 지급';
+
+  @override
+  String get tokenHistoryAdminRevoke => '운영자 회수';
+
+  @override
+  String tokenHistoryBalance(String n) {
+    return '보유 $n';
+  }
 }

@@ -224,3 +224,35 @@ class TokenShopState {
     ],
   );
 }
+
+/// 토큰 내역 한 줄(최신순으로 온다).
+class TokenHistoryEntry {
+  const TokenHistoryEntry({
+    required this.id,
+    required this.delta,
+    required this.reason,
+    required this.ref,
+    required this.at,
+  });
+
+  final int id;
+  final int delta;
+
+  /// mission · streak · shop · admin_grant · admin_revoke
+  final String reason;
+
+  /// 미션 키 또는 상품 키(그 외에는 null).
+  final String? ref;
+  final DateTime? at;
+
+  factory TokenHistoryEntry.fromJson(Map<String, dynamic> j) =>
+      TokenHistoryEntry(
+        id: _int(j['id']),
+        delta: _int(j['delta']),
+        reason: j['reason'] as String? ?? '',
+        ref: j['ref'] as String?,
+        at: j['createdAt'] is String
+            ? DateTime.tryParse(j['createdAt'] as String)?.toLocal()
+            : null,
+      );
+}

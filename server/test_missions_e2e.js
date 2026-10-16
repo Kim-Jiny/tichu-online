@@ -123,6 +123,12 @@ async function main() {
     const mine2 = b.last.room_list && b.last.room_list.rooms.find((r) => r.name === '강조방');
     check('해제하면 highlight 없음', mine2 && !mine2.highlight, JSON.stringify(mine2));
 
+    // 내 토큰 내역.
+    a.send({ type: 'get_token_history' });
+    const th = await a.waitFor('token_history');
+    check('토큰 내역을 받는다(구매 2건 + 지급 전)', th.success && th.rows.length >= 2 && th.rows.every((r) => typeof r.delta === 'number' && r.createdAt), JSON.stringify(th).slice(0, 160));
+    check('구매 내역은 상품 키를 담는다', th.rows.some((r) => r.reason === 'shop' && /^(room_highlight|bubble_)/.test(r.ref || '')));
+
     // ───────── 관리자 화면 ─────────
     const bcrypt = require(require.resolve('bcrypt', { paths: [__dirname] }));
     await pool.query(

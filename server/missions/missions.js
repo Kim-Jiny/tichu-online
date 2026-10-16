@@ -247,6 +247,39 @@ async function getBalance(nickname, db = pool) {
   return r.rows[0] ? r.rows[0].balance : 0;
 }
 
+/**
+ * 내 토큰 내역(최신순). before 는 이전 페이지 마지막 id — 그보다 오래된 것만 준다.
+ * 한 장 더 읽어 다음 장이 있는지(hasMore)를 알려 준다.
+ */
+async function getHistory(nickname, { before = null, limit = 30 } = {}) {
+  const lim = Math.max(1, Math.min(parseInt(limit, 10) || 30, 100));
+  const params = [nickname, lim + 1];
+  let cond = '';
+  if (before != null && Number.isFinite(Number(before))) {
+    params.push(Number(before));
+    cond = 'AND id < $3';
+  }
+  const r = await pool.query(
+    // 시각은 DB 가 UTC 문자열로 만들어 준다 — node-pg 가 timestamp 를 서버 지역 시간으로
+    // 해석해 호스트 시간대에 따라 어긋나는 걸 피한다.
+    `SELECT id, delta, reason, ref,
+            to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_utc
+       FROM tc_token_ledger
+      WHERE nickname = $1 ${cond}
+      ORDER BY id DESC LIMIT $2`,
+    params
+  );
+  const rows = r.rows.slice(0, lim).map((x) => ({
+    id: x.id,
+    delta: x.delta,
+    reason: x.reason,
+    // 관리자 지급·회수의 ref 는 '운영자 계정: 메모' 라서 유저에게 그대로 보이지 않게 뺀다.
+    ref: x.reason === 'mission' || x.reason === 'shop' ? x.ref : null,
+    createdAt: x.created_utc,
+  }));
+  return { rows, hasMore: r.rows.length > lim };
+}
+
 /** 여러 유저의 토큰 잔액(관리자 목록용) — { nickname → balance } 맵. */
 async function getBalances(nicknames) {
   const out = new Map();
@@ -876,6 +909,7 @@ module.exports = {
   getEquippedKeys,
   getBalance,
   getBalances,
+  getHistory,
   offersFor,
   defs,
 };

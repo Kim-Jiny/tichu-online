@@ -571,6 +571,12 @@ class GameService extends ChangeNotifier {
   TokenShopState? tokenShopState;
   bool missionsLoading = false;
 
+  /// 토큰 내역(최신순). 더 보기를 누르면 뒤에 이어 붙는다.
+  List<TokenHistoryEntry> tokenHistory = const [];
+  bool tokenHistoryHasMore = false;
+  bool tokenHistoryLoading = false;
+  bool tokenHistoryFailed = false;
+
   /// 서버가 밀어 주는 "미션 완료" 알림. 화면 어디서든 토스트로 띄운다.
   final StreamController<MissionCompletion> _missionCompletions =
       StreamController<MissionCompletion>.broadcast();
@@ -2494,6 +2500,21 @@ class GameService extends ChangeNotifier {
         // 진행·잔액이 바뀌었으니 다음에 열 때 새로 받도록 다시 요청해 둔다.
         _network.send({'type': 'get_missions'});
         break;
+      case 'token_history':
+        tokenHistoryLoading = false;
+        if (data['success'] == true) {
+          final rows = [
+            for (final r in (data['rows'] as List? ?? const []))
+              TokenHistoryEntry.fromJson(Map<String, dynamic>.from(r as Map)),
+          ];
+          tokenHistory = data['append'] == true ? [...tokenHistory, ...rows] : rows;
+          tokenHistoryHasMore = data['hasMore'] == true;
+          tokenHistoryFailed = false;
+        } else {
+          tokenHistoryFailed = true;
+        }
+        notifyListeners();
+        break;
       case 'token_shop':
         if (data['success'] == true) {
           tokenShopState = TokenShopState.fromJson(data);
@@ -3473,6 +3494,8 @@ class GameService extends ChangeNotifier {
     missionsState = null;
     tokenShopState = null;
     missionsLoading = false;
+    tokenHistory = const [];
+    tokenHistoryHasMore = false;
     attendanceError = null;
     attendanceClaiming = false;
     adRewardRemaining = 0;
@@ -3770,6 +3793,21 @@ class GameService extends ChangeNotifier {
       _network.send({'type': 'reroll_missions', 'game': game});
 
   void requestTokenShop() => _network.send({'type': 'get_token_shop'});
+
+  /// 첫 장을 새로 받는다. 이미 받은 게 있으면 그대로 보여 주면서 갱신한다.
+  void requestTokenHistory() {
+    tokenHistoryLoading = true;
+    notifyListeners();
+    _network.send({'type': 'get_token_history'});
+  }
+
+  /// 지금 가진 것보다 오래된 내역을 이어서 받는다.
+  void requestMoreTokenHistory() {
+    if (tokenHistoryLoading || tokenHistory.isEmpty) return;
+    tokenHistoryLoading = true;
+    notifyListeners();
+    _network.send({'type': 'get_token_history', 'before': tokenHistory.last.id});
+  }
   void buyTokenItem(String key) =>
       _network.send({'type': 'buy_token_item', 'key': key});
   void equipTokenItem(String slot, String? key) =>

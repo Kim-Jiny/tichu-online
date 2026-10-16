@@ -9896,6 +9896,54 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Got it'**
   String get missionsHelpClose;
+
+  /// No description provided for @tokenHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Token history'**
+  String get tokenHistoryTitle;
+
+  /// No description provided for @tokenHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No token history yet. It builds up as you complete missions.'**
+  String get tokenHistoryEmpty;
+
+  /// No description provided for @tokenHistoryMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get tokenHistoryMore;
+
+  /// No description provided for @tokenHistoryStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak bonus'**
+  String get tokenHistoryStreak;
+
+  /// No description provided for @tokenHistoryShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Bought: {name}'**
+  String tokenHistoryShop(String name);
+
+  /// No description provided for @tokenHistoryAdminGrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Granted by staff'**
+  String get tokenHistoryAdminGrant;
+
+  /// No description provided for @tokenHistoryAdminRevoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken back by staff'**
+  String get tokenHistoryAdminRevoke;
+
+  /// No description provided for @tokenHistoryBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance {n}'**
+  String tokenHistoryBalance(String n);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

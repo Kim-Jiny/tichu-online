@@ -3362,5 +3362,27 @@
         "type": "String"
       }
     }
+  },
+  "tokenHistoryTitle": "Token history",
+  "tokenHistoryEmpty": "No token history yet. It builds up as you complete missions.",
+  "tokenHistoryMore": "Load more",
+  "tokenHistoryStreak": "Streak bonus",
+  "tokenHistoryShop": "Bought: {name}",
+  "@tokenHistoryShop": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tokenHistoryAdminGrant": "Granted by staff",
+  "tokenHistoryAdminRevoke": "Taken back by staff",
+  "tokenHistoryBalance": "Balance {n}",
+  "@tokenHistoryBalance": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
   }
 }

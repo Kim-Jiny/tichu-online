@@ -5594,14 +5594,15 @@ class L10nEn extends L10n {
       'Play 5 games of Tichu (only games played to the end)';
 
   @override
-  String get missionTichuWin => 'Win 3 games of Tichu';
+  String get missionTichuWin => 'Win 3 Tichu games in a row (a loss resets it)';
 
   @override
   String get missionTichuWinStreak4 =>
-      'Win 4 Tichu games in a row (a loss resets it)';
+      'Win 5 Tichu games in a row (a loss resets it)';
 
   @override
-  String get missionTichuOnetwo => 'Finish 1-2 with your team twice';
+  String get missionTichuOnetwo =>
+      'Finish 1-2 with your team in 2 rounds in a row';
 
   @override
   String get missionTichuDogFinish =>
@@ -5620,13 +5621,48 @@ class L10nEn extends L10n {
   String get missionTichuStepsWin => 'Win 3 tricks with consecutive pairs';
 
   @override
-  String get missionTichuBombPlay => 'Play 4 bombs';
+  String get missionTichuBombPlay => 'Play 5 bombs';
 
   @override
-  String get missionTichuFirstOut5 => 'Go out first in 5 rounds';
+  String get missionTichuFirstOut5 =>
+      'Go out first in 5 rounds of a single game';
 
   @override
-  String get missionTichuBreakTichu => 'Stop opposing Tichu calls twice';
+  String get missionTichuBreakTichu =>
+      'Stop opposing Tichu calls twice in a single game';
+
+  @override
+  String get missionTichuStraight8 => 'Play a straight of 8 or more cards';
+
+  @override
+  String get missionTichuStraight10 => 'Play a straight of 10 or more cards';
+
+  @override
+  String get missionTichuFullhouseK =>
+      'Win a trick with a full house of Kings or Aces';
+
+  @override
+  String get missionTichuFullhouseA =>
+      'Win 50 points from tricks won with an Ace full house';
+
+  @override
+  String get missionTichuStraightFlush => 'Play a straight-flush bomb';
+
+  @override
+  String get missionTichuPhoenixSingleWin =>
+      'Win a trick with the Phoenix played alone';
+
+  @override
+  String get missionTichuCounterSmall =>
+      'Make a counter Small Tichu when the opponents also call Small Tichu';
+
+  @override
+  String get missionTichuCounterLarge =>
+      'Make a counter Grand Tichu when the opponents also call Grand Tichu';
+
+  @override
+  String get missionTichuTichuOnetwo =>
+      'Call Tichu and finish 1-2 with your team';
 
   @override
   String get missionMightyPlay =>
@@ -5638,6 +5674,9 @@ class L10nEn extends L10n {
   @override
   String get missionMightyWinStreak4 =>
       'Win 4 Mighty games in a row (a loss resets it)';
+
+  @override
+  String get missionMightyNt20 => 'Succeed with a 20-point No Trump bid';
 
   @override
   String get missionMightyBid18 => 'Succeed twice with a bid of 18 or more';
@@ -5654,27 +5693,49 @@ class L10nEn extends L10n {
       'As the friend, take 7+ points in a single round';
 
   @override
-  String get missionMightyMightyWin => 'Win 2 tricks with the Mighty';
+  String get missionMightyMightyWin =>
+      'Win a trick with the Mighty taking 2+ points (the Mighty counts)';
 
   @override
-  String get missionMightyTrump8 => 'Win 8 tricks with trump cards';
+  String get missionMightyDillmiss => 'Declare a deal miss twice';
 
   @override
-  String get missionMightyJokerWin => 'Win 2 tricks with the Joker';
+  String get missionMightyWin5 => 'Win 5 or more tricks in a single round';
+
+  @override
+  String get missionMightyJokerWin => 'Win 3 tricks with the Joker';
 
   @override
   String get missionMightyDeclarerSuccess => 'Succeed twice as the declarer';
+
+  @override
+  String get missionMightyPoint2 => 'Take 2 or more point cards in one trick';
+
+  @override
+  String get missionMightyPoint4 => 'Take 4 or more point cards in one trick';
+
+  @override
+  String get missionMightyPoint5 => 'Take 5 point cards in one trick';
+
+  @override
+  String get missionMightyJokerKillFriend =>
+      'As the friend, use the Joker Call to kill the declarer\'s Joker';
+
+  @override
+  String get missionMightyJokerKillDefender =>
+      'As a defender, use the Joker Call to kill the declarer\'s Joker';
 
   @override
   String get missionSkPlay =>
       'Play 5 games of Skull King (only games played to the end)';
 
   @override
-  String get missionSkWin => 'Win 3 games of Skull King';
+  String get missionSkWin =>
+      'Finish 1st in 3 games of Skull King (3+ players only)';
 
   @override
   String get missionSkWinStreak4 =>
-      'Win 4 Skull King games in a row (a loss resets it)';
+      'Finish 1st in 4 Skull King games in a row (a loss resets it)';
 
   @override
   String get missionSkPirates2 =>
@@ -5687,19 +5748,21 @@ class L10nEn extends L10n {
   String get missionSkTenWin => 'Win 2 tricks with a number 10';
 
   @override
-  String get missionSkBidHit6 => 'Hit your bid exactly 6 times';
+  String get missionSkBidHit6 =>
+      'Hit your bid exactly 6 or more times in a single game';
 
   @override
-  String get missionSkBidHit12 => 'Hit your bid exactly 12 times';
+  String get missionSkBidHit12 =>
+      'Hit your bid exactly in all 10 rounds of a single game';
 
   @override
-  String get missionSkZeroHit => 'Succeed with a bid of 0 twice';
+  String get missionSkZeroHit => 'Succeed with a bid of 0 five times';
 
   @override
-  String get missionSkPirateWin => 'Win 4 tricks with a pirate';
+  String get missionSkPirateWin => 'Win 5 tricks with a pirate';
 
   @override
-  String get missionSkMermaidWin => 'Win 2 tricks with a mermaid';
+  String get missionSkMermaidWin => 'Win 3 tricks with a mermaid';
 
   @override
   String get missionSkSkullkingWin => 'Win 3 tricks with the Skull King';
@@ -5722,64 +5785,12 @@ class L10nEn extends L10n {
   String get missionLlBaronWin => 'Win 2 Baron showdowns';
 
   @override
-  String get missionLlRoundWin => 'Win 6 rounds';
+  String get missionLlRoundWin => 'Win 8 rounds';
 
   @override
-  String get missionLlLastStanding => 'Win 2 rounds by knocking out everyone';
+  String get missionLlLastStanding =>
+      'Win a game in a landslide (nobody else has a victory token)';
 
   @override
-  String get missionLlKnockOut6 => 'Knock out 6 opponents';
-
-  @override
-  String get missionTichuStraight8 => 'Play a straight of 8 or more cards';
-
-  @override
-  String get missionTichuStraight10 => 'Play a straight of 10 or more cards';
-
-  @override
-  String get missionTichuFullhouseK =>
-      'Win a trick with a K-high full house (triple of K or A)';
-
-  @override
-  String get missionTichuFullhouseA =>
-      'Win a trick with an Ace full house (triple of Aces)';
-
-  @override
-  String get missionTichuStraightFlush => 'Play a straight-flush bomb';
-
-  @override
-  String get missionTichuPhoenixAce =>
-      'Beat an Ace with the Phoenix played alone';
-
-  @override
-  String get missionTichuCounterSmall =>
-      'Make a counter Small Tichu when the opponents also call Small Tichu';
-
-  @override
-  String get missionTichuCounterLarge =>
-      'Make a counter Grand Tichu when the opponents also call Grand Tichu';
-
-  @override
-  String get missionTichuTichuOnetwo =>
-      'Call Tichu and finish 1-2 with your team';
-
-  @override
-  String get missionMightyNt20 => 'Succeed with a 20-point No Trump bid';
-
-  @override
-  String get missionMightyPoint2 => 'Take 2 or more point cards in one trick';
-
-  @override
-  String get missionMightyPoint4 => 'Take 4 or more point cards in one trick';
-
-  @override
-  String get missionMightyPoint5 => 'Take 5 point cards in one trick';
-
-  @override
-  String get missionMightyJokerKillFriend =>
-      'As the friend, use the Joker Call to kill the declarer\'s Joker';
-
-  @override
-  String get missionMightyJokerKillDefender =>
-      'As a defender, use the Joker Call to kill the declarer\'s Joker';
+  String get missionLlKnockOut6 => 'Knock out 10 opponents';
 }

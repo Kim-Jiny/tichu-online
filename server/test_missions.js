@@ -168,7 +168,7 @@ async function main() {
   // ── 연속 미션: 지면 0 으로 ──
   const n5 = '연승테스터';
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, 'tichu_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]);
+    VALUES ($1, 'tichu_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]); // 목표 4 로 직접 넣어 검사한다
   await missions.record(n5, 'tichu.game_win');
   await missions.record(n5, 'tichu.game_win');
   let ss = await missions.getState(n5);
@@ -179,7 +179,7 @@ async function main() {
   for (let i = 0; i < 3; i++) await missions.record(n5, 'tichu.game_win');
   check('3연승까지는 미완료', (await missions.getState(n5)).active.find((m) => m.key === 'tichu_win_streak4').status === 'active');
   const dn = await missions.record(n5, 'tichu.game_win');
-  check('4연승이면 완료(보상 5)', dn.length === 1 && dn[0].tokens === 5, JSON.stringify(dn));
+  check('목표 연승이면 완료(정의된 보상)', dn.length === 1 && dn[0].tokens === defs.MISSION_BY_KEY.get('tichu_win_streak4').tokens, JSON.stringify(dn));
   check('이미 완료한 연승은 패배로 되돌아가지 않는다', (await missions.record(n5, 'tichu.game_loss')).length === 0 && (await missions.getState(n5)).active.find((m) => m.key === 'tichu_win_streak4').status === 'done');
   // 다른 게임의 패배는 영향 없다.
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
@@ -192,6 +192,28 @@ async function main() {
     VALUES ($1, 'removed_old_mission', CURRENT_DATE, CURRENT_DATE, 1)`, [n5]);
   const ss2 = await missions.getState(n5);
   check('없앤 미션은 목록에서 빠진다', !ss2.active.some((m) => m.key === 'removed_old_mission'));
+
+  // ── '한 판에' · '한 라운드에' · '연속 원투' 미션은 범위가 끝나면 0 으로 ──
+  const n6 = '범위테스터';
+  const add = (key, target) => pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
+    VALUES ($1, $2, CURRENT_DATE, CURRENT_DATE, $3)`, [n6, key, target]);
+  const prog = async (key) => (await missions.getState(n6)).active.find((m) => m.key === key).progress;
+  await add('tichu_first_out5', 5); await add('mighty_win5', 5); await add('tichu_onetwo', 2);
+  for (let i = 0; i < 3; i++) await missions.record(n6, 'tichu.first_out');
+  check('한 판에 1등 3/5', (await prog('tichu_first_out5')) === 3);
+  await missions.record(n6, 'tichu.game_end'); // 판이 끝남 → 0
+  check('판이 끝나면 한 판 미션은 0 으로', (await prog('tichu_first_out5')) === 0);
+  for (let i = 0; i < 4; i++) await missions.record(n6, 'mighty.trick_win');
+  check('한 라운드에 트릭 4/5', (await prog('mighty_win5')) === 4);
+  await missions.record(n6, 'mighty.round_end');
+  check('라운드가 끝나면 0 으로', (await prog('mighty_win5')) === 0);
+  await missions.record(n6, 'tichu.one_two');
+  check('원투 1/2', (await prog('tichu_onetwo')) === 1);
+  await missions.record(n6, 'tichu.round_no_onetwo');
+  check('원투를 못 한 라운드가 끼면 처음부터', (await prog('tichu_onetwo')) === 0);
+  await missions.record(n6, 'tichu.one_two');
+  const two = await missions.record(n6, 'tichu.one_two');
+  check('연속 두 번이면 완료', two.length === 1 && two[0].key === 'tichu_onetwo', JSON.stringify(two));
 
   // ── 내 토큰 내역 ──
   const hist = await missions.getHistory(n4, { limit: 2 });

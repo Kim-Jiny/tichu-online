@@ -6469,12 +6469,14 @@ async function saveGameResult(room) {
 
   if (room.gameType === 'skull_king') {
     try {
-      const winCutoff = Math.floor(room.game.playerCount / 2);
       const ranks = room.game.getRankings();
+      // 미션의 승리는 '1등'이고 3명 이상일 때만 인정한다(2명이면 승패 미션을 세지 않는다).
+      const countsWin = room.game.playerCount >= 3;
       recordGameEndMissions(
         room, 'sk',
         ranks.filter((r) => !r.playerId.startsWith('bot_')).map((r) => r.nickname),
-        new Set(ranks.filter((r) => r.rank <= winCutoff).map((r) => r.nickname)),
+        new Set(countsWin ? ranks.filter((r) => r.rank === 1).map((r) => r.nickname) : []),
+        { skipWinLoss: !countsWin },
       );
     } catch (e) { console.error('[missions] sk end failed:', e.message); }
     await saveSKGameResult(room);
@@ -6491,6 +6493,18 @@ async function saveGameResult(room) {
         ranks.filter((r) => !r.playerId.startsWith('bot_')).map((r) => r.nickname),
         new Set(ranks.filter((r) => r.rank === 1).map((r) => r.nickname)),
       );
+      // 압도적 승리: 이긴 사람 말고는 아무도 승리 토큰이 없는 채로 이겼다.
+      try {
+        const tokens = room.game.tokens || {};
+        const champs = ranks.filter((r) => r.rank === 1);
+        if (champs.length === 1) {
+          const champ = champs[0];
+          const othersZero = Object.entries(tokens).every(([pid, n]) => pid === champ.playerId || (n || 0) === 0);
+          if (othersZero && !champ.playerId.startsWith('bot_') && missionEligible(room)) {
+            recordMission(champ.nickname, 'll.dominant_win').catch(() => {});
+          }
+        }
+      } catch (e) { console.error('[missions] ll dominant failed:', e.message); }
     } catch (e) { console.error('[missions] ll end failed:', e.message); }
     await saveLLGameResult(room);
     await refreshConnectedRatings(room);
@@ -9218,9 +9232,22 @@ function notifyMissionResults(nickname, done) {
   }).catch(() => {});
 }
 
-async function recordMission(nickname, event, amount = 1) {
-  const done = await missions.record(nickname, event, amount);
-  notifyMissionResults(nickname, done);
+// 같은 사람의 이벤트는 들어온 순서대로 처리한다. '한 판에 N번'·'연속' 미션은 순서가
+// 곧 규칙이라(라운드 이벤트 → 판 끝 리셋), 서로 앞지르면 다음 판으로 새 나간다.
+const missionQueues = new Map();
+function recordMission(nickname, event, amount = 1) {
+  const prev = missionQueues.get(nickname) || Promise.resolve();
+  const next = prev
+    .catch(() => {})
+    .then(async () => {
+      const done = await missions.record(nickname, event, amount);
+      notifyMissionResults(nickname, done);
+    });
+  missionQueues.set(nickname, next);
+  next.finally(() => {
+    if (missionQueues.get(nickname) === next) missionQueues.delete(nickname);
+  }).catch(() => {});
+  return next;
 }
 
 /** 엔진이 남긴 이벤트를 꺼내 기록한다. 자격이 안 되는 방이어도 꼭 비워서 쌓이지 않게 한다. */
@@ -9238,13 +9265,17 @@ function processMissionEvents(room) {
 }
 
 /** 판이 끝났을 때: 끝까지 했다 / 이겼다. winners 는 닉네임 집합. */
-function recordGameEndMissions(room, prefix, participants, winners) {
+function recordGameEndMissions(room, prefix, participants, winners, opts = {}) {
+  // 마지막 라운드·트릭의 이벤트가 판 끝 이벤트보다 먼저 가도록 먼저 비운다.
+  processMissionEvents(room);
   if (!missionEligible(room)) return;
   for (const nickname of participants) {
     if (!nickname) continue;
     recordMission(nickname, `${prefix}.game_end`).catch(() => {});
     // 이기면 win, 지면 loss — '연속' 미션은 loss 에서 진행도가 0 으로 돌아간다.
-    recordMission(nickname, winners.has(nickname) ? `${prefix}.game_win` : `${prefix}.game_loss`).catch(() => {});
+    if (!opts.skipWinLoss) {
+      recordMission(nickname, winners.has(nickname) ? `${prefix}.game_win` : `${prefix}.game_loss`).catch(() => {});
+    }
   }
 }
 

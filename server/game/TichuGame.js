@@ -398,9 +398,6 @@ class TichuGame {
       if (combo.length >= 8) this._pushMissionEvent({ playerId, event: 'tichu.straight8', amount: 1 });
       if (combo.length >= 10) this._pushMissionEvent({ playerId, event: 'tichu.straight10', amount: 1 });
     }
-    if (combo.isPhoenix && prevTop && prevTop.combo && prevTop.combo.type === 'single' && prevTop.combo.value === 14) {
-      this._pushMissionEvent({ playerId, event: 'tichu.phoenix_ace', amount: 1 });
-    }
 
     const result = {
       success: true,
@@ -751,12 +748,19 @@ class TichuGame {
       const push = (event) => this._pushMissionEvent({ playerId: winner, event, amount: 1 });
       if (lastPlay.cards.includes('special_dragon')) push('tichu.dragon_win');
       if (lastPlay.cards.includes('special_phoenix')) push('tichu.phoenix_win');
+      // 봉황을 단독으로 내서 이긴 트릭.
+      if (lastPlay.cards.length === 1 && lastPlay.cards[0] === 'special_phoenix') push('tichu.phoenix_single_win');
       if (t === 'straight') push('tichu.straight_win');
       else if (t === 'full_house') {
         push('tichu.fullhouse_win');
         // K(13)·A(14) 트리플의 풀하우스로 이긴 경우.
         if (lastPlay.combo.value >= 13) push('tichu.fullhouse_k');
-        if (lastPlay.combo.value >= 14) push('tichu.fullhouse_a');
+        if (lastPlay.combo.value >= 14) {
+          push('tichu.fullhouse_a');
+          // A 풀하우스로 이긴 트릭에서 얻은 점수(카드 점수 합).
+          const aPts = calculateTrickPoints(allTrickCards);
+          if (aPts > 0) this._pushMissionEvent({ playerId: winner, event: 'tichu.fullhouse_a_points', amount: aPts });
+        }
       }
       else if (t === 'steps') push('tichu.steps_win');
     }
@@ -1281,13 +1285,19 @@ class TichuGame {
         }
       }
     }
+    // 원투 피니시. 원투를 못 한 사람에게는 '원투 아님' 이벤트를 보내 연속 원투 미션을 끊는다.
+    const oneTwoPlayers = new Set();
     if (this.finishOrder.length >= 2) {
       const teamOf = (pid) => (this.teams.teamA.includes(pid) ? 'teamA' : 'teamB');
       if (teamOf(this.finishOrder[0]) === teamOf(this.finishOrder[1])) {
         for (const pid of [this.finishOrder[0], this.finishOrder[1]]) {
+          oneTwoPlayers.add(pid);
           this._pushMissionEvent({ playerId: pid, event: 'tichu.one_two', amount: 1 });
         }
       }
+    }
+    for (const pid of this.playerIds) {
+      if (!oneTwoPlayers.has(pid)) this._pushMissionEvent({ playerId: pid, event: 'tichu.round_no_onetwo', amount: 1 });
     }
   }
 

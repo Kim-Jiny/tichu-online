@@ -5471,13 +5471,13 @@ class L10nKo extends L10n {
   String get missionTichuPlay => '티츄 5판 하기 (끝까지 마친 판만 인정)';
 
   @override
-  String get missionTichuWin => '티츄 3판 이기기';
+  String get missionTichuWin => '티츄 3판 연속 이기기 (한 판이라도 지면 처음부터)';
 
   @override
-  String get missionTichuWinStreak4 => '티츄 4판 연속 이기기 (한 판이라도 지면 처음부터)';
+  String get missionTichuWinStreak4 => '티츄 5판 연속 이기기 (한 판이라도 지면 처음부터)';
 
   @override
-  String get missionTichuOnetwo => '원투 피니시 2번 (우리 팀이 1등·2등)';
+  String get missionTichuOnetwo => '원투 피니시 2번 연속 하기 (우리 팀이 1등·2등)';
 
   @override
   String get missionTichuDogFinish => '개 카드로 마무리하며 패 털기 (1등·2등일 때만 인정)';
@@ -5492,16 +5492,44 @@ class L10nKo extends L10n {
   String get missionTichuFullhouseWin => '풀하우스로 트릭 4번 이기기';
 
   @override
-  String get missionTichuStepsWin => '연속 쌍(스텝)으로 트릭 3번 이기기';
+  String get missionTichuStepsWin => '연속 페어로 트릭 3번 이기기';
 
   @override
-  String get missionTichuBombPlay => '폭탄 4번 내기';
+  String get missionTichuBombPlay => '폭탄 5번 내기';
 
   @override
-  String get missionTichuFirstOut5 => '라운드 1등으로 5번 나가기';
+  String get missionTichuFirstOut5 => '한 판에 라운드 1등으로 5번 나가기';
 
   @override
-  String get missionTichuBreakTichu => '상대 팀의 티츄 2번 막아 내기 (선언한 상대가 1등을 못 하게)';
+  String get missionTichuBreakTichu =>
+      '한 판에 상대 팀의 티츄 2번 막아 내기 (선언한 상대가 1등을 못 하게)';
+
+  @override
+  String get missionTichuStraight8 => '8장 이상 스트레이트 내기';
+
+  @override
+  String get missionTichuStraight10 => '10장 이상 스트레이트 내기';
+
+  @override
+  String get missionTichuFullhouseK => 'K 풀하우스 또는 A 풀하우스로 트릭 이기기';
+
+  @override
+  String get missionTichuFullhouseA => 'A 풀하우스로 이긴 트릭에서 점수 50점 얻기';
+
+  @override
+  String get missionTichuStraightFlush => '스트레이트 플러시 폭탄 내기';
+
+  @override
+  String get missionTichuPhoenixSingleWin => '봉황을 단독으로 내서 트릭 이기기';
+
+  @override
+  String get missionTichuCounterSmall => '상대 팀이 스몰 티츄를 선언했을 때 맞스몰 티츄 성공하기';
+
+  @override
+  String get missionTichuCounterLarge => '상대 팀이 라지 티츄를 선언했을 때 맞라지 티츄로 성공하기';
+
+  @override
+  String get missionTichuTichuOnetwo => '티츄를 선언하고 우리 팀이 원투 피니시로 끝내기';
 
   @override
   String get missionMightyPlay => '마이티 5판 하기 (끝까지 마친 판만 인정)';
@@ -5513,10 +5541,13 @@ class L10nKo extends L10n {
   String get missionMightyWinStreak4 => '마이티 4판 연속 이기기 (한 판이라도 지면 처음부터)';
 
   @override
+  String get missionMightyNt20 => 'NT(노트럼프) 비딩 20점으로 성공하기';
+
+  @override
   String get missionMightyBid18 => '비딩 18점 이상으로 2번 성공하기';
 
   @override
-  String get missionMightyNt => '노트럼프 비딩으로 성공하기 (점수 무관)';
+  String get missionMightyNt => 'NT(노트럼프) 비딩으로 성공하기 (점수 무관)';
 
   @override
   String get missionMightyAll20 => '여당(주공·친구)으로 점수 카드 20장 모두 먹기';
@@ -5525,25 +5556,44 @@ class L10nKo extends L10n {
   String get missionMightyFriend7 => '친구로 참여해 한 라운드에 점수 7점 이상 먹기';
 
   @override
-  String get missionMightyMightyWin => '마이티 카드로 트릭 2번 이기기';
+  String get missionMightyMightyWin =>
+      '마이티 카드로 이긴 트릭에서 점수 2점 이상 먹기 (마이티 점수 포함)';
 
   @override
-  String get missionMightyTrump8 => '으뜸 카드로 트릭 8번 이기기';
+  String get missionMightyDillmiss => '딜미스 2회 선언하기';
 
   @override
-  String get missionMightyJokerWin => '조커로 트릭 2번 이기기';
+  String get missionMightyWin5 => '한 라운드에서 트릭 5번 이상 이기기';
+
+  @override
+  String get missionMightyJokerWin => '조커로 트릭 3번 이기기';
 
   @override
   String get missionMightyDeclarerSuccess => '주공으로 2번 성공하기';
 
   @override
+  String get missionMightyPoint2 => '한 트릭에 점수 카드 2장 이상 먹기';
+
+  @override
+  String get missionMightyPoint4 => '한 트릭에 점수 카드 4장 이상 먹기';
+
+  @override
+  String get missionMightyPoint5 => '한 트릭에 점수 카드 5장 먹기';
+
+  @override
+  String get missionMightyJokerKillFriend => '친구로 참여해 조커콜을 써서 주공의 조커 죽이기';
+
+  @override
+  String get missionMightyJokerKillDefender => '야당으로 조커콜을 써서 주공의 조커 죽이기';
+
+  @override
   String get missionSkPlay => '스컬킹 5판 하기 (끝까지 마친 판만 인정)';
 
   @override
-  String get missionSkWin => '스컬킹 3판 이기기';
+  String get missionSkWin => '스컬킹 3판 1등하기 (3인 이상에서 인정)';
 
   @override
-  String get missionSkWinStreak4 => '스컬킹 4판 연속 이기기 (한 판이라도 지면 처음부터)';
+  String get missionSkWinStreak4 => '스컬킹 4판 연속 1등하기 (한 판이라도 지면 처음부터)';
 
   @override
   String get missionSkPirates2 => '스컬킹으로 해적 두 명을 한 트릭에 잡기';
@@ -5555,19 +5605,19 @@ class L10nKo extends L10n {
   String get missionSkTenWin => '숫자 10 카드로 트릭 2번 이기기';
 
   @override
-  String get missionSkBidHit6 => '비딩을 6번 정확히 맞추기';
+  String get missionSkBidHit6 => '한 판에 비딩을 6번 이상 정확히 맞추기';
 
   @override
-  String get missionSkBidHit12 => '비딩을 12번 정확히 맞추기';
+  String get missionSkBidHit12 => '한 판에 비딩을 10번 모두 정확히 맞추기';
 
   @override
-  String get missionSkZeroHit => '0 비딩 2번 성공하기';
+  String get missionSkZeroHit => '0 비딩 5번 성공하기';
 
   @override
-  String get missionSkPirateWin => '해적으로 트릭 4번 이기기';
+  String get missionSkPirateWin => '해적으로 트릭 5번 이기기';
 
   @override
-  String get missionSkMermaidWin => '인어로 트릭 2번 이기기';
+  String get missionSkMermaidWin => '인어로 트릭 3번 이기기';
 
   @override
   String get missionSkSkullkingWin => '스컬킹으로 트릭 3번 이기기';
@@ -5588,56 +5638,12 @@ class L10nKo extends L10n {
   String get missionLlBaronWin => '남작 대결에서 2번 이기기';
 
   @override
-  String get missionLlRoundWin => '라운드 6번 이기기';
+  String get missionLlRoundWin => '라운드 8번 이기기';
 
   @override
-  String get missionLlLastStanding => '상대를 모두 탈락시키고 라운드 2번 이기기';
+  String get missionLlLastStanding =>
+      '압도적으로 승리하기 (다른 사람에게 승리 토큰이 없는 상태에서 게임 승리)';
 
   @override
-  String get missionLlKnockOut6 => '상대 6명 탈락시키기';
-
-  @override
-  String get missionTichuStraight8 => '8장 이상 스트레이트 내기';
-
-  @override
-  String get missionTichuStraight10 => '10장 이상 스트레이트 내기';
-
-  @override
-  String get missionTichuFullhouseK => 'K 풀하우스로 트릭 이기기 (K 또는 A 트리플)';
-
-  @override
-  String get missionTichuFullhouseA => 'A 풀하우스로 트릭 이기기 (A 트리플)';
-
-  @override
-  String get missionTichuStraightFlush => '스트레이트 플러시 폭탄 내기';
-
-  @override
-  String get missionTichuPhoenixAce => '봉황을 단독으로 내서 A 잡기';
-
-  @override
-  String get missionTichuCounterSmall => '상대 팀이 스몰 티츄를 선언했을 때 맞스몰 티츄 성공하기';
-
-  @override
-  String get missionTichuCounterLarge => '상대 팀이 라지 티츄를 선언했을 때 맞라지 티츄로 성공하기';
-
-  @override
-  String get missionTichuTichuOnetwo => '티츄를 선언하고 우리 팀이 원투 피니시로 끝내기';
-
-  @override
-  String get missionMightyNt20 => 'NT(노트럼프) 비딩 20점으로 성공하기';
-
-  @override
-  String get missionMightyPoint2 => '한 트릭에 점수 카드 2장 이상 먹기';
-
-  @override
-  String get missionMightyPoint4 => '한 트릭에 점수 카드 4장 이상 먹기';
-
-  @override
-  String get missionMightyPoint5 => '한 트릭에 점수 카드 5장 먹기';
-
-  @override
-  String get missionMightyJokerKillFriend => '친구로 참여해 조커콜을 써서 주공의 조커 죽이기';
-
-  @override
-  String get missionMightyJokerKillDefender => '야당으로 조커콜을 써서 주공의 조커 죽이기';
+  String get missionLlKnockOut6 => '상대 10명 탈락시키기';
 }

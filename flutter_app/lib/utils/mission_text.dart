@@ -37,8 +37,8 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionTichuFullhouseA;
     case 'tichu_straight_flush':
       return l10n.missionTichuStraightFlush;
-    case 'tichu_phoenix_ace':
-      return l10n.missionTichuPhoenixAce;
+    case 'tichu_phoenix_single_win':
+      return l10n.missionTichuPhoenixSingleWin;
     case 'tichu_counter_small':
       return l10n.missionTichuCounterSmall;
     case 'tichu_counter_large':
@@ -63,8 +63,10 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionMightyFriend7;
     case 'mighty_mighty_win':
       return l10n.missionMightyMightyWin;
-    case 'mighty_trump8':
-      return l10n.missionMightyTrump8;
+    case 'mighty_dillmiss':
+      return l10n.missionMightyDillmiss;
+    case 'mighty_win5':
+      return l10n.missionMightyWin5;
     case 'mighty_joker_win':
       return l10n.missionMightyJokerWin;
     case 'mighty_declarer_success':

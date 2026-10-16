@@ -315,6 +315,8 @@ class MightyGame {
     const eventPlayerName = this.playerNames[playerId] || playerId;
     const eventCards = [...(this.hands[playerId] || [])];
 
+    this._pushMissionEvent({ playerId, event: 'mighty.dealmiss', amount: 1 });
+
     // Penalty: 5 points off declarer, into the pool
     this.scores[playerId] -= 5;
     this.dealMissPool += 5;
@@ -968,7 +970,13 @@ class MightyGame {
       const winCard = winPlay && winPlay.cardId;
       const winInfo = winCard ? getCardInfo(winCard) : null;
       const push = (event, amount = 1) => this._pushMissionEvent({ playerId: winner, event, amount });
-      if (winCard && winCard === this.getMightyCard()) push('mighty.mighty_win');
+      if (winCard) push('mighty.trick_win');
+      if (winCard && winCard === this.getMightyCard()) {
+        push('mighty.mighty_win');
+        // 마이티 카드로 이긴 트릭에서 점수 카드(마이티 자신 포함)를 2장 이상 먹었다.
+        const mightyPts = this.currentTrick.filter((p) => (getCardInfo(p.cardId) || {}).point > 0).length;
+        if (mightyPts >= 2) push('mighty.mighty_point2');
+      }
       else if (winCard === 'mighty_joker') push('mighty.joker_win');
       else if (winInfo && this.trumpSuit && this.trumpSuit !== 'no_trump' && winInfo.suit === this.trumpSuit) {
         push('mighty.trump_win');
@@ -1269,6 +1277,8 @@ class MightyGame {
 
   /** 라운드 결과에서 나오는 미션 이벤트: 비딩 성공, 노트럼프 성공, 여당 20장 독식, 친구 점수. */
   _collectRoundMissionEvents(result) {
+    // '한 라운드에' 세는 미션(예: 트릭 5번)은 라운드가 끝나면 0 으로 돌아간다.
+    for (const pid of this.playerIds) this._pushMissionEvent({ playerId: pid, event: 'mighty.round_end', amount: 1 });
     const declarer = this.declarer;
     if (!declarer) return;
     const push = (playerId, event, amount = 1) => this._pushMissionEvent({ playerId, event, amount });
@@ -1294,7 +1304,7 @@ class MightyGame {
     // 친구로서 한 라운드에 7점 이상.
     if (this.partner && this.partner !== declarer) {
       const friendPoints = (this.pointCards[this.partner] || []).length;
-      if (friendPoints >= 7) push(this.partner, 'mighty.friend_points', 7);
+      if (friendPoints >= 7) push(this.partner, 'mighty.friend_points', 1);
     }
   }
 

@@ -4434,40 +4434,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildSkExpansionChip(String expansionKey) {
     final l10n = L10n.of(context);
-    String label;
-    Color fg;
-    Color bg;
-    switch (expansionKey) {
-      case 'kraken':
-        label = '🐙 ${l10n.lobbyExpKrakenShort}';
-        fg = const Color(0xFF6A1B9A);
-        bg = const Color(0xFFF3E5F5);
-        break;
-      case 'white_whale':
-        label = '🐳 ${l10n.lobbyExpWhaleShort}';
-        fg = const Color(0xFF01579B);
-        bg = const Color(0xFFE1F5FE);
-        break;
-      case 'loot':
-        label = '💰 ${l10n.lobbyExpLootShort}';
-        fg = const Color(0xFFBF7100);
-        bg = const Color(0xFFFFF3E0);
-        break;
-      default:
-        label = expansionKey;
-        fg = const Color(0xFF5A4038);
-        bg = const Color(0xFFEFEBE9);
-    }
+    // 방 목록 알약과 같은 테마색 바탕에 흰 글자.
+    final emoji = _skExpansionEmoji(expansionKey);
+    final name = _skExpansionShortLabel(expansionKey, l10n);
+    final label = emoji.isEmpty ? name : '$emoji $name';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bg,
+        color: _skExpansionStrongColor(expansionKey),
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
       child: Text(
         label,
-        style: Cartoon.userText(size: 12.5, weight: FontWeight.w900, color: fg),
+        style: Cartoon.userText(
+          size: 12.5,
+          weight: FontWeight.w900,
+          color: Colors.white,
+        ),
       ),
     );
   }

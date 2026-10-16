@@ -21,7 +21,7 @@ class Room {
   /// Equal to [maxPlayers] minus the number of blocked slots.
   final int effectiveMaxPlayers;
   /// Enabled Skull King expansions — only meaningful when [gameType] is
-  /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot']`.
+  /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot', 'pirate_abilities']`.
   final List<String> skExpansions;
   /// Tichu-only: host opted to randomize teams at game start instead of
   /// using the fixed (0,2) vs (1,3) seat-to-team mapping. Mirrors SK/Mighty

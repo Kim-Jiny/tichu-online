@@ -1245,7 +1245,7 @@
   "rulesTichuWinBody": "The first team to reach the target score (default 1000 points) set when creating the room wins. Ranked games use a fixed target of 1000 points.",
   "rulesSkGoalTitle": "Game Objective",
   "rulesSkGoalBody": "A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.",
-  "rulesSkCardCompositionTitle": "Card Composition (65 base cards)",
+  "rulesSkCardCompositionTitle": "Card Composition (66 base cards)",
   "rulesSkNumberCards": "Number Cards (1 – 13)",
   "rulesSkNumberCardsSub": "4 suits × 13 cards (Yellow / Green / Purple / Black)",
   "rulesSkEscape": "Escape",
@@ -3063,7 +3063,7 @@
   "rulesSkLootDemo": "The player who played Loot and the player who wins the trick form an alliance. Only if both make their bids by the end of the round does each earn +20 per Loot card.",
   "rulesSkLootDemoTag": "Both bids made → +20 each",
   "rulesTichuCardGuideTitle": "Cards & Effects (56 total)",
-  "rulesSkCardGuideTitle": "Cards & Effects (65 base)",
+  "rulesSkCardGuideTitle": "Cards & Effects (66 base)",
   "rulesLlCardGuideTitle": "Cards & Effects (16 total)",
   "shopNeedMoreGold": "You need {amount} more gold",
   "@shopNeedMoreGold": {
@@ -3435,5 +3435,157 @@
   "couponClipboardEmpty": "Nothing copied to paste",
   "couponRedeemedTitle": "Coupon redeemed!",
   "couponEnterCode": "Enter the code",
-  "appForceUpdateLater": "See you after the update!"
+  "appForceUpdateLater": "See you after the update!",
+  "skCardSkullKing": "Skull King",
+  "skCardPirate": "Pirate",
+  "skCardRascal": "Rascal",
+  "skCardRosie": "Rosie",
+  "skCardBendt": "Bendt",
+  "skCardHarry": "Harry",
+  "skCardJuanita": "Juanita",
+  "skCardTigress": "Tigress",
+  "skCardEscape": "Escape",
+  "skCardMermaid": "Mermaid",
+  "skCardKraken": "Kraken",
+  "skCardWhiteWhale": "White Whale",
+  "skCardLoot": "Loot",
+  "lobbyExpPirate": "Pirate abilities",
+  "lobbyExpPirateDesc": "Own powers",
+  "lobbyExpPirateShort": "Pirates",
+  "rulesSkExpPirate": "🏴‍☠️ Pirate abilities",
+  "rulesSkExpPirateDesc": "The 5 pirate cards are always in the deck, with or without this mode. When it is on, winning a trick with a pirate (not a Tigress played as a pirate) lets you use that pirate's ability right away, once. After the last trick of a round only Harry's ability can still be used.",
+  "skAbilityDescRascal": "After winning a trick, bet 0, 10 or 20 points. At the end of the round you gain the bet if your bid was exact, and lose it otherwise.",
+  "skAbilityDescRosie": "After winning a trick, choose any player (yourself included) to lead the next trick.",
+  "skAbilityDescBendt": "After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.",
+  "skAbilityDescHarry": "After winning a trick, change your bid by +1 or -1, or keep it. The only ability usable after the last trick of a round.",
+  "skAbilityDescJuanita": "After winning a trick, privately look at the cards that were not dealt this round.",
+  "skAbilityTitle": "{pirate}'s ability",
+  "@skAbilityTitle": {
+    "placeholders": {
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityRosiePrompt": "Choose who leads the next trick",
+  "skAbilityMe": "Me",
+  "skAbilityBendtPrompt": "You drew {count} cards. Pick {count} cards to discard",
+  "@skAbilityBendtPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityBendtConfirm": "Discard ({picked}/{count})",
+  "@skAbilityBendtConfirm": {
+    "placeholders": {
+      "picked": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityRascalPrompt": "How much do you bet? Hit your bid to gain it, miss and you lose it.",
+  "skAbilityRascalNone": "No bet",
+  "skAbilityPoints": "{points} pts",
+  "@skAbilityPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityJuanitaPrompt": "These cards were not dealt to anyone this round",
+  "skAbilityConfirm": "OK",
+  "skAbilityHarryPrompt": "You may change your bid (now {bid})",
+  "@skAbilityHarryPrompt": {
+    "placeholders": {
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityHarryKeep": "Keep",
+  "skAbilityWaiting": "{name} is using {pirate}'s ability",
+  "@skAbilityWaiting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventRosie": "{name} chose {target} to lead next",
+  "@skAbilityEventRosie": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventBendt": "{name} swapped {count} cards",
+  "@skAbilityEventBendt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascal": "{name} bet {points} points",
+  "@skAbilityEventRascal": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascalNone": "{name} placed no bet",
+  "@skAbilityEventRascalNone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventJuanita": "{name} peeked at the undealt cards",
+  "@skAbilityEventJuanita": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventHarry": "{name} changed their bid to {bid}",
+  "@skAbilityEventHarry": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventHarryKeep": "{name} kept their bid",
+  "@skAbilityEventHarryKeep": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

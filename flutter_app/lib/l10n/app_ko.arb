@@ -707,7 +707,7 @@
   "rulesTichuWinBody": "방 생성 시 설정한 목표 점수(기본 1000점)에 먼저 도달한 팀이 승리합니다. 랭크전은 1000점 고정입니다.",
   "rulesSkGoalTitle": "게임 목표",
   "rulesSkGoalBody": "2~6명이 개인전으로 진행하는 트릭테이킹 게임입니다. 총 10 라운드 동안 매 라운드마다 자신이 이길 트릭 수를 정확히 예측해야 점수를 얻습니다.",
-  "rulesSkCardCompositionTitle": "카드 구성 (기본 총 65장)",
+  "rulesSkCardCompositionTitle": "카드 구성 (기본 총 66장)",
   "rulesSkNumberCards": "숫자 카드 (1 ~ 13)",
   "rulesSkNumberCardsSub": "4 문양 × 13장 (노랑 / 초록 / 보라 / 검정)",
   "rulesSkEscape": "Escape (도주)",
@@ -1820,7 +1820,7 @@
   "rulesSkLootDemo": "보물을 낸 사람과 그 트릭을 이긴 사람이 동맹이 됩니다. 라운드가 끝났을 때 두 사람 모두 비드에 성공해야 각자 보물 1장당 +20점을 얻습니다.",
   "rulesSkLootDemoTag": "둘 다 비드 성공 → 각 +20",
   "rulesTichuCardGuideTitle": "카드 구성 및 효과 (총 56장)",
-  "rulesSkCardGuideTitle": "카드 구성 및 효과 (기본 총 65장)",
+  "rulesSkCardGuideTitle": "카드 구성 및 효과 (기본 총 66장)",
   "rulesLlCardGuideTitle": "카드 구성 및 효과 (총 16장)",
   "shopNeedMoreGold": "골드가 {amount} 부족해요",
   "shopTapToPlay": "지금 바로 써 볼까요?",
@@ -2157,5 +2157,157 @@
   "couponClipboardEmpty": "복사해 둔 코드가 없어요",
   "couponRedeemedTitle": "쿠폰이 등록됐어요!",
   "couponEnterCode": "코드를 입력해 주세요",
-  "appForceUpdateLater": "업데이트 후에 다시 만나요!"
+  "appForceUpdateLater": "업데이트 후에 다시 만나요!",
+  "skCardSkullKing": "스컬킹",
+  "skCardPirate": "해적",
+  "skCardRascal": "라스칼",
+  "skCardRosie": "로지",
+  "skCardBendt": "벤트",
+  "skCardHarry": "해리",
+  "skCardJuanita": "후아니타",
+  "skCardTigress": "티그리스",
+  "skCardEscape": "도주",
+  "skCardMermaid": "인어",
+  "skCardKraken": "크라켄",
+  "skCardWhiteWhale": "흰고래",
+  "skCardLoot": "보물",
+  "lobbyExpPirate": "해적 능력",
+  "lobbyExpPirateDesc": "고유 능력",
+  "lobbyExpPirateShort": "해적능력",
+  "rulesSkExpPirate": "🏴‍☠️ 해적 능력",
+  "rulesSkExpPirateDesc": "해적 카드 5장은 이 모드와 상관없이 항상 덱에 있습니다. 모드를 켜면 해적 카드로 트릭을 이겼을 때(티그리스로 낸 해적은 제외) 그 해적의 능력을 바로 한 번 쓸 수 있습니다. 마지막 트릭 뒤에는 해리의 능력만 쓸 수 있습니다.",
+  "skAbilityDescRascal": "트릭을 이기면 0·10·20점 중 하나를 겁니다. 라운드가 끝났을 때 입찰을 맞혔으면 건 점수를 더 받고, 못 맞혔으면 그만큼 잃습니다.",
+  "skAbilityDescRosie": "트릭을 이기면 다음 트릭을 시작할 사람을 나를 포함해 아무나 지목합니다.",
+  "skAbilityDescBendt": "트릭을 이기면 안 나눠 준 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.",
+  "skAbilityDescHarry": "트릭을 이기면 내 입찰을 +1, -1 하거나 그대로 둘 수 있습니다. 마지막 트릭 뒤에도 쓸 수 있는 유일한 능력입니다.",
+  "skAbilityDescJuanita": "트릭을 이기면 이번 라운드에 아무에게도 나눠 주지 않은 카드를 혼자 확인합니다.",
+  "skAbilityTitle": "{pirate}의 능력",
+  "@skAbilityTitle": {
+    "placeholders": {
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityRosiePrompt": "다음 트릭을 시작할 사람을 고르세요",
+  "skAbilityMe": "나",
+  "skAbilityBendtPrompt": "카드 {count}장을 가져왔어요. 버릴 카드 {count}장을 고르세요",
+  "@skAbilityBendtPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityBendtConfirm": "버리기 ({picked}/{count})",
+  "@skAbilityBendtConfirm": {
+    "placeholders": {
+      "picked": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityRascalPrompt": "얼마를 걸까요? 입찰을 맞히면 건 점수를 더 받고, 못 맞히면 그만큼 잃어요.",
+  "skAbilityRascalNone": "걸지 않기",
+  "skAbilityPoints": "{points}점",
+  "@skAbilityPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityJuanitaPrompt": "이번 라운드에 아무에게도 나눠 주지 않은 카드예요",
+  "skAbilityConfirm": "확인",
+  "skAbilityHarryPrompt": "입찰을 바꿀 수 있어요 (지금 {bid})",
+  "@skAbilityHarryPrompt": {
+    "placeholders": {
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityHarryKeep": "그대로",
+  "skAbilityWaiting": "{name}님이 {pirate}의 능력을 쓰는 중이에요",
+  "@skAbilityWaiting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventRosie": "{name}님이 {target}님을 다음 선으로 골랐어요",
+  "@skAbilityEventRosie": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventBendt": "{name}님이 카드 {count}장을 바꿨어요",
+  "@skAbilityEventBendt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascal": "{name}님이 {points}점을 걸었어요",
+  "@skAbilityEventRascal": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascalNone": "{name}님은 점수를 걸지 않았어요",
+  "@skAbilityEventRascalNone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventJuanita": "{name}님이 안 나눠 준 카드를 살펴봤어요",
+  "@skAbilityEventJuanita": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventHarry": "{name}님이 입찰을 바꿨어요 (→ {bid})",
+  "@skAbilityEventHarry": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventHarryKeep": "{name}님은 입찰을 그대로 뒀어요",
+  "@skAbilityEventHarryKeep": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

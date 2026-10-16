@@ -1224,6 +1224,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         l10n.lobbyExpLoot,
                                         l10n.lobbyExpLootDesc,
                                       ],
+                                      [
+                                        'pirate_abilities',
+                                        l10n.lobbyExpPirate,
+                                        l10n.lobbyExpPirateDesc,
+                                      ],
                                     ].indexed) ...[
                                       if (i > 0) const SizedBox(width: 6),
                                       Expanded(
@@ -1247,6 +1252,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                               'white_whale' => (
                                                 const Color(0xFF1E88D6),
                                                 '🐳',
+                                              ),
+                                              'pirate_abilities' => (
+                                                const Color(0xFFC0392B),
+                                                '🏴‍☠️',
                                               ),
                                               _ => (
                                                 const Color(0xFFE29A00),
@@ -1293,20 +1302,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 ),
                                                 child: Column(
                                                   children: [
-                                                    Text(
-                                                      '$emoji ${entry[1]}',
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: Cartoon.userText(
-                                                        size: 13,
-                                                        weight: FontWeight.w800,
-                                                        color: selected
-                                                            ? Colors.white
-                                                            : Cartoon.ink
-                                                                  .withValues(
-                                                                    alpha: 0.55,
-                                                                  ),
+                                                    FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: Text(
+                                                        '$emoji ${entry[1]}',
+                                                        maxLines: 1,
+                                                        style: Cartoon.userText(
+                                                          size: 13,
+                                                          weight:
+                                                              FontWeight.w800,
+                                                          color: selected
+                                                              ? Colors.white
+                                                              : Cartoon.ink
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.55,
+                                                                    ),
+                                                        ),
                                                       ),
                                                     ),
                                                     const SizedBox(height: 2),
@@ -2932,6 +2944,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return const Color(0xFF1E88D6);
       case 'loot':
         return const Color(0xFFE29A00);
+      case 'pirate_abilities':
+        return const Color(0xFFC0392B);
       default:
         return const Color(0xFF6A5A52);
     }
@@ -2945,6 +2959,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return '🐳';
       case 'loot':
         return '💰';
+      case 'pirate_abilities':
+        return '🏴‍☠️';
       default:
         return '';
     }
@@ -2958,6 +2974,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return l10n.lobbyExpWhaleShort;
       case 'loot':
         return l10n.lobbyExpLootShort;
+      case 'pirate_abilities':
+        return l10n.lobbyExpPirateShort;
       default:
         return expansionId;
     }

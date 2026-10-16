@@ -2191,7 +2191,7 @@ class L10nEn extends L10n {
       'A trick-taking game for 2–6 players (free-for-all). Over 10 rounds, you must accurately predict the number of tricks you will win each round to score points.';
 
   @override
-  String get rulesSkCardCompositionTitle => 'Card Composition (65 base cards)';
+  String get rulesSkCardCompositionTitle => 'Card Composition (66 base cards)';
 
   @override
   String get rulesSkNumberCards => 'Number Cards (1 – 13)';
@@ -5216,7 +5216,7 @@ class L10nEn extends L10n {
   String get rulesTichuCardGuideTitle => 'Cards & Effects (56 total)';
 
   @override
-  String get rulesSkCardGuideTitle => 'Cards & Effects (65 base)';
+  String get rulesSkCardGuideTitle => 'Cards & Effects (66 base)';
 
   @override
   String get rulesLlCardGuideTitle => 'Cards & Effects (16 total)';
@@ -5831,4 +5831,167 @@ class L10nEn extends L10n {
 
   @override
   String get appForceUpdateLater => 'See you after the update!';
+
+  @override
+  String get skCardSkullKing => 'Skull King';
+
+  @override
+  String get skCardPirate => 'Pirate';
+
+  @override
+  String get skCardRascal => 'Rascal';
+
+  @override
+  String get skCardRosie => 'Rosie';
+
+  @override
+  String get skCardBendt => 'Bendt';
+
+  @override
+  String get skCardHarry => 'Harry';
+
+  @override
+  String get skCardJuanita => 'Juanita';
+
+  @override
+  String get skCardTigress => 'Tigress';
+
+  @override
+  String get skCardEscape => 'Escape';
+
+  @override
+  String get skCardMermaid => 'Mermaid';
+
+  @override
+  String get skCardKraken => 'Kraken';
+
+  @override
+  String get skCardWhiteWhale => 'White Whale';
+
+  @override
+  String get skCardLoot => 'Loot';
+
+  @override
+  String get lobbyExpPirate => 'Pirate abilities';
+
+  @override
+  String get lobbyExpPirateDesc => 'Own powers';
+
+  @override
+  String get lobbyExpPirateShort => 'Pirates';
+
+  @override
+  String get rulesSkExpPirate => '🏴‍☠️ Pirate abilities';
+
+  @override
+  String get rulesSkExpPirateDesc =>
+      'The 5 pirate cards are always in the deck, with or without this mode. When it is on, winning a trick with a pirate (not a Tigress played as a pirate) lets you use that pirate\'s ability right away, once. After the last trick of a round only Harry\'s ability can still be used.';
+
+  @override
+  String get skAbilityDescRascal =>
+      'After winning a trick, bet 0, 10 or 20 points. At the end of the round you gain the bet if your bid was exact, and lose it otherwise.';
+
+  @override
+  String get skAbilityDescRosie =>
+      'After winning a trick, choose any player (yourself included) to lead the next trick.';
+
+  @override
+  String get skAbilityDescBendt =>
+      'After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.';
+
+  @override
+  String get skAbilityDescHarry =>
+      'After winning a trick, change your bid by +1 or -1, or keep it. The only ability usable after the last trick of a round.';
+
+  @override
+  String get skAbilityDescJuanita =>
+      'After winning a trick, privately look at the cards that were not dealt this round.';
+
+  @override
+  String skAbilityTitle(String pirate) {
+    return '$pirate\'s ability';
+  }
+
+  @override
+  String get skAbilityRosiePrompt => 'Choose who leads the next trick';
+
+  @override
+  String get skAbilityMe => 'Me';
+
+  @override
+  String skAbilityBendtPrompt(int count) {
+    return 'You drew $count cards. Pick $count cards to discard';
+  }
+
+  @override
+  String skAbilityBendtConfirm(int picked, int count) {
+    return 'Discard ($picked/$count)';
+  }
+
+  @override
+  String get skAbilityRascalPrompt =>
+      'How much do you bet? Hit your bid to gain it, miss and you lose it.';
+
+  @override
+  String get skAbilityRascalNone => 'No bet';
+
+  @override
+  String skAbilityPoints(int points) {
+    return '$points pts';
+  }
+
+  @override
+  String get skAbilityJuanitaPrompt =>
+      'These cards were not dealt to anyone this round';
+
+  @override
+  String get skAbilityConfirm => 'OK';
+
+  @override
+  String skAbilityHarryPrompt(int bid) {
+    return 'You may change your bid (now $bid)';
+  }
+
+  @override
+  String get skAbilityHarryKeep => 'Keep';
+
+  @override
+  String skAbilityWaiting(String name, String pirate) {
+    return '$name is using $pirate\'s ability';
+  }
+
+  @override
+  String skAbilityEventRosie(String name, String target) {
+    return '$name chose $target to lead next';
+  }
+
+  @override
+  String skAbilityEventBendt(String name, int count) {
+    return '$name swapped $count cards';
+  }
+
+  @override
+  String skAbilityEventRascal(String name, int points) {
+    return '$name bet $points points';
+  }
+
+  @override
+  String skAbilityEventRascalNone(String name) {
+    return '$name placed no bet';
+  }
+
+  @override
+  String skAbilityEventJuanita(String name) {
+    return '$name peeked at the undealt cards';
+  }
+
+  @override
+  String skAbilityEventHarry(String name, int bid) {
+    return '$name changed their bid to $bid';
+  }
+
+  @override
+  String skAbilityEventHarryKeep(String name) {
+    return '$name kept their bid';
+  }
 }

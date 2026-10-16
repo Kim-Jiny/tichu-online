@@ -2203,7 +2203,7 @@ class L10nDe extends L10n {
 
   @override
   String get rulesSkCardCompositionTitle =>
-      'Kartenzusammensetzung (65 Basiskarten)';
+      'Kartenzusammensetzung (66 Basiskarten)';
 
   @override
   String get rulesSkNumberCards => 'Zahlenkarten (1 – 13)';
@@ -5252,7 +5252,7 @@ class L10nDe extends L10n {
   String get rulesTichuCardGuideTitle => 'Karten & Effekte (insgesamt 56)';
 
   @override
-  String get rulesSkCardGuideTitle => 'Karten & Effekte (65 im Basisspiel)';
+  String get rulesSkCardGuideTitle => 'Karten & Effekte (66 im Basisspiel)';
 
   @override
   String get rulesLlCardGuideTitle => 'Karten & Effekte (insgesamt 16)';
@@ -5881,4 +5881,167 @@ class L10nDe extends L10n {
 
   @override
   String get appForceUpdateLater => 'Bis gleich nach dem Update!';
+
+  @override
+  String get skCardSkullKing => 'Skull King';
+
+  @override
+  String get skCardPirate => 'Pirat';
+
+  @override
+  String get skCardRascal => 'Rascal';
+
+  @override
+  String get skCardRosie => 'Rosie';
+
+  @override
+  String get skCardBendt => 'Bendt';
+
+  @override
+  String get skCardHarry => 'Harry';
+
+  @override
+  String get skCardJuanita => 'Juanita';
+
+  @override
+  String get skCardTigress => 'Tigress';
+
+  @override
+  String get skCardEscape => 'Flucht';
+
+  @override
+  String get skCardMermaid => 'Meerjungfrau';
+
+  @override
+  String get skCardKraken => 'Kraken';
+
+  @override
+  String get skCardWhiteWhale => 'Weißwal';
+
+  @override
+  String get skCardLoot => 'Beute';
+
+  @override
+  String get lobbyExpPirate => 'Piratenfähigkeiten';
+
+  @override
+  String get lobbyExpPirateDesc => 'Sonderkräfte';
+
+  @override
+  String get lobbyExpPirateShort => 'Piraten';
+
+  @override
+  String get rulesSkExpPirate => '🏴‍☠️ Piratenfähigkeiten';
+
+  @override
+  String get rulesSkExpPirateDesc =>
+      'Die 5 Piratenkarten sind immer im Deck – mit oder ohne diesen Modus. Ist er aktiv, darfst du nach einem Stichgewinn mit einem Piraten (nicht mit einer als Pirat gespielten Tigress) dessen Fähigkeit sofort einmal einsetzen. Nach dem letzten Stich einer Runde geht nur noch Harrys Fähigkeit.';
+
+  @override
+  String get skAbilityDescRascal =>
+      'Nach einem Stichgewinn setzt du 0, 10 oder 20 Punkte. Am Rundenende bekommst du den Einsatz bei exaktem Gebot dazu, sonst verlierst du ihn.';
+
+  @override
+  String get skAbilityDescRosie =>
+      'Nach einem Stichgewinn bestimmst du, wer den nächsten Stich ausspielt – auch du selbst.';
+
+  @override
+  String get skAbilityDescBendt =>
+      'Nach einem Stichgewinn ziehst du 2 Karten vom Stapel der nicht ausgeteilten Karten und wirfst dann beliebige 2 Handkarten ab.';
+
+  @override
+  String get skAbilityDescHarry =>
+      'Nach einem Stichgewinn änderst du dein Gebot um +1 oder -1 oder lässt es. Die einzige Fähigkeit, die nach dem letzten Stich noch geht.';
+
+  @override
+  String get skAbilityDescJuanita =>
+      'Nach einem Stichgewinn siehst du heimlich die Karten, die in dieser Runde nicht ausgeteilt wurden.';
+
+  @override
+  String skAbilityTitle(String pirate) {
+    return 'Fähigkeit: $pirate';
+  }
+
+  @override
+  String get skAbilityRosiePrompt => 'Wähle, wer den nächsten Stich ausspielt';
+
+  @override
+  String get skAbilityMe => 'Ich';
+
+  @override
+  String skAbilityBendtPrompt(int count) {
+    return 'Du hast $count Karten gezogen. Wähle $count Karten zum Abwerfen';
+  }
+
+  @override
+  String skAbilityBendtConfirm(int picked, int count) {
+    return 'Abwerfen ($picked/$count)';
+  }
+
+  @override
+  String get skAbilityRascalPrompt =>
+      'Wie viel setzt du? Triffst du dein Gebot, gewinnst du es, sonst verlierst du es.';
+
+  @override
+  String get skAbilityRascalNone => 'Kein Einsatz';
+
+  @override
+  String skAbilityPoints(int points) {
+    return '$points Pkt.';
+  }
+
+  @override
+  String get skAbilityJuanitaPrompt =>
+      'Diese Karten wurden in dieser Runde an niemanden ausgeteilt';
+
+  @override
+  String get skAbilityConfirm => 'OK';
+
+  @override
+  String skAbilityHarryPrompt(int bid) {
+    return 'Du darfst dein Gebot ändern (jetzt $bid)';
+  }
+
+  @override
+  String get skAbilityHarryKeep => 'Behalten';
+
+  @override
+  String skAbilityWaiting(String name, String pirate) {
+    return '$name setzt die Fähigkeit von $pirate ein';
+  }
+
+  @override
+  String skAbilityEventRosie(String name, String target) {
+    return '$name bestimmt $target als nächsten Ausspieler';
+  }
+
+  @override
+  String skAbilityEventBendt(String name, int count) {
+    return '$name hat $count Karten getauscht';
+  }
+
+  @override
+  String skAbilityEventRascal(String name, int points) {
+    return '$name setzt $points Punkte';
+  }
+
+  @override
+  String skAbilityEventRascalNone(String name) {
+    return '$name setzt nichts';
+  }
+
+  @override
+  String skAbilityEventJuanita(String name) {
+    return '$name hat die nicht ausgeteilten Karten angesehen';
+  }
+
+  @override
+  String skAbilityEventHarry(String name, int bid) {
+    return '$name ändert das Gebot auf $bid';
+  }
+
+  @override
+  String skAbilityEventHarryKeep(String name) {
+    return '$name behält das Gebot';
+  }
 }

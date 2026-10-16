@@ -23,6 +23,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../widgets/mid_game_join.dart';
 import '../widgets/sk_number_card.dart';
+import '../widgets/sk_pirate_ability_panel.dart';
 
 class SKGameScreen extends StatefulWidget {
   const SKGameScreen({super.key});
@@ -58,6 +59,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   bool _waitingForRoomRecovery = false;
   GameService? _gameService;
 
+  // 해적 능력: 방금 쓴 능력을 모두에게 잠깐 알리는 띠(abilitySeq 가 바뀔 때 한 번).
+  int _lastAbilitySeq = -1;
+  String? _abilityToast;
+  Timer? _abilityToastTimer;
+
+  /// 트릭 결과(승자 표시·카드 강조)를 보여 주는 단계 — 능력을 쓰는 동안에도 그대로 둔다.
+  bool _trickShown(SKGameStateData state) =>
+      state.phase == 'trick_end' || state.phase == 'pirate_ability';
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +97,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     _countdownTimer?.cancel();
     _gameEndCountdownTimer?.cancel();
     _cardViewRequestTimer?.cancel();
+    _abilityToastTimer?.cancel();
     super.dispose();
   }
 
@@ -179,6 +190,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         'bidding',
                         'playing',
                         'trick_end',
+                        'pirate_ability',
                       ].contains(g.skGameState?.phase),
                 ),
                 Positioned.fill(
@@ -261,6 +273,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           _lastSkTrickNumber = state.trickNumber;
                         }
 
+                        // 방금 쓴 해적 능력을 모두에게 한 번만 알린다(처음 들어온 화면에서는 건너뜀).
+                        if (_lastAbilitySeq != state.abilitySeq) {
+                          final firstLook = _lastAbilitySeq == -1;
+                          _lastAbilitySeq = state.abilitySeq;
+                          final ev = state.lastAbility;
+                          if (!firstLook && ev != null) {
+                            final text = _abilityEventText(state, ev);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _showAbilityToast(text);
+                            });
+                          }
+                        }
+
                         if (isSpectating) {
                           return Stack(
                             children: [
@@ -271,6 +296,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     'bidding',
                                     'playing',
                                     'trick_end',
+                                    'pirate_ability',
                                   ].contains(state.phase))
                                     _buildBoardStage(
                                       board: _buildSpectatorScoreboard(
@@ -312,6 +338,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     ),
                                 ],
                               ),
+                              if (state.phase == 'pirate_ability')
+                                _buildAbilityWaitingBanner(state),
+                              if (_abilityToast != null)
+                                _buildAbilityToastBanner(_abilityToast!),
                               if (_moreOpen) _buildMoreMenu(game),
                               if (_soundPanelOpen) _buildSoundPanel(game),
                               if (_chatOpen) _buildChatPanel(game),
@@ -333,7 +363,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   ),
                                 ],
                                 if (state.phase == 'playing' ||
-                                    state.phase == 'trick_end')
+                                    state.phase == 'trick_end' ||
+                                    state.phase == 'pirate_ability')
                                   _buildBoardStage(
                                     board: _buildScoreboard(state, game),
                                     bottomOverlay: _buildHandArea(state, game),
@@ -361,6 +392,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               ),
                             if (game.hasIncomingCardViewRequests)
                               _buildCardViewRequestPopup(game),
+                            if (state.phase == 'pirate_ability')
+                              state.isMyAbilityTurn
+                                  ? _buildAbilityPanelLayer(state, game)
+                                  : _buildAbilityWaitingBanner(state),
+                            if (_abilityToast != null)
+                              _buildAbilityToastBanner(_abilityToast!),
                             if (_moreOpen) _buildMoreMenu(game),
                             if (_viewersOpen) _buildViewersPanel(game),
                             if (_soundPanelOpen) _buildSoundPanel(game),
@@ -813,8 +850,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         orElse: () => null,
                       );
                   final isTrickWinner =
-                      state.phase == 'trick_end' &&
-                      state.lastTrickWinner == p.id;
+                      _trickShown(state) && state.lastTrickWinner == p.id;
 
                   if (trickPlay == null) return const SizedBox.shrink();
                   return Positioned(
@@ -1102,8 +1138,21 @@ class _SKGameScreenState extends State<SKGameScreen> {
             name: l10n.rulesSkExpLoot,
             desc: l10n.rulesSkExpLootDesc,
           ),
+          'pirate_abilities' => (
+            cardId: '',
+            name: l10n.rulesSkExpPirate,
+            desc: l10n.rulesSkExpPirateDesc,
+          ),
           _ => (cardId: '', name: id, desc: ''),
         },
+      // 해적 능력 모드를 켰으면 5명의 능력을 카드 그림과 함께 이어서 설명한다.
+      if (state.hasPirateAbilities)
+        for (final pirate in skPirateByNumber.values)
+          (
+            cardId: skPirateCardId(pirate),
+            name: skPirateName(l10n, pirate),
+            desc: skPirateAbilityDesc(l10n, pirate),
+          ),
     ];
     if (entries.isEmpty) return;
     showModalBottomSheet(
@@ -1150,7 +1199,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (e.cardId.isNotEmpty)
-                            _buildCard(e.cardId, size: 86),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _buildCard(
+                                e.cardId,
+                                size: 86,
+                                showName: true,
+                              ),
+                            ),
                           if (e.cardId.isNotEmpty) const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -1256,7 +1312,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             orElse: () => null,
           );
     final isSelfTrickWinner =
-        state.phase == 'trick_end' && state.lastTrickWinner == selfPlayer?.id;
+        _trickShown(state) && state.lastTrickWinner == selfPlayer?.id;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1396,8 +1452,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         orElse: () => null,
                       );
                   final isTrickWinner =
-                      state.phase == 'trick_end' &&
-                      state.lastTrickWinner == p.id;
+                      _trickShown(state) && state.lastTrickWinner == p.id;
 
                   if (trickPlay == null) return const SizedBox.shrink();
                   return Positioned(
@@ -2070,15 +2125,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }) {
     final isTigressChoice =
         play.tigressChoice == 'pirate' || play.tigressChoice == 'escape';
-    final displayCardId = play.tigressChoice == 'pirate'
-        ? 'sk_pirate'
-        : play.tigressChoice == 'escape'
-        ? 'sk_escape'
-        : play.cardId;
+    // 티그리스는 고른 모양과 상관없이 티그리스 그림으로 보이고, 이름표에 고른 쪽을 적는다
+    // (해적 그림으로 바꾸면 이름 있는 해적을 낸 것으로 오해한다).
+    final l10n = L10n.of(context);
     final card = _buildCard(
-      displayCardId,
+      play.cardId,
       size: size,
       highlighted: highlighted,
+      showName: true,
+      nameOverride: play.tigressChoice == 'pirate'
+          ? '${l10n.skCardTigress}·${l10n.skCardPirate}'
+          : play.tigressChoice == 'escape'
+          ? '${l10n.skCardTigress}·${l10n.skCardEscape}'
+          : null,
     );
     if (!isTigressChoice) return card;
     // Overlay a small check-mark badge in the top-left corner so players can
@@ -2103,6 +2162,112 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── 해적 능력 ──
+
+  String _abilityPlayerName(SKGameStateData state, String id) {
+    for (final p in state.players) {
+      if (p.id == id) return p.name;
+    }
+    return id;
+  }
+
+  String _abilityEventText(SKGameStateData state, SKAbilityEvent ev) {
+    final l10n = L10n.of(context);
+    final name = _abilityPlayerName(state, ev.playerId);
+    switch (ev.pirate) {
+      case 'rosie':
+        return l10n.skAbilityEventRosie(
+          name,
+          _abilityPlayerName(state, ev.targetId ?? ''),
+        );
+      case 'bendt':
+        return l10n.skAbilityEventBendt(name, ev.count ?? 2);
+      case 'rascal':
+        return (ev.wager ?? 0) > 0
+            ? l10n.skAbilityEventRascal(name, ev.wager!)
+            : l10n.skAbilityEventRascalNone(name);
+      case 'harry':
+        return (ev.delta ?? 0) != 0
+            ? l10n.skAbilityEventHarry(name, ev.bid ?? 0)
+            : l10n.skAbilityEventHarryKeep(name);
+      default:
+        return l10n.skAbilityEventJuanita(name);
+    }
+  }
+
+  void _showAbilityToast(String text) {
+    _abilityToastTimer?.cancel();
+    setState(() => _abilityToast = text);
+    _abilityToastTimer = Timer(const Duration(milliseconds: 3200), () {
+      if (mounted) setState(() => _abilityToast = null);
+    });
+  }
+
+  Widget _buildAbilityToastBanner(String text) {
+    return Positioned(
+      top: 64,
+      left: 20,
+      right: 20,
+      child: IgnorePointer(
+        child: CartoonEntrance(
+          from: const Offset(0, -10),
+          child: GameNoticeBar(
+            icon: Icons.sailing_rounded,
+            color: Cartoon.yellow,
+            text: text,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 다른 사람이 능력을 고르는 동안 보여 주는 안내(관전자도 같다).
+  Widget _buildAbilityWaitingBanner(SKGameStateData state) {
+    final ab = state.pendingAbility;
+    if (ab == null) return const SizedBox.shrink();
+    final l10n = L10n.of(context);
+    return Positioned(
+      top: 64,
+      left: 20,
+      right: 20,
+      child: IgnorePointer(
+        child: GameNoticeBar(
+          icon: Icons.sailing_rounded,
+          color: Cartoon.yellow,
+          text: l10n.skAbilityWaiting(
+            _abilityPlayerName(state, ab.playerId),
+            skPirateName(l10n, ab.pirate),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 내가 능력을 쓸 차례 — 화면을 살짝 어둡게 하고 선택 패널을 띄운다.
+  Widget _buildAbilityPanelLayer(SKGameStateData state, GameService game) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.45),
+        alignment: Alignment.center,
+        child: SkAbilityPanel(
+          state: state,
+          buildCard: (id, {size = 60, highlighted = false}) => _buildCard(
+            id,
+            size: size,
+            highlighted: highlighted,
+            showName: true,
+          ),
+          onUse: ({leaderId, discard, wager, delta}) => game.skUsePirateAbility(
+            leaderId: leaderId,
+            discard: discard,
+            wager: wager,
+            delta: delta,
+          ),
+        ),
+      ),
     );
   }
 
@@ -2739,7 +2904,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final isVoided = state.lastTrickVoided;
 
     // Voided trick → distinct banner
-    if (isVoided && state.phase == 'trick_end') {
+    if (isVoided && _trickShown(state)) {
       return _skEffectPanel(
         cardId: isKraken ? 'sk_kraken' : 'sk_white_whale',
         cardSize: 62,
@@ -2751,7 +2916,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       );
     }
 
-    if (!isKraken && hasWhiteWhaleEffect && state.phase == 'trick_end') {
+    if (!isKraken && hasWhiteWhaleEffect && _trickShown(state)) {
       return _skEffectPanel(
         cardId: 'sk_white_whale',
         cardSize: 62,
@@ -2768,7 +2933,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       );
     }
 
-    final ended = state.phase == 'trick_end';
+    final ended = _trickShown(state);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
@@ -3306,7 +3471,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
       Widget card = Padding(
         padding: EdgeInsets.symmetric(horizontal: padding),
-        child: _buildCard(cardId, size: cardHeight, highlighted: isSelected),
+        child: _buildCard(
+          cardId,
+          size: cardHeight,
+          highlighted: isSelected,
+          showName: true,
+        ),
       );
 
       if (interactive) {
@@ -3327,6 +3497,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   cardId,
                   size: cardHeight,
                   highlighted: isSelected,
+                  showName: true,
                 ),
               ),
             ),
@@ -3657,6 +3828,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     final tricks = pScore['tricks'] ?? 0;
                     final bonus = pScore['bonus'] ?? 0;
                     final roundScore = pScore['roundScore'] ?? 0;
+                    final wager = (pScore['wager'] as num?)?.toInt() ?? 0;
                     final success = bid == 0 ? tricks == 0 : tricks == bid;
                     final rankColor = rank == 1
                         ? const Color(0xFFD4A24A)
@@ -3690,13 +3862,29 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           ),
                           Expanded(
                             flex: 3,
-                            child: Text(
-                              p.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: Cartoon.userText(
-                                size: isLandscape ? 14 : 15,
-                                color: Cartoon.ink,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  p.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Cartoon.userText(
+                                    size: isLandscape ? 14 : 15,
+                                    color: Cartoon.ink,
+                                  ),
+                                ),
+                                // Rascal 의 내기: 입찰을 맞히면 +, 못 맞히면 −(점수에 이미 반영됨).
+                                if (wager > 0)
+                                  Text(
+                                    '🏴‍☠️ ${success ? '+' : '-'}$wager',
+                                    style: Cartoon.userText(
+                                      size: 11,
+                                      color: success
+                                          ? Cartoon.orangeDeep
+                                          : Cartoon.red,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           Expanded(
@@ -3945,10 +4133,79 @@ class _SKGameScreenState extends State<SKGameScreen> {
     'loot': Color(0xFF8B6F22),
   };
 
+  /// 특수 카드 그림에는 글자가 없어서, 어떤 카드인지 이름표를 카드 아래쪽에 살짝 걸쳐 단다.
+  String _skCardLabel(String cardId, _CardInfo info) {
+    final l10n = L10n.of(context);
+    switch (info.type) {
+      case 'skull_king':
+        return l10n.skCardSkullKing;
+      case 'pirate':
+        final key = skPirateByNumber[info.number];
+        return key == null ? l10n.skCardPirate : skPirateName(l10n, key);
+      case 'mermaid':
+        return l10n.skCardMermaid;
+      case 'escape':
+        return l10n.skCardEscape;
+      case 'tigress':
+        return l10n.skCardTigress;
+      case 'kraken':
+        return l10n.skCardKraken;
+      case 'white_whale':
+        return l10n.skCardWhiteWhale;
+      case 'loot':
+        return l10n.skCardLoot;
+      default:
+        return '';
+    }
+  }
+
+  Widget _withNameTag(Widget card, String label, double size) {
+    if (label.isEmpty) return card;
+    final w = size * 0.7;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        card,
+        Positioned(
+          left: -w * 0.05,
+          right: -w * 0.05,
+          bottom: -size * 0.075,
+          child: Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: size * 0.07,
+                vertical: size * 0.012,
+              ),
+              decoration: BoxDecoration(
+                color: Cartoon.cream,
+                borderRadius: BorderRadius.circular(size * 0.1),
+                border: Border.all(color: Cartoon.ink, width: 1.3),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Cartoon.userText(
+                    size: (size * 0.15).clamp(8.0, 13.0),
+                    weight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCard(
     String cardId, {
     double size = 60,
     bool highlighted = false,
+    bool showName = false,
+    String? nameOverride,
   }) {
     final info = _parseCardId(cardId);
     final w = size * 0.7;
@@ -3994,7 +4251,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     }
     final fallbackLabel = _specialLabels[info.type] ?? '?';
 
-    return Container(
+    final specialCard = Container(
       width: w,
       height: h,
       decoration: BoxDecoration(
@@ -4012,6 +4269,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   _buildSpecialFallback(fallbackLabel, size),
             )
           : _buildSpecialFallback(fallbackLabel, size),
+    );
+    if (!showName) return specialCard;
+    return _withNameTag(
+      specialCard,
+      nameOverride ?? _skCardLabel(cardId, info),
+      size,
     );
   }
 

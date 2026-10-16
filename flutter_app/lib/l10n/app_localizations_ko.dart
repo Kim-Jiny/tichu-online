@@ -2148,7 +2148,7 @@ class L10nKo extends L10n {
       '2~6명이 개인전으로 진행하는 트릭테이킹 게임입니다. 총 10 라운드 동안 매 라운드마다 자신이 이길 트릭 수를 정확히 예측해야 점수를 얻습니다.';
 
   @override
-  String get rulesSkCardCompositionTitle => '카드 구성 (기본 총 65장)';
+  String get rulesSkCardCompositionTitle => '카드 구성 (기본 총 66장)';
 
   @override
   String get rulesSkNumberCards => '숫자 카드 (1 ~ 13)';
@@ -5093,7 +5093,7 @@ class L10nKo extends L10n {
   String get rulesTichuCardGuideTitle => '카드 구성 및 효과 (총 56장)';
 
   @override
-  String get rulesSkCardGuideTitle => '카드 구성 및 효과 (기본 총 65장)';
+  String get rulesSkCardGuideTitle => '카드 구성 및 효과 (기본 총 66장)';
 
   @override
   String get rulesLlCardGuideTitle => '카드 구성 및 효과 (총 16장)';
@@ -5680,4 +5680,165 @@ class L10nKo extends L10n {
 
   @override
   String get appForceUpdateLater => '업데이트 후에 다시 만나요!';
+
+  @override
+  String get skCardSkullKing => '스컬킹';
+
+  @override
+  String get skCardPirate => '해적';
+
+  @override
+  String get skCardRascal => '라스칼';
+
+  @override
+  String get skCardRosie => '로지';
+
+  @override
+  String get skCardBendt => '벤트';
+
+  @override
+  String get skCardHarry => '해리';
+
+  @override
+  String get skCardJuanita => '후아니타';
+
+  @override
+  String get skCardTigress => '티그리스';
+
+  @override
+  String get skCardEscape => '도주';
+
+  @override
+  String get skCardMermaid => '인어';
+
+  @override
+  String get skCardKraken => '크라켄';
+
+  @override
+  String get skCardWhiteWhale => '흰고래';
+
+  @override
+  String get skCardLoot => '보물';
+
+  @override
+  String get lobbyExpPirate => '해적 능력';
+
+  @override
+  String get lobbyExpPirateDesc => '고유 능력';
+
+  @override
+  String get lobbyExpPirateShort => '해적능력';
+
+  @override
+  String get rulesSkExpPirate => '🏴‍☠️ 해적 능력';
+
+  @override
+  String get rulesSkExpPirateDesc =>
+      '해적 카드 5장은 이 모드와 상관없이 항상 덱에 있습니다. 모드를 켜면 해적 카드로 트릭을 이겼을 때(티그리스로 낸 해적은 제외) 그 해적의 능력을 바로 한 번 쓸 수 있습니다. 마지막 트릭 뒤에는 해리의 능력만 쓸 수 있습니다.';
+
+  @override
+  String get skAbilityDescRascal =>
+      '트릭을 이기면 0·10·20점 중 하나를 겁니다. 라운드가 끝났을 때 입찰을 맞혔으면 건 점수를 더 받고, 못 맞혔으면 그만큼 잃습니다.';
+
+  @override
+  String get skAbilityDescRosie => '트릭을 이기면 다음 트릭을 시작할 사람을 나를 포함해 아무나 지목합니다.';
+
+  @override
+  String get skAbilityDescBendt =>
+      '트릭을 이기면 안 나눠 준 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.';
+
+  @override
+  String get skAbilityDescHarry =>
+      '트릭을 이기면 내 입찰을 +1, -1 하거나 그대로 둘 수 있습니다. 마지막 트릭 뒤에도 쓸 수 있는 유일한 능력입니다.';
+
+  @override
+  String get skAbilityDescJuanita =>
+      '트릭을 이기면 이번 라운드에 아무에게도 나눠 주지 않은 카드를 혼자 확인합니다.';
+
+  @override
+  String skAbilityTitle(String pirate) {
+    return '$pirate의 능력';
+  }
+
+  @override
+  String get skAbilityRosiePrompt => '다음 트릭을 시작할 사람을 고르세요';
+
+  @override
+  String get skAbilityMe => '나';
+
+  @override
+  String skAbilityBendtPrompt(int count) {
+    return '카드 $count장을 가져왔어요. 버릴 카드 $count장을 고르세요';
+  }
+
+  @override
+  String skAbilityBendtConfirm(int picked, int count) {
+    return '버리기 ($picked/$count)';
+  }
+
+  @override
+  String get skAbilityRascalPrompt =>
+      '얼마를 걸까요? 입찰을 맞히면 건 점수를 더 받고, 못 맞히면 그만큼 잃어요.';
+
+  @override
+  String get skAbilityRascalNone => '걸지 않기';
+
+  @override
+  String skAbilityPoints(int points) {
+    return '$points점';
+  }
+
+  @override
+  String get skAbilityJuanitaPrompt => '이번 라운드에 아무에게도 나눠 주지 않은 카드예요';
+
+  @override
+  String get skAbilityConfirm => '확인';
+
+  @override
+  String skAbilityHarryPrompt(int bid) {
+    return '입찰을 바꿀 수 있어요 (지금 $bid)';
+  }
+
+  @override
+  String get skAbilityHarryKeep => '그대로';
+
+  @override
+  String skAbilityWaiting(String name, String pirate) {
+    return '$name님이 $pirate의 능력을 쓰는 중이에요';
+  }
+
+  @override
+  String skAbilityEventRosie(String name, String target) {
+    return '$name님이 $target님을 다음 선으로 골랐어요';
+  }
+
+  @override
+  String skAbilityEventBendt(String name, int count) {
+    return '$name님이 카드 $count장을 바꿨어요';
+  }
+
+  @override
+  String skAbilityEventRascal(String name, int points) {
+    return '$name님이 $points점을 걸었어요';
+  }
+
+  @override
+  String skAbilityEventRascalNone(String name) {
+    return '$name님은 점수를 걸지 않았어요';
+  }
+
+  @override
+  String skAbilityEventJuanita(String name) {
+    return '$name님이 안 나눠 준 카드를 살펴봤어요';
+  }
+
+  @override
+  String skAbilityEventHarry(String name, int bid) {
+    return '$name님이 입찰을 바꿨어요 (→ $bid)';
+  }
+
+  @override
+  String skAbilityEventHarryKeep(String name) {
+    return '$name님은 입찰을 그대로 뒀어요';
+  }
 }

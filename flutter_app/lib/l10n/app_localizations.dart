@@ -4032,7 +4032,7 @@ abstract class L10n {
   /// No description provided for @rulesSkCardCompositionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Card Composition (65 base cards)'**
+  /// **'Card Composition (66 base cards)'**
   String get rulesSkCardCompositionTitle;
 
   /// No description provided for @rulesSkNumberCards.
@@ -9198,7 +9198,7 @@ abstract class L10n {
   /// No description provided for @rulesSkCardGuideTitle.
   ///
   /// In en, this message translates to:
-  /// **'Cards & Effects (65 base)'**
+  /// **'Cards & Effects (66 base)'**
   String get rulesSkCardGuideTitle;
 
   /// No description provided for @rulesLlCardGuideTitle.
@@ -10250,6 +10250,264 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'See you after the update!'**
   String get appForceUpdateLater;
+
+  /// No description provided for @skCardSkullKing.
+  ///
+  /// In en, this message translates to:
+  /// **'Skull King'**
+  String get skCardSkullKing;
+
+  /// No description provided for @skCardPirate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pirate'**
+  String get skCardPirate;
+
+  /// No description provided for @skCardRascal.
+  ///
+  /// In en, this message translates to:
+  /// **'Rascal'**
+  String get skCardRascal;
+
+  /// No description provided for @skCardRosie.
+  ///
+  /// In en, this message translates to:
+  /// **'Rosie'**
+  String get skCardRosie;
+
+  /// No description provided for @skCardBendt.
+  ///
+  /// In en, this message translates to:
+  /// **'Bendt'**
+  String get skCardBendt;
+
+  /// No description provided for @skCardHarry.
+  ///
+  /// In en, this message translates to:
+  /// **'Harry'**
+  String get skCardHarry;
+
+  /// No description provided for @skCardJuanita.
+  ///
+  /// In en, this message translates to:
+  /// **'Juanita'**
+  String get skCardJuanita;
+
+  /// No description provided for @skCardTigress.
+  ///
+  /// In en, this message translates to:
+  /// **'Tigress'**
+  String get skCardTigress;
+
+  /// No description provided for @skCardEscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Escape'**
+  String get skCardEscape;
+
+  /// No description provided for @skCardMermaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mermaid'**
+  String get skCardMermaid;
+
+  /// No description provided for @skCardKraken.
+  ///
+  /// In en, this message translates to:
+  /// **'Kraken'**
+  String get skCardKraken;
+
+  /// No description provided for @skCardWhiteWhale.
+  ///
+  /// In en, this message translates to:
+  /// **'White Whale'**
+  String get skCardWhiteWhale;
+
+  /// No description provided for @skCardLoot.
+  ///
+  /// In en, this message translates to:
+  /// **'Loot'**
+  String get skCardLoot;
+
+  /// No description provided for @lobbyExpPirate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pirate abilities'**
+  String get lobbyExpPirate;
+
+  /// No description provided for @lobbyExpPirateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Own powers'**
+  String get lobbyExpPirateDesc;
+
+  /// No description provided for @lobbyExpPirateShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Pirates'**
+  String get lobbyExpPirateShort;
+
+  /// No description provided for @rulesSkExpPirate.
+  ///
+  /// In en, this message translates to:
+  /// **'🏴‍☠️ Pirate abilities'**
+  String get rulesSkExpPirate;
+
+  /// No description provided for @rulesSkExpPirateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The 5 pirate cards are always in the deck, with or without this mode. When it is on, winning a trick with a pirate (not a Tigress played as a pirate) lets you use that pirate\'s ability right away, once. After the last trick of a round only Harry\'s ability can still be used.'**
+  String get rulesSkExpPirateDesc;
+
+  /// No description provided for @skAbilityDescRascal.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning a trick, bet 0, 10 or 20 points. At the end of the round you gain the bet if your bid was exact, and lose it otherwise.'**
+  String get skAbilityDescRascal;
+
+  /// No description provided for @skAbilityDescRosie.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning a trick, choose any player (yourself included) to lead the next trick.'**
+  String get skAbilityDescRosie;
+
+  /// No description provided for @skAbilityDescBendt.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.'**
+  String get skAbilityDescBendt;
+
+  /// No description provided for @skAbilityDescHarry.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning a trick, change your bid by +1 or -1, or keep it. The only ability usable after the last trick of a round.'**
+  String get skAbilityDescHarry;
+
+  /// No description provided for @skAbilityDescJuanita.
+  ///
+  /// In en, this message translates to:
+  /// **'After winning a trick, privately look at the cards that were not dealt this round.'**
+  String get skAbilityDescJuanita;
+
+  /// No description provided for @skAbilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{pirate}\'s ability'**
+  String skAbilityTitle(String pirate);
+
+  /// No description provided for @skAbilityRosiePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who leads the next trick'**
+  String get skAbilityRosiePrompt;
+
+  /// No description provided for @skAbilityMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get skAbilityMe;
+
+  /// No description provided for @skAbilityBendtPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'You drew {count} cards. Pick {count} cards to discard'**
+  String skAbilityBendtPrompt(int count);
+
+  /// No description provided for @skAbilityBendtConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard ({picked}/{count})'**
+  String skAbilityBendtConfirm(int picked, int count);
+
+  /// No description provided for @skAbilityRascalPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How much do you bet? Hit your bid to gain it, miss and you lose it.'**
+  String get skAbilityRascalPrompt;
+
+  /// No description provided for @skAbilityRascalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No bet'**
+  String get skAbilityRascalNone;
+
+  /// No description provided for @skAbilityPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} pts'**
+  String skAbilityPoints(int points);
+
+  /// No description provided for @skAbilityJuanitaPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'These cards were not dealt to anyone this round'**
+  String get skAbilityJuanitaPrompt;
+
+  /// No description provided for @skAbilityConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get skAbilityConfirm;
+
+  /// No description provided for @skAbilityHarryPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'You may change your bid (now {bid})'**
+  String skAbilityHarryPrompt(int bid);
+
+  /// No description provided for @skAbilityHarryKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get skAbilityHarryKeep;
+
+  /// No description provided for @skAbilityWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is using {pirate}\'s ability'**
+  String skAbilityWaiting(String name, String pirate);
+
+  /// No description provided for @skAbilityEventRosie.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} chose {target} to lead next'**
+  String skAbilityEventRosie(String name, String target);
+
+  /// No description provided for @skAbilityEventBendt.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} swapped {count} cards'**
+  String skAbilityEventBendt(String name, int count);
+
+  /// No description provided for @skAbilityEventRascal.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} bet {points} points'**
+  String skAbilityEventRascal(String name, int points);
+
+  /// No description provided for @skAbilityEventRascalNone.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} placed no bet'**
+  String skAbilityEventRascalNone(String name);
+
+  /// No description provided for @skAbilityEventJuanita.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} peeked at the undealt cards'**
+  String skAbilityEventJuanita(String name);
+
+  /// No description provided for @skAbilityEventHarry.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} changed their bid to {bid}'**
+  String skAbilityEventHarry(String name, int bid);
+
+  /// No description provided for @skAbilityEventHarryKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} kept their bid'**
+  String skAbilityEventHarryKeep(String name);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

@@ -8,6 +8,7 @@ import '../widgets/cartoon_icons.dart';
 import '../widgets/game_type_icon.dart';
 import '../widgets/playing_card.dart';
 import '../widgets/sk_number_card.dart';
+import '../widgets/sk_pirate_ability_panel.dart';
 
 /// Rules / "게임설명" screen — accessible from the lobby header.
 /// Shows Tichu and Skull King rules with exact card counts. The Skull King
@@ -475,7 +476,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 leading: _GuideCardImage('assets/cards/sk_pirate1.webp'),
                 name: L10n.of(context).rulesSkPirate,
                 sub: L10n.of(context).rulesSkPirateSub,
-                count: 4,
+                count: 5,
                 lines: [
                   L10n.of(context).rulesSkSpecialPirateLine1,
                   L10n.of(context).rulesSkSpecialPirateLine2,
@@ -558,6 +559,32 @@ class _RulesScreenState extends State<RulesScreen> {
                 count: 2,
                 lines: [L10n.of(context).rulesSkExpLootDesc],
               ),
+              const SizedBox(height: 10),
+              _CardGuide(
+                leading: const _GuideCardImage('assets/cards/sk_pirate2.webp'),
+                name: L10n.of(context).rulesSkExpPirate,
+                sub: '',
+                count: 5,
+                lines: [L10n.of(context).rulesSkExpPirateDesc],
+              ),
+              for (final (i, pirate) in const [
+                'rascal',
+                'rosie',
+                'bendt',
+                'harry',
+                'juanita',
+              ].indexed) ...[
+                const SizedBox(height: 10),
+                _CardGuide(
+                  leading: _GuideCardImage(
+                    'assets/cards/sk_pirate${i + 1}.webp',
+                  ),
+                  name: skPirateName(L10n.of(context), pirate),
+                  sub: '',
+                  count: 1,
+                  lines: [skPirateAbilityDesc(L10n.of(context), pirate)],
+                ),
+              ],
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(10),

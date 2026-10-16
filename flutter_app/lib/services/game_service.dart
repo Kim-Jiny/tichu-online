@@ -149,7 +149,7 @@ class GameService extends ChangeNotifier {
   }
 
   /// Skull King expansions active in the current room. Subset of
-  /// `['kraken', 'white_whale', 'loot']`. Only meaningful when
+  /// `['kraken', 'white_whale', 'loot', 'pirate_abilities']`. Only meaningful when
   /// [currentGameType] is `skull_king`.
   List<String> roomSkExpansions = const [];
 
@@ -3267,7 +3267,8 @@ class GameService extends ChangeNotifier {
     }
 
     // My turn
-    if (!prev.isMyTurn && next.isMyTurn) {
+    if ((!prev.isMyTurn && next.isMyTurn) ||
+        (!prev.isMyAbilityTurn && next.isMyAbilityTurn)) {
       _sfx.play('my_turn');
     }
 
@@ -4225,6 +4226,22 @@ class GameService extends ChangeNotifier {
   void playCard(String cardId, {String? tigressChoice}) {
     final msg = <String, dynamic>{'type': 'play_card', 'cardId': cardId};
     if (tigressChoice != null) msg['tigressChoice'] = tigressChoice;
+    _network.send(msg);
+  }
+
+  /// 해적 능력 사용 — 능력마다 필요한 값만 채워서 보낸다(Rosie: leaderId, Bendt: discard,
+  /// Rascal: wager, Harry: delta, Juanita: 없음).
+  void skUsePirateAbility({
+    String? leaderId,
+    List<String>? discard,
+    int? wager,
+    int? delta,
+  }) {
+    final msg = <String, dynamic>{'type': 'use_pirate_ability'};
+    if (leaderId != null) msg['leaderId'] = leaderId;
+    if (discard != null) msg['discard'] = discard;
+    if (wager != null) msg['wager'] = wager;
+    if (delta != null) msg['delta'] = delta;
     _network.send(msg);
   }
 

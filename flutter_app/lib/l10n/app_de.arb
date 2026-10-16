@@ -717,7 +717,7 @@
   "rulesTichuWinBody": "Das erste Team, das die beim Erstellen festgelegte Zielpunktzahl (Standard 1000) erreicht, gewinnt. Ranglistenspiele verwenden feste 1000 Punkte.",
   "rulesSkGoalTitle": "Spielziel",
   "rulesSkGoalBody": "Ein Stichspiel für 2–6 Spieler (Jeder gegen Jeden). Über 10 Runden musst du die Anzahl deiner gewonnenen Stiche pro Runde genau vorhersagen, um Punkte zu erhalten.",
-  "rulesSkCardCompositionTitle": "Kartenzusammensetzung (65 Basiskarten)",
+  "rulesSkCardCompositionTitle": "Kartenzusammensetzung (66 Basiskarten)",
   "rulesSkNumberCards": "Zahlenkarten (1 – 13)",
   "rulesSkNumberCardsSub": "4 Farben × 13 Karten (Gelb / Grün / Lila / Schwarz)",
   "rulesSkEscape": "Escape",
@@ -1820,7 +1820,7 @@
   "rulesSkLootDemo": "Der Spieler, der Loot spielt, und der Stichgewinner bilden eine Allianz. Nur wenn beide am Rundenende ihr Gebot erfüllt haben, erhält jeder +20 pro Loot-Karte.",
   "rulesSkLootDemoTag": "Beide erfüllt → je +20",
   "rulesTichuCardGuideTitle": "Karten & Effekte (insgesamt 56)",
-  "rulesSkCardGuideTitle": "Karten & Effekte (65 im Basisspiel)",
+  "rulesSkCardGuideTitle": "Karten & Effekte (66 im Basisspiel)",
   "rulesLlCardGuideTitle": "Karten & Effekte (insgesamt 16)",
   "shopNeedMoreGold": "Dir fehlen {amount} Gold",
   "shopTapToPlay": "Gleich ausprobieren?",
@@ -2157,5 +2157,157 @@
   "couponClipboardEmpty": "Nichts zum Einfügen kopiert",
   "couponRedeemedTitle": "Gutschein eingelöst!",
   "couponEnterCode": "Bitte gib den Code ein",
-  "appForceUpdateLater": "Bis gleich nach dem Update!"
+  "appForceUpdateLater": "Bis gleich nach dem Update!",
+  "skCardSkullKing": "Skull King",
+  "skCardPirate": "Pirat",
+  "skCardRascal": "Rascal",
+  "skCardRosie": "Rosie",
+  "skCardBendt": "Bendt",
+  "skCardHarry": "Harry",
+  "skCardJuanita": "Juanita",
+  "skCardTigress": "Tigress",
+  "skCardEscape": "Flucht",
+  "skCardMermaid": "Meerjungfrau",
+  "skCardKraken": "Kraken",
+  "skCardWhiteWhale": "Weißwal",
+  "skCardLoot": "Beute",
+  "lobbyExpPirate": "Piratenfähigkeiten",
+  "lobbyExpPirateDesc": "Sonderkräfte",
+  "lobbyExpPirateShort": "Piraten",
+  "rulesSkExpPirate": "🏴‍☠️ Piratenfähigkeiten",
+  "rulesSkExpPirateDesc": "Die 5 Piratenkarten sind immer im Deck – mit oder ohne diesen Modus. Ist er aktiv, darfst du nach einem Stichgewinn mit einem Piraten (nicht mit einer als Pirat gespielten Tigress) dessen Fähigkeit sofort einmal einsetzen. Nach dem letzten Stich einer Runde geht nur noch Harrys Fähigkeit.",
+  "skAbilityDescRascal": "Nach einem Stichgewinn setzt du 0, 10 oder 20 Punkte. Am Rundenende bekommst du den Einsatz bei exaktem Gebot dazu, sonst verlierst du ihn.",
+  "skAbilityDescRosie": "Nach einem Stichgewinn bestimmst du, wer den nächsten Stich ausspielt – auch du selbst.",
+  "skAbilityDescBendt": "Nach einem Stichgewinn ziehst du 2 Karten vom Stapel der nicht ausgeteilten Karten und wirfst dann beliebige 2 Handkarten ab.",
+  "skAbilityDescHarry": "Nach einem Stichgewinn änderst du dein Gebot um +1 oder -1 oder lässt es. Die einzige Fähigkeit, die nach dem letzten Stich noch geht.",
+  "skAbilityDescJuanita": "Nach einem Stichgewinn siehst du heimlich die Karten, die in dieser Runde nicht ausgeteilt wurden.",
+  "skAbilityTitle": "Fähigkeit: {pirate}",
+  "@skAbilityTitle": {
+    "placeholders": {
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityRosiePrompt": "Wähle, wer den nächsten Stich ausspielt",
+  "skAbilityMe": "Ich",
+  "skAbilityBendtPrompt": "Du hast {count} Karten gezogen. Wähle {count} Karten zum Abwerfen",
+  "@skAbilityBendtPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityBendtConfirm": "Abwerfen ({picked}/{count})",
+  "@skAbilityBendtConfirm": {
+    "placeholders": {
+      "picked": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityRascalPrompt": "Wie viel setzt du? Triffst du dein Gebot, gewinnst du es, sonst verlierst du es.",
+  "skAbilityRascalNone": "Kein Einsatz",
+  "skAbilityPoints": "{points} Pkt.",
+  "@skAbilityPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityJuanitaPrompt": "Diese Karten wurden in dieser Runde an niemanden ausgeteilt",
+  "skAbilityConfirm": "OK",
+  "skAbilityHarryPrompt": "Du darfst dein Gebot ändern (jetzt {bid})",
+  "@skAbilityHarryPrompt": {
+    "placeholders": {
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityHarryKeep": "Behalten",
+  "skAbilityWaiting": "{name} setzt die Fähigkeit von {pirate} ein",
+  "@skAbilityWaiting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventRosie": "{name} bestimmt {target} als nächsten Ausspieler",
+  "@skAbilityEventRosie": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventBendt": "{name} hat {count} Karten getauscht",
+  "@skAbilityEventBendt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascal": "{name} setzt {points} Punkte",
+  "@skAbilityEventRascal": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventRascalNone": "{name} setzt nichts",
+  "@skAbilityEventRascalNone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventJuanita": "{name} hat die nicht ausgeteilten Karten angesehen",
+  "@skAbilityEventJuanita": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventHarry": "{name} ändert das Gebot auf {bid}",
+  "@skAbilityEventHarry": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "bid": {
+        "type": "int"
+      }
+    }
+  },
+  "skAbilityEventHarryKeep": "{name} behält das Gebot",
+  "@skAbilityEventHarryKeep": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

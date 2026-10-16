@@ -41,7 +41,22 @@ class TichuSpecialArt extends StatelessWidget {
                   width: art,
                   height: art,
                   child: cardId == 'special_dragon'
-                      ? const GameSymbol('tichu', size: 1000)
+                      ? Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: CustomPaint(painter: _ArtPainter(cardId)),
+                            ),
+                            // 앱 심볼과 같은 얼굴을 몸 위에 얹는다.
+                            Positioned(
+                              left: art * 0.18,
+                              top: art * 0.0,
+                              width: art * 0.64,
+                              height: art * 0.64,
+                              child: const GameSymbol('tichu', size: 1000),
+                            ),
+                          ],
+                        )
                       : CustomPaint(painter: _ArtPainter(cardId)),
                 ),
               ),
@@ -183,11 +198,9 @@ class _ArtPainter extends CustomPainter {
 
   final String cardId;
 
-  static const _red = Color(0xFFE53935);
   static const _orange = Color(0xFFFF8A2B);
   static const _yellow = Color(0xFFFFD84D);
   static const _paper = Color(0xFFFFFBF2);
-  static const _teal = Color(0xFF26A69A);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -203,97 +216,10 @@ class _ArtPainter extends CustomPainter {
     }
 
     switch (cardId) {
+      case 'special_dragon':
+        _dragon(canvas, size);
       case 'special_phoenix':
-        // 깃털 한 장: 어깨(0,0)에서 길이 len 로 뻗는 잎 모양.
-        void feather(
-          Offset at,
-          double angle,
-          double len,
-          double wid,
-          Color c, {
-          bool eye = false,
-        }) {
-          canvas.save();
-          canvas.translate(at.dx, at.dy);
-          canvas.rotate(angle);
-          final f = Path()
-            ..moveTo(0, 0)
-            ..quadraticBezierTo(wid, len * 0.5, 0, len)
-            ..quadraticBezierTo(-wid, len * 0.5, 0, 0)
-            ..close();
-          canvas.drawPath(f, _fill(c));
-          canvas.drawPath(f, line);
-          if (eye) {
-            canvas.drawCircle(
-              Offset(0, len * 0.78),
-              wid * 0.42,
-              _fill(_yellow),
-            );
-            canvas.drawCircle(
-              Offset(0, len * 0.78),
-              wid * 0.42,
-              line..strokeWidth = sw * 0.7,
-            );
-            line.strokeWidth = sw;
-          }
-          canvas.restore();
-        }
-        // 꼬리깃(부채꼴 세 장)
-        feather(p(0.5, 0.60), -0.55, s * 0.38, s * 0.12, _teal, eye: true);
-        feather(
-          p(0.5, 0.60),
-          0.55,
-          s * 0.40,
-          s * 0.085,
-          const Color(0xFF3E6BB5),
-          eye: true,
-        );
-        feather(p(0.5, 0.60), 0.0, s * 0.42, s * 0.13, _red, eye: true);
-        // 날개(깃털 세 장씩)
-        for (final left in [true, false]) {
-          final d = left ? -1.0 : 1.0;
-          final sh = p(0.5 + d * 0.10, 0.50);
-          feather(sh, d * -2.30, s * 0.32, s * 0.09, _yellow);
-          feather(sh, d * -1.95, s * 0.37, s * 0.10, _orange);
-          feather(sh, d * -1.60, s * 0.34, s * 0.09, _red);
-        }
-        // 몸통
-        final body = Path()
-          ..addOval(
-            Rect.fromCenter(
-              center: p(0.5, 0.52),
-              width: x(0.26),
-              height: y(0.34),
-            ),
-          );
-        shape(body, _red);
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: p(0.5, 0.56),
-            width: x(0.14),
-            height: y(0.20),
-          ),
-          _fill(_yellow),
-        );
-        // 머리·볏
-        for (final (dx, ang) in [
-          (-0.04, math.pi - 0.55),
-          (0.0, math.pi),
-          (0.04, math.pi + 0.55),
-        ]) {
-          feather(p(0.5 + dx, 0.22), ang, s * 0.13, s * 0.04, _orange);
-        }
-        canvas.drawCircle(p(0.5, 0.31), s * 0.12, _fill(_yellow));
-        canvas.drawCircle(p(0.5, 0.31), s * 0.12, line);
-        final beak = Path()
-          ..moveTo(x(0.46), y(0.335))
-          ..lineTo(x(0.54), y(0.335))
-          ..lineTo(x(0.5), y(0.40))
-          ..close();
-        shape(beak, _orange);
-        for (final dx in [-0.045, 0.045]) {
-          canvas.drawCircle(p(0.5 + dx, 0.295), s * 0.02, _fill(Cartoon.ink));
-        }
+        _phoenix(canvas, size);
       case 'special_dog':
         // 귀(처진 갈색)
         for (final left in [true, false]) {
@@ -474,6 +400,264 @@ class _ArtPainter extends CustomPainter {
         for (final dx in [0.48, 0.56]) {
           canvas.drawLine(p(dx, 0.70), p(dx, 0.74), line);
         }
+    }
+  }
+
+  void _cloud(Canvas canvas, Size size, double cx, double cy, double r) {
+    final c = Paint()..color = Colors.white.withValues(alpha: 0.75);
+    final w = size.width, h = size.height;
+    for (final (dx, dy, k) in [
+      (-0.9, 0.2, 0.7),
+      (0.0, 0.0, 1.0),
+      (0.95, 0.2, 0.75),
+    ]) {
+      canvas.drawCircle(
+        Offset(w * cx + dx * r * w, h * cy + dy * r * w),
+        r * w * k,
+        c,
+      );
+    }
+  }
+
+  void _dragon(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, s = size.shortestSide;
+    double x(double t) => w * t;
+    double y(double t) => h * t;
+    final sw = (s * 0.03).clamp(1.2, 3.2);
+    const green = Color(0xFF4CAF3F);
+    const greenDark = Color(0xFF2E8B34);
+    const gold = Color(0xFFFFC928);
+    const flame = Color(0xFFFF7A2F);
+
+    _cloud(canvas, size, 0.18, 0.18, 0.08);
+    _cloud(canvas, size, 0.86, 0.74, 0.07);
+
+    // 몸통 중심선: 머리에서 내려와 S자로 감겨 꼬리까지
+    final spine = Path()
+      ..moveTo(x(0.50), y(0.44))
+      ..cubicTo(x(0.10), y(0.46), x(0.12), y(0.69), x(0.50), y(0.69))
+      ..cubicTo(x(0.90), y(0.69), x(0.88), y(0.91), x(0.42), y(0.91))
+      ..cubicTo(x(0.30), y(0.91), x(0.22), y(0.89), x(0.16), y(0.84));
+    final metric = spine.computeMetrics().first;
+    final total = metric.length;
+
+    // 몸통: 테두리 → 초록 → 배(연한 줄)
+    Paint stroke(Color c, double wd) => Paint()
+      ..color = c
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = wd
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(spine, stroke(Cartoon.ink, s * 0.14 + sw * 2));
+    canvas.drawPath(spine, stroke(green, s * 0.14));
+    // 배 쪽 연한 줄(바깥 반대편으로 살짝 치우침은 생략하고 가운데 가늘게)
+    canvas.drawPath(spine, stroke(const Color(0xFFB6E08A), s * 0.05));
+    // 비늘 무늬
+    for (var i = 1; i < 26; i++) {
+      final t = total * i / 26;
+      final tan = metric.getTangentForOffset(t)!;
+      final n = Offset(-tan.vector.dy, tan.vector.dx);
+      final c0 = tan.position + n * (s * 0.045);
+      canvas.drawArc(
+        Rect.fromCircle(center: c0, radius: s * 0.022),
+        0,
+        math.pi,
+        false,
+        _line(sw * 0.7)..color = greenDark,
+      );
+    }
+    // 꼬리 끝 불꽃
+    final tailEnd = metric.getTangentForOffset(total)!;
+    canvas.save();
+    canvas.translate(tailEnd.position.dx, tailEnd.position.dy);
+    canvas.rotate(math.atan2(tailEnd.vector.dy, tailEnd.vector.dx));
+    final tailFlame = Path()
+      ..moveTo(0, -s * 0.05)
+      ..quadraticBezierTo(s * 0.02, -s * 0.12, -s * 0.12, -s * 0.10)
+      ..quadraticBezierTo(-s * 0.06, -s * 0.02, -s * 0.16, s * 0.04)
+      ..quadraticBezierTo(-s * 0.04, s * 0.08, 0, s * 0.05)
+      ..close();
+    canvas.drawPath(tailFlame, _fill(flame));
+    canvas.drawPath(tailFlame, _line(sw));
+    canvas.drawCircle(Offset(-s * 0.03, 0), s * 0.025, _fill(gold));
+    canvas.restore();
+
+    // 앞발 하나(몸 가운데 아래쪽 곡선 안쪽)
+    void paw(Offset at) {
+      canvas.drawCircle(at, s * 0.045, _fill(green));
+      canvas.drawCircle(at, s * 0.045, _line(sw));
+      for (final dx in [-0.035, 0.0, 0.035]) {
+        canvas.drawLine(
+          at + Offset(dx * s, s * 0.04),
+          at + Offset(dx * s * 1.3, s * 0.07),
+          _line(sw * 1.1),
+        );
+      }
+    }
+
+    paw(Offset(x(0.26), y(0.56)));
+    paw(Offset(x(0.74), y(0.80)));
+  }
+
+  void _phoenix(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, s = size.shortestSide;
+    double x(double t) => w * t;
+    double y(double t) => h * t;
+    final sw = (s * 0.028).clamp(1.2, 3.2);
+    const teal = Color(0xFF1FA8A0);
+    const blue = Color(0xFF3E6BB5);
+    const gold = Color(0xFFFFC928);
+
+    _cloud(canvas, size, 0.16, 0.20, 0.08);
+    _cloud(canvas, size, 0.86, 0.26, 0.07);
+
+    // 깃털: 어깨에서 뻗어 나가는 곡선 잎. [curve] 로 끝을 휘게.
+    void feather(
+      Offset at,
+      double angle,
+      double len,
+      double wid,
+      Color c, {
+      double curve = 0.0,
+      bool eye = false,
+      Color? tip,
+    }) {
+      canvas.save();
+      canvas.translate(at.dx, at.dy);
+      canvas.rotate(angle);
+      final f = Path()
+        ..moveTo(0, 0)
+        ..cubicTo(
+          wid,
+          len * 0.25,
+          wid * 1.1 + curve * len,
+          len * 0.7,
+          curve * len,
+          len,
+        )
+        ..cubicTo(-wid * 1.1 + curve * len, len * 0.7, -wid, len * 0.25, 0, 0)
+        ..close();
+      canvas.drawPath(f, _fill(c));
+      if (tip != null) {
+        canvas.save();
+        canvas.clipPath(f);
+        canvas.drawRect(
+          Rect.fromLTWH(-len, len * 0.6, len * 2, len),
+          _fill(tip),
+        );
+        canvas.restore();
+      }
+      canvas.drawPath(f, _line(sw));
+      if (eye) {
+        final ec = Offset(curve * len * 0.85, len * 0.74);
+        canvas.drawOval(
+          Rect.fromCenter(center: ec, width: wid * 1.1, height: wid * 1.5),
+          _fill(gold),
+        );
+        canvas.drawOval(
+          Rect.fromCenter(center: ec, width: wid * 1.1, height: wid * 1.5),
+          _line(sw * 0.7),
+        );
+        canvas.drawCircle(ec, wid * 0.22, _fill(blue));
+      }
+      canvas.restore();
+    }
+
+    final cx = x(0.5);
+    // 꼬리깃 다섯 장(부채꼴, 끝이 살짝 휨)
+    final tailAt = Offset(cx, y(0.60));
+    feather(tailAt, -0.80, s * 0.36, s * 0.07, teal, curve: -0.10, eye: true);
+    feather(tailAt, 0.80, s * 0.36, s * 0.07, teal, curve: 0.10, eye: true);
+    feather(tailAt, -0.42, s * 0.42, s * 0.08, blue, curve: -0.08, eye: true);
+    feather(tailAt, 0.42, s * 0.42, s * 0.08, blue, curve: 0.08, eye: true);
+    feather(
+      tailAt,
+      0.0,
+      s * 0.46,
+      s * 0.09,
+      const Color(0xFFFF7A2F),
+      eye: true,
+    );
+
+    // 날개: 위로 활짝 펼친 깃 네 장씩
+    for (final left in [true, false]) {
+      final d = left ? -1.0 : 1.0;
+      final sh = Offset(cx + d * s * 0.09, y(0.47));
+      feather(sh, d * -2.55, s * 0.30, s * 0.07, gold);
+      feather(sh, d * -2.15, s * 0.38, s * 0.085, const Color(0xFFFFA726));
+      feather(sh, d * -1.78, s * 0.42, s * 0.09, const Color(0xFFFF7A2F));
+      feather(sh, d * -1.45, s * 0.38, s * 0.085, const Color(0xFFE53935));
+    }
+
+    // 몸통
+    final body = Rect.fromCenter(
+      center: Offset(cx, y(0.50)),
+      width: s * 0.24,
+      height: s * 0.34,
+    );
+    canvas.drawOval(body, _fill(const Color(0xFFFF7A2F)));
+    canvas.drawOval(body, _line(sw));
+    final chest = Rect.fromCenter(
+      center: Offset(cx, y(0.54)),
+      width: s * 0.13,
+      height: s * 0.20,
+    );
+    canvas.drawOval(chest, _fill(gold));
+
+    // 목·머리(초록빛 노랑)
+    final head = Offset(cx, y(0.31));
+    canvas.drawCircle(head, s * 0.105, _fill(const Color(0xFFB8E04A)));
+    canvas.drawCircle(head, s * 0.105, _line(sw));
+    // 볏: 위로 휘어 올라간 세 가닥
+    feather(
+      Offset(cx - s * 0.02, y(0.235)),
+      math.pi - 0.5,
+      s * 0.14,
+      s * 0.035,
+      const Color(0xFFFF7A2F),
+      curve: 0.10,
+    );
+    feather(
+      Offset(cx, y(0.225)),
+      math.pi,
+      s * 0.17,
+      s * 0.04,
+      gold,
+      curve: -0.08,
+    );
+    feather(
+      Offset(cx + s * 0.02, y(0.235)),
+      math.pi + 0.5,
+      s * 0.14,
+      s * 0.035,
+      const Color(0xFFE53935),
+      curve: -0.10,
+    );
+    // 부리
+    final beak = Path()
+      ..moveTo(cx - s * 0.035, y(0.325))
+      ..lineTo(cx + s * 0.035, y(0.325))
+      ..lineTo(cx, y(0.375))
+      ..close();
+    canvas.drawPath(beak, _fill(const Color(0xFFFF9A3C)));
+    canvas.drawPath(beak, _line(sw * 0.9));
+    // 눈
+    for (final dx in [-0.045, 0.045]) {
+      canvas.drawCircle(
+        Offset(cx + dx * s, y(0.295)),
+        s * 0.026,
+        _fill(_paper),
+      );
+      canvas.drawCircle(
+        Offset(cx + dx * s, y(0.295)),
+        s * 0.026,
+        _line(sw * 0.7),
+      );
+      canvas.drawCircle(
+        Offset(cx + dx * s, y(0.297)),
+        s * 0.014,
+        _fill(Cartoon.ink),
+      );
     }
   }
 

@@ -447,8 +447,8 @@ class _LoginScreenState extends State<LoginScreen> {
           child: CartoonFloat(
             child: Image.asset(
               'assets/dragon_head.webp',
-              width: compact ? 88 : 104,
-              height: compact ? 88 : 104,
+              // 머리 그림은 가로로 길어 정사각 칸에 넣으면 작아 보인다.
+              width: compact ? 124 : 156,
             ),
           ),
         ),

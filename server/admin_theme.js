@@ -889,8 +889,10 @@ label { font-weight: 600; }
 .progress { background: #fff; border: 2px solid var(--ink); height: 12px; }
 .progress > span { background: linear-gradient(90deg, var(--green), #7ddc8f); border-right: 2px solid var(--ink); }
 .chat-log { background: #fff; border: 2px solid var(--ink); border-radius: 16px; }
-.empty { background: #fff; border: 2.5px dashed rgba(59,42,32,0.35); border-radius: 18px; color: var(--muted); font-weight: 600; padding: 34px 20px; }
-.empty::before { content: ''; display: block; width: 84px; height: 84px; margin: 0 auto 10px; background: url('/tc-backstage/_a/dragon_full.webp') center/contain no-repeat; opacity: 0.9; }
+.empty { color: var(--muted); font-weight: 600; }
+div.empty { background: #fff; border: 2.5px dashed rgba(59,42,32,0.35); border-radius: 18px; padding: 34px 20px; }
+td.empty { padding: 26px 14px; }
+div.empty::before { content: ''; display: block; width: 84px; height: 84px; margin: 0 auto 10px; background: url('/tc-backstage/_a/dragon_full.webp') center/contain no-repeat; opacity: 0.9; }
 details > summary { cursor: pointer; }
 hr { border: none; border-top: 2.5px dashed rgba(59,42,32,0.25); margin: 16px 0; }
 code, .mono { background: rgba(59,42,32,0.07); border-radius: 6px; padding: 0 5px; }
@@ -917,6 +919,11 @@ code, .mono { background: rgba(59,42,32,0.07); border-radius: 6px; padding: 0 5p
   .dh-hello { justify-content: center; font-size: 20px; }
   .quick-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
 }
+
+/* ── 복사 알림 ── */
+code, .mono { cursor: copy; }
+.copy-toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--ink); color: #fff; font: 400 14px var(--font-display); padding: 9px 18px 8px; border-radius: 999px; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 rgba(59,42,32,0.35); transition: opacity 0.18s, transform 0.18s; z-index: 300; }
+.copy-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ── 맨 위로 ── */
 .to-top { position: fixed; right: 18px; bottom: 18px; width: 46px; height: 46px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--yellow); box-shadow: 0 3px 0 var(--ink); display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 80; padding: 0; }
@@ -997,6 +1004,21 @@ function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('op
     window.addEventListener('scroll',function(){top.classList.toggle('show',window.scrollY>600)},{passive:true});
     top.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})});
   }
+  // 고정폭 값(코드·ID·영수증 번호)을 누르면 복사한다
+  var toast=document.getElementById('copy-toast'),toastT=null;
+  document.addEventListener('click',function(e){
+    var el=e.target.closest&&e.target.closest('code, .mono');
+    if(!el||el.closest('a, button, input, textarea')||!navigator.clipboard)return;
+    var sel=window.getSelection&&window.getSelection().toString();
+    if(sel)return;
+    var text=(el.textContent||'').trim();
+    if(!text||text.length>300)return;
+    navigator.clipboard.writeText(text).then(function(){
+      if(!toast)return;
+      toast.classList.add('show');clearTimeout(toastT);
+      toastT=setTimeout(function(){toast.classList.remove('show')},1300);
+    }).catch(function(){});
+  });
   // 표 머리글을 눌러 정렬(머리글 한 줄, 병합 칸 없음, 본문 3줄 이상인 표만)
   function cellVal(td){
     var t=(td.getAttribute('data-sort')||td.textContent||'').trim();
@@ -1097,6 +1119,7 @@ ${body}
   </div>
 </main>
 <button class="to-top" id="to-top" aria-label="맨 위로">${icon('top', 22)}</button>
+<div class="copy-toast" id="copy-toast">복사했어요!</div>
 <script>${SHELL_JS}</script>
 </body>
 </html>`;

@@ -2207,8 +2207,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildAbilityToastBanner(String text) {
+    // 대기 안내(top: 64)와 겹치지 않게 그 아래에 띄운다.
     return Positioned(
-      top: 64,
+      top: 124,
       left: 20,
       right: 20,
       child: IgnorePointer(

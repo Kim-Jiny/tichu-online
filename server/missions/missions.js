@@ -483,7 +483,9 @@ async function record(nickname, event, amount = 1) {
   if (!nickname || !(amount > 0)) return [];
   const eventKeys = defs.MISSIONS.filter((m) => m.event === event).map((m) => m.key);
   // '연속' 미션: 이 이벤트(예: 패배)가 오면 진행도가 0 으로 돌아간다.
-  const resetKeys = defs.MISSIONS.filter((m) => m.resetOn === event).map((m) => m.key);
+  const resetKeys = defs.MISSIONS
+    .filter((m) => [].concat(m.resetOn || []).includes(event))
+    .map((m) => m.key);
   if (!eventKeys.length && !resetKeys.length) return [];
   await loadOverrides();
   const client = await pool.connect();

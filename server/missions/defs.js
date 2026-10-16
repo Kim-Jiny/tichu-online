@@ -42,7 +42,9 @@ const GAMES = ['tichu', 'mighty', 'skull_king', 'love_letter'];
 /**
  * event: 서버가 판정하는 이벤트 이름(missions.js 의 record 호출과 맞춘다).
  * target: 이벤트가 몇 번 일어나야 하는지.
- * resetOn: 이 이벤트가 오면 진행도가 0 으로 돌아간다('연속' 미션 — 한 번 지면 처음부터).
+ * resetOn: 이 이벤트(들)가 오면 진행도가 0 으로 돌아간다. 문자열 하나 또는 배열.
+ *   '연속' 미션은 패배에서, '한 판에'는 판 끝·판 시작에서, '한 라운드에'는 라운드 끝에서 끊긴다.
+ *   판 시작(game_start)도 넣는 이유: 중간에 끝난(탈주 등) 판의 진행이 다음 판으로 새면 안 된다.
  * tier: 1 쉬움 · 2 보통 · 3 어려움(토큰은 tokens 에 직접 적는다).
  */
 const MISSIONS = [
@@ -57,8 +59,8 @@ const MISSIONS = [
   { key: 'tichu_fullhouse_win', game: 'tichu', tier: 1, tokens: 1, event: 'tichu.fullhouse_win', target: 4 },
   { key: 'tichu_steps_win', game: 'tichu', tier: 1, tokens: 1, event: 'tichu.steps_win', target: 3 },
   { key: 'tichu_bomb_play', game: 'tichu', tier: 3, tokens: 3, event: 'tichu.bomb_played', target: 5 },
-  { key: 'tichu_first_out5', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.first_out', target: 5, resetOn: 'tichu.game_end' },
-  { key: 'tichu_break_tichu', game: 'tichu', tier: 3, tokens: 3, event: 'tichu.tichu_broken', target: 2, resetOn: 'tichu.game_end' },
+  { key: 'tichu_first_out5', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.first_out', target: 5, resetOn: ['tichu.game_end', 'tichu.game_start'] },
+  { key: 'tichu_break_tichu', game: 'tichu', tier: 3, tokens: 3, event: 'tichu.tichu_broken', target: 2, resetOn: ['tichu.game_end', 'tichu.game_start'] },
   { key: 'tichu_straight8', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.straight8', target: 1 },
   { key: 'tichu_straight10', game: 'tichu', tier: 3, tokens: 3, event: 'tichu.straight10', target: 1 },
   { key: 'tichu_fullhouse_k', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.fullhouse_k', target: 1 },
@@ -79,7 +81,7 @@ const MISSIONS = [
   { key: 'mighty_friend7', game: 'mighty', tier: 3, tokens: 3, event: 'mighty.friend_points', target: 1 },
   { key: 'mighty_mighty_win', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.mighty_point2', target: 1 },
   { key: 'mighty_dillmiss', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.dealmiss', target: 2 },
-  { key: 'mighty_win5', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.trick_win', target: 5, resetOn: 'mighty.round_end' },
+  { key: 'mighty_win5', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.trick_win', target: 5, resetOn: ['mighty.round_end', 'mighty.game_start'] },
   { key: 'mighty_joker_win', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.joker_win', target: 3 },
   { key: 'mighty_declarer_success', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.declarer_success', target: 2 },
   { key: 'mighty_point2', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.point_trick2', target: 1 },
@@ -94,8 +96,8 @@ const MISSIONS = [
   { key: 'sk_pirates2', game: 'skull_king', tier: 3, tokens: 3, event: 'sk.skullking_two_pirates', target: 1 },
   { key: 'sk_mermaid_king', game: 'skull_king', tier: 3, tokens: 4, event: 'sk.mermaid_takes_skullking', target: 1 },
   { key: 'sk_ten_win', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.win_with_ten', target: 2 },
-  { key: 'sk_bid_hit6', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.bid_hit', target: 6, resetOn: 'sk.game_end' },
-  { key: 'sk_bid_hit12', game: 'skull_king', tier: 3, tokens: 4, event: 'sk.bid_hit', target: 10, resetOn: 'sk.game_end' },
+  { key: 'sk_bid_hit6', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.bid_hit', target: 6, resetOn: ['sk.game_end', 'sk.game_start'] },
+  { key: 'sk_bid_hit12', game: 'skull_king', tier: 3, tokens: 4, event: 'sk.bid_hit', target: 10, resetOn: ['sk.game_end', 'sk.game_start'] },
   { key: 'sk_zero_hit', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.zero_hit', target: 5 },
   { key: 'sk_pirate_win', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.pirate_win', target: 5 },
   { key: 'sk_mermaid_win', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.mermaid_win', target: 3 },

@@ -215,6 +215,21 @@ async function main() {
   const two = await missions.record(n6, 'tichu.one_two');
   check('연속 두 번이면 완료', two.length === 1 && two[0].key === 'tichu_onetwo', JSON.stringify(two));
 
+  // 판 시작도 '한 판에' 미션을 0 으로(중간에 끝난 판의 진행이 새지 않게).
+  const n7 = '판시작테스터';
+  await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
+    VALUES ($1, 'sk_bid_hit6', CURRENT_DATE, CURRENT_DATE, 6), ($1, 'mighty_win5', CURRENT_DATE, CURRENT_DATE, 5)`, [n7]);
+  await missions.record(n7, 'sk.bid_hit'); await missions.record(n7, 'sk.bid_hit');
+  await missions.record(n7, 'mighty.trick_win');
+  await missions.record(n7, 'sk.game_start');
+  let st7 = await missions.getState(n7);
+  check('판 시작이 한 판 미션을 0 으로', st7.active.find((m) => m.key === 'sk_bid_hit6').progress === 0);
+  check('다른 게임의 판 시작은 영향 없음', st7.active.find((m) => m.key === 'mighty_win5').progress === 1);
+  await missions.record(n7, 'mighty.game_start');
+  st7 = await missions.getState(n7);
+  check('마이티 판 시작은 한 라운드 미션도 0 으로', st7.active.find((m) => m.key === 'mighty_win5').progress === 0);
+  check('resetOn 은 문자열·배열 모두 받는다', defs.MISSIONS.some((m) => typeof m.resetOn === 'string') && defs.MISSIONS.some((m) => Array.isArray(m.resetOn)));
+
   // ── 내 토큰 내역 ──
   const hist = await missions.getHistory(n4, { limit: 2 });
   check('내역은 최신순이고 한 장 더 있으면 hasMore', hist.rows.length === 2 && hist.hasMore === true && hist.rows[0].id > hist.rows[1].id, JSON.stringify(hist));

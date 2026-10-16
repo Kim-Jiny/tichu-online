@@ -5596,6 +5596,7 @@ function handleStartGame(ws) {
     room.blockedSlots.delete(autoBlockedSlot);
     room.autoBlockedSlots.delete(autoBlockedSlot);
   }
+  if (started !== false) recordGameStartMissions(room);
   broadcastRoomState(ws.roomId);
   broadcastRoomList();
   // Send initial cards to each player
@@ -8061,6 +8062,9 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
   // Someone else already claimed this game terminally.
   if (game.deserted) return;
 
+  // 나간 사람은 이 판을 진 것으로 센다(아래에서 봇이 이어받든 판이 끝나든 같다).
+  try { recordLeaveLoss(room, playerId); } catch (e) { console.error('[missions] leave loss failed:', e.message); }
+
   // Rooms that allow mid-match seat changes don't end the match when one
   // person goes — a bot inherits the seat and everyone else plays on. This
   // sits ahead of the terminal claim below and covers EVERY route into
@@ -9262,6 +9266,26 @@ function processMissionEvents(room) {
     if (!nickname) continue;
     recordMission(nickname, e.event, e.amount).catch((err) => console.error('[missions] record failed:', err.message));
   }
+}
+
+const MISSION_PREFIX = { tichu: 'tichu', mighty: 'mighty', skull_king: 'sk', love_letter: 'll' };
+
+/** 판이 시작될 때: '한 판에' 세는 미션이 이전 판의 진행을 끌고 오지 않게 한다. */
+function recordGameStartMissions(room) {
+  const prefix = MISSION_PREFIX[room && room.gameType];
+  if (!prefix || !missionEligible(room)) return;
+  for (const p of room.players || []) {
+    if (!p || p.isBot || !p.nickname) continue;
+    recordMission(p.nickname, `${prefix}.game_start`).catch(() => {});
+  }
+}
+
+/** 판 도중에 나간 사람은 그 판을 진 것으로 센다 — 지는 판을 나가서 '연속 승리'를 지키는 걸 막는다. */
+function recordLeaveLoss(room, playerId) {
+  const prefix = MISSION_PREFIX[room && room.gameType];
+  if (!prefix || !playerId || String(playerId).startsWith('bot_') || !missionEligible(room)) return;
+  const nickname = room.game && room.game.playerNames && room.game.playerNames[playerId];
+  if (nickname) recordMission(nickname, `${prefix}.game_loss`).catch(() => {});
 }
 
 /** 판이 끝났을 때: 끝까지 했다 / 이겼다. winners 는 닉네임 집합. */

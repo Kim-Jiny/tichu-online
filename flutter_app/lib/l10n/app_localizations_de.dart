@@ -5322,13 +5322,13 @@ class L10nDe extends L10n {
   }
 
   @override
-  String missionsTodayEarned(String earned, String cap) {
-    return 'Heute verdient $earned/$cap';
+  String missionsTodayEarned(String n, String max) {
+    return 'Heute gewählt $n/$max';
   }
 
   @override
-  String missionsActiveHeader(String n, String max) {
-    return 'In Arbeit ($n/$max)';
+  String missionsActiveHeader(String n) {
+    return 'In Arbeit ($n)';
   }
 
   @override
@@ -5384,8 +5384,8 @@ class L10nDe extends L10n {
   String get missionsStreakToday => 'Heute geschafft';
 
   @override
-  String missionsRules(String cap) {
-    return 'Nur Spiele mit mindestens 2 Menschen zählen. Bis zu $cap Token pro Tag.';
+  String missionsRules(String n, String max) {
+    return 'Nur Spiele mit mindestens $n Menschen zählen. Du kannst pro Tag bis zu $max Missionen wählen.';
   }
 
   @override
@@ -5402,7 +5402,7 @@ class L10nDe extends L10n {
 
   @override
   String missionsErrTooMany(String max) {
-    return 'Du kannst höchstens $max gleichzeitig haben';
+    return 'Du kannst pro Tag $max Missionen wählen';
   }
 
   @override
@@ -5427,9 +5427,6 @@ class L10nDe extends L10n {
   String missionCompletedTokens(String n) {
     return 'Token +$n';
   }
-
-  @override
-  String get missionCompletedCapped => 'Tageslimit für Token erreicht';
 
   @override
   String missionCompletedStreak(String n) {
@@ -5621,8 +5618,8 @@ class L10nDe extends L10n {
   String get missionsHelpAcceptTitle => 'Erst die Mission annehmen';
 
   @override
-  String missionsHelpAcceptBody(String max, String days) {
-    return 'Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Du kannst $max gleichzeitig haben, jede gilt $days Tage.';
+  String missionsHelpAcceptBody(String days) {
+    return 'Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Jede gilt $days Tage ab dem Tag der Annahme.';
   }
 
   @override
@@ -5635,11 +5632,11 @@ class L10nDe extends L10n {
       'Räume nur mit Bots oder nur einem Menschen sowie Zuschauen zählen nicht. „Spiel beenden“ und „Spiel gewinnen“ zählen nur, wenn du bis zum Ende bleibst.';
 
   @override
-  String get missionsHelpCapTitle => 'Tägliches Token-Limit';
+  String get missionsHelpCapTitle => 'Missionen pro Tag';
 
   @override
-  String missionsHelpCapBody(String cap) {
-    return 'Pro Tag sind höchstens $cap Token aus Missionen möglich. Darüber hinaus wird die Mission zwar abgeschlossen, bringt aber keine Token mehr.';
+  String missionsHelpCapBody(String max) {
+    return 'Du kannst pro Tag bis zu $max Missionen wählen (Reset um Mitternacht koreanischer Zeit). Aufgeben gibt die Wahl nicht zurück.';
   }
 
   @override

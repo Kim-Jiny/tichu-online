@@ -66,10 +66,9 @@ class _MissionsScreenState extends State<MissionsScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => MissionsHelpDialog(
-        maxActive: st?.maxActive ?? 3,
+        dailyPicks: st?.dailyPicks ?? 3,
         lifetimeDays: st?.lifetimeDays ?? 3,
         minHumans: st?.minHumans ?? 2,
-        dailyCap: st?.dailyCap ?? 10,
         streakTarget: st?.streakTarget ?? 7,
         streakBonus: st?.streakBonus ?? 10,
       ),
@@ -80,7 +79,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
     final reason = game.missionActionReason;
     if (reason == null) return;
     final l10n = L10n.of(context);
-    final max = game.missionsState?.maxActive ?? 3;
+    final max = game.missionsState?.dailyPicks ?? 3;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -256,12 +255,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
         children: [
           _streakCard(l10n, st),
           const SizedBox(height: 14),
-          _sectionTitle(
-            l10n.missionsActiveHeader(
-              st.activeCount.toString(),
-              st.maxActive.toString(),
-            ),
-          ),
+          _sectionTitle(l10n.missionsActiveHeader(st.activeCount.toString())),
           if (st.active.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -287,7 +281,10 @@ class _MissionsScreenState extends State<MissionsScreen> {
           ],
           const SizedBox(height: 16),
           Text(
-            l10n.missionsRules(st.dailyCap.toString()),
+            l10n.missionsRules(
+              st.minHumans.toString(),
+              st.dailyPicks.toString(),
+            ),
             textAlign: TextAlign.center,
             style: Cartoon.userText(
               size: 12,
@@ -381,8 +378,8 @@ class _MissionsScreenState extends State<MissionsScreen> {
           const SizedBox(height: 4),
           Text(
             l10n.missionsTodayEarned(
-              st.todayEarned.toString(),
-              st.dailyCap.toString(),
+              st.picksToday.toString(),
+              st.dailyPicks.toString(),
             ),
             style: Cartoon.userText(
               size: 12,
@@ -593,8 +590,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
     MissionOffer o,
   ) {
     final l10n = L10n.of(context);
-    final full = st.activeCount >= st.maxActive;
-    final canPick = !o.picked && !full;
+    final canPick = !o.picked && st.canPickMore;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -724,18 +720,16 @@ class TokenCoin extends StatelessWidget {
 class MissionsHelpDialog extends StatelessWidget {
   const MissionsHelpDialog({
     super.key,
-    required this.maxActive,
+    required this.dailyPicks,
     required this.lifetimeDays,
     required this.minHumans,
-    required this.dailyCap,
     required this.streakTarget,
     required this.streakBonus,
   });
 
-  final int maxActive;
+  final int dailyPicks;
   final int lifetimeDays;
   final int minHumans;
-  final int dailyCap;
   final int streakTarget;
   final int streakBonus;
 
@@ -747,10 +741,7 @@ class MissionsHelpDialog extends StatelessWidget {
         Icons.touch_app_rounded,
         const Color(0xFFFF9A1F),
         l10n.missionsHelpAcceptTitle,
-        l10n.missionsHelpAcceptBody(
-          maxActive.toString(),
-          lifetimeDays.toString(),
-        ),
+        l10n.missionsHelpAcceptBody(lifetimeDays.toString()),
       ),
       (
         Icons.groups_rounded,
@@ -768,7 +759,7 @@ class MissionsHelpDialog extends StatelessWidget {
         Icons.speed_rounded,
         const Color(0xFFE5484D),
         l10n.missionsHelpCapTitle,
-        l10n.missionsHelpCapBody(dailyCap.toString()),
+        l10n.missionsHelpCapBody(dailyPicks.toString()),
       ),
       (
         Icons.local_fire_department_rounded,

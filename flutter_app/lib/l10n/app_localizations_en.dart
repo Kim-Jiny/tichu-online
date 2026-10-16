@@ -5287,13 +5287,13 @@ class L10nEn extends L10n {
   }
 
   @override
-  String missionsTodayEarned(String earned, String cap) {
-    return 'Earned today $earned/$cap';
+  String missionsTodayEarned(String n, String max) {
+    return 'Missions picked today $n/$max';
   }
 
   @override
-  String missionsActiveHeader(String n, String max) {
-    return 'In progress ($n/$max)';
+  String missionsActiveHeader(String n) {
+    return 'In progress ($n)';
   }
 
   @override
@@ -5349,8 +5349,8 @@ class L10nEn extends L10n {
   String get missionsStreakToday => 'Done for today';
 
   @override
-  String missionsRules(String cap) {
-    return 'Only games with 2+ human players count. Up to $cap tokens a day.';
+  String missionsRules(String n, String max) {
+    return 'Only games with $n+ human players count. You can pick up to $max missions a day.';
   }
 
   @override
@@ -5367,7 +5367,7 @@ class L10nEn extends L10n {
 
   @override
   String missionsErrTooMany(String max) {
-    return 'You can have $max at a time';
+    return 'You can pick $max missions a day';
   }
 
   @override
@@ -5391,9 +5391,6 @@ class L10nEn extends L10n {
   String missionCompletedTokens(String n) {
     return 'Tokens +$n';
   }
-
-  @override
-  String get missionCompletedCapped => 'Daily token limit reached';
 
   @override
   String missionCompletedStreak(String n) {
@@ -5584,8 +5581,8 @@ class L10nEn extends L10n {
   String get missionsHelpAcceptTitle => 'Accept a mission first';
 
   @override
-  String missionsHelpAcceptBody(String max, String days) {
-    return 'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. You can hold $max at a time and each lasts $days days.';
+  String missionsHelpAcceptBody(String days) {
+    return 'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Each lasts $days days from the day you accept it.';
   }
 
   @override
@@ -5598,11 +5595,11 @@ class L10nEn extends L10n {
       'Rooms with only bots or a single human, and games you only watch, don\'t count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.';
 
   @override
-  String get missionsHelpCapTitle => 'Daily token limit';
+  String get missionsHelpCapTitle => 'Missions per day';
 
   @override
-  String missionsHelpCapBody(String cap) {
-    return 'You can earn up to $cap tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.';
+  String missionsHelpCapBody(String max) {
+    return 'You can pick up to $max missions a day (resets at midnight Korea time). Giving one up doesn\'t give the pick back.';
   }
 
   @override

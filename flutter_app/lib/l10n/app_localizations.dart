@@ -9324,14 +9324,14 @@ abstract class L10n {
   /// No description provided for @missionsTodayEarned.
   ///
   /// In en, this message translates to:
-  /// **'Earned today {earned}/{cap}'**
-  String missionsTodayEarned(String earned, String cap);
+  /// **'Missions picked today {n}/{max}'**
+  String missionsTodayEarned(String n, String max);
 
   /// No description provided for @missionsActiveHeader.
   ///
   /// In en, this message translates to:
-  /// **'In progress ({n}/{max})'**
-  String missionsActiveHeader(String n, String max);
+  /// **'In progress ({n})'**
+  String missionsActiveHeader(String n);
 
   /// No description provided for @missionsActiveEmpty.
   ///
@@ -9420,8 +9420,8 @@ abstract class L10n {
   /// No description provided for @missionsRules.
   ///
   /// In en, this message translates to:
-  /// **'Only games with 2+ human players count. Up to {cap} tokens a day.'**
-  String missionsRules(String cap);
+  /// **'Only games with {n}+ human players count. You can pick up to {max} missions a day.'**
+  String missionsRules(String n, String max);
 
   /// No description provided for @missionsTierEasy.
   ///
@@ -9450,7 +9450,7 @@ abstract class L10n {
   /// No description provided for @missionsErrTooMany.
   ///
   /// In en, this message translates to:
-  /// **'You can have {max} at a time'**
+  /// **'You can pick {max} missions a day'**
   String missionsErrTooMany(String max);
 
   /// No description provided for @missionsErrAlready.
@@ -9488,12 +9488,6 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Tokens +{n}'**
   String missionCompletedTokens(String n);
-
-  /// No description provided for @missionCompletedCapped.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily token limit reached'**
-  String get missionCompletedCapped;
 
   /// No description provided for @missionCompletedStreak.
   ///
@@ -9846,8 +9840,8 @@ abstract class L10n {
   /// No description provided for @missionsHelpAcceptBody.
   ///
   /// In en, this message translates to:
-  /// **'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. You can hold {max} at a time and each lasts {days} days.'**
-  String missionsHelpAcceptBody(String max, String days);
+  /// **'Only missions you accepted from today\'s offers make progress; play before accepting doesn\'t count. Each lasts {days} days from the day you accept it.'**
+  String missionsHelpAcceptBody(String days);
 
   /// No description provided for @missionsHelpHumansTitle.
   ///
@@ -9864,14 +9858,14 @@ abstract class L10n {
   /// No description provided for @missionsHelpCapTitle.
   ///
   /// In en, this message translates to:
-  /// **'Daily token limit'**
+  /// **'Missions per day'**
   String get missionsHelpCapTitle;
 
   /// No description provided for @missionsHelpCapBody.
   ///
   /// In en, this message translates to:
-  /// **'You can earn up to {cap} tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.'**
-  String missionsHelpCapBody(String cap);
+  /// **'You can pick up to {max} missions a day (resets at midnight Korea time). Giving one up doesn\'t give the pick back.'**
+  String missionsHelpCapBody(String max);
 
   /// No description provided for @missionsHelpStreakTitle.
   ///

@@ -5168,13 +5168,13 @@ class L10nKo extends L10n {
   }
 
   @override
-  String missionsTodayEarned(String earned, String cap) {
-    return '오늘 번 토큰 $earned/$cap';
+  String missionsTodayEarned(String n, String max) {
+    return '오늘 고른 미션 $n/$max';
   }
 
   @override
-  String missionsActiveHeader(String n, String max) {
-    return '진행 중 ($n/$max)';
+  String missionsActiveHeader(String n) {
+    return '진행 중 ($n개)';
   }
 
   @override
@@ -5230,8 +5230,8 @@ class L10nKo extends L10n {
   String get missionsStreakToday => '오늘 달성 완료';
 
   @override
-  String missionsRules(String cap) {
-    return '사람이 2명 이상 있는 판만 인정돼요. 하루 최대 $cap토큰까지 얻어요.';
+  String missionsRules(String n, String max) {
+    return '사람이 $n명 이상 있는 판만 인정돼요. 미션은 하루에 $max개까지 고를 수 있어요.';
   }
 
   @override
@@ -5248,7 +5248,7 @@ class L10nKo extends L10n {
 
   @override
   String missionsErrTooMany(String max) {
-    return '동시에 $max개까지만 받을 수 있어요';
+    return '오늘은 미션을 $max개까지만 고를 수 있어요';
   }
 
   @override
@@ -5272,9 +5272,6 @@ class L10nKo extends L10n {
   String missionCompletedTokens(String n) {
     return '토큰 +$n';
   }
-
-  @override
-  String get missionCompletedCapped => '오늘 얻을 수 있는 토큰을 다 얻었어요';
 
   @override
   String missionCompletedStreak(String n) {
@@ -5459,8 +5456,8 @@ class L10nKo extends L10n {
   String get missionsHelpAcceptTitle => '먼저 \"받기\"를 눌러야 해요';
 
   @override
-  String missionsHelpAcceptBody(String max, String days) {
-    return '오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 동시에 $max개까지 받을 수 있고, 받은 날부터 $days일 안에 깨야 해요.';
+  String missionsHelpAcceptBody(String days) {
+    return '오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 받은 날부터 $days일 안에 깨야 해요.';
   }
 
   @override
@@ -5473,11 +5470,11 @@ class L10nKo extends L10n {
       '봇만 있거나 사람이 한 명뿐인 방, 관전 중인 판은 인정되지 않아요. \"한 판 끝까지 하기·이기기\" 미션은 중간에 나가지 않고 끝까지 마친 판만 인정돼요.';
 
   @override
-  String get missionsHelpCapTitle => '하루에 얻는 토큰 한도';
+  String get missionsHelpCapTitle => '하루에 고를 수 있는 미션';
 
   @override
-  String missionsHelpCapBody(String cap) {
-    return '하루에 미션으로 얻을 수 있는 토큰은 최대 $cap개예요. 한도를 넘기면 미션은 완료되지만 토큰은 더 오르지 않아요.';
+  String missionsHelpCapBody(String max) {
+    return '미션은 하루에 최대 $max개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 포기해도 고른 수는 돌아오지 않아요.';
   }
 
   @override

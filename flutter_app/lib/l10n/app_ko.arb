@@ -1848,28 +1848,8 @@
       }
     }
   },
-  "missionsTodayEarned": "오늘 번 토큰 {earned}/{cap}",
-  "@missionsTodayEarned": {
-    "placeholders": {
-      "earned": {
-        "type": "String"
-      },
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
-  "missionsActiveHeader": "진행 중 ({n}/{max})",
-  "@missionsActiveHeader": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      },
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsTodayEarned": "오늘 고른 미션 {n}/{max}",
+  "missionsActiveHeader": "진행 중 ({n}개)",
   "missionsActiveEmpty": "아래 후보에서 미션을 받아 보세요",
   "missionsOffersHeader": "오늘의 후보",
   "missionsPick": "받기",
@@ -1925,26 +1905,12 @@
     }
   },
   "missionsStreakToday": "오늘 달성 완료",
-  "missionsRules": "사람이 2명 이상 있는 판만 인정돼요. 하루 최대 {cap}토큰까지 얻어요.",
-  "@missionsRules": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsRules": "사람이 {n}명 이상 있는 판만 인정돼요. 미션은 하루에 {max}개까지 고를 수 있어요.",
   "missionsTierEasy": "쉬움",
   "missionsTierNormal": "보통",
   "missionsTierHard": "어려움",
   "missionsOpenShop": "토큰 상점",
-  "missionsErrTooMany": "동시에 {max}개까지만 받을 수 있어요",
-  "@missionsErrTooMany": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsErrTooMany": "오늘은 미션을 {max}개까지만 고를 수 있어요",
   "missionsErrAlready": "이미 받은 미션이에요",
   "missionsErrGeneric": "처리하지 못했어요. 잠시 뒤 다시 해 주세요",
   "missionsLoadFailed": "미션을 불러오지 못했어요",
@@ -1965,7 +1931,6 @@
       }
     }
   },
-  "missionCompletedCapped": "오늘 얻을 수 있는 토큰을 다 얻었어요",
   "missionCompletedStreak": "연속 달성 보너스 +{n}",
   "@missionCompletedStreak": {
     "placeholders": {
@@ -2045,17 +2010,7 @@
   "missionsHelpTokenTitle": "미션 토큰",
   "missionsHelpTokenBody": "토큰은 미션을 깨야만 얻을 수 있어요. 토큰 상점에서만 쓸 수 있고, 돈이나 골드로는 살 수 없어요.",
   "missionsHelpAcceptTitle": "먼저 \"받기\"를 눌러야 해요",
-  "missionsHelpAcceptBody": "오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 동시에 {max}개까지 받을 수 있고, 받은 날부터 {days}일 안에 깨야 해요.",
-  "@missionsHelpAcceptBody": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      },
-      "days": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpAcceptBody": "오늘의 후보에서 \"받기\"를 누른 미션만 진행돼요. 받기 전에 한 플레이는 인정되지 않아요. 받은 날부터 {days}일 안에 깨야 해요.",
   "missionsHelpHumansTitle": "사람이 {n}명 이상인 판만 인정돼요",
   "@missionsHelpHumansTitle": {
     "placeholders": {
@@ -2065,15 +2020,8 @@
     }
   },
   "missionsHelpHumansBody": "봇만 있거나 사람이 한 명뿐인 방, 관전 중인 판은 인정되지 않아요. \"한 판 끝까지 하기·이기기\" 미션은 중간에 나가지 않고 끝까지 마친 판만 인정돼요.",
-  "missionsHelpCapTitle": "하루에 얻는 토큰 한도",
-  "missionsHelpCapBody": "하루에 미션으로 얻을 수 있는 토큰은 최대 {cap}개예요. 한도를 넘기면 미션은 완료되지만 토큰은 더 오르지 않아요.",
-  "@missionsHelpCapBody": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpCapTitle": "하루에 고를 수 있는 미션",
+  "missionsHelpCapBody": "미션은 하루에 최대 {max}개까지 고를 수 있어요(한국 시간 자정에 새로 시작). 포기해도 고른 수는 돌아오지 않아요.",
   "missionsHelpStreakTitle": "연속 달성 보너스",
   "missionsHelpStreakBody": "하루에 미션을 1개 이상 깨면 연속으로 쳐요. {target}일을 채우면 보너스 토큰 {bonus}개를 줘요. 하루를 건너뛰면 처음부터 다시 시작해요.",
   "@missionsHelpStreakBody": {
@@ -2088,5 +2036,53 @@
   },
   "missionsHelpResetTitle": "매일 바뀌어요",
   "missionsHelpResetBody": "오늘의 후보는 매일 새로 나와요(한국 시간 자정). 마음에 안 들면 게임마다 하루 한 번 새로고침할 수 있어요.",
-  "missionsHelpClose": "알겠어요"
+  "missionsHelpClose": "알겠어요",
+  "@missionsActiveHeader": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsTodayEarned": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsRules": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsErrTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpAcceptBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpCapBody": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  }
 }

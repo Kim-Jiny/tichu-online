@@ -94,7 +94,8 @@ const Map<String, BubbleStyle> _bubbleStyles = {
 };
 
 /// 서버가 준 키에 해당하는 말풍선 모양. 모르는 키(새 모양을 못 받은 옛 앱)나 null 이면 null.
-BubbleStyle? bubbleStyleFor(String? key) => key == null ? null : _bubbleStyles[key];
+BubbleStyle? bubbleStyleFor(String? key) =>
+    key == null ? null : _bubbleStyles[key];
 
 // ───────────────────────────── 방 목록 강조 ─────────────────────────────
 
@@ -267,7 +268,11 @@ class RoomHighlightPreview extends StatelessWidget {
 
 /// 방 목록 줄에 씌우는 강조 틀 — 바탕색·테두리·모서리 표식.
 class RoomHighlightFrame extends StatelessWidget {
-  const RoomHighlightFrame({super.key, required this.style, required this.child});
+  const RoomHighlightFrame({
+    super.key,
+    required this.style,
+    required this.child,
+  });
 
   final RoomHighlightStyle style;
   final Widget child;
@@ -313,7 +318,11 @@ class RoomHighlightFrame extends StatelessWidget {
 
 /// 강조 모양이 없으면 그대로, 있으면 틀을 씌운다.
 class MaybeRoomHighlight extends StatelessWidget {
-  const MaybeRoomHighlight({super.key, required this.style, required this.child});
+  const MaybeRoomHighlight({
+    super.key,
+    required this.style,
+    required this.child,
+  });
 
   final RoomHighlightStyle? style;
   final Widget child;

@@ -1848,28 +1848,8 @@
       }
     }
   },
-  "missionsTodayEarned": "Heute verdient {earned}/{cap}",
-  "@missionsTodayEarned": {
-    "placeholders": {
-      "earned": {
-        "type": "String"
-      },
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
-  "missionsActiveHeader": "In Arbeit ({n}/{max})",
-  "@missionsActiveHeader": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      },
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsTodayEarned": "Heute gewählt {n}/{max}",
+  "missionsActiveHeader": "In Arbeit ({n})",
   "missionsActiveEmpty": "Wähle unten eine Mission aus",
   "missionsOffersHeader": "Heutige Auswahl",
   "missionsPick": "Annehmen",
@@ -1925,26 +1905,12 @@
     }
   },
   "missionsStreakToday": "Heute geschafft",
-  "missionsRules": "Nur Spiele mit mindestens 2 Menschen zählen. Bis zu {cap} Token pro Tag.",
-  "@missionsRules": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsRules": "Nur Spiele mit mindestens {n} Menschen zählen. Du kannst pro Tag bis zu {max} Missionen wählen.",
   "missionsTierEasy": "Leicht",
   "missionsTierNormal": "Mittel",
   "missionsTierHard": "Schwer",
   "missionsOpenShop": "Token-Shop",
-  "missionsErrTooMany": "Du kannst höchstens {max} gleichzeitig haben",
-  "@missionsErrTooMany": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsErrTooMany": "Du kannst pro Tag {max} Missionen wählen",
   "missionsErrAlready": "Bereits angenommen",
   "missionsErrGeneric": "Etwas ist schiefgelaufen. Versuche es gleich erneut",
   "missionsLoadFailed": "Missionen konnten nicht geladen werden",
@@ -1965,7 +1931,6 @@
       }
     }
   },
-  "missionCompletedCapped": "Tageslimit für Token erreicht",
   "missionCompletedStreak": "Serien-Bonus +{n}",
   "@missionCompletedStreak": {
     "placeholders": {
@@ -2045,17 +2010,7 @@
   "missionsHelpTokenTitle": "Missions-Token",
   "missionsHelpTokenBody": "Token gibt es nur für abgeschlossene Missionen und sie lassen sich nur im Token-Shop ausgeben. Mit Geld oder Gold kann man sie nicht kaufen.",
   "missionsHelpAcceptTitle": "Erst die Mission annehmen",
-  "missionsHelpAcceptBody": "Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Du kannst {max} gleichzeitig haben, jede gilt {days} Tage.",
-  "@missionsHelpAcceptBody": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      },
-      "days": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpAcceptBody": "Nur angenommene Missionen aus der heutigen Auswahl zählen; Spiele davor zählen nicht. Jede gilt {days} Tage ab dem Tag der Annahme.",
   "missionsHelpHumansTitle": "Nur Spiele mit mindestens {n} Menschen zählen",
   "@missionsHelpHumansTitle": {
     "placeholders": {
@@ -2065,15 +2020,8 @@
     }
   },
   "missionsHelpHumansBody": "Räume nur mit Bots oder nur einem Menschen sowie Zuschauen zählen nicht. „Spiel beenden“ und „Spiel gewinnen“ zählen nur, wenn du bis zum Ende bleibst.",
-  "missionsHelpCapTitle": "Tägliches Token-Limit",
-  "missionsHelpCapBody": "Pro Tag sind höchstens {cap} Token aus Missionen möglich. Darüber hinaus wird die Mission zwar abgeschlossen, bringt aber keine Token mehr.",
-  "@missionsHelpCapBody": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpCapTitle": "Missionen pro Tag",
+  "missionsHelpCapBody": "Du kannst pro Tag bis zu {max} Missionen wählen (Reset um Mitternacht koreanischer Zeit). Aufgeben gibt die Wahl nicht zurück.",
   "missionsHelpStreakTitle": "Serien-Bonus",
   "missionsHelpStreakBody": "Schließe täglich mindestens eine Mission ab, um die Serie zu halten. Bei {target} Tagen gibt es {bonus} Bonus-Token. Wer einen Tag auslässt, beginnt von vorn.",
   "@missionsHelpStreakBody": {
@@ -2088,5 +2036,53 @@
   },
   "missionsHelpResetTitle": "Tägliche Erneuerung",
   "missionsHelpResetBody": "Die Auswahl erneuert sich täglich um Mitternacht (koreanische Zeit). Pro Spiel kannst du sie einmal am Tag neu mischen.",
-  "missionsHelpClose": "Verstanden"
+  "missionsHelpClose": "Verstanden",
+  "@missionsActiveHeader": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsTodayEarned": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsRules": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsErrTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpAcceptBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpCapBody": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  }
 }

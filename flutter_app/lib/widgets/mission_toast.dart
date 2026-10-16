@@ -55,10 +55,7 @@ class _MissionToastHostState extends State<MissionToastHost> {
     final c = _queue.removeAt(0);
     final l10n = L10n.of(ctx);
     final lines = <String>[
-      if (c.tokens > 0)
-        l10n.missionCompletedTokens(c.tokens.toString())
-      else
-        l10n.missionCompletedCapped,
+      l10n.missionCompletedTokens(c.tokens.toString()),
       if (c.streakBonus > 0)
         l10n.missionCompletedStreak(c.streakBonus.toString()),
     ];

@@ -22,13 +22,13 @@ class MissionOffer {
   final bool picked;
 
   factory MissionOffer.fromJson(Map<String, dynamic> j) => MissionOffer(
-        key: j['key'] as String? ?? '',
-        game: j['game'] as String? ?? '',
-        tier: _int(j['tier'], 1),
-        tokens: _int(j['tokens']),
-        target: _int(j['target'], 1),
-        picked: j['picked'] == true,
-      );
+    key: j['key'] as String? ?? '',
+    game: j['game'] as String? ?? '',
+    tier: _int(j['tier'], 1),
+    tokens: _int(j['tokens']),
+    target: _int(j['target'], 1),
+    picked: j['picked'] == true,
+  );
 }
 
 class ActiveMission {
@@ -55,15 +55,15 @@ class ActiveMission {
   final String? expiresDay;
 
   factory ActiveMission.fromJson(Map<String, dynamic> j) => ActiveMission(
-        key: j['key'] as String? ?? '',
-        game: j['game'] as String? ?? '',
-        tier: _int(j['tier'], 1),
-        tokens: _int(j['tokens']),
-        progress: _int(j['progress']),
-        target: _int(j['target'], 1),
-        done: j['status'] == 'done',
-        expiresDay: j['expiresDay'] as String?,
-      );
+    key: j['key'] as String? ?? '',
+    game: j['game'] as String? ?? '',
+    tier: _int(j['tier'], 1),
+    tokens: _int(j['tokens']),
+    progress: _int(j['progress']),
+    target: _int(j['target'], 1),
+    done: j['status'] == 'done',
+    expiresDay: j['expiresDay'] as String?,
+  );
 }
 
 class GameOffers {
@@ -75,9 +75,8 @@ class GameOffers {
 class MissionsState {
   const MissionsState({
     required this.balance,
-    required this.todayEarned,
-    required this.dailyCap,
-    required this.maxActive,
+    required this.picksToday,
+    required this.dailyPicks,
     required this.lifetimeDays,
     required this.minHumans,
     required this.streak,
@@ -90,11 +89,12 @@ class MissionsState {
   });
 
   final int balance;
-  final int todayEarned;
-  final int dailyCap;
-  final int maxActive;
 
-  /// 받은 미션이 유효한 날 수, 그리고 미션으로 인정되는 최소 사람 수.
+  /// 오늘 이미 고른 미션 수(포기한 것도 센다)와 하루에 고를 수 있는 수.
+  final int picksToday;
+  final int dailyPicks;
+
+  /// 고른 미션이 유효한 날 수, 그리고 미션으로 인정되는 최소 사람 수.
   final int lifetimeDays;
   final int minHumans;
   final int streak;
@@ -108,6 +108,9 @@ class MissionsState {
   final Map<String, GameOffers> offers;
 
   int get activeCount => active.where((m) => !m.done).length;
+
+  /// 오늘 더 고를 수 있는지.
+  bool get canPickMore => picksToday < dailyPicks;
 
   factory MissionsState.fromJson(Map<String, dynamic> j) {
     final offers = <String, GameOffers>{};
@@ -126,15 +129,14 @@ class MissionsState {
     }
     return MissionsState(
       balance: _int(j['balance']),
-      todayEarned: _int(j['todayEarned']),
-      dailyCap: _int(j['dailyCap'], 10),
-      maxActive: _int(j['maxActive'], 3),
+      picksToday: _int(j['picksToday']),
+      dailyPicks: _int(j['dailyPicks'], 3),
       lifetimeDays: _int(j['lifetimeDays'], 3),
       minHumans: _int(j['minHumans'], 2),
       streak: _int(j['streak']),
       streakDoneToday: j['streakDoneToday'] == true,
       streakTarget: _int(j['streakTarget'], 7),
-      streakBonus: _int(j['streakBonus'], 10),
+      streakBonus: _int(j['streakBonus'], 5),
       resetAtUtc: j['resetAtUtc'] is String
           ? DateTime.tryParse(j['resetAtUtc'] as String)
           : null,
@@ -197,16 +199,16 @@ class TokenProduct {
   String get slot => kind == 'room_highlight' ? 'room_highlight' : 'bubble';
 
   factory TokenProduct.fromJson(Map<String, dynamic> j) => TokenProduct(
-        key: j['key'] as String? ?? '',
-        kind: j['kind'] as String? ?? '',
-        variant: _int(j['variant'], 1),
-        price: _int(j['price']),
-        days: _int(j['days'], 30),
-        ownedUntil: j['ownedUntil'] is String
-            ? DateTime.tryParse(j['ownedUntil'] as String)?.toLocal()
-            : null,
-        equipped: j['equipped'] == true,
-      );
+    key: j['key'] as String? ?? '',
+    kind: j['kind'] as String? ?? '',
+    variant: _int(j['variant'], 1),
+    price: _int(j['price']),
+    days: _int(j['days'], 30),
+    ownedUntil: j['ownedUntil'] is String
+        ? DateTime.tryParse(j['ownedUntil'] as String)?.toLocal()
+        : null,
+    equipped: j['equipped'] == true,
+  );
 }
 
 class TokenShopState {
@@ -215,10 +217,10 @@ class TokenShopState {
   final List<TokenProduct> products;
 
   factory TokenShopState.fromJson(Map<String, dynamic> j) => TokenShopState(
-        balance: _int(j['balance']),
-        products: [
-          for (final p in (j['products'] as List? ?? const []))
-            TokenProduct.fromJson(Map<String, dynamic>.from(p as Map)),
-        ],
-      );
+    balance: _int(j['balance']),
+    products: [
+      for (final p in (j['products'] as List? ?? const []))
+        TokenProduct.fromJson(Map<String, dynamic>.from(p as Map)),
+    ],
+  );
 }

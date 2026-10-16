@@ -3126,28 +3126,8 @@
       }
     }
   },
-  "missionsTodayEarned": "Earned today {earned}/{cap}",
-  "@missionsTodayEarned": {
-    "placeholders": {
-      "earned": {
-        "type": "String"
-      },
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
-  "missionsActiveHeader": "In progress ({n}/{max})",
-  "@missionsActiveHeader": {
-    "placeholders": {
-      "n": {
-        "type": "String"
-      },
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsTodayEarned": "Missions picked today {n}/{max}",
+  "missionsActiveHeader": "In progress ({n})",
   "missionsActiveEmpty": "Pick a mission from today's offers below",
   "missionsOffersHeader": "Today's offers",
   "missionsPick": "Accept",
@@ -3203,26 +3183,12 @@
     }
   },
   "missionsStreakToday": "Done for today",
-  "missionsRules": "Only games with 2+ human players count. Up to {cap} tokens a day.",
-  "@missionsRules": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsRules": "Only games with {n}+ human players count. You can pick up to {max} missions a day.",
   "missionsTierEasy": "Easy",
   "missionsTierNormal": "Normal",
   "missionsTierHard": "Hard",
   "missionsOpenShop": "Token shop",
-  "missionsErrTooMany": "You can have {max} at a time",
-  "@missionsErrTooMany": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsErrTooMany": "You can pick {max} missions a day",
   "missionsErrAlready": "Already accepted",
   "missionsErrGeneric": "Something went wrong. Try again shortly",
   "missionsLoadFailed": "Couldn't load missions",
@@ -3243,7 +3209,6 @@
       }
     }
   },
-  "missionCompletedCapped": "Daily token limit reached",
   "missionCompletedStreak": "Streak bonus +{n}",
   "@missionCompletedStreak": {
     "placeholders": {
@@ -3323,17 +3288,7 @@
   "missionsHelpTokenTitle": "Mission tokens",
   "missionsHelpTokenBody": "Tokens can only be earned by completing missions and only be spent in the token shop. They can't be bought with money or gold.",
   "missionsHelpAcceptTitle": "Accept a mission first",
-  "missionsHelpAcceptBody": "Only missions you accepted from today's offers make progress; play before accepting doesn't count. You can hold {max} at a time and each lasts {days} days.",
-  "@missionsHelpAcceptBody": {
-    "placeholders": {
-      "max": {
-        "type": "String"
-      },
-      "days": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpAcceptBody": "Only missions you accepted from today's offers make progress; play before accepting doesn't count. Each lasts {days} days from the day you accept it.",
   "missionsHelpHumansTitle": "Only games with {n}+ people count",
   "@missionsHelpHumansTitle": {
     "placeholders": {
@@ -3343,15 +3298,8 @@
     }
   },
   "missionsHelpHumansBody": "Rooms with only bots or a single human, and games you only watch, don't count. \"Finish a game\" and \"win a game\" missions only count games played to the end without leaving.",
-  "missionsHelpCapTitle": "Daily token limit",
-  "missionsHelpCapBody": "You can earn up to {cap} tokens a day from missions. Past the limit a mission still completes, but gives no more tokens.",
-  "@missionsHelpCapBody": {
-    "placeholders": {
-      "cap": {
-        "type": "String"
-      }
-    }
-  },
+  "missionsHelpCapTitle": "Missions per day",
+  "missionsHelpCapBody": "You can pick up to {max} missions a day (resets at midnight Korea time). Giving one up doesn't give the pick back.",
   "missionsHelpStreakTitle": "Streak bonus",
   "missionsHelpStreakBody": "Complete at least one mission a day to keep your streak. Reach {target} days for {bonus} bonus tokens. Skip a day and it starts over.",
   "@missionsHelpStreakBody": {
@@ -3366,5 +3314,53 @@
   },
   "missionsHelpResetTitle": "Resets daily",
   "missionsHelpResetBody": "Offers refresh every day at midnight Korea time. You can refresh each game's offers once a day.",
-  "missionsHelpClose": "Got it"
+  "missionsHelpClose": "Got it",
+  "@missionsActiveHeader": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsTodayEarned": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsRules": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsErrTooMany": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpAcceptBody": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "@missionsHelpCapBody": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  }
 }

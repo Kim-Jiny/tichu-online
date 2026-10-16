@@ -72,10 +72,10 @@ String missionTierName(L10n l10n, int tier) {
 }
 
 /// 서버가 돌려준 실패 이유 → 안내 문장.
-String missionErrorText(L10n l10n, String reason, int maxActive) {
+String missionErrorText(L10n l10n, String reason, int dailyPicks) {
   switch (reason) {
     case 'too_many':
-      return l10n.missionsErrTooMany(maxActive.toString());
+      return l10n.missionsErrTooMany(dailyPicks.toString());
     case 'already_picked':
       return l10n.missionsErrAlready;
     default:

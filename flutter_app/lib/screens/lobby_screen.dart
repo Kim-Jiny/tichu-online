@@ -2090,11 +2090,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     width: 190,
                     child: OverflowBox(
                       alignment: Alignment.bottomLeft,
-                      maxHeight: 62,
+                      maxHeight: 52,
                       maxWidth: 190,
                       child: Image.asset(
                         'assets/dragon_icon.webp',
-                        height: 62,
+                        height: 52,
                         fit: BoxFit.contain,
                         alignment: Alignment.bottomLeft,
                       ),

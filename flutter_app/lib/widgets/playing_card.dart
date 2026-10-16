@@ -1,3 +1,4 @@
+import 'tichu_special_art.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -214,12 +215,19 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _buildSpecialCard() {
-    final imagePath = specialImages[cardId];
-    if (imagePath == null) {
+    if (!specialImages.containsKey(cardId)) {
       return const Center(child: Text('?'));
     }
-
-    return _artFill(imagePath);
+    // 직접 그린 카툰 벡터. 바탕이 카드 면을 가득 채우고 둥근 모서리만 맞춘다.
+    final outer = (width / 48 * 12).clamp(4.0, 13.0);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular((outer - 1.5).clamp(3.0, 12.0)),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: TichuSpecialArt(cardId),
+      ),
+    );
   }
 
   /// 그림 카드: 그림 자체가 카드 테두리(흰 둥근 틀)를 품고 있어서 그대로 얹으면

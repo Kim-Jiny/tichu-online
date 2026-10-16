@@ -1,3 +1,4 @@
+import '../widgets/tichu_special_art.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
@@ -259,7 +260,7 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
               const SizedBox(height: 10),
               _CardGuide(
-                leading: _GuideCardImage('assets/cards/bird.webp'),
+                leading: _GuideCardImage('special_bird'),
                 name: L10n.of(context).rulesTichuMahjong,
                 sub: L10n.of(context).rulesTichuMahjongSub,
                 count: 1,
@@ -270,7 +271,7 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
               const SizedBox(height: 10),
               _CardGuide(
-                leading: _GuideCardImage('assets/cards/dog.webp'),
+                leading: _GuideCardImage('special_dog'),
                 name: L10n.of(context).rulesTichuDog,
                 sub: L10n.of(context).rulesTichuDogSub,
                 count: 1,
@@ -281,7 +282,7 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
               const SizedBox(height: 10),
               _CardGuide(
-                leading: _GuideCardImage('assets/cards/phoenix.webp'),
+                leading: _GuideCardImage('special_phoenix'),
                 name: L10n.of(context).rulesTichuPhoenix,
                 sub: L10n.of(context).rulesTichuPhoenixSub,
                 count: 1,
@@ -293,7 +294,7 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
               const SizedBox(height: 10),
               _CardGuide(
-                leading: _GuideCardImage('assets/cards/dragon.webp'),
+                leading: _GuideCardImage('special_dragon'),
                 name: L10n.of(context).rulesTichuDragon,
                 sub: L10n.of(context).rulesTichuDragonSub,
                 count: 1,
@@ -1816,10 +1817,26 @@ RuleGlyphKind ruleGlyphFor(IconData icon) {
 class _GuideCardImage extends StatelessWidget {
   const _GuideCardImage(this.asset);
 
+  /// 'special_*' 는 직접 그린 티츄 특수 카드, 그 외는 그림 파일 경로.
   final String asset;
 
   @override
   Widget build(BuildContext context) {
+    if (asset.startsWith('special_')) {
+      return Container(
+        width: 84,
+        height: 118,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Cartoon.ink, width: 2),
+          boxShadow: const [
+            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: TichuSpecialArt(asset),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),

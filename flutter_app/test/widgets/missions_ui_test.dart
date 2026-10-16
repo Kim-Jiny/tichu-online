@@ -635,6 +635,9 @@ void main() {
                     'room_highlight_1',
                     'room_highlight_2',
                     'room_highlight_3',
+                    'room_highlight_4',
+                    'room_highlight_5',
+                    'room_highlight_6',
                   ])
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),

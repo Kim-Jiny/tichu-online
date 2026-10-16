@@ -163,7 +163,7 @@ async function main() {
   await pool.query(`UPDATE tc_token_balance SET balance = 300 WHERE nickname = $1`, [n4]);
   check('판매 중지한 상품은 못 산다', (await missions.buy(n4, 'bubble_basic_1')).reason === 'not_for_sale');
   const ov = await missions.adminOverview();
-  check('개요가 미션·상품 전부를 낸다', ov.missions.length === defs.MISSIONS.length && ov.products.length === 9);
+  check('개요가 미션·상품 전부를 낸다', ov.missions.length === defs.MISSIONS.length && ov.products.length === defs.PRODUCTS.length);
 
   // ── 연속 미션: 지면 0 으로 ──
   const n5 = '연승테스터';

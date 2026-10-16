@@ -5362,6 +5362,15 @@ class L10nKo extends L10n {
   String get tokenVariantRoomHighlight3 => '분홍 리본';
 
   @override
+  String get tokenVariantRoomHighlight4 => '하늘 구름';
+
+  @override
+  String get tokenVariantRoomHighlight5 => '민트 새싹';
+
+  @override
+  String get tokenVariantRoomHighlight6 => '보랏빛 달';
+
+  @override
   String get tokenVariantBubbleBasic1 => '빨간 하트';
 
   @override

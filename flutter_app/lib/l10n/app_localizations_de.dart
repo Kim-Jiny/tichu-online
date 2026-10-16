@@ -5524,6 +5524,15 @@ class L10nDe extends L10n {
   String get tokenVariantRoomHighlight3 => 'Rosa Schleife';
 
   @override
+  String get tokenVariantRoomHighlight4 => 'Himmelswolke';
+
+  @override
+  String get tokenVariantRoomHighlight5 => 'Minzsprössling';
+
+  @override
+  String get tokenVariantRoomHighlight6 => 'Violetter Mond';
+
+  @override
   String get tokenVariantBubbleBasic1 => 'Rotes Herz';
 
   @override

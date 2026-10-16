@@ -80,7 +80,7 @@ async function main() {
 
     a.send({ type: 'get_token_shop' });
     const shop = await a.waitFor('token_shop');
-    check('토큰 상점 상품 9개', shop.success && shop.products.length === 9, String(shop.products && shop.products.length));
+    check('토큰 상점 상품 12개', shop.success && shop.products.length === 12, String(shop.products && shop.products.length));
     a.send({ type: 'buy_token_item', key: 'room_highlight_1' });
     const nb = await a.waitFor('token_buy_result');
     check('토큰이 없으면 못 산다', !nb.success && nb.reason === 'not_enough');

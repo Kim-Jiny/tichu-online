@@ -129,6 +129,9 @@ const PRODUCT_DEFS = [
   { key: 'room_highlight_1', kind: 'room_highlight', slot: 'room_highlight', variant: 1, price: 50, days: 30 },
   { key: 'room_highlight_2', kind: 'room_highlight', slot: 'room_highlight', variant: 2, price: 50, days: 30 },
   { key: 'room_highlight_3', kind: 'room_highlight', slot: 'room_highlight', variant: 3, price: 50, days: 30 },
+  { key: 'room_highlight_4', kind: 'room_highlight', slot: 'room_highlight', variant: 4, price: 50, days: 30 },
+  { key: 'room_highlight_5', kind: 'room_highlight', slot: 'room_highlight', variant: 5, price: 50, days: 30 },
+  { key: 'room_highlight_6', kind: 'room_highlight', slot: 'room_highlight', variant: 6, price: 50, days: 30 },
   // 말풍선(기본 모양)
   { key: 'bubble_basic_1', kind: 'bubble_basic', slot: 'bubble', variant: 1, price: 60, days: 30 },
   { key: 'bubble_basic_2', kind: 'bubble_basic', slot: 'bubble', variant: 2, price: 60, days: 30 },

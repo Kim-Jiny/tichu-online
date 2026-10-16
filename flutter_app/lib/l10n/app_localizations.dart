@@ -9651,6 +9651,24 @@ abstract class L10n {
   /// **'Pink ribbon'**
   String get tokenVariantRoomHighlight3;
 
+  /// No description provided for @tokenVariantRoomHighlight4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky cloud'**
+  String get tokenVariantRoomHighlight4;
+
+  /// No description provided for @tokenVariantRoomHighlight5.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint sprout'**
+  String get tokenVariantRoomHighlight5;
+
+  /// No description provided for @tokenVariantRoomHighlight6.
+  ///
+  /// In en, this message translates to:
+  /// **'Violet moon'**
+  String get tokenVariantRoomHighlight6;
+
   /// No description provided for @tokenVariantBubbleBasic1.
   ///
   /// In en, this message translates to:

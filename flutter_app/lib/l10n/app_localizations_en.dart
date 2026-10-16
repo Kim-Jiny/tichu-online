@@ -5487,6 +5487,15 @@ class L10nEn extends L10n {
   String get tokenVariantRoomHighlight3 => 'Pink ribbon';
 
   @override
+  String get tokenVariantRoomHighlight4 => 'Sky cloud';
+
+  @override
+  String get tokenVariantRoomHighlight5 => 'Mint sprout';
+
+  @override
+  String get tokenVariantRoomHighlight6 => 'Violet moon';
+
+  @override
   String get tokenVariantBubbleBasic1 => 'Red heart';
 
   @override

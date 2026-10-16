@@ -30,19 +30,18 @@ class BubbleStyle {
     double radius = 14,
     double borderWidth = 1.8,
     BorderRadius? borderRadius,
-  }) =>
-      BoxDecoration(
-        color: fillEnd == null ? fill : null,
-        gradient: fillEnd == null
-            ? null
-            : LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [fill, fillEnd!],
-              ),
-        borderRadius: borderRadius ?? BorderRadius.circular(radius),
-        border: Border.all(color: border, width: borderWidth),
-      );
+  }) => BoxDecoration(
+    color: fillEnd == null ? fill : null,
+    gradient: fillEnd == null
+        ? null
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [fill, fillEnd!],
+          ),
+    borderRadius: borderRadius ?? BorderRadius.circular(radius),
+    border: Border.all(color: border, width: borderWidth),
+  );
 }
 
 const Map<String, BubbleStyle> _bubbleStyles = {
@@ -107,6 +106,18 @@ const Map<String, RoomHighlightStyle> _roomHighlights = {
     fill: Color(0xFFFFE9F2),
     border: Color(0xFFE8689A),
   ),
+  'room_highlight_4': RoomHighlightStyle(
+    fill: Color(0xFFE6F4FF),
+    border: Color(0xFF4FA3E0),
+  ),
+  'room_highlight_5': RoomHighlightStyle(
+    fill: Color(0xFFE5F8EC),
+    border: Color(0xFF3FB27A),
+  ),
+  'room_highlight_6': RoomHighlightStyle(
+    fill: Color(0xFFF0E9FF),
+    border: Color(0xFF8B66D9),
+  ),
 };
 
 RoomHighlightStyle? roomHighlightFor(String? key) =>
@@ -123,6 +134,12 @@ String tokenProductName(L10n l10n, String key) {
       return l10n.tokenVariantRoomHighlight2;
     case 'room_highlight_3':
       return l10n.tokenVariantRoomHighlight3;
+    case 'room_highlight_4':
+      return l10n.tokenVariantRoomHighlight4;
+    case 'room_highlight_5':
+      return l10n.tokenVariantRoomHighlight5;
+    case 'room_highlight_6':
+      return l10n.tokenVariantRoomHighlight6;
     case 'bubble_basic_1':
       return l10n.tokenVariantBubbleBasic1;
     case 'bubble_basic_2':

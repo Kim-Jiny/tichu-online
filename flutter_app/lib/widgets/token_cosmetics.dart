@@ -14,8 +14,6 @@ class BubbleStyle {
     this.fillEnd,
     required this.border,
     this.text = Cartoon.ink,
-    required this.badge,
-    required this.badgeColor,
   });
 
   final Color fill;
@@ -24,10 +22,6 @@ class BubbleStyle {
   final Color? fillEnd;
   final Color border;
   final Color text;
-
-  /// 말풍선 모서리에 붙는 작은 표식.
-  final IconData badge;
-  final Color badgeColor;
 
   /// 꼬리(말풍선 아래 삼각형)가 맞춰 칠할 색.
   Color get tailFill => fillEnd ?? fill;
@@ -52,20 +46,14 @@ const Map<String, BubbleStyle> _bubbleStyles = {
   'bubble_basic_1': BubbleStyle(
     fill: Color(0xFFFFE1EC),
     border: Color(0xFFD63B78),
-    badge: Icons.favorite_rounded,
-    badgeColor: Color(0xFFE5457F),
   ),
   'bubble_basic_2': BubbleStyle(
     fill: Color(0xFFDDF7EE),
     border: Color(0xFF2BA37F),
-    badge: Icons.cloud_rounded,
-    badgeColor: Color(0xFF39B58E),
   ),
   'bubble_basic_3': BubbleStyle(
     fill: Color(0xFFFFF3B0),
     border: Color(0xFFD99A00),
-    badge: Icons.star_rounded,
-    badgeColor: Color(0xFFFFB300),
   ),
   // 상위 3종 — 바탕이 번지고 글자색도 바뀐다.
   'bubble_premium_1': BubbleStyle(
@@ -73,23 +61,17 @@ const Map<String, BubbleStyle> _bubbleStyles = {
     fillEnd: Color(0xFFFF5A5F),
     border: Color(0xFF8A2B10),
     text: Colors.white,
-    badge: Icons.local_fire_department_rounded,
-    badgeColor: Color(0xFFFFD43B),
   ),
   'bubble_premium_2': BubbleStyle(
     fill: Color(0xFFFFE9F3),
     fillEnd: Color(0xFFFFB7D5),
     border: Color(0xFFB03A74),
-    badge: Icons.local_florist_rounded,
-    badgeColor: Color(0xFFE5457F),
   ),
   'bubble_premium_3': BubbleStyle(
     fill: Color(0xFF3B2A6B),
     fillEnd: Color(0xFF6A47C4),
     border: Color(0xFFFFD43B),
     text: Colors.white,
-    badge: Icons.bolt_rounded,
-    badgeColor: Color(0xFFFFD43B),
   ),
 };
 
@@ -100,40 +82,24 @@ BubbleStyle? bubbleStyleFor(String? key) =>
 // ───────────────────────────── 방 목록 강조 ─────────────────────────────
 
 class RoomHighlightStyle {
-  const RoomHighlightStyle({
-    required this.fill,
-    required this.border,
-    required this.badge,
-    required this.badgeColor,
-    this.badgeOnRight = true,
-  });
+  const RoomHighlightStyle({required this.fill, required this.border});
 
   final Color fill;
   final Color border;
-  final IconData badge;
-  final Color badgeColor;
-  final bool badgeOnRight;
 }
 
 const Map<String, RoomHighlightStyle> _roomHighlights = {
   'room_highlight_1': RoomHighlightStyle(
     fill: Color(0xFFFFF4C9),
     border: Color(0xFFE0A800),
-    badge: Icons.workspace_premium_rounded,
-    badgeColor: Color(0xFFE0A800),
   ),
   'room_highlight_2': RoomHighlightStyle(
     fill: Color(0xFFFFF9E3),
     border: Color(0xFFFFB300),
-    badge: Icons.auto_awesome_rounded,
-    badgeColor: Color(0xFFFF9A1F),
   ),
   'room_highlight_3': RoomHighlightStyle(
     fill: Color(0xFFFFE9F2),
     border: Color(0xFFE8689A),
-    badge: Icons.bookmark_rounded,
-    badgeColor: Color(0xFFE8457F),
-    badgeOnRight: false,
   ),
 };
 
@@ -192,46 +158,19 @@ class BubblePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = bubbleStyleFor(styleKey);
     if (style == null) return const SizedBox.shrink();
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: style.decoration(),
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Cartoon.userText(
-              size: 13,
-              weight: FontWeight.w800,
-              color: style.text,
-            ),
-          ),
-        ),
-        Positioned(left: -7, top: -9, child: BubbleBadge(style: style)),
-      ],
-    );
-  }
-}
-
-/// 말풍선 모서리 표식.
-class BubbleBadge extends StatelessWidget {
-  const BubbleBadge({super.key, required this.style, this.size = 18});
-  final BubbleStyle style;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Cartoon.paper,
-        shape: BoxShape.circle,
-        border: Border.all(color: style.border, width: 1.4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: style.decoration(),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Cartoon.userText(
+          size: 13,
+          weight: FontWeight.w800,
+          color: style.text,
+        ),
       ),
-      child: Icon(style.badge, size: size * 0.66, color: style.badgeColor),
     );
   }
 }
@@ -266,7 +205,7 @@ class RoomHighlightPreview extends StatelessWidget {
   }
 }
 
-/// 방 목록 줄에 씌우는 강조 틀 — 바탕색·테두리·모서리 표식.
+/// 방 목록 줄에 씌우는 강조 틀 — 바탕색·테두리·은은한 빛.
 class RoomHighlightFrame extends StatelessWidget {
   const RoomHighlightFrame({
     super.key,
@@ -279,39 +218,16 @@ class RoomHighlightFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: style.fill,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: style.border, width: 2.4),
-            boxShadow: [
-              BoxShadow(
-                color: style.border.withValues(alpha: 0.35),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-          child: child,
-        ),
-        Positioned(
-          top: -7,
-          left: style.badgeOnRight ? null : 10,
-          right: style.badgeOnRight ? 10 : null,
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: Cartoon.paper,
-              shape: BoxShape.circle,
-              border: Border.all(color: style.border, width: 1.6),
-            ),
-            child: Icon(style.badge, size: 15, color: style.badgeColor),
-          ),
-        ),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: style.fill,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: style.border, width: 2.4),
+        boxShadow: [
+          BoxShadow(color: style.border.withValues(alpha: 0.35), blurRadius: 8),
+        ],
+      ),
+      child: child,
     );
   }
 }

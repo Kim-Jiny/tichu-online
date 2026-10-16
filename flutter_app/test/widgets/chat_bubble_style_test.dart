@@ -52,14 +52,13 @@ void main() {
     return c.decoration as BoxDecoration?;
   }
 
-  testWidgets('장착한 사람의 채팅 줄은 그 모양(색·테두리·표식)으로 그려진다', (t) async {
+  testWidgets('장착한 사람의 채팅 줄은 그 모양(색·테두리)으로 그려진다', (t) async {
     final game = _FakeGame({'꾸밈이': 'bubble_basic_1'});
     await pumpLine(t, game, '꾸밈이');
     final style = bubbleStyleFor('bubble_basic_1')!;
     final deco = bodyDecoration(t)!;
     expect(deco.color, style.fill);
     expect((deco.border as Border).top.color, style.border);
-    expect(find.byType(BubbleBadge), findsOneWidget);
   });
 
   testWidgets('상위 모양은 그라데이션과 글자색까지 바뀐다', (t) async {
@@ -80,10 +79,8 @@ void main() {
   testWidgets('장착하지 않았거나 모르는 키면 기본 모양', (t) async {
     final game = _FakeGame({'모름': 'bubble_unknown_9'});
     await pumpLine(t, game, '평범이');
-    expect(find.byType(BubbleBadge), findsNothing);
     expect(bodyDecoration(t)!.color, Colors.white);
     await pumpLine(t, game, '모름');
-    expect(find.byType(BubbleBadge), findsNothing);
     await pumpLine(t, game, '평범이', isMe: true);
     expect(bodyDecoration(t)!.color, const Color(0xFF64B5F6)); // 기본 내 말풍선 파랑
   });
@@ -91,6 +88,5 @@ void main() {
   testWidgets('시스템 줄(보낸 사람 없음)에는 모양을 입히지 않는다', (t) async {
     final game = _FakeGame({'': 'bubble_basic_1'});
     await pumpLine(t, game, '');
-    expect(find.byType(BubbleBadge), findsNothing);
   });
 }

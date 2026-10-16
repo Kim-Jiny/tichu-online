@@ -162,20 +162,7 @@ class SeatChatBubble extends StatelessWidget {
         ),
       ),
     );
-    // 장착한 모양이 있으면 왼쪽 위 모서리에 작은 표식이 붙는다.
-    final body = style == null
-        ? plainBody
-        : Stack(
-            clipBehavior: Clip.none,
-            children: [
-              plainBody,
-              Positioned(
-                left: -6,
-                top: -8,
-                child: BubbleBadge(style: style, size: 16),
-              ),
-            ],
-          );
+    final body = plainBody;
     // 나타날 때 꼬리 끝(말한 좌석)에서 통 튀어나온다.
     Widget pop(Widget child) => TweenAnimationBuilder<double>(
       key: ValueKey(text),

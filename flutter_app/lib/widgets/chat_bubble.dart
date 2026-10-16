@@ -60,7 +60,7 @@ class ChatBubble extends StatelessWidget {
     ),
   });
 
-  /// 말풍선 몸통. 토큰 상점 모양이 있으면 그 색·테두리·표식, 없으면 기본 카툰 모양.
+  /// 말풍선 몸통. 토큰 상점 모양이 있으면 그 색·테두리, 없으면 기본 카툰 모양.
   Widget _bubble(BubbleStyle? style) {
     final textColor = style?.text ?? (isMe ? Colors.white : Cartoon.ink);
     final body = Container(
@@ -85,19 +85,7 @@ class ChatBubble extends StatelessWidget {
         ),
       ),
     );
-    if (style == null) return body;
-    // 좌석 말풍선과 같은 모서리 표식.
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        body,
-        Positioned(
-          left: -5,
-          top: -7,
-          child: BubbleBadge(style: style, size: 16),
-        ),
-      ],
-    );
+    return body;
   }
 
   @override

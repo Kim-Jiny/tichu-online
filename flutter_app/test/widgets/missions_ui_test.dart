@@ -590,7 +590,7 @@ void main() {
 
   test('말풍선 키가 있으면 SeatChatBubbles 가 모양을 기억하고 만료되면 잊는다', () {
     // 키를 모르면 기본 모양(null)으로 떨어지는 것까지.
-    expect(bubbleStyleFor('bubble_basic_1')?.badge, Icons.favorite_rounded);
+    expect(bubbleStyleFor('bubble_basic_1')?.fill, const Color(0xFFFFE1EC));
     expect(bubbleStyleFor(''), isNull);
   });
 

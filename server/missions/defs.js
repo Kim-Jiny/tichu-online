@@ -26,8 +26,13 @@ const DAILY_REROLLS = 1;
 const STREAK_BONUS_DAYS = 7;
 const STREAK_BONUS_TOKENS = 5;
 
-/** 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지). */
-const MIN_HUMANS = 2;
+/**
+ * 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지).
+ *
+ * TODO(배포 전에 반드시): 지금은 혼자 봇과 하며 테스트하느라 1 로 풀어 두었다.
+ * 정식 값은 2 — 환경변수 MISSION_MIN_HUMANS 로도 바꿀 수 있다.
+ */
+const MIN_HUMANS = Math.max(1, parseInt(process.env.MISSION_MIN_HUMANS, 10) || 1);
 
 const GAMES = ['tichu', 'mighty', 'skull_king', 'love_letter'];
 

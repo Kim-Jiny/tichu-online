@@ -4147,10 +4147,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        nameChip,
-        _spectatorHandPanel(state, viewingPlayer),
-      ],
+      children: [nameChip, _spectatorHandPanel(state, viewingPlayer)],
     );
   }
 
@@ -4159,7 +4156,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     MightyPlayer viewingPlayer,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Cartoon.paper,
@@ -4181,29 +4178,39 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             )
           else
-            // 남의 패는 한 줄 작은 카드로 — 두 줄로 크게 펼치면 아래 좌석을
-            // 가린다. 판을 줄이지 않고 이 패널이 110 안에 들어가게 한다.
+            // 남의 패는 두 줄 작은 카드로. 이름은 창 밖 알약으로 빼서 창이 낮다.
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
               child: LayoutBuilder(
                 builder: (context, c) {
-                  final n = viewingPlayer.cards.length;
-                  const gap = 2.0;
-                  final w = ((c.maxWidth - gap * (n - 1)) / n).clamp(
+                  final cards = viewingPlayer.cards;
+                  final perRow = (cards.length / 2).ceil();
+                  const gap = 3.0;
+                  final w = ((c.maxWidth - gap * (perRow - 1)) / perRow).clamp(
                     18.0,
-                    38.0,
+                    32.0,
                   );
-                  return Row(
+                  Widget row(List<String> r) => Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      for (int i = 0; i < n; i++) ...[
+                      for (int i = 0; i < r.length; i++) ...[
                         if (i > 0) const SizedBox(width: gap),
                         PlayingCard(
-                          cardId: _displayCardId(viewingPlayer.cards[i]),
+                          cardId: _displayCardId(r[i]),
                           width: w,
                           height: w * 1.4,
                           isInteractive: false,
                         ),
+                      ],
+                    ],
+                  );
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      row(cards.take(perRow).toList()),
+                      if (cards.length > perRow) ...[
+                        const SizedBox(height: 3),
+                        row(cards.skip(perRow).toList()),
                       ],
                     ],
                   );

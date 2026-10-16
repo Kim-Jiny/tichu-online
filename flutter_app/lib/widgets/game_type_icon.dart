@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import 'game_symbols.dart';
 
 /// The colour that stands for each game.
 ///
@@ -53,15 +54,8 @@ String gameTypeAsset(String gameType) {
 /// fitted inside a square box the way an icon would be, and callers can go on
 /// laying out square slots. It carries its own colours, so unlike the glyph it
 /// takes no tint.
-Widget gameTypeSymbol(String gameType, {double size = 20}) {
-  return Image.asset(
-    gameTypeAsset(gameType),
-    width: size,
-    height: size,
-    fit: BoxFit.contain,
-    filterQuality: FilterQuality.medium,
-  );
-}
+Widget gameTypeSymbol(String gameType, {double size = 20}) =>
+    GameSymbol(gameType, size: size);
 
 /// The game's name, in the player's language.
 String gameTypeLabel(L10n l10n, String gameType) {

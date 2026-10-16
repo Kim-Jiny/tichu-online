@@ -70,6 +70,8 @@ class DraggableChatPanel extends StatefulWidget {
 }
 
 /// Panel geometry as last left by the user.
+const double _defaultOpacity = 0.8;
+
 class _ChatGeometry {
   final double left;
   final double top;
@@ -104,7 +106,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
     final top = prefs.getDouble('chat_panel_${persistKey}_top');
     final width = prefs.getDouble('chat_panel_${persistKey}_width');
     final height = prefs.getDouble('chat_panel_${persistKey}_height');
-    final opacity = prefs.getDouble('chat_panel_${persistKey}_opacity') ?? 1.0;
+    final opacity =
+        prefs.getDouble('chat_panel_${persistKey}_opacity') ?? _defaultOpacity;
     if (left != null && top != null && width != null && height != null) {
       _cache[persistKey] = _ChatGeometry(left, top, width, height, opacity);
     }
@@ -137,7 +140,8 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
   // Panel opacity (1.0 = opaque). Clamped to [_minOpacity, 1] so it can never
   // become fully invisible/unreachable.
   static const double _minOpacity = 0.3;
-  double _opacity = 1.0;
+  // 기본은 살짝 투명하게 — 열었을 때 뒤의 손패·판이 비쳐 보이게. 직접 바꾼 값은 저장돼 그대로 쓴다.
+  double _opacity = _defaultOpacity;
   bool _showOpacitySlider = false;
 
   String get _kLeft => 'chat_panel_${widget.persistKey}_left';

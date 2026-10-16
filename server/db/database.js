@@ -12576,6 +12576,27 @@ async function countPendingBankDepositsAll() {
 }
 
 /**
+ * 어드민 사이드바에 붙는 "손댈 것이 있다" 숫자 — 미처리 문의·신고·입금 확인.
+ * 하나라도 실패하면 그 항목만 0 으로 두고 나머지는 그대로 돌려준다(메뉴가 안 뜨면 안 된다).
+ */
+async function getAdminNavBadges() {
+  const count = async (sql) => {
+    try {
+      const r = await pool.query(sql);
+      return parseInt(r.rows[0].n) || 0;
+    } catch {
+      return 0;
+    }
+  };
+  const [inquiries, reports, deposits] = await Promise.all([
+    count(`SELECT COUNT(*) AS n FROM tc_inquiries WHERE status = 'pending'`),
+    count(`SELECT COUNT(*) AS n FROM tc_reports WHERE status = 'pending'`),
+    count(`SELECT COUNT(*) AS n FROM tc_bank_deposits WHERE status = 'pending'`),
+  ]);
+  return { inquiries, reports, deposits };
+}
+
+/**
  * Approve a claim and pay out, in one transaction.
  *
  * The status flip is guarded on `status = 'pending'` inside the same
@@ -12815,6 +12836,7 @@ module.exports = {
   createBankDeposit,
   countPendingBankDeposits,
   countPendingBankDepositsAll,
+  getAdminNavBadges,
   getBankDeposits,
   approveBankDeposit,
   rejectBankDeposit,

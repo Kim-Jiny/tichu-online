@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const serverStartedAt = new Date();
 const logBuffer = require('./logBuffer');
 const {
@@ -11,7 +13,7 @@ const {
   reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
-  getDetailedAdminStats,
+  getDetailedAdminStats, getAdminNavBadges,
   getAllShopItemsAdmin, addShopItem, updateShopItem, deleteShopItem, getShopItemById,
   getAllGoldProductsAdmin, getGoldProductById, addGoldProduct, updateGoldProduct, deleteGoldProduct,
   getIapReceipts, getIapReceiptById, refundIapReceipt, autoRefundByTransaction,
@@ -138,582 +140,31 @@ function redirect(res, location) {
 
 // ===== Layout & Styles =====
 
+// 모양(CSS·사이드바·아이콘)은 admin_theme.js 에 있다. 여기서는 사이드바 배지와 접속 현황 같은
+// "페이지가 열릴 때의 값"만 모아서 넘긴다.
+const { renderLayout, renderLoginPage } = require('./admin_theme');
+
+// 사이드바 배지(미처리 문의·신고·입금)는 모든 페이지가 쓰는데 layout() 은 동기 함수라서, 30초마다
+// 갱신해 두는 값을 읽는다. 조회가 실패하면 직전 값을 그대로 둔다.
+let navBadges = { inquiries: 0, reports: 0, deposits: 0 };
+let navBadgesAt = 0;
+let navBadgesLoading = false;
+function refreshNavBadges() {
+  if (navBadgesLoading || Date.now() - navBadgesAt < 30000) return;
+  navBadgesLoading = true;
+  getAdminNavBadges()
+    .then((b) => { navBadges = b; navBadgesAt = Date.now(); })
+    .catch(() => { navBadgesAt = Date.now() - 20000; })
+    .finally(() => { navBadgesLoading = false; });
+}
+// 접속 현황은 대시보드 요청마다 갱신한다(wss 를 가진 쪽이 handleAdminRoute 라서).
+let liveNow = null;
+
 // pendingDeposits drives the badge on the 입금확인 tab. Passed in rather than
 // queried here because layout() is synchronous and called from every page.
 function layout(title, content, activePage = '', pendingDeposits = 0) {
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title} - Tichu Admin</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-:root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --surface-strong: #ffffff;
-  --line: #e4e1da;
-  --text: #1f2328;
-  --muted: #6c727f;
-  --brand: #0f6c5c;
-  --brand-soft: #d9eee7;
-  --accent: #d88c38;
-  --danger: #c0563f;
-  --warning: #c67b2b;
-  --shadow: none;
-}
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-  min-height: 100vh;
-}
-.sidebar {
-  width: 248px;
-  background: linear-gradient(180deg, #17352f 0%, #102923 100%);
-  color: #e7efe9;
-  padding: 24px 0;
-  position: fixed;
-  height: 100vh;
-  overflow-y: auto;
-  z-index: 100;
-  transition: transform 0.3s ease;
-  box-shadow: 10px 0 30px rgba(16, 41, 35, 0.16);
-}
-.sidebar-header { padding: 0 22px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px; }
-.sidebar-header-link { display: block; color: inherit; text-decoration: none; }
-.sidebar h2 { padding: 0; font-size: 18px; color: #fff; margin-bottom: 6px; letter-spacing: 0.01em; }
-.sidebar-meta { font-size: 12px; color: rgba(231,239,233,0.62); line-height: 1.5; }
-.nav-section { margin: 4px 0 10px; }
-.nav-section-label { padding: 0 22px; margin: 14px 0 8px; font-size: 11px; color: rgba(231,239,233,0.45); text-transform: uppercase; letter-spacing: 0.12em; }
-.sidebar a { display: block; padding: 13px 22px; color: rgba(231,239,233,0.75); text-decoration: none; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
-.sidebar a:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.sidebar a.active { background: rgba(255,255,255,0.08); color: #fff; border-left-color: #dcb46a; }
-.sidebar .logout { margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; }
-.sidebar .logout a { color: #e57373; }
-.menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #17352f; color: #fff; border: none; border-radius: 12px; width: 42px; height: 42px; font-size: 22px; cursor: pointer; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16,41,35,0.22); }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; }
-.main { margin-left: 248px; flex: 1; padding: 28px; min-height: 100vh; min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; }
-.page-shell { max-width: 1480px; margin: 0 auto; min-width: 0; width: 100%; }
-.page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
-.page-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; color: var(--text); letter-spacing: -0.02em; }
-.page-subtitle { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 760px; }
-.header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; min-width: 0; }
-.stat-card {
-  background: transparent;
-  border: none;
-  border-left: 1px solid var(--line);
-  border-radius: 0;
-  padding: 2px 0 2px 16px;
-}
-.stats-grid > .stat-card:first-child { border-left: none; padding-left: 0; }
-.stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0; text-transform: none; }
-.stat-card .value { font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-.stat-card .value.purple { color: #5f62d6; }
-.stat-card .value.green { color: #2e8b57; }
-.stat-card .value.orange { color: var(--warning); }
-.stat-card .value.red { color: var(--danger); }
-/* 상자를 겹치지 않는다: 카드 테두리·그림자·둥근 모서리를 걷어내고, 구획은
-   여백과 얇은 구분선으로만 나눈다. 페이지마다 카드가 카드를 품고 있어서
-   중요한 숫자와 배경 장식이 같은 무게로 보이던 문제. */
-.card {
-  background: transparent;
-  border: none;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  padding: 20px 0 4px;
-  box-shadow: none;
-  margin-bottom: 8px;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-}
-.card h3 {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 14px;
-  color: var(--muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.hero-card {
-  background: linear-gradient(135deg, #17352f 0%, #1d4a41 60%, #24584d 100%);
-  color: #fff;
-  border-radius: 22px;
-  padding: 24px;
-  margin-bottom: 22px;
-  box-shadow: 0 24px 50px rgba(23, 53, 47, 0.24);
-  min-width: 0;
-  max-width: 100%;
-}
-.hero-card .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.72); margin-bottom: 8px; }
-.hero-card .headline { font-size: 30px; font-weight: 800; line-height: 1.18; max-width: 760px; letter-spacing: -0.03em; }
-.hero-card .sub { margin-top: 10px; color: rgba(255,255,255,0.78); font-size: 14px; line-height: 1.6; }
-.hero-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; min-width: 0; }
-.hero-meta .item { background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(8px); }
-.hero-meta .item .k { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
-.hero-meta .item .v { font-size: 22px; font-weight: 800; }
-.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; min-width: 0; }
-.summary-item { background: transparent; border: none; border-left: 1px solid var(--line); border-radius: 0; padding: 2px 0 2px 16px; }
-.summary-strip > .summary-item:first-child { border-left: none; padding-left: 0; }
-.summary-item .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: none; letter-spacing: 0; }
-.summary-item .v { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
-.summary-item .meta { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.section-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; text-transform: none; letter-spacing: 0; font-weight: 700; }
-
-/* ── 대시보드 ─────────────────────────────────────────────────────────
-   숫자만 크게 늘어놓으면 무엇이 이상한지 알 수 없다. 모든 수치는 비교
-   대상(어제, 7일 평균)을 데리고 다니고, 손댈 것이 있는 항목만 색을 쓴다. */
-.dash-section { padding: 26px 0; border-top: 1px solid var(--line); }
-.dash-section:first-of-type { border-top: none; padding-top: 8px; }
-.dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.dash-head h2 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-.dash-head .hint { font-size: 12px; color: var(--muted); }
-.dash-head a { font-size: 12px; color: var(--brand); text-decoration: none; font-weight: 600; }
-
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; min-width: 0; }
-.kpi { min-width: 0; }
-.kpi { padding: 2px 18px; border-left: 1px solid var(--line); }
-.kpi:first-child { border-left: none; padding-left: 0; }
-.kpi .k { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.kpi .v { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-.kpi .v .unit { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 3px; }
-.kpi .d { margin-top: 6px; font-size: 12px; color: var(--muted); }
-.kpi .d .up { color: #2e7d54; font-weight: 700; }
-.kpi .d .down { color: #b4553f; font-weight: 700; }
-.kpi .d .flat { color: var(--muted); font-weight: 700; }
-
-/* 처리 대기: 0건이면 한 줄로 조용히, 있으면 눈에 띄게. */
-.todo-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.todo { display: inline-flex; align-items: baseline; gap: 8px; padding: 10px 14px; border: 1px solid #e7c9bf; background: #fdf3f0; border-radius: 8px; text-decoration: none; }
-.todo .n { font-size: 20px; font-weight: 800; color: #b4553f; letter-spacing: -0.02em; }
-.todo .t { font-size: 13px; color: #7a4436; font-weight: 600; }
-.todo-clear { font-size: 13px; color: var(--muted); }
-
-.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0 28px; min-width: 0; }
-.facts > div { min-width: 0; }
-.fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f1efe9; }
-.fact .k { font-size: 13px; color: var(--muted); }
-.fact .v { font-size: 14px; font-weight: 700; }
-.fact .v.warn { color: #b4553f; }
-
-.cell-ellipsis { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.spark { display: flex; align-items: flex-end; gap: 4px; height: 92px; min-width: 0; }
-.spark .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.spark .stack { width: 100%; max-width: 34px; display: flex; flex-direction: column-reverse; border-radius: 3px; overflow: hidden; }
-.spark .n { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.spark .x { font-size: 10px; color: #a9a49a; }
-.spark .col.today .n { color: var(--text); font-weight: 700; }
-.spark .col.today .x { color: var(--text); font-weight: 700; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
-.legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
-.legend .zero { opacity: 0.4; }
-/* minmax(0,1fr): 그냥 1fr 이면 칸이 표의 최소 너비까지 늘어나 페이지 전체가
-   가로로 넘친다(모바일에서 오른쪽이 잘리던 원인). */
-.dash-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-.dash-cols > * { min-width: 0; }
-@media (max-width: 1100px) { .dash-cols { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
-.kpi-note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
-.metric-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px dashed rgba(32,28,22,0.08); }
-.metric-inline:last-child { border-bottom: none; padding-bottom: 0; }
-.metric-inline .name { font-size: 13px; color: var(--muted); }
-.metric-inline .num { font-weight: 700; font-size: 15px; color: var(--text); }
-.card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-/* 화면 여러 곳이 .table-responsive 를 붙여 쓰고 있었는데 CSS 에 정의가
-   없어 아무 일도 하지 않았다 — 폰에서 표가 그대로 삐져나갔다. */
-.table-responsive,
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); scrollbar-width: thin; max-width: 100%; width: 100%; }
-table { width: 100%; max-width: 100%; border-collapse: separate; border-spacing: 0; }
-th { text-align: left; padding: 10px 14px; background: #faf9f6; color: var(--muted); font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; text-transform: none; letter-spacing: 0; position: sticky; top: 0; z-index: 1; }
-td { padding: 10px 14px; border-bottom: 1px solid #f1efe9; font-size: 14px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: #f7f9f8; }
-.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge-pending { background: #fff3e0; color: #e65100; }
-.badge-resolved { background: #e8f5e9; color: #2e7d32; }
-.badge-reviewed { background: #e3f2fd; color: #1565c0; }
-.badge-bug { background: #ffebee; color: #c62828; }
-.badge-suggestion { background: #e8eaf6; color: #283593; }
-.badge-payment { background: #fff3e0; color: #e65100; }
-.badge-other { background: #f3e5f5; color: #6a1b9a; }
-.btn { display: inline-block; padding: 9px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-.btn-primary { background: var(--brand); color: #fff; }
-.btn-primary:hover { background: #0c594b; }
-.btn-danger { background: #e53935; color: #fff; }
-.btn-danger:hover { background: #c62828; }
-.btn-success { background: #4caf50; color: #fff; }
-.btn-success:hover { background: #388e3c; }
-.btn-secondary { background: #ece5d8; color: #3d403f; }
-.btn-secondary:hover { background: #e0d5c2; }
-.detail-grid { display: grid; grid-template-columns: 120px 1fr; gap: 8px 16px; margin-bottom: 16px; }
-.detail-grid .label { color: var(--muted); font-size: 13px; font-weight: 700; }
-.detail-grid .value { font-size: 14px; word-break: break-word; }
-textarea, select, input[type="date"], input[type="datetime-local"], input[type="number"] {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #dad3c7;
-  border-radius: 12px;
-  font-size: 14px;
-  font-family: inherit;
-  background: rgba(255,255,255,0.92);
-  color: var(--text);
-}
-input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #dad3c7; border-radius: 12px; font-size: 14px; font-family: inherit; background: rgba(255,255,255,0.92); color: var(--text); }
-.search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
-.search-bar input { flex: 1; }
-.filter-card {
-  padding: 0 0 18px;
-  border-radius: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  box-shadow: none;
-  margin-bottom: 18px;
-}
-.filter-title { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 10px; font-weight: 700; }
-/* 필터 한 줄.
- *
- * 예전에는 폼마다 style="display:flex;..." 와 style="width:130px" 을 직접
- * 박았다. 인라인은 클래스가 못 이기므로 좁은 화면 규칙이 통하지 않았고,
- * 폰에서 칸이 줄을 넘지 못해 가로로 삐져나갔다. 폭을 클래스로 옮겨 둔다.
- *   f-grow  검색처럼 남는 자리를 먹는 칸
- *   f-mid   IP·OS·버전처럼 중간 폭
- *   f-num   최소 레이팅·게임·이탈처럼 짧은 숫자
- *   f-gap   버튼을 오른쪽으로 미는 빈칸 (폰에서는 사라진다)
- */
-.filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
-.filter-row .f-grow { flex: 1 1 200px; min-width: 0; }
-.filter-row .f-mid { flex: 0 1 130px; min-width: 0; }
-.filter-row .f-num { flex: 0 1 100px; min-width: 0; }
-.filter-row .f-gap { flex: 1 1 0; }
-.filter-row .f-label { font-size: 12px; color: var(--muted); }
-.filter-form { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.subtab-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-.subtab-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 13px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid var(--line);
-  font-size: 13px;
-  font-weight: 700;
-}
-.subtab-link:hover { color: var(--text); background: rgba(255,255,255,0.92); }
-.subtab-link.active {
-  color: #fff;
-  background: linear-gradient(135deg, #17352f 0%, #24584d 100%);
-  border-color: rgba(23,53,47,0.3);
-  box-shadow: 0 12px 24px rgba(23,53,47,0.18);
-}
-.subtab-copy { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
-.preset-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.preset-link {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  text-decoration: none;
-  color: var(--muted);
-  background: rgba(255,255,255,0.8);
-  border: 1px solid rgba(32,28,22,0.08);
-  font-size: 12px;
-  font-weight: 700;
-}
-.preset-link.active {
-  color: #fff;
-  background: var(--brand);
-  border-color: var(--brand);
-}
-/* 붙박이 상자를 없앤다. 스크롤을 따라다니되 배경·그림자 없이 구분선만. */
-.sticky-kpi-rail {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  margin-bottom: 18px;
-  padding: 14px 0;
-  border-radius: 0;
-  background: var(--bg);
-  border: none;
-  border-bottom: 1px solid var(--line);
-  box-shadow: none;
-}
-.sticky-kpi-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-.sticky-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.sticky-kpi-item { padding: 2px 0; border-radius: 0; background: transparent; border: none; }
-.sticky-kpi-item .k { font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 6px; }
-.sticky-kpi-item .v { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
-.sticky-kpi-item .m { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.hero-rail { padding: 14px 0; }
-.hero-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 4px; }
-.hero-item { padding: 2px 18px; min-width: 0; border-left: 1px solid var(--line); }
-.hero-item:first-child { border-left: none; padding-left: 0; }
-.hk-label { font-size: 12px; color: var(--muted); letter-spacing: 0.02em; margin-bottom: 7px; white-space: nowrap; }
-.hk-value { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.03em; line-height: 1.05; }
-.hk-delta { margin-top: 9px; }
-.hk-prev { font-size: 11px; color: var(--muted); margin-top: 5px; }
-.delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; line-height: 1.5; }
-.delta.up { color: #1a7f4b; background: rgba(46,139,87,0.13); }
-.delta.down { color: #c0563f; background: rgba(192,86,63,0.13); }
-.delta.flat { color: #8a8378; background: rgba(138,131,120,0.12); font-weight: 600; }
-.chart-foldout { border: 1px solid #ebe4d8; border-radius: 14px; background: #fff; margin: 12px 0; overflow: hidden; }
-.chart-foldout > summary { cursor: pointer; padding: 13px 18px; font-size: 14px; font-weight: 700; color: var(--text); list-style: none; display: flex; align-items: center; justify-content: space-between; }
-.chart-foldout > summary::-webkit-details-marker { display: none; }
-.chart-foldout > summary::after { content: '▾ 차트 보기'; font-size: 12px; font-weight: 600; color: var(--muted); }
-.chart-foldout[open] > summary::after { content: '▴ 접기'; }
-.chart-foldout .card-body { padding: 2px 18px 18px; }
-.status-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
-.status-card {
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(32,28,22,0.08);
-  background: rgba(255,255,255,0.85);
-}
-.status-card.warning { background: rgba(255,244,229,0.95); border-color: rgba(198,123,43,0.25); }
-.status-card.danger { background: rgba(255,235,238,0.95); border-color: rgba(192,86,63,0.25); }
-.status-card.good { background: rgba(232,245,233,0.95); border-color: rgba(46,125,50,0.22); }
-.status-card .title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
-.status-card .desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
-.pagination { display: flex; gap: 8px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
-.pagination a { padding: 7px 12px; border-radius: 10px; background: #ece5d8; color: #333; text-decoration: none; font-size: 13px; }
-.pagination a.active { background: var(--brand); color: #fff; }
-.chat-log { max-height: 400px; overflow-y: auto; background: #f7f4ee; border-radius: 14px; padding: 12px; margin: 12px 0; border: 1px solid #ebe3d7; }
-.chat-msg { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
-.chat-msg .sender { font-weight: 700; color: var(--text); }
-.chat-msg .text { color: #555; }
-.empty { text-align: center; padding: 40px; color: var(--muted); font-size: 15px; }
-.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; min-width: 0; }
-.form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; align-items: center; max-width: 600px; }
-.muted { color: var(--muted); }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.table-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-.progress { height: 8px; border-radius: 999px; background: #ece6dc; overflow: hidden; }
-.progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand), #2f9b83); }
-.split-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-.soft-panel { background: #f7f3ea; border-radius: 16px; padding: 16px; border: 1px solid #ebe4d8; }
-.soft-panel h4 { font-size: 14px; margin-bottom: 10px; color: var(--text); }
-
-@media (max-width: 1100px) {
-  .main { padding: 20px; }
-  .page-title { font-size: 28px; }
-  .grid-2col { grid-template-columns: 1fr; }
-  .sticky-kpi-rail { position: static; top: auto; }
-}
-
-@media (max-width: 768px) {
-  .menu-toggle { display: flex; }
-  .sidebar {
-    width: min(82vw, 320px);
-    transform: translateX(-100%);
-    padding-top: 64px;
-  }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay.open { display: block; }
-  .main { margin-left: 0; padding: 14px; padding-top: 64px; width: 100vw; max-width: 100vw; }
-  .page-shell { max-width: 100%; }
-  .page-header { flex-direction: column; }
-  .page-title { font-size: 24px; }
-  .page-subtitle { font-size: 13px; }
-  .header-actions { width: 100%; display: flex; gap: 8px; }
-  .header-actions .btn { flex: 1 1 0; min-width: 0; text-align: center; }
-  .hero-card .headline { font-size: 24px; }
-  .hero-card { padding: 18px; border-radius: 18px; }
-  .hero-card .sub { font-size: 13px; }
-  .hero-meta { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .hero-meta .item { padding: 12px; }
-  .hero-meta .item .v { font-size: 18px; }
-  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-  .stat-card { padding: 14px; }
-  .stat-card .value { font-size: 22px; }
-  .card { padding: 14px; border-radius: 16px; }
-  .summary-strip { grid-template-columns: 1fr 1fr; }
-  .summary-item { padding: 14px; }
-  .summary-item .v { font-size: 20px; }
-  .detail-grid { grid-template-columns: 100px 1fr; gap: 6px 12px; }
-  .form-grid { grid-template-columns: 1fr; max-width: 100%; }
-  .form-grid label { font-weight: 600; margin-top: 4px; }
-  .search-bar { flex-direction: column; gap: 10px; }
-  .search-bar > * { width: 100%; min-width: 0 !important; }
-  .search-bar .btn { width: 100%; text-align: center; }
-  .filter-card { padding: 14px; border-radius: 16px; }
-  /* 칸을 줄 단위로 눕힌다. 검색은 한 줄을 통째로, 나머지는 두세 개씩
-   * 나눠 담아 세로로 끝없이 길어지지 않게 한다. */
-  .filter-row { gap: 10px; }
-  .filter-row .f-grow { flex: 1 1 100%; }
-  .filter-row .f-mid { flex: 1 1 calc(50% - 5px); }
-  .filter-row .f-num { flex: 1 1 calc(33.333% - 7px); }
-  .filter-row .f-gap { display: none; }
-  .filter-row .btn { flex: 1 1 auto; text-align: center; }
-  /* 폰에서는 볼 자리가 없는 열을 접는다. 표가 가로로 스크롤되긴 하지만,
-   * 열세 칸을 밀어 가며 보는 것과 필요한 것만 보는 것은 다르다. */
-  .col-hide-sm { display: none; }
-  /* 인라인 style="display:flex" 로 짠 줄들은 클래스가 없어 하나씩 잡을 수가
-   * 없다. 그렇다고 전부 접으면 막대그래프(align-items:flex-end 로 세운 것)
-   * 처럼 접히면 안 되는 것까지 무너진다. **입력칸이 든 줄만** 고른다 —
-   * 폰에서 삐져나가는 건 그쪽이고, 차트에는 입력칸이 없다. */
-  [style*="display:flex"]:has(input, select, textarea) { flex-wrap: wrap; }
-  /* 그 줄 안에 인라인으로 박힌 폭이 화면보다 넓어도 화면을 넘지는 않게.
-   * width 를 덮어쓰지 않고 상한만 씌우므로, 화면에 들어가는 폭은 그대로다. */
-  .card input, .card select, .card textarea,
-  .filter-card input, .filter-card select, .filter-card textarea {
-    max-width: 100%;
-  }
-  .subtab-bar,
-  .preset-bar {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-    margin-right: -4px;
-  }
-  .subtab-link,
-  .preset-link { white-space: nowrap; flex: 0 0 auto; }
-  .subtab-link { padding: 9px 12px; font-size: 12px; }
-  .subtab-link span:last-child { display: none; }
-  .sticky-kpi-rail { padding: 14px; border-radius: 16px; }
-  .sticky-kpi-grid { grid-template-columns: 1fr 1fr; }
-  .sticky-kpi-item { padding: 12px; }
-  .hero-kpi { grid-template-columns: 1fr 1fr; gap: 16px 0; }
-  .hero-item { padding: 0 14px; border-left: 1px solid rgba(32,28,22,0.08); }
-  .hero-item:nth-child(odd) { border-left: none; padding-left: 0; }
-  .hk-value { font-size: 24px; }
-  .sticky-kpi-item .v { font-size: 18px; }
-  .status-strip { grid-template-columns: 1fr; }
-  .card-actions { flex-direction: column; }
-  .card-actions .btn { width: 100%; text-align: center; }
-  .split-stats { grid-template-columns: 1fr; }
-  .soft-panel { padding: 14px; }
-  .detail-grid { grid-template-columns: 1fr; }
-  .detail-grid .label { margin-top: 8px; }
-  .table-meta { align-items: stretch; }
-  .table-meta > * { width: 100%; }
-  .table-wrap { margin: 0; border-radius: 14px; width: 100%; max-width: 100%; }
-  table { font-size: 13px; width: max-content; min-width: 100%; }
-  th, td { padding: 9px 10px; }
-  textarea, select, input[type="date"], input[type="datetime-local"], input[type="number"], input[type="text"], input[type="password"] {
-    font-size: 16px;
-  }
-  .btn { padding: 11px 14px; }
-}
-/* 대시보드 모바일: 지표는 두 칸까지만, 구분선은 세로선 대신 가로선으로. */
-@media (max-width: 768px) {
-  .dash-section { padding: 20px 0; }
-  .dash-head h2 { font-size: 14px; }
-  .dash-head .hint { font-size: 11px; line-height: 1.5; }
-  .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
-  .kpi { border-left: none; padding: 0; }
-  .kpi .v { font-size: 24px; }
-  .kpi .d { font-size: 11px; }
-  .facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .todo { padding: 9px 12px; }
-  .spark { height: 84px; }
-  .spark .n { font-size: 10px; }
-  .spark .x { font-size: 9px; }
-  .cell-ellipsis { max-width: 150px; }
-}
-
-@media (max-width: 480px) {
-  .sidebar { width: 88vw; }
-  .kpi-row { gap: 12px 10px; }
-  .kpi .v { font-size: 21px; }
-  .cell-ellipsis { max-width: 116px; }
-  .main { padding: 12px; padding-top: 60px; width: 100vw; max-width: 100vw; }
-  .page-title { font-size: 22px; }
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .summary-strip { grid-template-columns: 1fr; }
-  .stat-card { padding: 10px; }
-  .stat-card .value { font-size: 18px; }
-  .hero-card { padding: 16px; }
-  .hero-card .headline { font-size: 20px; }
-  .hero-meta { grid-template-columns: 1fr; }
-  .sticky-kpi-grid { grid-template-columns: 1fr; }
-  .subtab-link { padding: 8px 11px; }
-  .preset-link { padding: 8px 10px; font-size: 11px; }
-  .table-wrap { margin: 0; }
-  table { width: max-content; min-width: 100%; }
-}
-</style>
-</head>
-<body>
-<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open');document.querySelector('.sidebar-overlay').classList.toggle('open')">&#9776;</button>
-<div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('open');this.classList.remove('open')"></div>
-<nav class="sidebar">
-  <div class="sidebar-header">
-    <a href="/tc-backstage/" class="sidebar-header-link" onclick="closeSidebar()">
-      <h2>Tichu Admin</h2>
-      <div class="sidebar-meta">운영 대시보드 · 실시간 점검 · 게임 모니터링</div>
-    </a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">Overview</div>
-    <a href="/tc-backstage/" class="${activePage === 'home' ? 'active' : ''}" onclick="closeSidebar()">대시보드</a>
-    <a href="/tc-backstage/stats" class="${activePage === 'stats' ? 'active' : ''}" onclick="closeSidebar()">통계</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">Operations</div>
-    <a href="/tc-backstage/inquiries" class="${activePage === 'inquiries' ? 'active' : ''}" onclick="closeSidebar()">문의</a>
-    <a href="/tc-backstage/reports" class="${activePage === 'reports' ? 'active' : ''}" onclick="closeSidebar()">신고</a>
-    <a href="/tc-backstage/profile-photos" class="${activePage === 'profile-photos' ? 'active' : ''}" onclick="closeSidebar()">프로필사진</a>
-    <a href="/tc-backstage/photo-rejections" class="${activePage === 'photo-rejections' ? 'active' : ''}" onclick="closeSidebar()">리젝 사진</a>
-    <a href="/tc-backstage/filler-rooms" class="${activePage === 'filler-rooms' ? 'active' : ''}" onclick="closeSidebar()">봇방</a>
-    <a href="/tc-backstage/users" class="${activePage === 'users' ? 'active' : ''}" onclick="closeSidebar()">유저</a>
-    <a href="/tc-backstage/shop" class="${activePage === 'shop' ? 'active' : ''}" onclick="closeSidebar()">상점</a>
-    <a href="/tc-backstage/shop/history" class="${activePage === 'shop-history' ? 'active' : ''}" onclick="closeSidebar()">상점 구매</a>
-    <a href="/tc-backstage/campaigns" class="${activePage === 'campaigns' ? 'active' : ''}" onclick="closeSidebar()">마케팅 푸시</a>
-    <a href="/tc-backstage/attendance" class="${activePage === 'attendance' ? 'active' : ''}" onclick="closeSidebar()">출석</a>
-    <a href="/tc-backstage/seasons" class="${activePage === 'seasons' ? 'active' : ''}" onclick="closeSidebar()">시즌</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">미션</div>
-    <a href="/tc-backstage/missions" class="${activePage === 'missions-overview' ? 'active' : ''}" onclick="closeSidebar()">미션 현황</a>
-    <a href="/tc-backstage/missions/manage" class="${activePage === 'missions-manage' ? 'active' : ''}" onclick="closeSidebar()">미션 관리</a>
-    <a href="/tc-backstage/missions/shop" class="${activePage === 'missions-shop' ? 'active' : ''}" onclick="closeSidebar()">토큰 상점</a>
-    <a href="/tc-backstage/missions/grant" class="${activePage === 'missions-grant' ? 'active' : ''}" onclick="closeSidebar()">토큰 지급·회수</a>
-    <a href="/tc-backstage/missions/ledger" class="${activePage === 'missions-ledger' ? 'active' : ''}" onclick="closeSidebar()">토큰 장부</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">매출</div>
-    <a href="/tc-backstage/gold-products" class="${activePage === 'gold-products' ? 'active' : ''}" onclick="closeSidebar()">골드상품</a>
-    <a href="/tc-backstage/iap-receipts" class="${activePage === 'iap-receipts' ? 'active' : ''}" onclick="closeSidebar()">결제내역</a>
-    <a href="/tc-backstage/iap-attempts" class="${activePage === 'iap-attempts' ? 'active' : ''}" onclick="closeSidebar()">검증로그</a>
-    <a href="/tc-backstage/iap-consumption" class="${activePage === 'iap-consumption' ? 'active' : ''}" onclick="closeSidebar()">환불요청</a>
-    <a href="/tc-backstage/iap-refund-issues" class="${activePage === 'iap-refund-issues' ? 'active' : ''}" onclick="closeSidebar()">환불문제</a>
-    <a href="/tc-backstage/deposits" class="${activePage === 'deposits' ? 'active' : ''}" onclick="closeSidebar()">입금확인${pendingDeposits > 0 ? ` <b style="color:#d88c38">${pendingDeposits}</b>` : ''}</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">Comms</div>
-    <a href="/tc-backstage/notices" class="${activePage === 'notices' ? 'active' : ''}" onclick="closeSidebar()">공지사항</a>
-    <a href="/tc-backstage/coupons" class="${activePage === 'coupons' ? 'active' : ''}" onclick="closeSidebar()">쿠폰</a>
-    <a href="/tc-backstage/push" class="${activePage === 'push' ? 'active' : ''}" onclick="closeSidebar()">푸시알림</a>
-    <a href="/tc-backstage/push-history" class="${activePage === 'push-history' ? 'active' : ''}" onclick="closeSidebar()">푸시 히스토리</a>
-    <a href="/tc-backstage/mail" class="${activePage === 'mail' ? 'active' : ''}" onclick="closeSidebar()">운영자 우편함</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-label">System</div>
-    <a href="/tc-backstage/logs" class="${activePage === 'logs' ? 'active' : ''}" onclick="closeSidebar()">서버로그</a>
-    <a href="/tc-backstage/maintenance" class="${activePage === 'maintenance' ? 'active' : ''}" onclick="closeSidebar()">점검</a>
-    <a href="/tc-backstage/settings" class="${activePage === 'settings' ? 'active' : ''}" onclick="closeSidebar()">설정</a>
-  </div>
-  <div class="logout">
-    <a href="/tc-backstage/logout">로그아웃</a>
-  </div>
-</nav>
-<main class="main">
-<div class="page-shell">
-${content}
-</div>
-</main>
-<script>function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.querySelector('.sidebar-overlay').classList.remove('open')}</script>
-</body>
-</html>`;
+  refreshNavBadges();
+  return renderLayout({ title, content, activePage, pendingDeposits, badges: navBadges, live: liveNow });
 }
 
 function serverLogsPage() {
@@ -844,33 +295,7 @@ function serverLogsPage() {
 }
 
 function loginPage(error = '') {
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login - Tichu</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-box { background: #fff; border-radius: 16px; padding: 40px; width: 360px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-.login-box h2 { text-align: center; margin-bottom: 24px; color: #1a1a2e; }
-.login-box input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 12px; }
-.login-box button { width: 100%; padding: 12px; background: #6c63ff; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-.login-box button:hover { background: #5a52e0; }
-.error { color: #e53935; font-size: 13px; text-align: center; margin-bottom: 12px; }
-</style>
-</head>
-<body>
-<form class="login-box" method="POST" action="/tc-backstage/login">
-  <h2>Tichu Admin</h2>
-  ${error ? `<div class="error">${error}</div>` : ''}
-  <input type="text" name="username" placeholder="아이디" required autofocus>
-  <input type="password" name="password" placeholder="비밀번호" required>
-  <button type="submit">로그인</button>
-</form>
-</body>
-</html>`;
+  return renderLoginPage(error);
 }
 
 function categoryBadge(cat) {
@@ -2025,6 +1450,23 @@ function parseGoldProductFormBody(body) {
 async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, maintenanceFns = {}) {
   const { getMaintenanceConfig, setMaintenanceConfig, getMaintenanceStatus, sendPushNotification, sendBroadcastPush, probeFcmTokens, runGoogleVoidedPoll, cleanupExpiredProfilePhotos, closeRoom, broadcastRoomList, getPhotoScreening, setPhotoScreening, getCustomTitleWords, setCustomTitleWords,
     getAttendancePushSwitch, setAttendancePushSwitch } = maintenanceFns;
+  // 어드민 화면 장식 이미지(드래곤 마스코트). 로그인 화면에도 쓰므로 인증 없이 내려 준다.
+  if (pathname.startsWith('/tc-backstage/_a/') && method === 'GET') {
+    const name = pathname.slice('/tc-backstage/_a/'.length);
+    if (!/^[a-z0-9_]+\.(webp|png|svg)$/.test(name)) { res.writeHead(404); return res.end(); }
+    try {
+      const buf = fs.readFileSync(path.join(__dirname, 'admin_assets', name));
+      res.writeHead(200, {
+        'Content-Type': name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.png') ? 'image/png' : 'image/webp',
+        'Cache-Control': 'public, max-age=86400',
+      });
+      return res.end(buf);
+    } catch {
+      res.writeHead(404);
+      return res.end();
+    }
+  }
+
   // Login page (no auth required)
   if (pathname === '/tc-backstage/login') {
     if (method === 'GET') {
@@ -2075,6 +1517,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
   }
   sessionInfo.session.createdAt = Date.now();
   setSessionCookie(res, sessionInfo.token);
+
+  // 사이드바 아래쪽에 보여 줄 접속 현황 — 페이지를 열 때마다 새로 센다.
+  try {
+    const rooms = lobby ? lobby.getRoomList() : [];
+    liveNow = {
+      users: wss ? wss.clients.size : 0,
+      rooms: rooms.length,
+      games: rooms.filter((r) => r.gameInProgress).length,
+    };
+  } catch { liveNow = null; }
 
   // Live server log stream (Server-Sent Events). Inherits the admin cookie
   // auth gate above. X-Accel-Buffering:no defeats nginx proxy buffering so

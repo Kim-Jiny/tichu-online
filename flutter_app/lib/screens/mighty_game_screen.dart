@@ -214,6 +214,27 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Stack(
               children: [
+                // 관전 손패 창은 SafeArea 안에 있어 아래 안전 영역이 배경으로
+                // 비어 따로 놀아 보였다 — 창과 같은 색으로 그 띠를 채운다.
+                Consumer<GameService>(
+                  builder: (context, g, _) {
+                    final st = g.mightyGameState;
+                    final inset = MediaQuery.of(context).padding.bottom;
+                    if (!g.isSpectator ||
+                        st == null ||
+                        st.phase == 'game_end' ||
+                        inset <= 0) {
+                      return const SizedBox.shrink();
+                    }
+                    return Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: inset,
+                      child: const ColoredBox(color: Cartoon.paper),
+                    );
+                  },
+                ),
                 SafeArea(child: _buildMainContent()),
                 // Edge-to-edge dim + result UI for round_end / game_end so the
                 // dim layer extends into status bar / nav bar regions instead

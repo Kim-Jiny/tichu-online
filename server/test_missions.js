@@ -96,7 +96,7 @@ async function main() {
   check('7일째 미션 완료 시 보너스 토큰', d[0] && d[0].streakBonus === defs.STREAK_BONUS_TOKENS, JSON.stringify(d));
   st = await missions.getState(n2);
   check('보너스는 5개', defs.STREAK_BONUS_TOKENS === 5);
-  check('보너스까지 합쳐 잔액', st.balance === 1 + defs.STREAK_BONUS_TOKENS, String(st.balance));
+  check('보너스까지 합쳐 잔액', st.balance === defs.MISSION_BY_KEY.get('tichu_play').tokens + defs.STREAK_BONUS_TOKENS, String(st.balance));
   check('주기가 다시 시작', st.streak === 0 || st.streak === 7 ? true : false);
 
   // 상점.
@@ -155,7 +155,7 @@ async function main() {
   }
   check('숨긴 미션은 어떤 유저의 후보에도 안 나온다', hidden);
   await missions.adminSetMission('tichu_play', { enabled: true, tokens: '9' }, 'tester');
-  check('보상 조정이 유효 값에 반영', missions.effectiveMission('tichu_play').tokens === 9 && missions.effectiveMission('tichu_play').defaultTokens === 1);
+  check('보상 조정이 유효 값에 반영', missions.effectiveMission('tichu_play').tokens === 9 && missions.effectiveMission('tichu_play').defaultTokens === defs.MISSION_BY_KEY.get('tichu_play').tokens);
   check('잘못된 보상(음수)은 거절', (await missions.adminSetMission('tichu_play', { enabled: true, tokens: '-1' }, 't')).reason === 'bad_tokens');
   await missions.adminSetProduct('bubble_basic_1', { enabled: true, price: '70' }, 'tester');
   check('가격 조정 반영', missions.effectiveProduct('bubble_basic_1').price === 70);

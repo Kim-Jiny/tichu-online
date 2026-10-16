@@ -1887,36 +1887,6 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return rowsHeight + _handChromeHeight;
   }
 
-  /// 관전자 아래 영역의 높이. 안내 바만 있을 땐 얇게, 승인돼 남의 패가 펼쳐지면
-  /// 그 패(1~2줄)만큼 키워서 좌석·먹은 카드가 패에 가려지지 않게 한다.
-  double _spectatorBottomInset(
-    MightyGameStateData state,
-    GameService game,
-    double boxWidth,
-  ) {
-    const idle = 110.0;
-    final id = _viewingPlayerId;
-    if (id == null) return idle;
-    final viewing = state.players.cast<MightyPlayer?>().firstWhere(
-      (p) => p?.id == id,
-      orElse: () => null,
-    );
-    if (viewing == null ||
-        !game.approvedCardViews.contains(id) ||
-        !viewing.canViewCards ||
-        viewing.cards.isEmpty) {
-      return idle;
-    }
-    return math.max(
-      idle,
-      _handReserveFor(
-        boxWidth,
-        viewing.cards.length,
-        playerCount: state.players.length,
-      ),
-    );
-  }
-
   Widget _buildActiveBoardStage(MightyGameStateData state, GameService game) {
     final showBottomOverlay = state.phase != 'game_end';
     final bottomOverlay = showBottomOverlay
@@ -1928,7 +1898,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         final bottomInset = !showBottomOverlay
             ? 0.0
             : game.isSpectator
-            ? _spectatorBottomInset(state, game, constraints.maxWidth)
+            ? 110.0
             : _handReserveFor(
                 constraints.maxWidth,
                 state.myCards.length,
@@ -1937,9 +1907,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         return Stack(
           children: [
             Positioned.fill(
-              child: AnimatedPadding(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
+              child: Padding(
                 padding: EdgeInsets.only(bottom: bottomInset),
                 child: _buildTableBoard(state, game),
               ),

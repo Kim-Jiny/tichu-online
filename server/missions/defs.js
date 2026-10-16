@@ -116,22 +116,31 @@ const MISSIONS = [
 const MISSION_BY_KEY = new Map(MISSIONS.map((m) => [m.key, m]));
 
 /**
- * 토큰 상점. 전부 30일짜리 기간제이고 영구 상품은 없다.
- * slot 이 같은 상품은 한 번에 하나만 장착한다(말풍선은 기본·상위가 한 칸을 같이 쓴다).
+ * 토큰 상점. 상품은 전부 기간제(영구 상품은 없다)이고 **기간은 상품마다 따로** 정한다 —
+ * 아래 목록의 days 만 바꾸면 된다. 앞으로 7일짜리·60일짜리가 생겨도 이 한 줄이면 된다.
+ * slot 이 같은 상품은 한 번에 하나만 장착한다.
+ *
+ * 앱은 서버가 준 days 를 그대로 카드에 보여 주고, 구매하면 그만큼 기간이 늘어난다.
+ * key 규칙: `${kind}_${번호}` (앱의 이름·모양 정의와 맞춘다).
  */
-const SHOP_DAYS = 30;
-const PRODUCT_KINDS = {
-  room_highlight: { price: 50, slot: 'room_highlight' },
-  bubble_basic: { price: 60, slot: 'bubble' },
-  bubble_premium: { price: 100, slot: 'bubble' },
-};
-const VARIANTS_PER_KIND = 3;
-const PRODUCTS = [];
-for (const [kind, { price, slot }] of Object.entries(PRODUCT_KINDS)) {
-  for (let v = 1; v <= VARIANTS_PER_KIND; v++) {
-    PRODUCTS.push({ key: `${kind}_${v}`, kind, slot, variant: v, price, days: SHOP_DAYS });
-  }
-}
+const DEFAULT_DAYS = 30;
+const PRODUCT_DEFS = [
+  // 방 목록 강조
+  { key: 'room_highlight_1', kind: 'room_highlight', slot: 'room_highlight', variant: 1, price: 50, days: 30 },
+  { key: 'room_highlight_2', kind: 'room_highlight', slot: 'room_highlight', variant: 2, price: 50, days: 30 },
+  { key: 'room_highlight_3', kind: 'room_highlight', slot: 'room_highlight', variant: 3, price: 50, days: 30 },
+  // 말풍선(기본 모양)
+  { key: 'bubble_basic_1', kind: 'bubble_basic', slot: 'bubble', variant: 1, price: 60, days: 30 },
+  { key: 'bubble_basic_2', kind: 'bubble_basic', slot: 'bubble', variant: 2, price: 60, days: 30 },
+  { key: 'bubble_basic_3', kind: 'bubble_basic', slot: 'bubble', variant: 3, price: 60, days: 30 },
+  // 말풍선(그라데이션 모양)
+  { key: 'bubble_premium_1', kind: 'bubble_premium', slot: 'bubble', variant: 1, price: 100, days: 30 },
+  { key: 'bubble_premium_2', kind: 'bubble_premium', slot: 'bubble', variant: 2, price: 100, days: 30 },
+  { key: 'bubble_premium_3', kind: 'bubble_premium', slot: 'bubble', variant: 3, price: 100, days: 30 },
+];
+const PRODUCTS = PRODUCT_DEFS.map((p) => ({ ...p, days: p.days || DEFAULT_DAYS }));
+const PRODUCT_KINDS = {};
+for (const p of PRODUCTS) PRODUCT_KINDS[p.kind] = { price: p.price, slot: p.slot };
 const PRODUCT_BY_KEY = new Map(PRODUCTS.map((p) => [p.key, p]));
 
 module.exports = {
@@ -145,7 +154,7 @@ module.exports = {
   GAMES,
   MISSIONS,
   MISSION_BY_KEY,
-  SHOP_DAYS,
+  DEFAULT_DAYS,
   PRODUCT_KINDS,
   PRODUCTS,
   PRODUCT_BY_KEY,

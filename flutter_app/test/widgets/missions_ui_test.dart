@@ -504,14 +504,19 @@ void main() {
     expect(find.text('방 목록 강조'), findsOneWidget);
     // '(상위)' 같은 구분은 어디에도 없다.
     expect(find.textContaining('상위'), findsNothing);
+    expect(find.textContaining('30일 동안'), findsNothing); // 기간은 카드마다 따로 보인다
     // 첫 탭(말풍선): 6종이 모두 보이고, 샀던 1개는 장착 중·연장.
     for (final n in ['빨간 하트', '민트 구름', '노랑 별', '용의 불꽃', '벚꽃', '번개']) {
       expect(find.text(n), findsOneWidget, reason: n);
     }
     expect(find.text('장착 중'), findsOneWidget);
-    expect(find.text('30일 연장'), findsWidgets);
+    expect(find.text('연장'), findsWidgets);
     // 구매 버튼: 5개(나머지 1개는 이미 가짐) × 외곽선 글자 2겹.
     expect(find.text('구매'), findsNWidgets(10));
+    // 카드 크기: 가진 카드와 안 가진 카드의 높이가 같다(사도 크기가 변하지 않는다).
+    final owned = t.getSize(find.ancestor(of: find.text('민트 구름'), matching: find.byType(Container)).first);
+    final notOwned = t.getSize(find.ancestor(of: find.text('빨간 하트'), matching: find.byType(Container)).first);
+    expect(owned.height, notOwned.height);
     await _snap(t, key, 'token_shop');
 
     await t.tap(find.text('구매').first);

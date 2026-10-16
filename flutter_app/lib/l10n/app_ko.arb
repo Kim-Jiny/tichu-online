@@ -1944,14 +1944,14 @@
   "missionsGameLoveLetter": "러브레터",
   "tokenShopTitle": "토큰 상점",
   "tokenShopBalance": "보유 토큰",
-  "tokenShopHint": "미션을 깨서 모은 토큰으로만 살 수 있어요. 전부 30일 동안 쓸 수 있고, 다시 사면 기간이 늘어나요.",
+  "tokenShopHint": "토큰은 미션을 깨야만 얻을 수 있고, 이 상점에서만 쓸 수 있어요. 이미 가진 상품을 다시 사면 사용 기간이 늘어나요.",
   "tokenShopKindRoomHighlight": "방 목록 강조",
   "tokenShopKindBubble": "말풍선 스타일",
   "tokenShopKindBubblePremium": "말풍선 스타일 (상위)",
   "tokenShopKindRoomHighlightDesc": "내가 만든 방이 방 목록에서 눈에 띄어요",
   "tokenShopKindBubbleDesc": "내 채팅 말풍선이 좌석 위에서 특별한 모양으로 떠요",
   "tokenShopBuy": "구매",
-  "tokenShopExtend": "30일 연장",
+  "tokenShopExtend": "연장",
   "tokenShopOwnedUntil": "{date}까지",
   "@tokenShopOwnedUntil": {
     "placeholders": {

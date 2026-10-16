@@ -9528,7 +9528,7 @@ abstract class L10n {
   /// No description provided for @tokenShopHint.
   ///
   /// In en, this message translates to:
-  /// **'Only bought with mission tokens. Everything lasts 30 days, and buying again extends it.'**
+  /// **'Tokens come only from missions and can only be spent here. Buying an item you already own extends its time.'**
   String get tokenShopHint;
 
   /// No description provided for @tokenShopKindRoomHighlight.
@@ -9570,7 +9570,7 @@ abstract class L10n {
   /// No description provided for @tokenShopExtend.
   ///
   /// In en, this message translates to:
-  /// **'Extend 30 days'**
+  /// **'Extend'**
   String get tokenShopExtend;
 
   /// No description provided for @tokenShopOwnedUntil.

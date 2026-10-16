@@ -5295,7 +5295,7 @@ class L10nKo extends L10n {
 
   @override
   String get tokenShopHint =>
-      '미션을 깨서 모은 토큰으로만 살 수 있어요. 전부 30일 동안 쓸 수 있고, 다시 사면 기간이 늘어나요.';
+      '토큰은 미션을 깨야만 얻을 수 있고, 이 상점에서만 쓸 수 있어요. 이미 가진 상품을 다시 사면 사용 기간이 늘어나요.';
 
   @override
   String get tokenShopKindRoomHighlight => '방 목록 강조';
@@ -5316,7 +5316,7 @@ class L10nKo extends L10n {
   String get tokenShopBuy => '구매';
 
   @override
-  String get tokenShopExtend => '30일 연장';
+  String get tokenShopExtend => '연장';
 
   @override
   String tokenShopOwnedUntil(String date) {

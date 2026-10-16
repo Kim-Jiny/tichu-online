@@ -310,53 +310,72 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
               ),
             ],
           ),
-          if (p.owned)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                l10n.tokenShopOwnedUntil(_date(p.ownedUntil!)),
-                style: Cartoon.userText(
-                  size: 11,
-                  color: Cartoon.ink.withValues(alpha: 0.55),
-                ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          if (p.owned) ...[
-            CartoonPressable(
-              scale: 0.95,
-              onTap: () =>
-                  game.equipTokenItem(p.slot, p.equipped ? null : p.key),
-              child: Container(
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: p.equipped ? const Color(0xFF3DBE6A) : Cartoon.paper,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Cartoon.ink, width: 1.8),
-                ),
-                child: Text(
-                  p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
-                  style: Cartoon.text(
-                    size: 13.5,
-                    color: p.equipped ? Colors.white : Cartoon.ink,
+          // 보유 기간 줄은 안 가졌어도 자리를 비워 둔다 — 샀다고 카드 높이가 달라지지 않게.
+          SizedBox(
+            height: 16,
+            child: p.owned
+                ? Text(
+                    l10n.tokenShopOwnedUntil(_date(p.ownedUntil!)),
+                    style: Cartoon.userText(
+                      size: 11,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 6),
+          // 버튼은 늘 두 개 — 안 가진 상품은 '장착'이 흐리게 비활성이라, 사기 전후로
+          // 카드 크기가 변하지 않는다.
+          Row(
+            children: [
+              Expanded(
+                child: CartoonButton(
+                  height: 36,
+                  radius: 12,
+                  color: canAfford ? Cartoon.orange : const Color(0xFF9AA5B1),
+                  onPressed: canAfford ? () => game.buyTokenItem(p.key) : null,
+                  child: CartoonButton.label(
+                    p.owned ? l10n.tokenShopExtend : l10n.tokenShopBuy,
+                    size: 14,
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-          ],
-          CartoonButton(
-            height: 36,
-            radius: 12,
-            color: canAfford ? Cartoon.orange : const Color(0xFF9AA5B1),
-            onPressed: canAfford ? () => game.buyTokenItem(p.key) : null,
-            child: CartoonButton.label(
-              p.owned ? l10n.tokenShopExtend : l10n.tokenShopBuy,
-              size: 14,
-            ),
+              const SizedBox(width: 6),
+              Expanded(child: _equipButton(l10n, game, p)),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  /// 장착 버튼 — 가진 상품만 눌린다. 장착 중이면 초록, 아니면 크림색, 안 가졌으면 흐리게.
+  Widget _equipButton(L10n l10n, GameService game, TokenProduct p) {
+    final enabled = p.owned;
+    return Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: CartoonPressable(
+        scale: enabled ? 0.95 : 1.0,
+        onTap: enabled
+            ? () => game.equipTokenItem(p.slot, p.equipped ? null : p.key)
+            : null,
+        child: Container(
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: p.equipped ? const Color(0xFF3DBE6A) : Cartoon.paper,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Cartoon.ink, width: 1.8),
+          ),
+          child: Text(
+            p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
+            maxLines: 1,
+            style: Cartoon.text(
+              size: 13.5,
+              color: p.equipped ? Colors.white : Cartoon.ink,
+            ),
+          ),
+        ),
       ),
     );
   }

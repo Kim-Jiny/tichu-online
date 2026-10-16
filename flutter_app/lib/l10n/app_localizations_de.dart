@@ -5450,7 +5450,7 @@ class L10nDe extends L10n {
 
   @override
   String get tokenShopHint =>
-      'Nur mit Missions-Token erhältlich. Alles gilt 30 Tage, erneutes Kaufen verlängert.';
+      'Token gibt es nur durch Missionen und sie lassen sich nur hier ausgeben. Wenn du einen Artikel erneut kaufst, verlängert sich seine Laufzeit.';
 
   @override
   String get tokenShopKindRoomHighlight => 'Raum-Hervorhebung';
@@ -5473,7 +5473,7 @@ class L10nDe extends L10n {
   String get tokenShopBuy => 'Kaufen';
 
   @override
-  String get tokenShopExtend => '30 Tage verlängern';
+  String get tokenShopExtend => 'Verlängern';
 
   @override
   String tokenShopOwnedUntil(String date) {

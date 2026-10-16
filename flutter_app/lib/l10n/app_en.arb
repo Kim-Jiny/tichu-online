@@ -3222,14 +3222,14 @@
   "missionsGameLoveLetter": "Love Letter",
   "tokenShopTitle": "Token shop",
   "tokenShopBalance": "Your tokens",
-  "tokenShopHint": "Only bought with mission tokens. Everything lasts 30 days, and buying again extends it.",
+  "tokenShopHint": "Tokens come only from missions and can only be spent here. Buying an item you already own extends its time.",
   "tokenShopKindRoomHighlight": "Room highlight",
   "tokenShopKindBubble": "Bubble style",
   "tokenShopKindBubblePremium": "Bubble style (premium)",
   "tokenShopKindRoomHighlightDesc": "Your room stands out in the room list",
   "tokenShopKindBubbleDesc": "Your chat bubble above your seat gets a special look",
   "tokenShopBuy": "Buy",
-  "tokenShopExtend": "Extend 30 days",
+  "tokenShopExtend": "Extend",
   "tokenShopOwnedUntil": "Until {date}",
   "@tokenShopOwnedUntil": {
     "placeholders": {

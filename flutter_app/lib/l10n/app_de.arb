@@ -1944,14 +1944,14 @@
   "missionsGameLoveLetter": "Love Letter",
   "tokenShopTitle": "Token-Shop",
   "tokenShopBalance": "Deine Token",
-  "tokenShopHint": "Nur mit Missions-Token erhältlich. Alles gilt 30 Tage, erneutes Kaufen verlängert.",
+  "tokenShopHint": "Token gibt es nur durch Missionen und sie lassen sich nur hier ausgeben. Wenn du einen Artikel erneut kaufst, verlängert sich seine Laufzeit.",
   "tokenShopKindRoomHighlight": "Raum-Hervorhebung",
   "tokenShopKindBubble": "Sprechblasen-Stil",
   "tokenShopKindBubblePremium": "Sprechblasen-Stil (Premium)",
   "tokenShopKindRoomHighlightDesc": "Dein Raum fällt in der Raumliste auf",
   "tokenShopKindBubbleDesc": "Deine Sprechblase über dem Platz sieht besonders aus",
   "tokenShopBuy": "Kaufen",
-  "tokenShopExtend": "30 Tage verlängern",
+  "tokenShopExtend": "Verlängern",
   "tokenShopOwnedUntil": "Bis {date}",
   "@tokenShopOwnedUntil": {
     "placeholders": {

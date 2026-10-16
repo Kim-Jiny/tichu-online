@@ -5414,7 +5414,7 @@ class L10nEn extends L10n {
 
   @override
   String get tokenShopHint =>
-      'Only bought with mission tokens. Everything lasts 30 days, and buying again extends it.';
+      'Tokens come only from missions and can only be spent here. Buying an item you already own extends its time.';
 
   @override
   String get tokenShopKindRoomHighlight => 'Room highlight';
@@ -5437,7 +5437,7 @@ class L10nEn extends L10n {
   String get tokenShopBuy => 'Buy';
 
   @override
-  String get tokenShopExtend => 'Extend 30 days';
+  String get tokenShopExtend => 'Extend';
 
   @override
   String tokenShopOwnedUntil(String date) {

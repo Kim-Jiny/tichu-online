@@ -5144,7 +5144,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ['bubble_premium', '말풍선 스타일 (상위)'],
       ];
       body = `
-        ${note(`토큰은 돈·골드로 살 수 없고 미션으로만 얻습니다. 전부 <b>${defs.SHOP_DAYS}일 기간제</b>이고, 다시 사면 기간이 늘어납니다.<br>
+        ${note(`토큰은 돈·골드로 살 수 없고 미션으로만 얻습니다. 전부 <b>기간제</b>이고 기간은 상품마다 다릅니다(각 상품 줄의 ‘기간’). 다시 사면 그 상품의 기간만큼 늘어납니다.<br>
           <b>판매 중지</b>로 바꾸면 상점 목록에서 사라지지만, 이미 산 유저는 남은 기간 동안 계속 씁니다. 가격을 바꾸면 이후 구매부터 적용됩니다.`)}
         ${groups.map(([kind, label]) => `
           ${sectionTitle(label)}
@@ -5153,7 +5153,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 4px;border-bottom:1px solid #f0ede6${p.enabled ? '' : ';opacity:.6'}">
                 <div style="min-width:220px;flex:1">
                   <div style="font-weight:700;font-size:14px">${escapeHtml((L.PRODUCT_LABEL_KO[p.key] || p.key).split(' · ')[1] || p.key)}</div>
-                  <div class="muted" style="font-size:12px;margin-top:4px">기본 ${p.price}토큰 · 구매 ${formatNumber(p.buys)}회 · 쓰인 토큰 ${formatNumber(p.spent)} <span class="mono" style="font-size:11px">${p.key}</span></div>
+                  <div class="muted" style="font-size:12px;margin-top:4px">기본 ${p.price}토큰 · 기간 ${p.days}일 · 구매 ${formatNumber(p.buys)}회 · 쓰인 토큰 ${formatNumber(p.spent)} <span class="mono" style="font-size:11px">${p.key}</span></div>
                 </div>
                 <form method="POST" action="/tc-backstage/missions/product" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                   <input type="hidden" name="key" value="${p.key}">

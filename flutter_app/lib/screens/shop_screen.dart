@@ -2757,46 +2757,6 @@ class _ShopScreenState extends State<ShopScreen> {
                             ),
                           ],
                         ),
-                        // 가격은 이름 바로 아래에 크게 — 아래 바까지 눈을 내리지 않아도
-                        // 알 수 있게. (기간별 상품은 아래 버튼 하나하나에 가격이 있다.)
-                        if (tierList == null && !ownedPermanent) ...[
-                          const SizedBox(height: 14),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: onSale
-                                    ? const Color(0xFFFFE3E3)
-                                    : Cartoon.cream,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Cartoon.ink,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GoldIcon(size: 26, amount: price),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    formatGold(price),
-                                    style: Cartoon.text(
-                                      size: 26,
-                                      color: onSale
-                                          ? const Color(0xFFD32F2F)
-                                          : Cartoon.ink,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
                         // Cosmetics are bought on how they look, so show the
                         // thing itself applied: a banner and a title on a
                         // waiting-room seat, a theme as the screen behind it.
@@ -2998,14 +2958,30 @@ class _ShopScreenState extends State<ShopScreen> {
                                         game.buyItem(itemKey);
                                       }
                                     },
-                              child: CartoonButton.label(
-                                lockedAsOwned
-                                    ? l10n.shopItemOwned
-                                    : (treatAsExtend
-                                          ? l10n.shopButtonExtend
-                                          : l10n.shopButtonPurchase),
-                                size: 19,
-                              ),
+                              // 가격은 누르는 버튼 안에 — 값을 보고 바로 누르게.
+                              child: lockedAsOwned
+                                  ? CartoonButton.label(
+                                      l10n.shopItemOwned,
+                                      size: 19,
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GoldIcon(size: 24, amount: price),
+                                        const SizedBox(width: 5),
+                                        CartoonButton.label(
+                                          formatGold(price),
+                                          size: 21,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        CartoonButton.label(
+                                          treatAsExtend
+                                              ? l10n.shopButtonExtend
+                                              : l10n.shopButtonPurchase,
+                                          size: 19,
+                                        ),
+                                      ],
+                                    ),
                             );
                             // Side by side, not stacked: a second full-width
                             // button pushes the sheet past its height and turns

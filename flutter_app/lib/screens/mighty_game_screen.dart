@@ -2672,14 +2672,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       for (final cardId in shown)
         PlayingCard(
           cardId: _displayCardId(cardId),
-          width: 15,
-          height: 21,
+          width: 19,
+          height: 27,
           isInteractive: false,
         ),
       if (extra > 0)
         Container(
-          width: 17,
-          height: 21,
+          width: 18,
+          height: 27,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: Cartoon.ink,
@@ -2691,16 +2691,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
         ),
     ];
+    // 카드를 키우되 살짝(약 4) 겹쳐 전체 폭은 예전과 비슷하게 — 겹쳐도 왼쪽 위
+    // 숫자·무늬는 보인다. 겹치는 쪽이 뒤에 오는 카드가 위에 그려진다.
+    const w = 19.0;
+    const step = 15.0;
+    const chipW = 18.0;
+    final cardsWidth = w + step * (shown.length - 1);
+    final totalWidth = extra > 0 ? cardsWidth + 2 + chipW : cardsWidth;
     return Padding(
       padding: const EdgeInsets.only(top: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(width: 2),
-            items[i],
+      child: SizedBox(
+        width: totalWidth,
+        height: 27,
+        child: Stack(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Positioned(
+                left: i < shown.length ? step * i : cardsWidth + 2,
+                top: 0,
+                child: items[i],
+              ),
           ],
-        ],
+        ),
       ),
     );
   }

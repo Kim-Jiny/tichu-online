@@ -2146,5 +2146,6 @@
   "missionLlBaronWin": "2 Baron-Duelle gewinnen",
   "missionLlRoundWin": "8 Runden gewinnen",
   "missionLlLastStanding": "Ein Spiel haushoch gewinnen (kein anderer hat einen Siegmarker)",
-  "missionLlKnockOut6": "10 Gegner ausschalten"
+  "missionLlKnockOut6": "10 Gegner ausschalten",
+  "missionsPickHint": "Wähle deine Missionen für heute!"
 }

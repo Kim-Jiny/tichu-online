@@ -109,6 +109,13 @@ class MissionsState {
 
   int get activeCount => active.where((m) => !m.done).length;
 
+  /// 이 상태가 아직 '오늘' 것인가(다음 리셋 시각 전). 리셋 시각을 모르면 믿는다.
+  bool isCurrent(DateTime now) =>
+      resetAtUtc == null || !now.isAfter(resetAtUtc!);
+
+  /// 오늘 미션을 하나도 안 골랐다 — 로비 미션 탭 알림 뱃지·안내 말풍선의 조건.
+  bool unpickedToday(DateTime now) => isCurrent(now) && picksToday == 0;
+
   /// 오늘 더 고를 수 있는지.
   bool get canPickMore => picksToday < dailyPicks;
 

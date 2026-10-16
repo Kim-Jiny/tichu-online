@@ -5793,4 +5793,7 @@ class L10nEn extends L10n {
 
   @override
   String get missionLlKnockOut6 => 'Knock out 10 opponents';
+
+  @override
+  String get missionsPickHint => 'Pick today\'s missions!';
 }

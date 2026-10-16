@@ -10184,6 +10184,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Knock out 10 opponents'**
   String get missionLlKnockOut6;
+
+  /// No description provided for @missionsPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick today\'s missions!'**
+  String get missionsPickHint;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

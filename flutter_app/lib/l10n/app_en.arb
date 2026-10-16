@@ -3424,5 +3424,6 @@
   "missionLlBaronWin": "Win 2 Baron showdowns",
   "missionLlRoundWin": "Win 8 rounds",
   "missionLlLastStanding": "Win a game in a landslide (nobody else has a victory token)",
-  "missionLlKnockOut6": "Knock out 10 opponents"
+  "missionLlKnockOut6": "Knock out 10 opponents",
+  "missionsPickHint": "Pick today's missions!"
 }

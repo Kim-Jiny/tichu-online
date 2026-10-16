@@ -590,6 +590,18 @@ class GameService extends ChangeNotifier {
 
   bool get hasPendingMissionToasts => _pendingMissionToasts.isNotEmpty;
 
+  /// 오늘(KST) 미션을 아직 하나도 고르지 않았다 — 로비 미션 탭에 알림 뱃지와 안내가 뜬다.
+  /// 상태를 아직 못 받았으면 false(받은 뒤에 판단한다).
+  bool get hasUnpickedMissionsToday {
+    return missionsState?.unpickedToday(DateTime.now()) ?? false;
+  }
+
+  /// 미션 상태를 (다시) 받아야 한다 — 없거나, 받은 날이 지났다.
+  bool get missionsNeedRefresh {
+    final st = missionsState;
+    return st == null || !st.isCurrent(DateTime.now());
+  }
+
   /// 알림으로 띄우려고 모아 둔 완료들을 꺼내 간다(꺼낸 건 비운다).
   List<MissionCompletion> takePendingMissionCompletions() {
     final out = List<MissionCompletion>.of(_pendingMissionToasts);

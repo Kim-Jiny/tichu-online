@@ -19,6 +19,7 @@ import 'rules_screen.dart';
 import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
+import '../widgets/hint_bubble.dart';
 import '../widgets/token_cosmetics.dart';
 import '../widgets/cartoon_icons.dart';
 import '../widgets/connection_overlay.dart';
@@ -68,6 +69,15 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   bool _inRoom = false;
   bool _roomMoreOpen = false;
+
+  // 오늘 미션을 아직 안 골랐으면 미션 탭 위에 "오늘의 미션을 선택하세요!" 말풍선을 한 번 띄운다.
+  final LayerLink _missionLink = LayerLink();
+  OverlayEntry? _missionHint;
+  Timer? _missionHintTimer;
+  DateTime? _missionsRequestedAt;
+
+  /// 이미 안내를 보여 준 날(미션 상태의 다음 리셋 시각). 앱을 켜 둔 채 로비를 오가도 하루 한 번만.
+  static String? _missionHintShownFor;
 
   /// Which game's rooms are showing, or null for all of them.
   ///
@@ -295,6 +305,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   void dispose() {
+    _hideMissionHint();
     _inquiryGameRef?.removeListener(_onInquiryUpdate);
     _seatChat.dispose();
     _chatController.dispose();
@@ -1764,6 +1775,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<GameService>().themeGradient;
+    final missionGame = context.read<GameService>();
+    // 로비가 그려질 때마다 한 프레임 뒤에 확인한다: 미션 상태 요청, 안내 말풍선 띄우기·치우기.
+    final landscapeNow =
+        !kIsWeb && MediaQuery.of(context).orientation == Orientation.landscape;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncMissionHint(missionGame, landscapeNow);
+    });
     // Same call the game screen makes: the landscape variants are built for a
     // tablet held sideways, and the app no longer rotates at all, so on the web
     // they are the only place that code runs — untested by everyone else. It
@@ -2214,6 +2232,76 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  // ───────────── 오늘의 미션 안내(뱃지 + 말풍선) ─────────────
+
+  void _hideMissionHint() {
+    _missionHintTimer?.cancel();
+    _missionHintTimer = null;
+    _missionHint?.remove();
+    _missionHint = null;
+  }
+
+  /// 미션 상태를 받아 오고, 오늘 미션을 안 골랐으면 안내를 띄우고, 조건이 사라지면 치운다.
+  void _syncMissionHint(GameService game, bool landscape) {
+    if (!game.isLoggedIn) return;
+    final inLobby =
+        !_inRoom &&
+        !game.hasRoom &&
+        game.currentDestination == AppDestination.lobby;
+    // 상태가 없거나 날이 바뀌었으면 (너무 자주는 말고) 다시 받는다.
+    if (inLobby && game.missionsNeedRefresh && !game.missionsLoading) {
+      final last = _missionsRequestedAt;
+      if (last == null || DateTime.now().difference(last).inSeconds >= 30) {
+        _missionsRequestedAt = DateTime.now();
+        game.requestMissions();
+      }
+    }
+    final dayKey = game.missionsState?.resetAtUtc?.toIso8601String();
+    final wanted =
+        inLobby &&
+        game.hasUnpickedMissionsToday &&
+        dayKey != null &&
+        _missionHintShownFor != dayKey;
+    if (_missionHint != null && !(inLobby && game.hasUnpickedMissionsToday)) {
+      _hideMissionHint(); // 골랐거나 로비를 떠났다
+      return;
+    }
+    if (!wanted || _missionHint != null) return;
+    _missionHintShownFor = dayKey;
+    final l10n = L10n.of(context);
+    _missionHint = OverlayEntry(
+      builder: (_) => Positioned(
+        left: 0,
+        top: 0,
+        child: CompositedTransformFollower(
+          link: _missionLink,
+          showWhenUnlinked: false,
+          // 세로: 하단 탭 위에서 꼬리가 아래를 가리킨다. 가로: 상단 버튼 아래에서 위를 가리킨다.
+          targetAnchor: landscape
+              ? Alignment.bottomCenter
+              : Alignment.topCenter,
+          followerAnchor: landscape
+              ? Alignment.topCenter
+              : Alignment.bottomCenter,
+          offset: Offset(0, landscape ? 8 : -8),
+          child: HintBubble(
+            text: l10n.missionsPickHint,
+            pointsDown: !landscape,
+            onTap: () {
+              _hideMissionHint();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MissionsScreen()),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_missionHint!);
+    _missionHintTimer = Timer(const Duration(seconds: 7), _hideMissionHint);
+  }
+
   List<Widget> _buildLobbyActionButtons(GameService game, double box) {
     final attendance = game.attendanceState;
     // Never on the web: the attendance banner inside the shop is hidden there
@@ -2300,45 +2388,72 @@ class _LobbyScreenState extends State<LobbyScreen> {
         },
         box: box,
       ),
-      // 미션 — 토큰을 모아 토큰 상점에서 꾸미기를 산다. 새로 깬 미션이 있으면 뱃지.
-      Stack(
-        clipBehavior: Clip.none,
-        children: [
-          _buildIconButton(
-            icon: Icons.task_alt_rounded,
-            color: const Color(0xFFFF8A65),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MissionsScreen()),
-              );
-            },
-            box: box,
-          ),
-          if (game.missionBadgeCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
-                  borderRadius: const BorderRadius.all(Radius.circular(999)),
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                child: Text(
-                  game.missionBadgeCount > 9 ? '9+' : '${game.missionBadgeCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+      // 미션 — 토큰을 모아 토큰 상점에서 꾸미기를 산다.
+      // 뱃지: 새로 깬 미션이 있으면 숫자, 오늘 미션을 아직 안 골랐으면 빨간 점.
+      CompositedTransformTarget(
+        link: _missionLink,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _buildIconButton(
+              icon: Icons.task_alt_rounded,
+              color: const Color(0xFFFF8A65),
+              onTap: () {
+                _hideMissionHint();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MissionsScreen()),
+                );
+              },
+              box: box,
+            ),
+            if (game.missionBadgeCount > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
                   ),
-                  textAlign: TextAlign.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: const BorderRadius.all(Radius.circular(999)),
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    game.missionBadgeCount > 9
+                        ? '9+'
+                        : '${game.missionBadgeCount}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            else if (game.hasUnpickedMissionsToday)
+              Positioned(
+                right: 2,
+                top: 2,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
       // Own profile, in the slot the rulebook used to sit in. The rulebook
       // moved into settings: it is read once and then never again, while your
@@ -2911,269 +3026,277 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: MaybeRoomHighlight(
           style: highlight,
           child: Container(
-          // 진행 중인 방은 옅게 가라앉힌다. 그림자가 없으니 반투명이어도 된다.
-          decoration: BoxDecoration(
-            color: highlight == null && isInProgress
-                ? const Color(0x14000000)
-                : null,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          // Clip the contents to the card's INNER curve instead of asking the
-          // strip to round itself. A 16px radius on a 6px-wide box is not a
-          // shape Flutter can draw — it scales the corners down to fit, so the
-          // strip's curve came out tighter than the card's and read as
-          // misaligned. And the radius here is 15, not 16: the border is 1px
-          // wide and the strip sits inside it.
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Left color strip — stretches to cell height. Square-cornered
-                  // on purpose; the ClipRRect above gives it the card's curve.
-                  Container(width: 7, color: stripColor),
-                  Expanded(
-                    child: Padding(
-                      // Tightened again (was 11/9). What the padding gives
-                      // up goes into the type and the icons below: the row is
-                      // read at arm's length in a list of a dozen, so legible
-                      // content beats air around it.
-                      padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      margin: const EdgeInsets.only(right: 7),
-                                      decoration: BoxDecoration(
-                                        color: badgeBgColor,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        badgeText,
-                                        style: Cartoon.text(
-                                          size: 13,
-                                          color: badgeTextColor,
+            // 진행 중인 방은 옅게 가라앉힌다. 그림자가 없으니 반투명이어도 된다.
+            decoration: BoxDecoration(
+              color: highlight == null && isInProgress
+                  ? const Color(0x14000000)
+                  : null,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            // Clip the contents to the card's INNER curve instead of asking the
+            // strip to round itself. A 16px radius on a 6px-wide box is not a
+            // shape Flutter can draw — it scales the corners down to fit, so the
+            // strip's curve came out tighter than the card's and read as
+            // misaligned. And the radius here is 15, not 16: the border is 1px
+            // wide and the strip sits inside it.
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left color strip — stretches to cell height. Square-cornered
+                    // on purpose; the ClipRRect above gives it the card's curve.
+                    Container(width: 7, color: stripColor),
+                    Expanded(
+                      child: Padding(
+                        // Tightened again (was 11/9). What the padding gives
+                        // up goes into the type and the icons below: the row is
+                        // read at arm's length in a list of a dozen, so legible
+                        // content beats air around it.
+                        padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
                                         ),
-                                      ),
-                                    ),
-                                    // Was emoji glued onto the front of the name
-                                    // string ('🔒 🏆 이름'). Real widgets instead:
-                                    // the trophy is now the same artwork as the
-                                    // ranked switch in the create dialog, and an
-                                    // emoji rendered next to it would read as a
-                                    // different badge from a different set.
-                                    if (room.isPrivate) ...[
-                                      const _LockChip(size: 24),
-                                      const SizedBox(width: 6),
-                                    ],
-                                    if (room.isRanked) ...[
-                                      RankedIcon(width: 20, height: 18),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Expanded(
-                                      child: Text(
-                                        room.name,
-                                        // 방 이름은 사용자가 정한 글자라 Jua 서브셋에
-                                        // 없는 글자가 올 수 있다 — 기본 글꼴로.
-                                        style: Cartoon.userText(size: 18),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 3),
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 2,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 2),
-                                      child: Text(
-                                        (isSK || isLL)
-                                            ? l10n.lobbyRoomTimeSec(
-                                                room.turnTimeLimit,
-                                              )
-                                            : l10n.lobbyRoomTimeAndScore(
-                                                room.turnTimeLimit,
-                                                room.targetScore,
-                                              ),
-                                        style: Cartoon.text(
-                                          size: 13,
-                                          color: Cartoon.ink.withValues(
-                                            alpha: 0.62,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    if (isSK && room.skExpansions.isNotEmpty)
-                                      for (final exp in room.skExpansions)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _skExpansionStrongColor(exp),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: Cartoon.ink,
-                                              width: 1.4,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            _skExpansionEmoji(exp).isEmpty
-                                                ? _skExpansionShortLabel(
-                                                    exp,
-                                                    l10n,
-                                                  )
-                                                : _skExpansionEmoji(exp),
-                                            style: Cartoon.userText(
-                                              size: 12,
-                                              color: Colors.white,
-                                              weight: FontWeight.w800,
-                                              height: 1.0,
-                                            ),
-                                          ),
-                                        ),
-                                    if (room.allowMidGameJoin)
-                                      Tooltip(
-                                        message: l10n.midJoinRoomBadge,
-                                        // Geometry copied from the spectate button beside
-                                        // it (8/7 padding, 16px glyph, radius 10) so the
-                                        // two read as one pair of room actions rather than
-                                        // two unrelated marks. Only the colour differs, and
-                                        // that difference is the whole message: purple =
-                                        // you can get in, not just watch.
-                                        child: Container(
-                                          // Tighter than the eye button's 8/7 because this
-                                          // glyph is wider than tall: same outer box, more
-                                          // of it spent on the artwork.
-                                          // Bare artwork — no plate, no border. Four
-                                          // boxed chips in a row read as a toolbar; the
-                                          // icons alone read as what the room is.
-                                          padding: const EdgeInsets.only(
-                                            left: 4,
-                                          ),
-                                          // Availability rides on opacity, since artwork
-                                          // can't be recoloured and a second symbol would
-                                          // undo the point of using this one: full when a
-                                          // seat is free right now, faded when it is only
-                                          // the room's rule.
-                                          child: Opacity(
-                                            opacity: room.canJoinInProgress
-                                                ? 1.0
-                                                : 0.4,
-                                            child: BotSwapIcon(
-                                              width: 28,
-                                              height: 23,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    if (room.allowSpectators)
-                                      GestureDetector(
-                                        onTap: () =>
-                                            _spectateWithPasswordCheck(room),
-                                        child: Container(
-                                          // Still the tap target that opens spectating —
-                                          // the padding keeps it thumb-sized without a
-                                          // border drawing a button around it.
-                                          padding: const EdgeInsets.fromLTRB(
-                                            2,
-                                            4,
+                                        margin: const EdgeInsets.only(right: 7),
+                                        decoration: BoxDecoration(
+                                          color: badgeBgColor,
+                                          borderRadius: BorderRadius.circular(
                                             8,
-                                            4,
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const EyeIcon(
-                                                width: 28,
-                                                height: 22,
-                                              ),
-                                              if (room.spectatorCount > 0) ...[
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '${room.spectatorCount}',
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Color(0xFF7A6A62),
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
+                                        ),
+                                        child: Text(
+                                          badgeText,
+                                          style: Cartoon.text(
+                                            size: 13,
+                                            color: badgeTextColor,
                                           ),
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ],
+                                      // Was emoji glued onto the front of the name
+                                      // string ('🔒 🏆 이름'). Real widgets instead:
+                                      // the trophy is now the same artwork as the
+                                      // ranked switch in the create dialog, and an
+                                      // emoji rendered next to it would read as a
+                                      // different badge from a different set.
+                                      if (room.isPrivate) ...[
+                                        const _LockChip(size: 24),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      if (room.isRanked) ...[
+                                        RankedIcon(width: 20, height: 18),
+                                        const SizedBox(width: 4),
+                                      ],
+                                      Expanded(
+                                        child: Text(
+                                          room.name,
+                                          // 방 이름은 사용자가 정한 글자라 Jua 서브셋에
+                                          // 없는 글자가 올 수 있다 — 기본 글꼴로.
+                                          style: Cartoon.userText(size: 18),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Wrap(
+                                    spacing: 4,
+                                    runSpacing: 2,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 2,
+                                        ),
+                                        child: Text(
+                                          (isSK || isLL)
+                                              ? l10n.lobbyRoomTimeSec(
+                                                  room.turnTimeLimit,
+                                                )
+                                              : l10n.lobbyRoomTimeAndScore(
+                                                  room.turnTimeLimit,
+                                                  room.targetScore,
+                                                ),
+                                          style: Cartoon.text(
+                                            size: 13,
+                                            color: Cartoon.ink.withValues(
+                                              alpha: 0.62,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (isSK && room.skExpansions.isNotEmpty)
+                                        for (final exp in room.skExpansions)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _skExpansionStrongColor(
+                                                exp,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Cartoon.ink,
+                                                width: 1.4,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _skExpansionEmoji(exp).isEmpty
+                                                  ? _skExpansionShortLabel(
+                                                      exp,
+                                                      l10n,
+                                                    )
+                                                  : _skExpansionEmoji(exp),
+                                              style: Cartoon.userText(
+                                                size: 12,
+                                                color: Colors.white,
+                                                weight: FontWeight.w800,
+                                                height: 1.0,
+                                              ),
+                                            ),
+                                          ),
+                                      if (room.allowMidGameJoin)
+                                        Tooltip(
+                                          message: l10n.midJoinRoomBadge,
+                                          // Geometry copied from the spectate button beside
+                                          // it (8/7 padding, 16px glyph, radius 10) so the
+                                          // two read as one pair of room actions rather than
+                                          // two unrelated marks. Only the colour differs, and
+                                          // that difference is the whole message: purple =
+                                          // you can get in, not just watch.
+                                          child: Container(
+                                            // Tighter than the eye button's 8/7 because this
+                                            // glyph is wider than tall: same outer box, more
+                                            // of it spent on the artwork.
+                                            // Bare artwork — no plate, no border. Four
+                                            // boxed chips in a row read as a toolbar; the
+                                            // icons alone read as what the room is.
+                                            padding: const EdgeInsets.only(
+                                              left: 4,
+                                            ),
+                                            // Availability rides on opacity, since artwork
+                                            // can't be recoloured and a second symbol would
+                                            // undo the point of using this one: full when a
+                                            // seat is free right now, faded when it is only
+                                            // the room's rule.
+                                            child: Opacity(
+                                              opacity: room.canJoinInProgress
+                                                  ? 1.0
+                                                  : 0.4,
+                                              child: BotSwapIcon(
+                                                width: 28,
+                                                height: 23,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      if (room.allowSpectators)
+                                        GestureDetector(
+                                          onTap: () =>
+                                              _spectateWithPasswordCheck(room),
+                                          child: Container(
+                                            // Still the tap target that opens spectating —
+                                            // the padding keeps it thumb-sized without a
+                                            // border drawing a button around it.
+                                            padding: const EdgeInsets.fromLTRB(
+                                              2,
+                                              4,
+                                              8,
+                                              4,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const EyeIcon(
+                                                  width: 28,
+                                                  height: 22,
+                                                ),
+                                                if (room.spectatorCount >
+                                                    0) ...[
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${room.spectatorCount}',
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: Color(0xFF7A6A62),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          // The eye used to mean two different things: a button
-                          // that takes you into spectating (waiting rooms) and a
-                          // read-out of how many people are already watching
-                          // (running games). Now the button is always the button,
-                          // and the count only appears when there is one.
-                          // A running game you can actually get into, not just
-                          // watch. Sits next to the "playing" chip because that
-                          // is the chip it qualifies — without it, a match in
-                          // progress reads as closed.
-                          // Marks every room running this rule, not only the ones
-                          // you could jump into this second — it is what the room
-                          // IS, and it decides whether you want to sit down here
-                          // at all (leaving hands your seat to a bot and counts
-                          // against you). Filled when a seat is actually free to
-                          // take right now, outlined when it is just the rule:
-                          // same fact, two different invitations.
-                          // Glyph only. Spelled out it was the widest thing in a
-                          // row that already carries the playing chip, the eye
-                          // and the seat count — and it was pushing the room name
-                          // out of a card whose whole job is showing the name.
-                          // The label lives on the tooltip and on the badge in
-                          // the waiting room, where there is space for it.
-                          // Shown whatever the room is doing: it is a property of
-                          // the room, and it decides whether you want to sit down
-                          // here at all — leaving hands your seat to a bot and
-                          // counts against you. Filled when a seat is free to take
-                          // this second, outlined when it is only the rule.
-                          // Seats only. Whether the match is running is carried
-                          // by the cell's own background now, so nothing here
-                          // has to spend width repeating it.
-                          Tooltip(
-                            message: isInProgress
-                                ? l10n.lobbyRoomPlaying
-                                : l10n.lobbyRoomWaiting,
-                            child: _SeatDots(
-                              filled: room.playerCount,
-                              total: room.effectiveMaxPlayers,
-                              color: stripColor,
+                            // The eye used to mean two different things: a button
+                            // that takes you into spectating (waiting rooms) and a
+                            // read-out of how many people are already watching
+                            // (running games). Now the button is always the button,
+                            // and the count only appears when there is one.
+                            // A running game you can actually get into, not just
+                            // watch. Sits next to the "playing" chip because that
+                            // is the chip it qualifies — without it, a match in
+                            // progress reads as closed.
+                            // Marks every room running this rule, not only the ones
+                            // you could jump into this second — it is what the room
+                            // IS, and it decides whether you want to sit down here
+                            // at all (leaving hands your seat to a bot and counts
+                            // against you). Filled when a seat is actually free to
+                            // take right now, outlined when it is just the rule:
+                            // same fact, two different invitations.
+                            // Glyph only. Spelled out it was the widest thing in a
+                            // row that already carries the playing chip, the eye
+                            // and the seat count — and it was pushing the room name
+                            // out of a card whose whole job is showing the name.
+                            // The label lives on the tooltip and on the badge in
+                            // the waiting room, where there is space for it.
+                            // Shown whatever the room is doing: it is a property of
+                            // the room, and it decides whether you want to sit down
+                            // here at all — leaving hands your seat to a bot and
+                            // counts against you. Filled when a seat is free to take
+                            // this second, outlined when it is only the rule.
+                            // Seats only. Whether the match is running is carried
+                            // by the cell's own background now, so nothing here
+                            // has to spend width repeating it.
+                            Tooltip(
+                              message: isInProgress
+                                  ? l10n.lobbyRoomPlaying
+                                  : l10n.lobbyRoomWaiting,
+                              child: _SeatDots(
+                                filled: room.playerCount,
+                                total: room.effectiveMaxPlayers,
+                                color: stripColor,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -3526,7 +3649,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
       bottom: 6,
       child: Align(
         alignment: Alignment.centerLeft,
-        child: SeatChatBubble(text: text, styleKey: _seatChat.styleFor(nickname)),
+        child: SeatChatBubble(
+          text: text,
+          styleKey: _seatChat.styleFor(nickname),
+        ),
       ),
     );
   }

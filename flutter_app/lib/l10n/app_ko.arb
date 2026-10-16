@@ -2146,5 +2146,6 @@
   "missionLlBaronWin": "남작 대결에서 2번 이기기",
   "missionLlRoundWin": "라운드 8번 이기기",
   "missionLlLastStanding": "압도적으로 승리하기 (다른 사람에게 승리 토큰이 없는 상태에서 게임 승리)",
-  "missionLlKnockOut6": "상대 10명 탈락시키기"
+  "missionLlKnockOut6": "상대 10명 탈락시키기",
+  "missionsPickHint": "오늘의 미션을 선택하세요!"
 }

@@ -5646,4 +5646,7 @@ class L10nKo extends L10n {
 
   @override
   String get missionLlKnockOut6 => '상대 10명 탈락시키기';
+
+  @override
+  String get missionsPickHint => '오늘의 미션을 선택하세요!';
 }

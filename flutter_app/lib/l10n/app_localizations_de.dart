@@ -5842,4 +5842,7 @@ class L10nDe extends L10n {
 
   @override
   String get missionLlKnockOut6 => '10 Gegner ausschalten';
+
+  @override
+  String get missionsPickHint => 'Wähle deine Missionen für heute!';
 }

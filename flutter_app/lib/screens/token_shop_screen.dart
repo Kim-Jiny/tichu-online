@@ -8,7 +8,8 @@ import '../theme/cartoon.dart';
 import '../widgets/token_cosmetics.dart';
 import '../widgets/token_widgets.dart';
 
-const _kinds = ['room_highlight', 'bubble_basic', 'bubble_premium'];
+/// 상점 탭 순서. 새 종류(배너·테마 등)는 여기에 이름을 더하면 탭이 생긴다.
+const _categoryOrder = ['bubble', 'room_highlight'];
 
 /// 토큰 상점. 토큰은 미션으로만 얻고 여기서만 쓴다 — 돈으로도 골드로도 못 산다.
 /// 전부 30일짜리 기간제이고, 다시 사면 기간이 늘어난다.
@@ -21,6 +22,7 @@ class TokenShopScreen extends StatefulWidget {
 
 class _TokenShopScreenState extends State<TokenShopScreen> {
   int _seenResultSeq = 0;
+  String _category = _categoryOrder.first;
 
   @override
   void initState() {
@@ -135,57 +137,125 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
         child: CircularProgressIndicator(color: Cartoon.orange, strokeWidth: 4),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+    // 상품을 종류(말풍선·방 강조, 앞으로는 배너·테마도)로 묶는다. 종류가 늘어도 위의 탭만
+    // 한 칸 늘어나고, 각 종류 안은 격자라서 길게 스크롤하지 않아도 한눈에 보인다.
+    final categories = [
+      for (final c in _categoryOrder)
+        if (shop.products.any((p) => p.slot == c)) c,
+      for (final c in {for (final p in shop.products) p.slot})
+        if (!_categoryOrder.contains(c)) c,
+    ];
+    if (categories.isEmpty) return const SizedBox.shrink();
+    final current = categories.contains(_category)
+        ? _category
+        : categories.first;
+    final products = shop.products.where((p) => p.slot == current).toList();
+    return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 2.5),
-          child: Text(
-            l10n.tokenShopHint,
-            style: Cartoon.userText(
-              size: 12.5,
-              color: Cartoon.ink.withValues(alpha: 0.7),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 2.5),
+            child: Text(
+              l10n.tokenShopHint,
+              style: Cartoon.userText(
+                size: 12.5,
+                color: Cartoon.ink.withValues(alpha: 0.7),
+              ),
             ),
           ),
         ),
-        for (final kind in _kinds) ...[
-          const SizedBox(height: 16),
-          _kindSection(context, game, shop, kind),
-        ],
+        _categoryTabs(l10n, categories, current),
+        const SizedBox(height: 10),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+                child: Text(
+                  tokenCategoryDesc(l10n, current),
+                  style: Cartoon.userText(
+                    size: 12,
+                    color: Cartoon.ink.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+              _grid(context, game, shop, products),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _kindSection(
+  /// 종류 탭 — 가로로 밀 수 있어서 종류가 늘어도 줄이 깨지지 않는다.
+  Widget _categoryTabs(L10n l10n, List<String> categories, String current) {
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: categories.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final c = categories[i];
+          final selected = c == current;
+          return CartoonPressable(
+            onTap: () => setState(() => _category = c),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              margin: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected ? Cartoon.orange : Cartoon.paper,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Cartoon.ink, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Cartoon.ink,
+                    offset: Offset(0, selected ? 4 : 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                tokenCategoryName(l10n, c),
+                style: Cartoon.text(
+                  size: 15,
+                  color: selected ? Colors.white : Cartoon.ink,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 상품 격자: 폭에 따라 2칸(폰) 또는 3칸(태블릿·웹).
+  Widget _grid(
     BuildContext context,
     GameService game,
     TokenShopState shop,
-    String kind,
+    List<TokenProduct> products,
   ) {
-    final l10n = L10n.of(context);
-    final products = shop.products.where((p) => p.kind == kind).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
-          child: Text(tokenKindName(l10n, kind), style: Cartoon.text(size: 18)),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-          child: Text(
-            kind == 'room_highlight'
-                ? l10n.tokenShopKindRoomHighlightDesc
-                : l10n.tokenShopKindBubbleDesc,
-            style: Cartoon.userText(
-              size: 12,
-              color: Cartoon.ink.withValues(alpha: 0.6),
-            ),
-          ),
-        ),
-        for (final p in products) _productCard(context, game, shop, p),
-      ],
+    return LayoutBuilder(
+      builder: (context, c) {
+        const gap = 10.0;
+        final cols = c.maxWidth >= 560 ? 3 : 2;
+        final w = (c.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final p in products)
+              SizedBox(width: w, child: _productCard(context, game, shop, p)),
+          ],
+        );
+      },
     );
   }
 
@@ -198,100 +268,93 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
     final l10n = L10n.of(context);
     final canAfford = shop.balance >= p.price;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
       decoration: Cartoon.panelDecoration(radius: 18, shadowOffset: 2.5),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  tokenProductName(l10n, p.key),
-                  style: Cartoon.text(size: 16),
-                ),
-              ),
-              if (p.owned)
-                Text(
-                  l10n.tokenShopOwnedUntil(_date(p.ownedUntil!)),
-                  style: Cartoon.userText(
-                    size: 11.5,
-                    color: Cartoon.ink.withValues(alpha: 0.6),
-                  ),
-                ),
-            ],
+          Text(
+            tokenProductName(l10n, p.key),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Cartoon.text(size: 15),
           ),
           const SizedBox(height: 8),
-          if (p.kind == 'room_highlight')
-            RoomHighlightPreview(
-              styleKey: p.key,
-              name: l10n.tokenShopRoomPreviewName,
-            )
-          else
-            Align(
-              alignment: Alignment.centerLeft,
-              child: BubblePreview(
-                styleKey: p.key,
-                text: l10n.tokenShopPreviewText,
-              ),
-            ),
-          const SizedBox(height: 10),
+          // 미리보기 칸은 높이를 맞춰서 카드가 가지런히 서게 한다.
+          Container(
+            height: 52,
+            alignment: Alignment.center,
+            child: p.kind == 'room_highlight'
+                ? RoomHighlightPreview(
+                    styleKey: p.key,
+                    name: l10n.tokenShopRoomPreviewName,
+                  )
+                : BubblePreview(
+                    styleKey: p.key,
+                    text: l10n.tokenShopPreviewText,
+                  ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
-              TokenCoin(size: 22),
-              const SizedBox(width: 5),
-              Text('${p.price}', style: Cartoon.text(size: 17)),
-              Text(
-                '  ·  ${l10n.tokenShopDays(p.days.toString())}',
-                style: Cartoon.userText(
-                  size: 12,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
-                ),
-              ),
+              const TokenCoin(size: 20),
+              const SizedBox(width: 4),
+              Text('${p.price}', style: Cartoon.text(size: 16)),
               const Spacer(),
-              if (p.owned)
-                CartoonPressable(
-                  scale: 0.92,
-                  onTap: () =>
-                      game.equipTokenItem(p.slot, p.equipped ? null : p.key),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: p.equipped
-                          ? const Color(0xFF3DBE6A)
-                          : Cartoon.paper,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Cartoon.ink, width: 1.8),
-                    ),
-                    child: Text(
-                      p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
-                      style: Cartoon.text(
-                        size: 13.5,
-                        color: p.equipped ? Colors.white : Cartoon.ink,
-                      ),
-                    ),
-                  ),
-                ),
-              CartoonButton(
-                expand: false,
-                height: 38,
-                radius: 13,
-                color: canAfford ? Cartoon.orange : const Color(0xFF9AA5B1),
-                onPressed: canAfford ? () => game.buyTokenItem(p.key) : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: CartoonButton.label(
-                    p.owned ? l10n.tokenShopExtend : l10n.tokenShopBuy,
-                    size: 14.5,
-                  ),
+              Text(
+                l10n.tokenShopDays(p.days.toString()),
+                style: Cartoon.userText(
+                  size: 11.5,
+                  color: Cartoon.ink.withValues(alpha: 0.55),
                 ),
               ),
             ],
+          ),
+          if (p.owned)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                l10n.tokenShopOwnedUntil(_date(p.ownedUntil!)),
+                style: Cartoon.userText(
+                  size: 11,
+                  color: Cartoon.ink.withValues(alpha: 0.55),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          if (p.owned) ...[
+            CartoonPressable(
+              scale: 0.95,
+              onTap: () =>
+                  game.equipTokenItem(p.slot, p.equipped ? null : p.key),
+              child: Container(
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: p.equipped ? const Color(0xFF3DBE6A) : Cartoon.paper,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Cartoon.ink, width: 1.8),
+                ),
+                child: Text(
+                  p.equipped ? l10n.tokenShopEquipped : l10n.tokenShopEquip,
+                  style: Cartoon.text(
+                    size: 13.5,
+                    color: p.equipped ? Colors.white : Cartoon.ink,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          CartoonButton(
+            height: 36,
+            radius: 12,
+            color: canAfford ? Cartoon.orange : const Color(0xFF9AA5B1),
+            onPressed: canAfford ? () => game.buyTokenItem(p.key) : null,
+            child: CartoonButton.label(
+              p.owned ? l10n.tokenShopExtend : l10n.tokenShopBuy,
+              size: 14,
+            ),
           ),
         ],
       ),

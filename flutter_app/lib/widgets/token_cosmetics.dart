@@ -43,9 +43,10 @@ class BubbleStyle {
 
 const Map<String, BubbleStyle> _bubbleStyles = {
   // 기본 3종
+  // 하트: 선명한 빨강 계열(벚꽃의 은은한 분홍과 확실히 다르게).
   'bubble_basic_1': BubbleStyle(
-    fill: Color(0xFFFFE1EC),
-    border: Color(0xFFD63B78),
+    fill: Color(0xFFFFCDD2),
+    border: Color(0xFFD32F2F),
   ),
   'bubble_basic_2': BubbleStyle(
     fill: Color(0xFFDDF7EE),
@@ -62,10 +63,11 @@ const Map<String, BubbleStyle> _bubbleStyles = {
     border: Color(0xFF8A2B10),
     text: Colors.white,
   ),
+  // 벚꽃: 흰색에서 연분홍으로 번지는 바탕 + 보랏빛 도는 테두리.
   'bubble_premium_2': BubbleStyle(
-    fill: Color(0xFFFFE9F3),
-    fillEnd: Color(0xFFFFB7D5),
-    border: Color(0xFFB03A74),
+    fill: Color(0xFFFFFFFF),
+    fillEnd: Color(0xFFF8C8DC),
+    border: Color(0xFF9C5FA8),
   ),
   'bubble_premium_3': BubbleStyle(
     fill: Color(0xFF3B2A6B),
@@ -133,16 +135,25 @@ String tokenProductName(L10n l10n, String key) {
   return key;
 }
 
-String tokenKindName(L10n l10n, String kind) {
-  switch (kind) {
+/// 상점 탭 이름. 말풍선은 기본·상위 구분 없이 한 종류로 묶는다.
+String tokenCategoryName(L10n l10n, String category) {
+  switch (category) {
     case 'room_highlight':
       return l10n.tokenShopKindRoomHighlight;
-    case 'bubble_basic':
+    case 'bubble':
       return l10n.tokenShopKindBubble;
-    case 'bubble_premium':
-      return l10n.tokenShopKindBubblePremium;
   }
-  return kind;
+  return category;
+}
+
+String tokenCategoryDesc(L10n l10n, String category) {
+  switch (category) {
+    case 'room_highlight':
+      return l10n.tokenShopKindRoomHighlightDesc;
+    case 'bubble':
+      return l10n.tokenShopKindBubbleDesc;
+  }
+  return '';
 }
 
 // ───────────────────────────── 미리보기 ─────────────────────────────

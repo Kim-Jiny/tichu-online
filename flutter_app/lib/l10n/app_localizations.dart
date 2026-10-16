@@ -9654,7 +9654,7 @@ abstract class L10n {
   /// No description provided for @tokenVariantBubbleBasic1.
   ///
   /// In en, this message translates to:
-  /// **'Pink heart'**
+  /// **'Red heart'**
   String get tokenVariantBubbleBasic1;
 
   /// No description provided for @tokenVariantBubbleBasic2.

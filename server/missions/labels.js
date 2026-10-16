@@ -67,7 +67,7 @@ const PRODUCT_LABEL_KO = {
   room_highlight_1: '방 목록 강조 · 금빛 테두리',
   room_highlight_2: '방 목록 강조 · 반짝이는 별',
   room_highlight_3: '방 목록 강조 · 분홍 리본',
-  bubble_basic_1: '말풍선(기본) · 분홍 하트',
+  bubble_basic_1: '말풍선(기본) · 빨간 하트',
   bubble_basic_2: '말풍선(기본) · 민트 구름',
   bubble_basic_3: '말풍선(기본) · 노랑 별',
   bubble_premium_1: '말풍선(상위) · 용의 불꽃',

@@ -489,8 +489,8 @@ void main() {
     expect(find.text('오늘 새로고침 끝'), findsWidgets);
   });
 
-  testWidgets('토큰 상점: 상품 9개, 장착 중·구매·장착 동작', (t) async {
-    await t.binding.setSurfaceSize(const Size(420, 2600));
+  testWidgets('토큰 상점: 종류 탭, 말풍선 6종을 한꺼번에(상위 표시 없이), 구매·장착', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 1800));
     final game = _FakeGame(_state(), _shop());
     final key = GlobalKey();
     await t.pumpWidget(
@@ -499,18 +499,38 @@ void main() {
     await t.pump(const Duration(milliseconds: 800));
 
     expect(find.text('토큰 상점'), findsWidgets);
+    // 탭: 말풍선 스타일 / 방 목록 강조.
+    expect(find.text('말풍선 스타일'), findsOneWidget);
     expect(find.text('방 목록 강조'), findsOneWidget);
+    // '(상위)' 같은 구분은 어디에도 없다.
+    expect(find.textContaining('상위'), findsNothing);
+    // 첫 탭(말풍선): 6종이 모두 보이고, 샀던 1개는 장착 중·연장.
+    for (final n in ['빨간 하트', '민트 구름', '노랑 별', '용의 불꽃', '벚꽃', '번개']) {
+      expect(find.text(n), findsOneWidget, reason: n);
+    }
     expect(find.text('장착 중'), findsOneWidget);
     expect(find.text('30일 연장'), findsWidgets);
-    expect(find.text('구매'), findsNWidgets(16));
+    // 구매 버튼: 5개(나머지 1개는 이미 가짐) × 외곽선 글자 2겹.
+    expect(find.text('구매'), findsNWidgets(10));
     await _snap(t, key, 'token_shop');
 
     await t.tap(find.text('구매').first);
     await t.pump();
-    expect(game.calls, contains('buy:room_highlight_1'));
+    expect(game.calls, contains('buy:bubble_basic_1'));
     await t.tap(find.text('장착 중'));
     await t.pump();
     expect(game.calls, contains('equip:bubble:null'));
+
+    // 방 목록 강조 탭으로 바꾸면 그 3종이 보인다.
+    await t.tap(find.text('방 목록 강조'));
+    await t.pump(const Duration(milliseconds: 400));
+    for (final n in ['금빛 테두리', '반짝이는 별', '분홍 리본']) {
+      expect(find.text(n), findsOneWidget, reason: n);
+    }
+    expect(find.text('빨간 하트'), findsNothing);
+    await t.tap(find.text('구매').first);
+    await t.pump();
+    expect(game.calls, contains('buy:room_highlight_1'));
   });
 
   testWidgets('토큰이 모자라면 구매 버튼이 눌리지 않는다', (t) async {
@@ -590,7 +610,7 @@ void main() {
 
   test('말풍선 키가 있으면 SeatChatBubbles 가 모양을 기억하고 만료되면 잊는다', () {
     // 키를 모르면 기본 모양(null)으로 떨어지는 것까지.
-    expect(bubbleStyleFor('bubble_basic_1')?.fill, const Color(0xFFFFE1EC));
+    expect(bubbleStyleFor('bubble_basic_1')?.fill, const Color(0xFFFFCDD2));
     expect(bubbleStyleFor(''), isNull);
   });
 

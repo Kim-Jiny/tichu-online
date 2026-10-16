@@ -213,7 +213,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             CartoonFloat(
               amplitude: 6,
               child: Image.asset(
-                'assets/dragon_icon.webp',
+                'assets/dragon_head.webp',
                 width: 72,
                 height: 72,
                 color: Colors.white.withValues(alpha: 0.35),

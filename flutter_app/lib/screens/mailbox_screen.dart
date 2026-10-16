@@ -244,7 +244,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                               CartoonFloat(
                                 amplitude: 8,
                                 child: Image.asset(
-                                  'assets/dragon_icon.webp',
+                                  'assets/dragon_head.webp',
                                   width: 96,
                                   height: 96,
                                   color: Colors.white.withValues(alpha: 0.35),

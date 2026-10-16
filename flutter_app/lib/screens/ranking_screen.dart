@@ -421,7 +421,7 @@ class _RankingScreenState extends State<RankingScreen> {
             CartoonFloat(
               amplitude: 8,
               child: Image.asset(
-                'assets/dragon_icon.webp',
+                'assets/dragon_head.webp',
                 width: 88,
                 height: 88,
                 color: Colors.white.withValues(alpha: 0.35),

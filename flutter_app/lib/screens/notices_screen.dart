@@ -151,7 +151,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                               CartoonFloat(
                                 amplitude: 8,
                                 child: Image.asset(
-                                  'assets/dragon_icon.webp',
+                                  'assets/dragon_head.webp',
                                   width: 90,
                                   height: 90,
                                   color: Colors.white.withValues(alpha: 0.35),

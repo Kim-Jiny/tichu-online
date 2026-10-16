@@ -7566,6 +7566,7 @@ function startTurnTimer(roomId) {
     if (!actor || seatIsAutoPlayed(room, actor)) return;
     const timeLimit = turnTimeLimitMs(room, actor);
     room.turnDeadline = Date.now() + timeLimit;
+    turnTimerTargets[roomId] = actor; // 재접속 때 시계를 이어 가려면 누구 차례인지 필요하다
     turnWaitingOn[roomId] = [actor];
     turnTimers[roomId] = setTimeout(() => {
       handleTurnTimeout(roomId, actor);

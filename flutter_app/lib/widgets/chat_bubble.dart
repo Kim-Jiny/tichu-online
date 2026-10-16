@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import 'token_cosmetics.dart';
 import 'profile_avatar.dart';
 
 /// One chat line: sender avatar, name, and the message bubble.
@@ -59,10 +60,52 @@ class ChatBubble extends StatelessWidget {
     ),
   });
 
+  /// 말풍선 몸통. 토큰 상점 모양이 있으면 그 색·테두리·표식, 없으면 기본 카툰 모양.
+  Widget _bubble(BubbleStyle? style) {
+    final textColor = style?.text ?? (isMe ? Colors.white : Cartoon.ink);
+    final body = Container(
+      padding: bubblePadding,
+      // 카툰: 내 말풍선과 남의 말풍선 모두 진한 테두리 + 작은 단색 그림자.
+      decoration: style != null
+          ? style.decoration(radius: bubbleRadius, borderWidth: 1.8)
+          : BoxDecoration(
+              color: isMe ? mineColor : Colors.white,
+              borderRadius: BorderRadius.circular(bubbleRadius),
+              border: Border.all(
+                color: isMe ? Cartoon.ink : Cartoon.ink.withValues(alpha: 0.45),
+                width: isMe ? 1.8 : 1.4,
+              ),
+            ),
+      child: Text(
+        message,
+        style: Cartoon.userText(
+          size: messageFontSize,
+          weight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+    if (style == null) return body;
+    // 좌석 말풍선과 같은 모서리 표식.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        body,
+        Positioned(
+          left: -5,
+          top: -7,
+          child: BubbleBadge(style: style, size: 16),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // System lines arrive with an empty sender; they get no avatar and no menu.
     final hasSender = sender.isNotEmpty;
+    // 보낸 사람이 장착한 말풍선 모양(없으면 null).
+    final style = hasSender ? bubbleStyleFor(game.chatBubbleFor(sender)) : null;
 
     final row = Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -114,28 +157,7 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
                 ),
-              Container(
-                padding: bubblePadding,
-                // 카툰: 내 말풍선과 남의 말풍선 모두 진한 테두리 + 작은 단색 그림자.
-                decoration: BoxDecoration(
-                  color: isMe ? mineColor : Colors.white,
-                  borderRadius: BorderRadius.circular(bubbleRadius),
-                  border: Border.all(
-                    color: isMe
-                        ? Cartoon.ink
-                        : Cartoon.ink.withValues(alpha: 0.45),
-                    width: isMe ? 1.8 : 1.4,
-                  ),
-                ),
-                child: Text(
-                  message,
-                  style: Cartoon.userText(
-                    size: messageFontSize,
-                    weight: FontWeight.w600,
-                    color: isMe ? Colors.white : Cartoon.ink,
-                  ),
-                ),
-              ),
+              _bubble(style),
             ],
           ),
         ),

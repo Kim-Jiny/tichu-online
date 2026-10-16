@@ -309,6 +309,10 @@ class GameService extends ChangeNotifier {
   /// Photo that arrived with a chat line, by sender nickname.
   final Map<String, String> _chatPhotos = {};
 
+  /// 채팅에서 본 사람별 말풍선 모양 키(토큰 상점). 없으면 기본 모양.
+  final Map<String, String> _chatBubbleKeys = {};
+  String? chatBubbleFor(String nickname) => _chatBubbleKeys[nickname];
+
   /// Counts only chat lines that arrive live. Replayed history (joining a
   /// room, reconnecting) does not touch it, so a screen can tell "someone just
   /// said this" from "this was already on the wall when I walked in" — seat
@@ -1912,6 +1916,13 @@ class GameService extends ChangeNotifier {
         final chatSender = (data['sender'] ?? '') as String;
         final chatPhoto = data['photoUrl'] as String?;
         if (chatSender.isNotEmpty) {
+          // 장착한 말풍선 모양. 벗으면 키가 없으니 기본 모양으로 돌아간다.
+          final b = data['bubble'];
+          if (b is String && b.isNotEmpty) {
+            _chatBubbleKeys[chatSender] = b;
+          } else {
+            _chatBubbleKeys.remove(chatSender);
+          }
           if (chatPhoto != null) {
             _chatPhotos[chatSender] = chatPhoto;
           } else {
@@ -1957,6 +1968,10 @@ class GameService extends ChangeNotifier {
           final s = (m['sender'] ?? '') as String;
           final photo = m['photoUrl'] as String?;
           if (s.isNotEmpty && photo != null) _chatPhotos[s] = photo;
+          final bubble = m['bubble'];
+          if (s.isNotEmpty && bubble is String && bubble.isNotEmpty) {
+            _chatBubbleKeys[s] = bubble;
+          }
         }
         chatMessages = messages
             .map(
@@ -3443,6 +3458,7 @@ class GameService extends ChangeNotifier {
     if (playerName.isEmpty || playerName == nickname) return;
     _profiles.clear();
     _chatPhotos.clear();
+    _chatBubbleKeys.clear();
     gold = 0;
     walletLoaded = false;
     goldHistory = [];
@@ -3497,6 +3513,7 @@ class GameService extends ChangeNotifier {
     playerId = '';
     playerName = '';
     _chatPhotos.clear();
+    _chatBubbleKeys.clear();
     liveChatSeq = 0;
     equippedTheme = null;
     equippedTitle = null;
@@ -4766,6 +4783,7 @@ class GameService extends ChangeNotifier {
   void clearChatMessages() {
     chatMessages.clear();
     _chatPhotos.clear();
+    _chatBubbleKeys.clear();
     liveChatSeq = 0;
     notifyListeners();
   }

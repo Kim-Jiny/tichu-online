@@ -4119,7 +4119,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     MightyPlayer viewingPlayer,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
       decoration: const BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -4172,14 +4172,33 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             )
           else
+            // 남의 패는 한 줄 작은 카드로 — 두 줄로 크게 펼치면 아래 좌석을
+            // 가린다. 판을 줄이지 않고 이 패널이 110 안에 들어가게 한다.
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: _buildHandRows(
-                viewingPlayer.cards,
-                legalCards: const {},
-                isPlaying: false,
-                isKitty: false,
-                state: state,
+              padding: const EdgeInsets.only(bottom: 2),
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final n = viewingPlayer.cards.length;
+                  const gap = 2.0;
+                  final w = ((c.maxWidth - gap * (n - 1)) / n).clamp(
+                    18.0,
+                    38.0,
+                  );
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int i = 0; i < n; i++) ...[
+                        if (i > 0) const SizedBox(width: gap),
+                        PlayingCard(
+                          cardId: _displayCardId(viewingPlayer.cards[i]),
+                          width: w,
+                          height: w * 1.4,
+                          isInteractive: false,
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
         ],

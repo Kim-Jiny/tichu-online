@@ -9,6 +9,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import '../widgets/hint_bubble.dart';
 import '../widgets/game_chrome.dart' show gameButton;
 import '../services/ad_service.dart';
 import '../services/inventory_new_tracker.dart';
@@ -303,39 +304,43 @@ class _ShopScreenState extends State<ShopScreen> {
                   _showAttendanceDialog(game);
                 },
                 // 꼬리를 몸통 위에 겹쳐 그려 꼬리 밑변 자리의 테두리 줄을 가린다.
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 9),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Cartoon.paper,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Cartoon.ink, width: 2),
-                      ),
-                      child: Text(
-                        text,
-                        textAlign: TextAlign.center,
-                        style: Cartoon.userText(
-                          size: 13,
-                          weight: FontWeight.w800,
-                          height: 1.25,
+                // 말풍선 전체를 아주 조금만 비치게 한다(미션 안내 말풍선과 같은 정도).
+                child: Opacity(
+                  opacity: HintBubble.opacity,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 9),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Cartoon.paper,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Cartoon.ink, width: 2),
+                        ),
+                        child: Text(
+                          text,
+                          textAlign: TextAlign.center,
+                          style: Cartoon.userText(
+                            size: 13,
+                            weight: FontWeight.w800,
+                            height: 1.25,
+                          ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 14,
-                      child: CustomPaint(
-                        size: const Size(16, 11),
-                        painter: _BubbleTailPainter(),
+                      Positioned(
+                        top: 0,
+                        right: 14,
+                        child: CustomPaint(
+                          size: const Size(16, 11),
+                          painter: _BubbleTailPainter(),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

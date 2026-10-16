@@ -20,6 +20,9 @@ class HintBubble extends StatelessWidget {
   final VoidCallback? onTap;
   final double maxWidth;
 
+  /// 아주 조금만 비치게 — 뒤의 화면이 완전히 가려지지 않는다.
+  static const opacity = 0.93;
+
   static const _tailHeight = 9.0;
   static const _border = 2.0;
 
@@ -36,7 +39,11 @@ class HintBubble extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: Cartoon.userText(size: 13.5, weight: FontWeight.w800, height: 1.25),
+        style: Cartoon.userText(
+          size: 13.5,
+          weight: FontWeight.w800,
+          height: 1.25,
+        ),
       ),
     );
     // 꼬리를 몸통 테두리 위에 겹쳐 그려 꼬리 밑변 자리의 줄을 가린다.
@@ -61,14 +68,18 @@ class HintBubble extends StatelessWidget {
         duration: const Duration(milliseconds: 380),
         curve: Curves.elasticOut,
         builder: (context, t, child) => Opacity(
-          opacity: t.clamp(0.0, 1.0),
+          opacity: t.clamp(0.0, 1.0) * opacity,
           child: Transform.scale(
             scale: 0.7 + 0.3 * t,
-            alignment: pointsDown ? Alignment.bottomCenter : Alignment.topCenter,
+            alignment: pointsDown
+                ? Alignment.bottomCenter
+                : Alignment.topCenter,
             child: child,
           ),
         ),
-        child: onTap == null ? bubble : GestureDetector(onTap: onTap, child: bubble),
+        child: onTap == null
+            ? bubble
+            : GestureDetector(onTap: onTap, child: bubble),
       ),
     );
   }
@@ -103,5 +114,6 @@ class _TailPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TailPainter old) => old.pointsDown != pointsDown;
+  bool shouldRepaint(covariant _TailPainter old) =>
+      old.pointsDown != pointsDown;
 }

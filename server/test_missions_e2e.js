@@ -158,6 +158,16 @@ async function main() {
     const cookie = (loginRes.headers['set-cookie'] || [])[0]?.split(';')[0];
     check('관리자 로그인', loginRes.status === 302 && !!cookie);
 
+    // 운영자가 우편을 보내면 접속 중인 받는 사람에게 mail_arrived 가 가고, 우편함에 바로 보인다.
+    a.forget('mail_arrived'); a.forget('mailbox_result');
+    const sent = await req('POST', '/tc-backstage/mail/send', { target_kind: 'list', nicknames: a.nickname, title: 'e2e 우편', body: '본문', reward_gold: '10' }, cookie);
+    check('관리자가 우편을 보냄', sent.status === 302 && decodeURIComponent(sent.headers.location).includes('보냈습니다'), decodeURIComponent(sent.headers.location || ''));
+    check('접속 중인 받는 사람에게 mail_arrived 알림', !!(await a.waitFor('mail_arrived', 3000)));
+    a.send({ type: 'get_mailbox' });
+    const mbx = await a.waitFor('mailbox_result');
+    check('우편함에 방금 보낸 우편이 보인다', mbx.success && mbx.mail.some((m) => m.title === 'e2e 우편'), JSON.stringify((mbx.mail || []).map((m) => m.title)));
+    check('안 읽은 수에 반영', mbx.unread >= 1, String(mbx.unread));
+
     for (const [path, needle] of [['/tc-backstage/missions', '미션 현황'], ['/tc-backstage/missions/manage', '미션 관리'], ['/tc-backstage/missions/shop', '토큰 상점'], ['/tc-backstage/missions/grant', '토큰 지급'], ['/tc-backstage/missions/ledger', '토큰 장부']]) {
       const r = await req('GET', path, null, cookie);
       check(`관리자 ${path} 가 열린다`, r.status === 200 && r.body.includes(needle), String(r.status));

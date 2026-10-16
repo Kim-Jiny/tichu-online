@@ -2916,6 +2916,11 @@ class GameService extends ChangeNotifier {
         }
         break;
 
+      case 'mail_arrived':
+        // 운영자가 우편을 보냈다 — 우편함을 다시 불러와 뱃지·목록에 바로 나타나게 한다.
+        loadMailbox();
+        break;
+
       case 'mailbox_result':
         mailboxLoading = false;
         if (data['success'] == true) {

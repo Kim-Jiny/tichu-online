@@ -5485,6 +5485,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         + encodeURIComponent(result.message || '보내지 못했습니다.'));
     }
 
+    // 지금 접속 중인 받는 사람에게는 앱이 우편함을 다시 불러오도록 알린다. 이게 없으면
+    // 우편이 도착해도 로그인할 때나 우편함을 열 때까지 뱃지가 안 뜬다(푸시를 꺼 둔 사람은
+    // 도착한 줄도 모른다). 편지는 이미 저장됐으니 이 알림이 실패해도 발송은 성공이다.
+    try {
+      const targetSet = new Set(result.targets || []);
+      if (wss && targetSet.size > 0) {
+        const note = JSON.stringify({ type: 'mail_arrived' });
+        for (const client of wss.clients) {
+          if (client.readyState === 1 && client.nickname && targetSet.has(client.nickname)) {
+            client.send(note);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[ADMIN] mail_arrived notify failed:', e.message);
+    }
+
     // The letter is already saved; the notification is a courtesy on top. A
     // push failure must therefore never read as a failed send.
     //

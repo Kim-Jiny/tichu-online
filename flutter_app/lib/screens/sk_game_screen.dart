@@ -3916,7 +3916,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // Special card asset mapping
   static const _specialAssets = {
     'skull_king': 'assets/cards/sk_skull_king.webp',
-    'pirate': 'assets/cards/sk_pirate.webp',
+    'pirate': 'assets/cards/sk_pirate1.webp',
     'mermaid': 'assets/cards/sk_mermaid.webp',
     'escape': 'assets/cards/sk_escape.webp',
     'tigress': 'assets/cards/sk_tigress.webp',

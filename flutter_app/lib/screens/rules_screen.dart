@@ -472,7 +472,7 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
               const SizedBox(height: 10),
               _CardGuide(
-                leading: _GuideCardImage('assets/cards/sk_pirate.webp'),
+                leading: _GuideCardImage('assets/cards/sk_pirate1.webp'),
                 name: L10n.of(context).rulesSkPirate,
                 sub: L10n.of(context).rulesSkPirateSub,
                 count: 4,
@@ -1188,7 +1188,7 @@ class _TigressDisplayPreview extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _TigressChoiceCard(
-                  assetPath: 'assets/cards/sk_pirate.webp',
+                  assetPath: 'assets/cards/sk_pirate1.webp',
                   label: L10n.of(context).rulesSkTigressChoicePirate,
                 ),
               ),

@@ -2084,15 +2084,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // 패널 아래 선에 맞춰 하단 정렬 — 패딩만큼 내려 선 위에 걸터앉게.
                 child: Transform.translate(
                   offset: const Offset(0, 7),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxHeight: 44,
-                      maxWidth: 150,
-                    ),
-                    child: Image.asset(
-                      'assets/dragon_icon.webp',
-                      fit: BoxFit.contain,
-                      alignment: Alignment.bottomCenter,
+                  // 패널 높이는 그대로 두고 그림만 위로 키운다.
+                  child: SizedBox(
+                    height: 44,
+                    width: 190,
+                    child: OverflowBox(
+                      alignment: Alignment.bottomLeft,
+                      maxHeight: 62,
+                      maxWidth: 190,
+                      child: Image.asset(
+                        'assets/dragon_icon.webp',
+                        height: 62,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.bottomLeft,
+                      ),
                     ),
                   ),
                 ),

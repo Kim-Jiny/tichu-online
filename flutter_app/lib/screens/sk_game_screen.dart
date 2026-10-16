@@ -905,65 +905,40 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     // Approved — show hand
     if (isApproved) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-        decoration: const BoxDecoration(
-          color: Cartoon.paper,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-          border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  const SizedBox(width: 32),
-                  Expanded(
-                    child: Text(
-                      L10n.of(context).skGamePlayerHand(viewingPlayer.name),
-                      textAlign: TextAlign.center,
-                      style: Cartoon.userText(size: 14),
+      return SpectatorHandWithChip(
+        label: L10n.of(context).skGamePlayerHand(viewingPlayer.name),
+        onClose: () => setState(() => _viewingPlayerId = null),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+          decoration: const BoxDecoration(
+            color: Cartoon.paper,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (viewingPlayer.cards.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    L10n.of(context).skGameNoCards,
+                    style: Cartoon.text(
+                      size: 13,
+                      color: Cartoon.ink.withValues(alpha: 0.55),
                     ),
                   ),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: IconButton(
-                      tooltip: MaterialLocalizations.of(
-                        context,
-                      ).closeButtonTooltip,
-                      padding: EdgeInsets.zero,
-                      splashRadius: 18,
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        size: 20,
-                        color: Cartoon.ink,
-                      ),
-                      onPressed: () => setState(() => _viewingPlayerId = null),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (viewingPlayer.cards.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  L10n.of(context).skGameNoCards,
-                  style: Cartoon.text(
-                    size: 13,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: _buildHandRows(
+                    viewingPlayer.cards,
+                    interactive: false,
                   ),
                 ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: _buildHandRows(viewingPlayer.cards, interactive: false),
-              ),
-          ],
+            ],
+          ),
         ),
       );
     }

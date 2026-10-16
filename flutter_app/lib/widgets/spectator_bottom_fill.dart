@@ -29,3 +29,54 @@ class SpectatorBottomFill extends StatelessWidget {
     );
   }
 }
+
+/// 관전 중 남의 패를 펼칠 때 "○○의 패 ✕" 알약을 손패 창 바로 위에 띄운다.
+/// 이름·닫기가 창 안에 있으면 창이 높아져 좌석을 가린다.
+class SpectatorHandWithChip extends StatelessWidget {
+  const SpectatorHandWithChip({
+    super.key,
+    required this.label,
+    required this.onClose,
+    required this.child,
+  });
+
+  final String label;
+  final VoidCallback onClose;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onClose,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.fromLTRB(12, 3, 6, 3),
+            decoration: BoxDecoration(
+              color: Cartoon.paper,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: Cartoon.ink, width: 1.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 13),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(width: double.infinity, child: child),
+      ],
+    );
+  }
+}

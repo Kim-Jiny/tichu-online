@@ -521,11 +521,7 @@ class _RulesScreenState extends State<RulesScreen> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  const Icon(
-                    Icons.extension,
-                    size: 20,
-                    color: Color(0xFFFF8A65),
-                  ),
+                  const RuleGlyph(RuleGlyphKind.puzzle, size: 24),
                   const SizedBox(width: 6),
                   Text(
                     L10n.of(context).rulesSkExpansionTitle,
@@ -574,11 +570,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      color: Color(0xFF212121),
-                      size: 18,
-                    ),
+                    const RuleGlyph(RuleGlyphKind.bomb, size: 22),
                     const SizedBox(width: 8),
                     Expanded(
                       child: RichText(
@@ -1783,20 +1775,40 @@ class _SectionBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 34,
-      height: 34,
+      width: 38,
+      height: 38,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: Cartoon.ink, width: 1.6),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color, Color.lerp(color, Colors.black, 0.25)!],
-        ),
+        color: Cartoon.cream,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Cartoon.ink, width: 1.8),
       ),
-      child: Icon(icon, color: Colors.white, size: 20),
+      child: RuleGlyph(ruleGlyphFor(icon), size: 28),
     );
   }
+}
+
+/// 룰북이 쓰던 머티리얼 아이콘을 직접 그린 그림으로 바꿔 준다.
+RuleGlyphKind ruleGlyphFor(IconData icon) {
+  if (icon == Icons.flag) return RuleGlyphKind.goal;
+  if (icon == Icons.style) return RuleGlyphKind.cards;
+  if (icon == Icons.campaign) return RuleGlyphKind.megaphone;
+  if (icon == Icons.format_list_numbered) return RuleGlyphKind.order;
+  if (icon == Icons.layers) return RuleGlyphKind.combos;
+  if (icon == Icons.local_fire_department) return RuleGlyphKind.bomb;
+  if (icon == Icons.calculate) return RuleGlyphKind.score;
+  if (icon == Icons.emoji_events) return RuleGlyphKind.trophy;
+  if (icon == Icons.visibility) return RuleGlyphKind.eye;
+  if (icon == Icons.gavel) return RuleGlyphKind.gavel;
+  if (icon == Icons.block) return RuleGlyphKind.ban;
+  if (icon == Icons.people) return RuleGlyphKind.people;
+  if (icon == Icons.swap_horiz) return RuleGlyphKind.swap;
+  if (icon == Icons.auto_awesome) return RuleGlyphKind.sparkle;
+  if (icon == Icons.gps_fixed) return RuleGlyphKind.target;
+  if (icon == Icons.star) return RuleGlyphKind.star;
+  if (icon == Icons.extension) return RuleGlyphKind.puzzle;
+  if (icon == Icons.check) return RuleGlyphKind.check;
+  return RuleGlyphKind.star;
 }
 
 // ─── Card guide (구성 + 효과를 카드 단위로) ──────────────────────────────────

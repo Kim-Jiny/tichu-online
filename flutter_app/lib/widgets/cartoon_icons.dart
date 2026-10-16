@@ -379,3 +379,373 @@ class _RulebookPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+/// 룰북 섹션 제목 앞에 붙는 그림들. 굵은 갈색 테두리 + 단색 몸통으로 직접 그렸다.
+enum RuleGlyphKind {
+  goal,
+  cards,
+  megaphone,
+  order,
+  combos,
+  bomb,
+  score,
+  trophy,
+  eye,
+  gavel,
+  ban,
+  people,
+  swap,
+  sparkle,
+  target,
+  star,
+  puzzle,
+  check,
+}
+
+class RuleGlyph extends StatelessWidget {
+  const RuleGlyph(this.kind, {super.key, this.size = 28});
+
+  final RuleGlyphKind kind;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _RuleGlyphPainter(kind)),
+  );
+}
+
+class _RuleGlyphPainter extends CustomPainter {
+  _RuleGlyphPainter(this.kind);
+
+  final RuleGlyphKind kind;
+
+  static const _red = Color(0xFFFF5A5F);
+  static const _yellow = Color(0xFFFFD84D);
+  static const _blue = Color(0xFF4A90D9);
+  static const _green = Color(0xFF4CAF50);
+  static const _paper = Color(0xFFFFFBF2);
+  static const _orange = Color(0xFFFF9F43);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide;
+    final sw = (s * 0.075).clamp(1.2, 2.6);
+    final pad = sw / 2 + 0.3;
+    double x(double t) => pad + (s - pad * 2) * t;
+    double y(double t) => pad + (s - pad * 2) * t;
+    Offset p(double a, double b) => Offset(x(a), y(b));
+    final line = _line(sw);
+    void shape(Path path, Color c) {
+      canvas.drawPath(path, _fill(c));
+      canvas.drawPath(path, line);
+    }
+
+    RRect rr(double l, double t, double r, double b, double rad) =>
+        RRect.fromLTRBR(x(l), y(t), x(r), y(b), Radius.circular(s * rad));
+
+    switch (kind) {
+      case RuleGlyphKind.goal:
+        canvas.drawLine(
+          p(0.22, 0.10),
+          p(0.22, 0.94),
+          line..strokeWidth = sw * 1.2,
+        );
+        final f = Path()
+          ..moveTo(x(0.24), y(0.12))
+          ..quadraticBezierTo(x(0.45), y(0.02), x(0.62), y(0.14))
+          ..quadraticBezierTo(x(0.80), y(0.26), x(0.94), y(0.14))
+          ..lineTo(x(0.94), y(0.56))
+          ..quadraticBezierTo(x(0.80), y(0.68), x(0.62), y(0.56))
+          ..quadraticBezierTo(x(0.45), y(0.44), x(0.24), y(0.54))
+          ..close();
+        shape(f, _red);
+      case RuleGlyphKind.cards:
+        canvas.save();
+        canvas.translate(x(0.36), y(0.52));
+        canvas.rotate(-0.28);
+        final back = RRect.fromLTRBR(
+          -s * 0.24,
+          -s * 0.34,
+          s * 0.24,
+          s * 0.34,
+          Radius.circular(s * 0.07),
+        );
+        canvas.drawRRect(back, _fill(_blue));
+        canvas.drawRRect(back, line);
+        canvas.restore();
+        canvas.save();
+        canvas.translate(x(0.62), y(0.52));
+        canvas.rotate(0.2);
+        final front = RRect.fromLTRBR(
+          -s * 0.24,
+          -s * 0.34,
+          s * 0.24,
+          s * 0.34,
+          Radius.circular(s * 0.07),
+        );
+        canvas.drawRRect(front, _fill(_paper));
+        canvas.drawRRect(front, line);
+        final d = Path()
+          ..moveTo(0, -s * 0.14)
+          ..lineTo(s * 0.11, 0)
+          ..lineTo(0, s * 0.14)
+          ..lineTo(-s * 0.11, 0)
+          ..close();
+        canvas.drawPath(d, _fill(_red));
+        canvas.drawPath(d, _line(sw * 0.8));
+        canvas.restore();
+      case RuleGlyphKind.megaphone:
+        final cone = Path()
+          ..moveTo(x(0.14), y(0.36))
+          ..lineTo(x(0.56), y(0.16))
+          ..lineTo(x(0.56), y(0.84))
+          ..lineTo(x(0.14), y(0.64))
+          ..close();
+        shape(cone, _yellow);
+        shape(Path()..addRRect(rr(0.04, 0.34, 0.22, 0.66, 0.05)), _orange);
+        shape(Path()..addRRect(rr(0.56, 0.12, 0.70, 0.88, 0.05)), _red);
+        final grip = Path()
+          ..moveTo(x(0.22), y(0.64))
+          ..lineTo(x(0.30), y(0.92))
+          ..lineTo(x(0.44), y(0.90))
+          ..lineTo(x(0.42), y(0.72));
+        canvas.drawPath(grip, line);
+        canvas.drawLine(p(0.80, 0.30), p(0.96, 0.22), line);
+        canvas.drawLine(p(0.82, 0.50), p(0.98, 0.50), line);
+        canvas.drawLine(p(0.80, 0.70), p(0.96, 0.78), line);
+      case RuleGlyphKind.order:
+        for (var i = 0; i < 3; i++) {
+          final cy = 0.20 + i * 0.30;
+          canvas.drawCircle(
+            p(0.18, cy),
+            s * 0.11,
+            _fill(i == 0 ? _red : _blue),
+          );
+          canvas.drawCircle(p(0.18, cy), s * 0.11, line);
+          shape(
+            Path()..addRRect(rr(0.38, cy - 0.09, 0.96, cy + 0.09, 0.05)),
+            _paper,
+          );
+        }
+      case RuleGlyphKind.combos:
+        for (var i = 0; i < 3; i++) {
+          canvas.save();
+          canvas.translate(x(0.5), y(0.80));
+          canvas.rotate(-0.5 + i * 0.5);
+          final c = RRect.fromLTRBR(
+            -s * 0.19,
+            -s * 0.68,
+            s * 0.19,
+            s * 0.06,
+            Radius.circular(s * 0.06),
+          );
+          canvas.drawRRect(
+            c,
+            _fill(i == 2 ? _red : (i == 1 ? _yellow : _paper)),
+          );
+          canvas.drawRRect(c, line);
+          canvas.restore();
+        }
+      case RuleGlyphKind.bomb:
+        canvas.drawCircle(
+          p(0.46, 0.60),
+          s * 0.34,
+          _fill(const Color(0xFF3B3B4F)),
+        );
+        canvas.drawCircle(p(0.46, 0.60), s * 0.34, line);
+        canvas.drawCircle(
+          p(0.34, 0.48),
+          s * 0.07,
+          _fill(Colors.white.withValues(alpha: 0.7)),
+        );
+        shape(
+          Path()..addRRect(rr(0.38, 0.16, 0.56, 0.30, 0.03)),
+          const Color(0xFF6B6B7F),
+        );
+        final fuse = Path()
+          ..moveTo(x(0.50), y(0.16))
+          ..quadraticBezierTo(x(0.62), y(0.04), x(0.78), y(0.12));
+        canvas.drawPath(fuse, line);
+        final spark = Path();
+        for (var i = 0; i < 8; i++) {
+          final r = i.isEven ? s * 0.11 : s * 0.05;
+          final a = i * math.pi / 4;
+          final pt = Offset(
+            x(0.84) + r * math.cos(a),
+            y(0.12) + r * math.sin(a),
+          );
+          i == 0 ? spark.moveTo(pt.dx, pt.dy) : spark.lineTo(pt.dx, pt.dy);
+        }
+        spark.close();
+        shape(spark, _yellow);
+      case RuleGlyphKind.score:
+        for (var i = 2; i >= 0; i--) {
+          final cy = 0.34 + i * 0.22;
+          final e = Rect.fromLTRB(x(0.10), y(cy - 0.12), x(0.90), y(cy + 0.12));
+          final body = Path()
+            ..addRect(
+              Rect.fromLTRB(
+                e.left,
+                e.center.dy,
+                e.right,
+                e.bottom - e.height * 0.0,
+              ),
+            )
+            ..addOval(e);
+          canvas.drawOval(
+            Rect.fromLTRB(
+              e.left,
+              e.top + s * 0.08,
+              e.right,
+              e.bottom + s * 0.08,
+            ),
+            _fill(const Color(0xFFE0A800)),
+          );
+          canvas.drawOval(e, _fill(_yellow));
+          canvas.drawOval(e, line);
+          body.close();
+        }
+        canvas.drawCircle(p(0.5, 0.34), s * 0.07, _line(sw * 0.8));
+      case RuleGlyphKind.trophy:
+        _TrophyPainter().paint(canvas, size);
+      case RuleGlyphKind.eye:
+        final eye = Path()
+          ..moveTo(x(0.02), y(0.5))
+          ..quadraticBezierTo(x(0.5), y(0.02), x(0.98), y(0.5))
+          ..quadraticBezierTo(x(0.5), y(0.98), x(0.02), y(0.5))
+          ..close();
+        shape(eye, _paper);
+        canvas.drawCircle(p(0.5, 0.5), s * 0.2, _fill(_blue));
+        canvas.drawCircle(p(0.5, 0.5), s * 0.2, line);
+        canvas.drawCircle(
+          p(0.5, 0.5),
+          s * 0.08,
+          _fill(const Color(0xFF2B2B3A)),
+        );
+        canvas.drawCircle(p(0.56, 0.44), s * 0.04, _fill(Colors.white));
+      case RuleGlyphKind.gavel:
+        canvas.save();
+        canvas.translate(x(0.5), y(0.46));
+        canvas.rotate(-0.6);
+        final head = RRect.fromLTRBR(
+          -s * 0.30,
+          -s * 0.30,
+          s * 0.30,
+          -s * 0.04,
+          Radius.circular(s * 0.07),
+        );
+        final handle = RRect.fromLTRBR(
+          -s * 0.06,
+          -s * 0.06,
+          s * 0.06,
+          s * 0.52,
+          Radius.circular(s * 0.04),
+        );
+        canvas.drawRRect(handle, _fill(const Color(0xFFB9783A)));
+        canvas.drawRRect(handle, line);
+        canvas.drawRRect(head, _fill(_orange));
+        canvas.drawRRect(head, line);
+        canvas.restore();
+        shape(Path()..addRRect(rr(0.44, 0.84, 0.98, 0.96, 0.04)), _paper);
+      case RuleGlyphKind.ban:
+        canvas.drawCircle(p(0.5, 0.5), s * 0.42, _fill(_red));
+        canvas.drawCircle(p(0.5, 0.5), s * 0.42, line);
+        shape(Path()..addRRect(rr(0.22, 0.42, 0.78, 0.58, 0.05)), _paper);
+      case RuleGlyphKind.people:
+        for (final (cx, col) in [(0.34, _blue), (0.68, _orange)]) {
+          canvas.drawCircle(p(cx, 0.32), s * 0.16, _fill(_paper));
+          canvas.drawCircle(p(cx, 0.32), s * 0.16, line);
+          final body = Path()
+            ..moveTo(x(cx - 0.26), y(0.92))
+            ..quadraticBezierTo(x(cx - 0.26), y(0.54), x(cx), y(0.54))
+            ..quadraticBezierTo(x(cx + 0.26), y(0.54), x(cx + 0.26), y(0.92))
+            ..close();
+          shape(body, col);
+        }
+      case RuleGlyphKind.swap:
+        for (final top in [true, false]) {
+          final yy = top ? 0.32 : 0.68;
+          canvas.drawLine(p(0.10, yy), p(0.80, yy), line);
+          final ah = Path();
+          if (top) {
+            ah
+              ..moveTo(x(0.62), y(yy - 0.18))
+              ..lineTo(x(0.94), y(yy))
+              ..lineTo(x(0.62), y(yy + 0.18))
+              ..close();
+          } else {
+            ah
+              ..moveTo(x(0.38), y(yy - 0.18))
+              ..lineTo(x(0.06), y(yy))
+              ..lineTo(x(0.38), y(yy + 0.18))
+              ..close();
+          }
+          shape(ah, top ? _red : _blue);
+        }
+      case RuleGlyphKind.sparkle:
+        Path star4(double cx, double cy, double r) => Path()
+          ..moveTo(x(cx), y(cy - r))
+          ..quadraticBezierTo(x(cx), y(cy), x(cx + r), y(cy))
+          ..quadraticBezierTo(x(cx), y(cy), x(cx), y(cy + r))
+          ..quadraticBezierTo(x(cx), y(cy), x(cx - r), y(cy))
+          ..quadraticBezierTo(x(cx), y(cy), x(cx), y(cy - r))
+          ..close();
+        shape(star4(0.42, 0.56, 0.40), _yellow);
+        shape(star4(0.82, 0.18, 0.16), _orange);
+        shape(star4(0.84, 0.82, 0.12), _paper);
+      case RuleGlyphKind.target:
+        canvas.drawCircle(p(0.5, 0.5), s * 0.42, _fill(_paper));
+        canvas.drawCircle(p(0.5, 0.5), s * 0.42, line);
+        canvas.drawCircle(p(0.5, 0.5), s * 0.28, _fill(_red));
+        canvas.drawCircle(p(0.5, 0.5), s * 0.28, line);
+        canvas.drawCircle(p(0.5, 0.5), s * 0.14, _fill(_paper));
+        canvas.drawCircle(p(0.5, 0.5), s * 0.14, line);
+        canvas.drawCircle(p(0.5, 0.5), s * 0.04, _fill(Cartoon.ink));
+      case RuleGlyphKind.star:
+        final st = Path();
+        for (var i = 0; i < 10; i++) {
+          final r = i.isEven ? s * 0.44 : s * 0.19;
+          final a = -math.pi / 2 + i * math.pi / 5;
+          final pt = Offset(
+            x(0.5) + r * math.cos(a),
+            y(0.54) + r * math.sin(a),
+          );
+          i == 0 ? st.moveTo(pt.dx, pt.dy) : st.lineTo(pt.dx, pt.dy);
+        }
+        st.close();
+        shape(st, _yellow);
+      case RuleGlyphKind.puzzle:
+        final pz = Path()
+          ..moveTo(x(0.12), y(0.30))
+          ..lineTo(x(0.40), y(0.30))
+          ..arcToPoint(
+            p(0.60, 0.30),
+            radius: Radius.circular(s * 0.10),
+            clockwise: false,
+          )
+          ..lineTo(x(0.88), y(0.30))
+          ..lineTo(x(0.88), y(0.50))
+          ..arcToPoint(
+            p(0.88, 0.70),
+            radius: Radius.circular(s * 0.10),
+            clockwise: false,
+          )
+          ..lineTo(x(0.88), y(0.90))
+          ..lineTo(x(0.12), y(0.90))
+          ..close();
+        shape(pz, _green);
+      case RuleGlyphKind.check:
+        final ck = Path()
+          ..moveTo(x(0.14), y(0.54))
+          ..lineTo(x(0.40), y(0.80))
+          ..lineTo(x(0.88), y(0.22));
+        canvas.drawPath(ck, _line(sw * 2.4)..color = Cartoon.ink);
+        canvas.drawPath(ck, _line(sw * 1.3)..color = _green);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RuleGlyphPainter old) => old.kind != kind;
+}

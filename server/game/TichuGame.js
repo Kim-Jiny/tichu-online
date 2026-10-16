@@ -482,6 +482,7 @@ class TichuGame {
     this.removeCardsFromHand(playerId, cardIds);
     this.currentTrick.push({ playerId, cards: cardIds, combo });
     this.lastPlayedBy = playerId;
+    this._pushMissionEvent({ playerId, event: 'tichu.bomb_played', amount: 1 });
     this.passCount = 0;
     this.currentPlayer = playerId;
 
@@ -727,6 +728,16 @@ class TichuGame {
       if (pts > 0) {
         this._pushMissionEvent({ playerId: winner, event: 'tichu.bomb_points', amount: pts });
       }
+    }
+    // 어떤 패로 트릭을 이겼는지(미션): 용·봉황이 든 조합, 스트레이트·풀하우스·연속 쌍.
+    {
+      const t = lastPlay.combo && lastPlay.combo.type;
+      const push = (event) => this._pushMissionEvent({ playerId: winner, event, amount: 1 });
+      if (lastPlay.cards.includes('special_dragon')) push('tichu.dragon_win');
+      if (lastPlay.cards.includes('special_phoenix')) push('tichu.phoenix_win');
+      if (t === 'straight') push('tichu.straight_win');
+      else if (t === 'full_house') push('tichu.fullhouse_win');
+      else if (t === 'steps') push('tichu.steps_win');
     }
     if (lastPlay.cards.includes('special_dragon')) {
       // Dragon winner must give trick to an opponent
@@ -1217,11 +1228,22 @@ class TichuGame {
   /** 라운드가 끝난 시점의 미션 이벤트: 티츄 성공, 1·2등 독식. */
   collectRoundMissionEvents() {
     const first = this.finishOrder[0];
+    if (first) this._pushMissionEvent({ playerId: first, event: 'tichu.first_out', amount: 1 });
+    const teamOfPid = (pid) => (this.teams.teamA.includes(pid) ? 'teamA' : 'teamB');
     for (const pid of this.smallTichuDeclarations) {
       if (pid === first) this._pushMissionEvent({ playerId: pid, event: 'tichu.small_success', amount: 1 });
     }
     for (const pid of this.largeTichuDeclarations) {
       if (pid === first) this._pushMissionEvent({ playerId: pid, event: 'tichu.large_success', amount: 1 });
+    }
+    // 상대 팀의 티츄(스몰·라지) 선언을 막았을 때: 선언자가 1등을 못 한 라운드, 상대 팀 전원.
+    for (const decl of [...this.smallTichuDeclarations, ...this.largeTichuDeclarations]) {
+      if (decl === first) continue;
+      for (const pid of this.playerIds) {
+        if (teamOfPid(pid) !== teamOfPid(decl)) {
+          this._pushMissionEvent({ playerId: pid, event: 'tichu.tichu_broken', amount: 1 });
+        }
+      }
     }
     if (this.finishOrder.length >= 2) {
       const teamOf = (pid) => (this.teams.teamA.includes(pid) ? 'teamA' : 'teamB');

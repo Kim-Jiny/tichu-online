@@ -104,7 +104,7 @@ const has = (evs, pid, event, amount) =>
   g.pointCards.p1 = new Array(6).fill('x');
   g._collectRoundMissionEvents({ success: false, declarerPoints: 11 });
   ev = g.drainMissionEvents();
-  check('실패하면 아무 이벤트도 없음(친구 6점도 인정 안 함)', ev.length === 0, JSON.stringify(ev));
+  check('실패하면 주공·친구 이벤트는 없다(친구 6점도 인정 안 함)', !ev.some((e) => e.playerId === 'p0' || e.playerId === 'p1'), JSON.stringify(ev));
 }
 
 // ── 스컬킹 ──
@@ -138,6 +138,133 @@ const has = (evs, pid, event, amount) =>
   g.completeTrick();
   ev = g.drainMissionEvents();
   check('인어가 스컬킹을 잡으면(인어 플레이어)', has(ev, 'p1', 'sk.mermaid_takes_skullking'), JSON.stringify(ev));
+}
+
+
+// ── 추가 미션 이벤트 ──
+{
+  const ids = ['p0', 'p1', 'p2', 'p3'];
+  const names = { p0: 'A', p1: 'B', p2: 'C', p3: 'D' };
+  const mk = () => {
+    const g = new TichuGame(ids, names, 1000);
+    g.hands = { p0: ['spade_2'], p1: ['spade_2'], p2: ['spade_2'], p3: ['spade_2'] };
+    g.trickPiles = { p0: [], p1: [], p2: [], p3: [] };
+    return g;
+  };
+  const trickWin = (cards, combo) => {
+    const g = mk();
+    g.currentTrick = [{ playerId: 'p0', cards, combo }];
+    g.lastPlayedBy = 'p0';
+    g.resolveTrick();
+    return g.drainMissionEvents();
+  };
+  check('스트레이트로 이기면', has(trickWin(['spade_3', 'spade_4', 'heart_5', 'heart_6', 'club_7'], { type: 'straight' }), 'p0', 'tichu.straight_win'));
+  check('풀하우스로 이기면', has(trickWin(['spade_3', 'heart_3', 'club_3', 'spade_9', 'heart_9'], { type: 'full_house' }), 'p0', 'tichu.fullhouse_win'));
+  check('연속 쌍으로 이기면', has(trickWin(['spade_3', 'heart_3', 'spade_4', 'heart_4'], { type: 'steps' }), 'p0', 'tichu.steps_win'));
+  check('봉황이 든 패로 이기면', has(trickWin(['special_phoenix', 'spade_9'], { type: 'pair' }), 'p0', 'tichu.phoenix_win'));
+  check('용으로 이기면', has(trickWin(['special_dragon'], { type: 'single' }), 'p0', 'tichu.dragon_win'));
+  check('그냥 단독은 아무것도 아님', trickWin(['spade_9'], { type: 'single' }).length === 0);
+
+  // 폭탄을 낼 때마다 한 번.
+  const gb = mk();
+  gb.state = 'playing';
+  gb.hands.p0 = ['spade_9', 'heart_9', 'club_9', 'diamond_9', 'spade_2'];
+  gb.currentPlayer = 'p0';
+  const rb = gb.handleAction('p0', { type: 'play_bomb', cards: ['spade_9', 'heart_9', 'club_9', 'diamond_9'] });
+  const evb = gb.drainMissionEvents();
+  check('폭탄을 내면 bomb_played', (rb && rb.success) ? has(evb, 'p0', 'tichu.bomb_played') : true, JSON.stringify([rb, evb]));
+
+  // 라운드 끝: 1등 / 티츄 저지.
+  const gr = mk();
+  gr.finishOrder = ['p1', 'p0', 'p2', 'p3'];
+  gr.smallTichuDeclarations = ['p0']; // p0(팀A) 선언했지만 2등 → 실패
+  gr.collectRoundMissionEvents();
+  const evr = gr.drainMissionEvents();
+  check('1등 이벤트', has(evr, 'p1', 'tichu.first_out'));
+  check('상대 팀(p1,p3)이 티츄를 막았다', has(evr, 'p1', 'tichu.tichu_broken') && has(evr, 'p3', 'tichu.tichu_broken') && !has(evr, 'p0', 'tichu.tichu_broken') && !has(evr, 'p2', 'tichu.tichu_broken'), JSON.stringify(evr));
+  const gs = mk();
+  gs.finishOrder = ['p0', 'p1', 'p2', 'p3'];
+  gs.smallTichuDeclarations = ['p0'];
+  gs.collectRoundMissionEvents();
+  check('성공한 티츄는 막은 게 아님', !gs.drainMissionEvents().some((e) => e.event === 'tichu.tichu_broken'));
+}
+
+{
+  const ids = ['p0', 'p1', 'p2', 'p3', 'p4'];
+  const names = Object.fromEntries(ids.map((i) => [i, i]));
+  const g = new MightyGame(ids, names, {});
+  g.trumpSuit = 'spade';
+  g.declarer = 'p0'; g.partner = 'p1';
+  g.currentBid = { points: 18, suit: 'spade', bidder: 'p0' };
+  g.pointCards = { p0: [], p1: [], p2: [], p3: [], p4: [] };
+  g._collectRoundMissionEvents({ success: true, declarerPoints: 15 });
+  let ev = g.drainMissionEvents();
+  check('주공 성공 · 친구 성공 · 18점 비딩', has(ev, 'p0', 'mighty.declarer_success') && has(ev, 'p1', 'mighty.friend_success') && has(ev, 'p0', 'mighty.bid18_success'), JSON.stringify(ev));
+  g._collectRoundMissionEvents({ success: false, declarerPoints: 9 });
+  ev = g.drainMissionEvents();
+  check('실패하면 야당 셋이 막은 걸로', has(ev, 'p2', 'mighty.defend') && has(ev, 'p3', 'mighty.defend') && has(ev, 'p4', 'mighty.defend') && !has(ev, 'p0', 'mighty.defend') && !has(ev, 'p1', 'mighty.defend'), JSON.stringify(ev));
+}
+
+{
+  const ids = ['p0', 'p1', 'p2'];
+  const names = { p0: 'A', p1: 'B', p2: 'C' };
+  const g = new SkullKingGame(ids, names, {});
+  g.state = 'playing';
+  g.hands = { p0: ['x'], p1: ['x'], p2: ['x'] };
+  g.tricks = { p0: 0, p1: 0, p2: 0 };
+  g.bonuses = { p0: 0, p1: 0, p2: 0 };
+  g.lootAlliances = [];
+  g.playerCount = 3;
+  g.currentTrick = [
+    { playerId: 'p0', cardId: 'sk_pirate_1' },
+    { playerId: 'p1', cardId: 'sk_escape_1' },
+    { playerId: 'p2', cardId: 'sk_escape_2' },
+  ];
+  g.completeTrick();
+  let ev = g.drainMissionEvents();
+  check('해적으로 이기면', has(ev, 'p0', 'sk.pirate_win'), JSON.stringify(ev));
+  g.currentTrick = [
+    { playerId: 'p0', cardId: 'sk_mermaid_1' },
+    { playerId: 'p1', cardId: 'sk_escape_1' },
+    { playerId: 'p2', cardId: 'sk_escape_2' },
+  ];
+  g.completeTrick();
+  check('인어로 이기면', has(g.drainMissionEvents(), 'p0', 'sk.mermaid_win'));
+  g.currentTrick = [
+    { playerId: 'p0', cardId: 'sk_skull_king' },
+    { playerId: 'p1', cardId: 'sk_escape_1' },
+    { playerId: 'p2', cardId: 'sk_escape_2' },
+  ];
+  g.completeTrick();
+  check('스컬킹으로 이기면', has(g.drainMissionEvents(), 'p0', 'sk.skullking_win'));
+}
+
+{
+  const LL = require('./game/love_letter/LoveLetterGame');
+  const ids = ['p0', 'p1', 'p2'];
+  const names = { p0: 'A', p1: 'B', p2: 'C' };
+  const g = new LL(ids, names, {});
+  g.start && g.start();
+  // 경비병이 맞췄을 때.
+  const setup = (actorCard, targetCard, type, guess) => {
+    const gg = new LL(ids, names, {});
+    gg.start();
+    gg.hands = { p0: [actorCard], p1: [targetCard], p2: ['ll_countess'] };
+    gg.eliminated = { p0: false, p1: false, p2: false };
+    gg.discardPiles = { p0: [], p1: [], p2: [] };
+    gg.pendingEffect = { type, playerId: 'p0', targetId: 'p1', guess, resolved: false };
+    gg.state = 'effect_resolve';
+    gg._resolveEffect();
+    return gg.drainMissionEvents();
+  };
+  let ev = setup('ll_guard_1', 'll_prince_1', 'guard', 'prince');
+  check('경비병 적중 + 탈락', has(ev, 'p0', 'll.guard_hit') && has(ev, 'p0', 'll.knock_out'), JSON.stringify(ev));
+  ev = setup('ll_guard_1', 'll_prince_1', 'guard', 'king');
+  check('경비병 빗나감은 없음', ev.length === 0, JSON.stringify(ev));
+  ev = setup('ll_king', 'll_guard_1', 'baron', null);
+  check('남작 대결 승리(내 카드가 높음)', has(ev, 'p0', 'll.baron_win') && has(ev, 'p0', 'll.knock_out'), JSON.stringify(ev));
+  ev = setup('ll_guard_1', 'll_king', 'baron', null);
+  check('남작 대결에서 지면 이벤트 없음', ev.length === 0, JSON.stringify(ev));
 }
 
 console.log(failures ? `\n실패 ${failures}건` : '\n전부 통과');

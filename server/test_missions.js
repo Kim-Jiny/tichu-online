@@ -37,7 +37,8 @@ async function main() {
 
   // 후보 중 쉬운 것(…_play) 세 게임에서 하나씩 고른다.
   const offered = (g) => st.offers[g].missions;
-  const easy = defs.GAMES.map((g) => offered(g).find((m) => m.tier === 1)).filter(Boolean);
+  // 한 번에 깨지는(목표 1) 미션만 골라야 아래의 완료 검사가 성립한다.
+  const easy = defs.GAMES.map((g) => offered(g).find((m) => m.target === 1)).filter(Boolean);
   for (const m of easy.slice(0, 3)) check(`선택 ${m.key}`, (await missions.pick(nick, m.key)).success);
   check('같은 미션 중복 선택 불가', (await missions.pick(nick, easy[0].key)).reason === 'already_picked');
   const fourth = easy[3] || offered('tichu').find((m) => !easy.includes(m));
@@ -52,9 +53,9 @@ async function main() {
   // 이벤트로 진행 → 완료 → 토큰.
   const evOf = (key) => defs.MISSION_BY_KEY.get(key).event;
   const done = await missions.record(nick, evOf(easy[0].key));
-  check('이벤트로 미션 완료', done.length === 1 && done[0].key === easy[0].key && done[0].tokens === 1, JSON.stringify(done));
+  check('이벤트로 미션 완료', done.length === 1 && done[0].key === easy[0].key && done[0].tokens === easy[0].tokens, JSON.stringify(done));
   st = await missions.getState(nick);
-  check('토큰 +1, 오늘 고른 미션 3개', st.balance === 1 && st.picksToday === 3 && st.dailyPicks === 3);
+  check('토큰 지급, 오늘 고른 미션 3개', st.balance === easy[0].tokens && st.picksToday === 3 && st.dailyPicks === 3);
   check('완료한 미션도 오늘은 목록에 보인다', st.active.some((m) => m.key === easy[0].key && m.status === 'done'));
   check('같은 이벤트가 다시 와도 두 번 주지 않음', (await missions.record(nick, evOf(easy[0].key))).length === 0);
   check('연속 1일째', st.streak === 1 && st.streakDoneToday === true);
@@ -62,8 +63,8 @@ async function main() {
   // 하루 토큰 상한은 없다 — 연달아 깨면 깬 만큼 다 받는다.
   await pool.query(`UPDATE tc_token_balance SET balance = 50 WHERE nickname = $1`, [nick]);
   const done2 = await missions.record(nick, evOf(easy[1].key));
-  check('상한 없이 그대로 지급', done2.length === 1 && done2[0].tokens === 1, JSON.stringify(done2));
-  check('잔액 51', (await missions.getBalance(nick)) === 51);
+  check('상한 없이 그대로 지급', done2.length === 1 && done2[0].tokens === easy[1].tokens, JSON.stringify(done2));
+  check('잔액이 지급만큼 늘었다', (await missions.getBalance(nick)) === 50 + easy[1].tokens);
 
   // 목표가 큰 미션(폭탄 30점)은 누적.
   await pool.query('DELETE FROM tc_user_missions WHERE nickname = $1', [nick]);

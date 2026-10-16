@@ -5684,4 +5684,102 @@ class L10nDe extends L10n {
 
   @override
   String get missionsExpiresToday => 'Bis heute Mitternacht';
+
+  @override
+  String get missionTichuPlay3 => '3 Tichu-Spiele zu Ende spielen';
+
+  @override
+  String get missionTichuWin2 => '2 Tichu-Spiele gewinnen';
+
+  @override
+  String get missionTichuDragonWin => 'Einen Stich mit dem Drachen gewinnen';
+
+  @override
+  String get missionTichuPhoenixWin => '2 Stiche mit dem Phönix gewinnen';
+
+  @override
+  String get missionTichuStraightWin => '2 Stiche mit einer Straße gewinnen';
+
+  @override
+  String get missionTichuFullhouseWin =>
+      '2 Stiche mit einem Full House gewinnen';
+
+  @override
+  String get missionTichuStepsWin => 'Einen Stich mit Treppenpaaren gewinnen';
+
+  @override
+  String get missionTichuBombPlay2 => '2 Bomben spielen';
+
+  @override
+  String get missionTichuFirstOut3 => 'In 3 Runden als Erster aussteigen';
+
+  @override
+  String get missionTichuBreakTichu => 'Ein gegnerisches Tichu verhindern';
+
+  @override
+  String get missionMightyPlay2 => '2 Mighty-Spiele zu Ende spielen';
+
+  @override
+  String get missionMightyMightyWin => 'Einen Stich mit dem Mighty gewinnen';
+
+  @override
+  String get missionMightyJokerWin => 'Einen Stich mit dem Joker gewinnen';
+
+  @override
+  String get missionMightyTrump3 => '3 Stiche mit Trumpfkarten gewinnen';
+
+  @override
+  String get missionMightyPointTrick =>
+      '3 oder mehr Punktkarten in einem Stich holen';
+
+  @override
+  String get missionMightyDeclarerSuccess => 'Als Spieler erfolgreich sein';
+
+  @override
+  String get missionMightyDefend => 'Als Verteidiger den Spieler stoppen';
+
+  @override
+  String get missionMightyFriendSuccess =>
+      'Als Freund dem Spieler zum Sieg verhelfen';
+
+  @override
+  String get missionMightyBid18 => 'Mit einem Gebot ab 18 gewinnen';
+
+  @override
+  String get missionSkPlay2 => '2 Skull-King-Spiele zu Ende spielen';
+
+  @override
+  String get missionSkBidHit3 => '3-mal das Gebot genau treffen';
+
+  @override
+  String get missionSkZeroHit => 'Mit Gebot 0 erfolgreich sein';
+
+  @override
+  String get missionSkPirateWin2 => '2 Stiche mit einem Piraten gewinnen';
+
+  @override
+  String get missionSkMermaidWin =>
+      'Einen Stich mit einer Meerjungfrau gewinnen';
+
+  @override
+  String get missionSkSkullkingWin2 => '2 Stiche mit dem Skull King gewinnen';
+
+  @override
+  String get missionLlPlay2 => '2 Love-Letter-Spiele zu Ende spielen';
+
+  @override
+  String get missionLlGuardHit => 'Mit der Wache eine Karte richtig raten';
+
+  @override
+  String get missionLlBaronWin => 'Ein Baron-Duell gewinnen';
+
+  @override
+  String get missionLlRoundWin3 => '3 Runden gewinnen';
+
+  @override
+  String get missionLlLastStanding =>
+      'Eine Runde gewinnen, indem alle anderen ausscheiden';
+
+  @override
+  String get missionLlKnockOut3 => '3 Gegner ausschalten';
 }

@@ -28,6 +28,8 @@ class LoveLetterGame {
       this.tokens[pid] = 0;
     }
     this.roundHistory = [];
+    // 미션 판정용 이벤트 — { playerId, event, amount }. 서버가 액션 뒤에 꺼내 간다.
+    this.missionEvents = [];
 
     // Per-round state (initialized in startNextRound)
     this.hands = {};
@@ -403,6 +405,8 @@ class LoveLetterGame {
 
         if (correct) {
           this._eliminatePlayer(targetId);
+          this._pushMissionEvent({ playerId: effect.playerId, event: 'll.guard_hit', amount: 1 });
+          this._pushMissionEvent({ playerId: effect.playerId, event: 'll.knock_out', amount: 1 });
         }
         effect.resolved = true;
         return { success: true };
@@ -441,6 +445,11 @@ class LoveLetterGame {
 
         if (loser) {
           this._eliminatePlayer(loser);
+          // 내가 이긴 대결(상대가 탈락)일 때만.
+          if (loser === targetId) {
+            this._pushMissionEvent({ playerId: effect.playerId, event: 'll.baron_win', amount: 1 });
+            this._pushMissionEvent({ playerId: effect.playerId, event: 'll.knock_out', amount: 1 });
+          }
         }
         effect.resolved = true;
         return { success: true };
@@ -458,6 +467,7 @@ class LoveLetterGame {
         if (discardedInfo && discardedInfo.type === CARD_TYPE.PRINCESS) {
           // Forced to discard Princess = eliminated
           this._eliminatePlayer(targetId);
+          this._pushMissionEvent({ playerId: effect.playerId, event: 'll.knock_out', amount: 1 });
           effect.result = { discardedCard, eliminated: true };
         } else {
           // Draw a new card
@@ -530,6 +540,18 @@ class LoveLetterGame {
     return { success: true };
   }
 
+  // 직렬화로 복원된 게임에는 생성자가 안 돌아 missionEvents 가 없다.
+  _pushMissionEvent(e) {
+    if (!this.missionEvents) this.missionEvents = [];
+    this.missionEvents.push(e);
+  }
+
+  drainMissionEvents() {
+    const out = this.missionEvents || [];
+    this.missionEvents = [];
+    return out;
+  }
+
   _endRound() {
     const alive = this._getAlivePlayers();
     let roundWinners = [];
@@ -569,6 +591,9 @@ class LoveLetterGame {
     if (roundWinners.length > 0) {
       for (const pid of roundWinners) {
         this.tokens[pid]++;
+        this._pushMissionEvent({ playerId: pid, event: 'll.round_win', amount: 1 });
+        // 상대를 전부 탈락시켜 혼자 남아 이긴 라운드.
+        if (alive.length === 1) this._pushMissionEvent({ playerId: pid, event: 'll.last_standing', amount: 1 });
       }
       this.currentPlayer = roundWinners[0]; // First winner leads next round
     }

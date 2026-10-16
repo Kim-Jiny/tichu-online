@@ -5521,4 +5521,97 @@ class L10nKo extends L10n {
 
   @override
   String get missionsExpiresToday => '오늘 자정까지';
+
+  @override
+  String get missionTichuPlay3 => '티츄 3판 끝까지 하기';
+
+  @override
+  String get missionTichuWin2 => '티츄 2판 이기기';
+
+  @override
+  String get missionTichuDragonWin => '용으로 트릭 이기기';
+
+  @override
+  String get missionTichuPhoenixWin => '봉황이 든 패로 트릭 2번 이기기';
+
+  @override
+  String get missionTichuStraightWin => '스트레이트로 트릭 2번 이기기';
+
+  @override
+  String get missionTichuFullhouseWin => '풀하우스로 트릭 2번 이기기';
+
+  @override
+  String get missionTichuStepsWin => '연속 쌍(스텝)으로 트릭 이기기';
+
+  @override
+  String get missionTichuBombPlay2 => '폭탄 2번 내기';
+
+  @override
+  String get missionTichuFirstOut3 => '라운드 1등으로 3번 나가기';
+
+  @override
+  String get missionTichuBreakTichu => '상대 팀의 티츄 막아 내기';
+
+  @override
+  String get missionMightyPlay2 => '마이티 2판 끝까지 하기';
+
+  @override
+  String get missionMightyMightyWin => '마이티 카드로 트릭 이기기';
+
+  @override
+  String get missionMightyJokerWin => '조커로 트릭 이기기';
+
+  @override
+  String get missionMightyTrump3 => '으뜸 카드로 트릭 3번 이기기';
+
+  @override
+  String get missionMightyPointTrick => '한 트릭에 점수 카드 3장 이상 먹기';
+
+  @override
+  String get missionMightyDeclarerSuccess => '주공으로 성공하기';
+
+  @override
+  String get missionMightyDefend => '야당으로 주공 막기';
+
+  @override
+  String get missionMightyFriendSuccess => '친구로 참여해 주공팀 승리 돕기';
+
+  @override
+  String get missionMightyBid18 => '비딩 18점 이상으로 성공하기';
+
+  @override
+  String get missionSkPlay2 => '스컬킹 2판 끝까지 하기';
+
+  @override
+  String get missionSkBidHit3 => '비딩을 3번 정확히 맞추기';
+
+  @override
+  String get missionSkZeroHit => '0 비딩 성공하기';
+
+  @override
+  String get missionSkPirateWin2 => '해적으로 트릭 2번 이기기';
+
+  @override
+  String get missionSkMermaidWin => '인어로 트릭 이기기';
+
+  @override
+  String get missionSkSkullkingWin2 => '스컬킹으로 트릭 2번 이기기';
+
+  @override
+  String get missionLlPlay2 => '러브레터 2판 끝까지 하기';
+
+  @override
+  String get missionLlGuardHit => '경비병으로 상대 카드 맞히기';
+
+  @override
+  String get missionLlBaronWin => '남작 대결에서 이기기';
+
+  @override
+  String get missionLlRoundWin3 => '라운드 3번 이기기';
+
+  @override
+  String get missionLlLastStanding => '상대를 모두 탈락시키고 라운드 이기기';
+
+  @override
+  String get missionLlKnockOut3 => '상대 3명 탈락시키기';
 }

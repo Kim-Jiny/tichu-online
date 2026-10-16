@@ -5647,4 +5647,99 @@ class L10nEn extends L10n {
 
   @override
   String get missionsExpiresToday => 'Until midnight today';
+
+  @override
+  String get missionTichuPlay3 => 'Finish 3 games of Tichu';
+
+  @override
+  String get missionTichuWin2 => 'Win 2 games of Tichu';
+
+  @override
+  String get missionTichuDragonWin => 'Win a trick with the Dragon';
+
+  @override
+  String get missionTichuPhoenixWin =>
+      'Win 2 tricks with the Phoenix in your play';
+
+  @override
+  String get missionTichuStraightWin => 'Win 2 tricks with a straight';
+
+  @override
+  String get missionTichuFullhouseWin => 'Win 2 tricks with a full house';
+
+  @override
+  String get missionTichuStepsWin => 'Win a trick with consecutive pairs';
+
+  @override
+  String get missionTichuBombPlay2 => 'Play 2 bombs';
+
+  @override
+  String get missionTichuFirstOut3 => 'Go out first in 3 rounds';
+
+  @override
+  String get missionTichuBreakTichu => 'Stop an opposing Tichu call';
+
+  @override
+  String get missionMightyPlay2 => 'Finish 2 games of Mighty';
+
+  @override
+  String get missionMightyMightyWin => 'Win a trick with the Mighty';
+
+  @override
+  String get missionMightyJokerWin => 'Win a trick with the Joker';
+
+  @override
+  String get missionMightyTrump3 => 'Win 3 tricks with trump cards';
+
+  @override
+  String get missionMightyPointTrick => 'Take 3+ point cards in one trick';
+
+  @override
+  String get missionMightyDeclarerSuccess => 'Succeed as the declarer';
+
+  @override
+  String get missionMightyDefend => 'Stop the declarer as a defender';
+
+  @override
+  String get missionMightyFriendSuccess =>
+      'Help the declarer win as the friend';
+
+  @override
+  String get missionMightyBid18 => 'Succeed with a bid of 18 or more';
+
+  @override
+  String get missionSkPlay2 => 'Finish 2 games of Skull King';
+
+  @override
+  String get missionSkBidHit3 => 'Hit your bid exactly 3 times';
+
+  @override
+  String get missionSkZeroHit => 'Succeed with a bid of 0';
+
+  @override
+  String get missionSkPirateWin2 => 'Win 2 tricks with a pirate';
+
+  @override
+  String get missionSkMermaidWin => 'Win a trick with a mermaid';
+
+  @override
+  String get missionSkSkullkingWin2 => 'Win 2 tricks with the Skull King';
+
+  @override
+  String get missionLlPlay2 => 'Finish 2 games of Love Letter';
+
+  @override
+  String get missionLlGuardHit => 'Guess a card right with the Guard';
+
+  @override
+  String get missionLlBaronWin => 'Win a Baron showdown';
+
+  @override
+  String get missionLlRoundWin3 => 'Win 3 rounds';
+
+  @override
+  String get missionLlLastStanding => 'Win a round by knocking out everyone';
+
+  @override
+  String get missionLlKnockOut3 => 'Knock out 3 opponents';
 }

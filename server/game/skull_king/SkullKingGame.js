@@ -300,6 +300,14 @@ class SkullKingGame {
     if (info && info.type === CARD_TYPE.NUMBER && info.value === 10) {
       this._pushMissionEvent({ playerId: winner, event: 'sk.win_with_ten', amount: 1 });
     }
+    // 어떤 카드로 이겼는지(미션): 해적(호랑이를 해적으로 낸 것 포함)·인어·스컬킹.
+    if (info) {
+      const asPirate = info.type === CARD_TYPE.PIRATE
+        || (info.type === CARD_TYPE.TIGRESS && winPlay.tigressChoice === 'pirate');
+      if (asPirate) this._pushMissionEvent({ playerId: winner, event: 'sk.pirate_win', amount: 1 });
+      else if (info.type === CARD_TYPE.MERMAID) this._pushMissionEvent({ playerId: winner, event: 'sk.mermaid_win', amount: 1 });
+      else if (info.type === CARD_TYPE.SKULL_KING) this._pushMissionEvent({ playerId: winner, event: 'sk.skullking_win', amount: 1 });
+    }
   }
 
   // 직렬화로 복원된 게임에는 생성자가 안 돌아 missionEvents 가 없다.
@@ -354,6 +362,10 @@ class SkullKingGame {
 
       // Only show bonus when bid was met (bonus is only applied on success)
       const bidSuccess = (bid === 0) ? (tricksWon === 0) : (tricksWon === bid);
+      if (bidSuccess) {
+        this._pushMissionEvent({ playerId: pid, event: 'sk.bid_hit', amount: 1 });
+        if (bid === 0) this._pushMissionEvent({ playerId: pid, event: 'sk.zero_hit', amount: 1 });
+      }
       roundScoreData[pid] = {
         bid,
         tricks: tricksWon,

@@ -962,6 +962,21 @@ class MightyGame {
       }
     }
 
+    // 어떤 카드로 트릭을 이겼는지, 한 트릭에 점수 카드를 몇 장 먹었는지(미션).
+    {
+      const winPlay = this.currentTrick.find((p) => p.pid === winner);
+      const winCard = winPlay && winPlay.cardId;
+      const winInfo = winCard ? getCardInfo(winCard) : null;
+      const push = (event, amount = 1) => this._pushMissionEvent({ playerId: winner, event, amount });
+      if (winCard && winCard === this.getMightyCard()) push('mighty.mighty_win');
+      else if (winCard === 'mighty_joker') push('mighty.joker_win');
+      else if (winInfo && this.trumpSuit && this.trumpSuit !== 'no_trump' && winInfo.suit === this.trumpSuit) {
+        push('mighty.trump_win');
+      }
+      const pointsInTrick = this.currentTrick.filter((p) => (getCardInfo(p.cardId) || {}).point > 0).length;
+      if (pointsInTrick >= 3) push('mighty.point_trick');
+    }
+
     // Save trick cards for trick_end display before clearing
     this.lastTrickCards = this.currentTrick.map(play => ({
       playerId: play.pid,
@@ -1242,6 +1257,17 @@ class MightyGame {
     const push = (playerId, event, amount = 1) => this._pushMissionEvent({ playerId, event, amount });
     if (result.success && this.currentBid.points >= 20) push(declarer, 'mighty.bid20_success');
     if (result.success && this.trumpSuit === 'no_trump') push(declarer, 'mighty.nt_success');
+    if (result.success && this.currentBid.points >= 18) push(declarer, 'mighty.bid18_success');
+    if (result.success) {
+      push(declarer, 'mighty.declarer_success');
+      if (this.partner && this.partner !== declarer) push(this.partner, 'mighty.friend_success');
+    } else {
+      // 야당(주공도 친구도 아닌 사람)이 주공팀을 막았다.
+      for (const pid of this.playerIds) {
+        if (this.excludedPlayers.has(pid) || pid === declarer || pid === this.partner) continue;
+        push(pid, 'mighty.defend');
+      }
+    }
     // 여당(주공 + 친구)이 점수 카드 20장을 전부 먹음.
     if (result.declarerPoints >= 20) {
       push(declarer, 'mighty.declarer_all20');

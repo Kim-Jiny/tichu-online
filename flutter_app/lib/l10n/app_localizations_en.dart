@@ -5407,70 +5407,6 @@ class L10nEn extends L10n {
   String get missionsGameLoveLetter => 'Love Letter';
 
   @override
-  String get missionTichuPlay => 'Play 5 games of Tichu';
-
-  @override
-  String get missionTichuWin => 'Win a game of Tichu';
-
-  @override
-  String get missionTichuSmall => 'Make a Small Tichu';
-
-  @override
-  String get missionTichuLarge => 'Make a Grand Tichu';
-
-  @override
-  String get missionTichuOnetwo => 'Finish 1st and 2nd with your team';
-
-  @override
-  String get missionTichuDogFinish =>
-      'Go out 1st or 2nd with the Dog as your last card';
-
-  @override
-  String get missionTichuBomb30 => 'Win 30 points with bombs';
-
-  @override
-  String get missionMightyPlay => 'Play 5 games of Mighty';
-
-  @override
-  String get missionMightyWin => 'Win a game of Mighty';
-
-  @override
-  String get missionMightyBid20 => 'Succeed with a 20-point bid';
-
-  @override
-  String get missionMightyNt => 'Succeed with a No Trump bid';
-
-  @override
-  String get missionMightyAll20 =>
-      'Take all 20 point cards as the declaring team';
-
-  @override
-  String get missionMightyFriend7 =>
-      'As the friend, take 7 or more points in a round';
-
-  @override
-  String get missionSkPlay => 'Play 5 games of Skull King';
-
-  @override
-  String get missionSkWin => 'Win a game of Skull King';
-
-  @override
-  String get missionSkPirates2 =>
-      'Capture two pirates with the Skull King in one trick';
-
-  @override
-  String get missionSkMermaidKing => 'Capture the Skull King with a Mermaid';
-
-  @override
-  String get missionSkTenWin => 'Win a trick with a number 10';
-
-  @override
-  String get missionLlPlay => 'Play 5 games of Love Letter';
-
-  @override
-  String get missionLlWin => 'Win a game of Love Letter';
-
-  @override
   String get tokenShopTitle => 'Token shop';
 
   @override
@@ -5649,90 +5585,201 @@ class L10nEn extends L10n {
   String get missionsExpiresToday => 'Until midnight today';
 
   @override
-  String get missionTichuWin2 => 'Win 2 games of Tichu';
-
-  @override
-  String get missionTichuDragonWin => 'Win a trick with the Dragon';
-
-  @override
-  String get missionTichuPhoenixWin =>
-      'Win 2 tricks with the Phoenix in your play';
-
-  @override
-  String get missionTichuStraightWin => 'Win 2 tricks with a straight';
-
-  @override
-  String get missionTichuFullhouseWin => 'Win 2 tricks with a full house';
-
-  @override
-  String get missionTichuStepsWin => 'Win a trick with consecutive pairs';
-
-  @override
-  String get missionTichuBombPlay2 => 'Play 2 bombs';
-
-  @override
-  String get missionTichuFirstOut3 => 'Go out first in 3 rounds';
-
-  @override
-  String get missionTichuBreakTichu => 'Stop an opposing Tichu call';
-
-  @override
-  String get missionMightyMightyWin => 'Win a trick with the Mighty';
-
-  @override
-  String get missionMightyJokerWin => 'Win a trick with the Joker';
-
-  @override
-  String get missionMightyTrump3 => 'Win 3 tricks with trump cards';
-
-  @override
-  String get missionMightyPointTrick => 'Take 3+ point cards in one trick';
-
-  @override
-  String get missionMightyDeclarerSuccess => 'Succeed as the declarer';
-
-  @override
-  String get missionMightyDefend => 'Stop the declarer as a defender';
-
-  @override
-  String get missionMightyFriendSuccess =>
-      'Help the declarer win as the friend';
-
-  @override
-  String get missionMightyBid18 => 'Succeed with a bid of 18 or more';
-
-  @override
-  String get missionSkBidHit3 => 'Hit your bid exactly 3 times';
-
-  @override
-  String get missionSkZeroHit => 'Succeed with a bid of 0';
-
-  @override
-  String get missionSkPirateWin2 => 'Win 2 tricks with a pirate';
-
-  @override
-  String get missionSkMermaidWin => 'Win a trick with a mermaid';
-
-  @override
-  String get missionSkSkullkingWin2 => 'Win 2 tricks with the Skull King';
-
-  @override
-  String get missionLlGuardHit => 'Guess a card right with the Guard';
-
-  @override
-  String get missionLlBaronWin => 'Win a Baron showdown';
-
-  @override
-  String get missionLlRoundWin3 => 'Win 3 rounds';
-
-  @override
-  String get missionLlLastStanding => 'Win a round by knocking out everyone';
-
-  @override
-  String get missionLlKnockOut3 => 'Knock out 3 opponents';
-
-  @override
   String missionCompletedMulti(String n) {
     return '$n missions complete!';
   }
+
+  @override
+  String get missionTichuPlay =>
+      'Play 5 games of Tichu (only games played to the end)';
+
+  @override
+  String get missionTichuWin => 'Win 3 games of Tichu';
+
+  @override
+  String get missionTichuWinStreak4 =>
+      'Win 4 Tichu games in a row (a loss resets it)';
+
+  @override
+  String get missionTichuOnetwo => 'Finish 1-2 with your team twice';
+
+  @override
+  String get missionTichuDogFinish =>
+      'Go out with the Dog as your last card (only as 1st or 2nd)';
+
+  @override
+  String get missionTichuBomb50 => 'Win 50 points from tricks won with bombs';
+
+  @override
+  String get missionTichuStraightWin => 'Win 4 tricks with a straight';
+
+  @override
+  String get missionTichuFullhouseWin => 'Win 4 tricks with a full house';
+
+  @override
+  String get missionTichuStepsWin => 'Win 3 tricks with consecutive pairs';
+
+  @override
+  String get missionTichuBombPlay => 'Play 4 bombs';
+
+  @override
+  String get missionTichuFirstOut5 => 'Go out first in 5 rounds';
+
+  @override
+  String get missionTichuBreakTichu => 'Stop opposing Tichu calls twice';
+
+  @override
+  String get missionMightyPlay =>
+      'Play 5 games of Mighty (only games played to the end)';
+
+  @override
+  String get missionMightyWin => 'Win 3 games of Mighty';
+
+  @override
+  String get missionMightyWinStreak4 =>
+      'Win 4 Mighty games in a row (a loss resets it)';
+
+  @override
+  String get missionMightyBid18 => 'Succeed twice with a bid of 18 or more';
+
+  @override
+  String get missionMightyNt => 'Succeed with a No Trump bid (any points)';
+
+  @override
+  String get missionMightyAll20 =>
+      'Take all 20 point cards as the declaring team';
+
+  @override
+  String get missionMightyFriend7 =>
+      'As the friend, take 7+ points in a single round';
+
+  @override
+  String get missionMightyMightyWin => 'Win 2 tricks with the Mighty';
+
+  @override
+  String get missionMightyTrump8 => 'Win 8 tricks with trump cards';
+
+  @override
+  String get missionMightyJokerWin => 'Win 2 tricks with the Joker';
+
+  @override
+  String get missionMightyDeclarerSuccess => 'Succeed twice as the declarer';
+
+  @override
+  String get missionSkPlay =>
+      'Play 5 games of Skull King (only games played to the end)';
+
+  @override
+  String get missionSkWin => 'Win 3 games of Skull King';
+
+  @override
+  String get missionSkWinStreak4 =>
+      'Win 4 Skull King games in a row (a loss resets it)';
+
+  @override
+  String get missionSkPirates2 =>
+      'Capture two pirates with the Skull King in one trick';
+
+  @override
+  String get missionSkMermaidKing => 'Capture the Skull King with a Mermaid';
+
+  @override
+  String get missionSkTenWin => 'Win 2 tricks with a number 10';
+
+  @override
+  String get missionSkBidHit6 => 'Hit your bid exactly 6 times';
+
+  @override
+  String get missionSkBidHit12 => 'Hit your bid exactly 12 times';
+
+  @override
+  String get missionSkZeroHit => 'Succeed with a bid of 0 twice';
+
+  @override
+  String get missionSkPirateWin => 'Win 4 tricks with a pirate';
+
+  @override
+  String get missionSkMermaidWin => 'Win 2 tricks with a mermaid';
+
+  @override
+  String get missionSkSkullkingWin => 'Win 3 tricks with the Skull King';
+
+  @override
+  String get missionLlPlay =>
+      'Play 5 games of Love Letter (only games played to the end)';
+
+  @override
+  String get missionLlWin => 'Win 3 games of Love Letter';
+
+  @override
+  String get missionLlWinStreak4 =>
+      'Win 4 Love Letter games in a row (a loss resets it)';
+
+  @override
+  String get missionLlGuardHit => 'Guess a card right with the Guard twice';
+
+  @override
+  String get missionLlBaronWin => 'Win 2 Baron showdowns';
+
+  @override
+  String get missionLlRoundWin => 'Win 6 rounds';
+
+  @override
+  String get missionLlLastStanding => 'Win 2 rounds by knocking out everyone';
+
+  @override
+  String get missionLlKnockOut6 => 'Knock out 6 opponents';
+
+  @override
+  String get missionTichuStraight8 => 'Play a straight of 8 or more cards';
+
+  @override
+  String get missionTichuStraight10 => 'Play a straight of 10 or more cards';
+
+  @override
+  String get missionTichuFullhouseK =>
+      'Win a trick with a K-high full house (triple of K or A)';
+
+  @override
+  String get missionTichuFullhouseA =>
+      'Win a trick with an Ace full house (triple of Aces)';
+
+  @override
+  String get missionTichuStraightFlush => 'Play a straight-flush bomb';
+
+  @override
+  String get missionTichuPhoenixAce =>
+      'Beat an Ace with the Phoenix played alone';
+
+  @override
+  String get missionTichuCounterSmall =>
+      'Make a counter Small Tichu when the opponents also call Small Tichu';
+
+  @override
+  String get missionTichuCounterLarge =>
+      'Make a counter Grand Tichu when the opponents also call Grand Tichu';
+
+  @override
+  String get missionTichuTichuOnetwo =>
+      'Call Tichu and finish 1-2 with your team';
+
+  @override
+  String get missionMightyNt20 => 'Succeed with a 20-point No Trump bid';
+
+  @override
+  String get missionMightyPoint2 => 'Take 2 or more point cards in one trick';
+
+  @override
+  String get missionMightyPoint4 => 'Take 4 or more point cards in one trick';
+
+  @override
+  String get missionMightyPoint5 => 'Take 5 point cards in one trick';
+
+  @override
+  String get missionMightyJokerKillFriend =>
+      'As the friend, use the Joker Call to kill the declarer\'s Joker';
+
+  @override
+  String get missionMightyJokerKillDefender =>
+      'As a defender, use the Joker Call to kill the declarer\'s Joker';
 }

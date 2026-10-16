@@ -382,10 +382,25 @@ class TichuGame {
 
     // Play the cards (arrange Phoenix position for display)
     const arrangedCards = arrangeCardsWithPhoenix(cardIds, combo);
+    const prevTop = this.currentTrick.length > 0 ? this.currentTrick[this.currentTrick.length - 1] : null;
     this.removeCardsFromHand(playerId, cardIds);
     this.currentTrick.push({ playerId, cards: arrangedCards, combo });
     this.lastPlayedBy = playerId;
     this.passCount = 0;
+
+    // 차례에 낸 폭탄도 이 길로 온다(차례 밖 폭탄만 playBomb 를 탄다).
+    if (String(combo.type).startsWith('bomb_')) {
+      this._pushMissionEvent({ playerId, event: 'tichu.bomb_played', amount: 1 });
+      if (combo.type === 'bomb_straight_flush') this._pushMissionEvent({ playerId, event: 'tichu.straight_flush', amount: 1 });
+    }
+    // 어려운 플레이(미션): 긴 스트레이트를 냈다 / 봉황 단독으로 A 를 잡았다.
+    if (combo.type === 'straight') {
+      if (combo.length >= 8) this._pushMissionEvent({ playerId, event: 'tichu.straight8', amount: 1 });
+      if (combo.length >= 10) this._pushMissionEvent({ playerId, event: 'tichu.straight10', amount: 1 });
+    }
+    if (combo.isPhoenix && prevTop && prevTop.combo && prevTop.combo.type === 'single' && prevTop.combo.value === 14) {
+      this._pushMissionEvent({ playerId, event: 'tichu.phoenix_ace', amount: 1 });
+    }
 
     const result = {
       success: true,
@@ -483,6 +498,7 @@ class TichuGame {
     this.currentTrick.push({ playerId, cards: cardIds, combo });
     this.lastPlayedBy = playerId;
     this._pushMissionEvent({ playerId, event: 'tichu.bomb_played', amount: 1 });
+    if (combo.type === 'bomb_straight_flush') this._pushMissionEvent({ playerId, event: 'tichu.straight_flush', amount: 1 });
     this.passCount = 0;
     this.currentPlayer = playerId;
 
@@ -736,7 +752,12 @@ class TichuGame {
       if (lastPlay.cards.includes('special_dragon')) push('tichu.dragon_win');
       if (lastPlay.cards.includes('special_phoenix')) push('tichu.phoenix_win');
       if (t === 'straight') push('tichu.straight_win');
-      else if (t === 'full_house') push('tichu.fullhouse_win');
+      else if (t === 'full_house') {
+        push('tichu.fullhouse_win');
+        // K(13)·A(14) 트리플의 풀하우스로 이긴 경우.
+        if (lastPlay.combo.value >= 13) push('tichu.fullhouse_k');
+        if (lastPlay.combo.value >= 14) push('tichu.fullhouse_a');
+      }
       else if (t === 'steps') push('tichu.steps_win');
     }
     if (lastPlay.cards.includes('special_dragon')) {
@@ -1235,6 +1256,21 @@ class TichuGame {
     }
     for (const pid of this.largeTichuDeclarations) {
       if (pid === first) this._pushMissionEvent({ playerId: pid, event: 'tichu.large_success', amount: 1 });
+    }
+    // 맞티츄: 상대 팀도 같은 종류의 티츄를 선언한 라운드에, 내가 선언하고 1등으로 나갔다.
+    const opponentCalled = (list, pid) => list.some((o) => teamOfPid(o) !== teamOfPid(pid));
+    if (first) {
+      if (this.smallTichuDeclarations.includes(first) && opponentCalled(this.smallTichuDeclarations, first)) {
+        this._pushMissionEvent({ playerId: first, event: 'tichu.counter_small', amount: 1 });
+      }
+      if (this.largeTichuDeclarations.includes(first) && opponentCalled(this.largeTichuDeclarations, first)) {
+        this._pushMissionEvent({ playerId: first, event: 'tichu.counter_large', amount: 1 });
+      }
+      // 티츄를 선언하고 우리 팀이 원투로 끝냈다.
+      const declared = this.smallTichuDeclarations.includes(first) || this.largeTichuDeclarations.includes(first);
+      if (declared && this.finishOrder.length >= 2 && teamOfPid(this.finishOrder[1]) === teamOfPid(first)) {
+        this._pushMissionEvent({ playerId: first, event: 'tichu.tichu_onetwo', amount: 1 });
+      }
     }
     // 상대 팀의 티츄(스몰·라지) 선언을 막았을 때: 선언자가 1등을 못 한 라운드, 상대 팀 전원.
     for (const decl of [...this.smallTichuDeclarations, ...this.largeTichuDeclarations]) {

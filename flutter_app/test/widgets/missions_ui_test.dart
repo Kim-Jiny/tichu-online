@@ -136,12 +136,12 @@ MissionsState _state() => MissionsState.fromJson({
   'active': [
     {
       'id': 1,
-      'key': 'tichu_bomb30',
+      'key': 'tichu_bomb50',
       'game': 'tichu',
       'tier': 3,
       'tokens': 3,
-      'progress': 15,
-      'target': 30,
+      'progress': 25,
+      'target': 50,
       'status': 'active',
       'expiresDay': '2026-10-18',
     },
@@ -169,7 +169,7 @@ MissionsState _state() => MissionsState.fromJson({
           'picked': false,
         },
         {
-          'key': 'tichu_small',
+          'key': 'tichu_fullhouse_k',
           'game': 'tichu',
           'tier': 2,
           'tokens': 2,
@@ -177,11 +177,11 @@ MissionsState _state() => MissionsState.fromJson({
           'picked': false,
         },
         {
-          'key': 'tichu_bomb30',
+          'key': 'tichu_bomb50',
           'game': 'tichu',
           'tier': 3,
           'tokens': 3,
-          'target': 30,
+          'target': 50,
           'picked': true,
         },
       ],
@@ -262,10 +262,10 @@ void main() {
     await t.pump(const Duration(milliseconds: 600));
 
     expect(find.text('미션'), findsWidgets);
-    expect(find.text('폭탄으로 점수 30점 얻기'), findsWidgets);
-    expect(find.text('15/30'), findsOneWidget);
+    expect(find.text('폭탄으로 이긴 트릭에서 점수 50점 얻기'), findsWidgets);
+    expect(find.text('25/50'), findsOneWidget);
     expect(find.text('3/7일'), findsOneWidget);
-    expect(find.text('티츄 5판 하기'), findsOneWidget);
+    expect(find.textContaining('티츄 5판 하기'), findsOneWidget);
     // 이미 받은 미션은 '진행 중' 버튼, 나머지는 받기.
     // 외곽선 글자라 한 라벨이 Text 두 개(테두리+채움)로 그려진다.
     expect(find.text('받기'), findsNWidgets(4));
@@ -294,7 +294,7 @@ void main() {
     expect(game.calls, contains('history'));
     expect(find.text('토큰 내역'), findsOneWidget);
     expect(find.text('연속 달성 보너스'), findsOneWidget);
-    expect(find.text('티츄 5판 하기'), findsWidgets);
+    expect(find.textContaining('티츄 5판 하기'), findsWidgets);
     expect(find.text('상점 구매: 민트 구름'), findsOneWidget);
     expect(find.text('운영자 지급'), findsOneWidget);
     expect(find.text('+5'), findsOneWidget);
@@ -357,7 +357,7 @@ void main() {
         balance: 1,
       ),
       const MissionCompletion(
-        key: 'tichu_small',
+        key: 'tichu_fullhouse_k',
         tokens: 2,
         streakBonus: 5,
         balance: 8,
@@ -394,7 +394,7 @@ void main() {
     await t.pump();
     game.pending.add(
       const MissionCompletion(
-        key: 'tichu_large',
+        key: 'tichu_counter_large',
         tokens: 4,
         streakBonus: 0,
         balance: 4,
@@ -403,7 +403,7 @@ void main() {
     game.notifyListeners();
     await t.pump();
     await t.pump(const Duration(milliseconds: 600));
-    expect(find.textContaining('라지 티츄 성공하기'), findsOneWidget);
+    expect(find.textContaining('맞라지 티츄로 성공하기'), findsOneWidget);
     expect(find.text('토큰 +4'), findsOneWidget);
     await t.pump(const Duration(seconds: 5));
   });
@@ -454,12 +454,12 @@ void main() {
       'active': [
         {
           'id': 1,
-          'key': 'tichu_bomb30',
+          'key': 'tichu_bomb50',
           'game': 'tichu',
           'tier': 3,
           'tokens': 3,
           'progress': 0,
-          'target': 30,
+          'target': 50,
           'status': 'active',
           'expiresDay': '2026-10-18',
         },

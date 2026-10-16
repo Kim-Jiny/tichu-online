@@ -974,7 +974,10 @@ class MightyGame {
         push('mighty.trump_win');
       }
       const pointsInTrick = this.currentTrick.filter((p) => (getCardInfo(p.cardId) || {}).point > 0).length;
-      if (pointsInTrick >= 3) push('mighty.point_trick');
+      // 한 트릭에 점수 카드를 몇 장 먹었는지: 2장 이상 / 4장 이상 / 5장 이상.
+      if (pointsInTrick >= 2) push('mighty.point_trick2');
+      if (pointsInTrick >= 4) push('mighty.point_trick4');
+      if (pointsInTrick >= 5) push('mighty.point_trick5');
     }
 
     // Save trick cards for trick_end display before clearing
@@ -999,6 +1002,20 @@ class MightyGame {
       cards: this.currentTrick.slice(),
       winner,
     });
+
+    // 조커콜로 주공의 조커를 죽였다(미션): 조커콜 카드를 선 사람이 주공이 아니고, 그 트릭에
+    // 주공이 낸 조커가 힘을 잃었다. 선 사람이 친구인지 야당인지에 따라 이벤트가 다르다.
+    if (this.jokerCallActive && this.currentTrick.length > 0 && this.currentTrick[0].cardId === this.getJokerCallCard()) {
+      const caller = this.currentTrick[0].pid;
+      const jokerPlay = this.currentTrick.find((p) => p.cardId === 'mighty_joker');
+      if (jokerPlay && this.declarer && jokerPlay.pid === this.declarer && caller !== this.declarer) {
+        this._pushMissionEvent({
+          playerId: caller,
+          event: caller === this.partner ? 'mighty.joker_kill_friend' : 'mighty.joker_kill_defender',
+          amount: 1,
+        });
+      }
+    }
 
     this.currentTrick = [];
     this.jokerSuitDeclared = null;
@@ -1257,6 +1274,7 @@ class MightyGame {
     const push = (playerId, event, amount = 1) => this._pushMissionEvent({ playerId, event, amount });
     if (result.success && this.currentBid.points >= 20) push(declarer, 'mighty.bid20_success');
     if (result.success && this.trumpSuit === 'no_trump') push(declarer, 'mighty.nt_success');
+    if (result.success && this.trumpSuit === 'no_trump' && this.currentBid.points >= 20) push(declarer, 'mighty.nt20_success');
     if (result.success && this.currentBid.points >= 18) push(declarer, 'mighty.bid18_success');
     if (result.success) {
       push(declarer, 'mighty.declarer_success');

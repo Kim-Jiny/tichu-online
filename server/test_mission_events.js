@@ -99,6 +99,7 @@ const has = (evs, pid, event, amount) =>
   check('노트럼프 성공', has(ev, 'p0', 'mighty.nt_success'));
   check('여당 20장 독식(주공·친구 모두)', has(ev, 'p0', 'mighty.declarer_all20') && has(ev, 'p1', 'mighty.declarer_all20'));
   check('친구가 7점 이상', has(ev, 'p1', 'mighty.friend_points', 7));
+  check('NT 20점 성공', has(ev, 'p0', 'mighty.nt20_success'), JSON.stringify(ev));
   g.currentBid = { points: 15, suit: 'spade', bidder: 'p0' };
   g.trumpSuit = 'spade';
   g.pointCards.p1 = new Array(6).fill('x');
@@ -170,9 +171,9 @@ const has = (evs, pid, event, amount) =>
   gb.state = 'playing';
   gb.hands.p0 = ['spade_9', 'heart_9', 'club_9', 'diamond_9', 'spade_2'];
   gb.currentPlayer = 'p0';
-  const rb = gb.handleAction('p0', { type: 'play_bomb', cards: ['spade_9', 'heart_9', 'club_9', 'diamond_9'] });
+  const rb = gb.handleAction('p0', { type: 'play_cards', cards: ['spade_9', 'heart_9', 'club_9', 'diamond_9'] });
   const evb = gb.drainMissionEvents();
-  check('폭탄을 내면 bomb_played', (rb && rb.success) ? has(evb, 'p0', 'tichu.bomb_played') : true, JSON.stringify([rb, evb]));
+  check('폭탄을 내면 bomb_played', !!(rb && rb.success) && has(evb, 'p0', 'tichu.bomb_played'), JSON.stringify([rb, evb]));
 
   // 라운드 끝: 1등 / 티츄 저지.
   const gr = mk();
@@ -190,6 +191,109 @@ const has = (evs, pid, event, amount) =>
 }
 
 {
+  // 맞티츄·티츄 원투, 긴 스트레이트, K/A 풀하우스, 스트레이트 플러시, 봉황으로 A 잡기.
+  const ids = ['p0', 'p1', 'p2', 'p3'];
+  const names = { p0: 'A', p1: 'B', p2: 'C', p3: 'D' };
+  const mk = () => {
+    const g = new TichuGame(ids, names, 1000);
+    g.hands = { p0: ['spade_2'], p1: ['spade_2'], p2: ['spade_2'], p3: ['spade_2'] };
+    g.trickPiles = { p0: [], p1: [], p2: [], p3: [] };
+    return g;
+  };
+  const round = (order, small, large) => {
+    const g = mk();
+    g.finishOrder = order; g.smallTichuDeclarations = small; g.largeTichuDeclarations = large;
+    g.collectRoundMissionEvents();
+    return g.drainMissionEvents();
+  };
+  // p0(팀A) 이 1등, 상대 팀(p1) 도 스몰 선언 → 맞스몰.
+  let ev = round(['p0', 'p2', 'p1', 'p3'], ['p0', 'p1'], []);
+  check('맞스몰 성공', has(ev, 'p0', 'tichu.counter_small') && !has(ev, 'p0', 'tichu.counter_large'), JSON.stringify(ev));
+  ev = round(['p0', 'p1', 'p2', 'p3'], ['p0'], []);
+  check('상대가 선언하지 않았으면 맞스몰이 아님', !has(ev, 'p0', 'tichu.counter_small'));
+  ev = round(['p0', 'p1', 'p2', 'p3'], ['p0'], ['p1']);
+  check('상대는 라지, 나는 스몰이면 맞스몰이 아님', !has(ev, 'p0', 'tichu.counter_small') && !has(ev, 'p0', 'tichu.counter_large'));
+  ev = round(['p1', 'p0', 'p2', 'p3'], ['p0', 'p1'], []);
+  check('상대가 1등이면 내 맞스몰은 실패', !has(ev, 'p0', 'tichu.counter_small') && has(ev, 'p1', 'tichu.counter_small') === true);
+  ev = round(['p0', 'p2', 'p1', 'p3'], [], ['p0', 'p3']);
+  check('맞라지 성공', has(ev, 'p0', 'tichu.counter_large'), JSON.stringify(ev));
+  ev = round(['p0', 'p2', 'p1', 'p3'], ['p0'], []);
+  check('티츄 선언 + 우리 팀 원투', has(ev, 'p0', 'tichu.tichu_onetwo'), JSON.stringify(ev));
+  ev = round(['p0', 'p1', 'p2', 'p3'], ['p0'], []);
+  check('원투가 아니면 티츄 원투 아님', !has(ev, 'p0', 'tichu.tichu_onetwo'));
+  ev = round(['p0', 'p2', 'p1', 'p3'], [], []);
+  check('선언 없는 원투는 티츄 원투 아님', !has(ev, 'p0', 'tichu.tichu_onetwo'));
+
+  // 긴 스트레이트.
+  const longStraight = (n) => {
+    const g = mk();
+    g.state = 'playing';
+    const suits = ['spade', 'heart', 'club', 'diamond'];
+    const RK = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const cards = []; for (let i = 0; i < n; i++) cards.push(`${suits[i % 3]}_${RK[i]}`);
+    g.hands.p0 = [...cards, 'diamond_A'];
+    g.currentPlayer = 'p0';
+    const r = g.handleAction('p0', { type: 'play_cards', cards });
+    return { r, ev: g.drainMissionEvents() };
+  };
+  let ls = longStraight(8);
+  check('8장 스트레이트', ls.r.success && has(ls.ev, 'p0', 'tichu.straight8') && !has(ls.ev, 'p0', 'tichu.straight10'), JSON.stringify([ls.r.success, ls.ev]));
+  ls = longStraight(10);
+  check('10장 스트레이트', ls.r.success && has(ls.ev, 'p0', 'tichu.straight10') && has(ls.ev, 'p0', 'tichu.straight8'), JSON.stringify([ls.r.success, ls.ev]));
+  ls = longStraight(5);
+  check('5장 스트레이트는 해당 없음', ls.r.success && !has(ls.ev, 'p0', 'tichu.straight8'));
+
+  // K / A 풀하우스로 이긴 트릭.
+  const fh = (rank) => {
+    const g = mk();
+    g.currentTrick = [{ playerId: 'p0', cards: [`spade_${rank}`, `heart_${rank}`, `club_${rank}`, 'spade_3', 'heart_3'], combo: { type: 'full_house', length: 5, value: rank === 'K' ? 13 : rank === 'A' ? 14 : 9 } }];
+    g.lastPlayedBy = 'p0';
+    g.resolveTrick();
+    return g.drainMissionEvents();
+  };
+  ev = fh('K');
+  check('K 풀하우스', has(ev, 'p0', 'tichu.fullhouse_k') && !has(ev, 'p0', 'tichu.fullhouse_a'), JSON.stringify(ev));
+  ev = fh('A');
+  check('A 풀하우스는 K 조건도 만족', has(ev, 'p0', 'tichu.fullhouse_a') && has(ev, 'p0', 'tichu.fullhouse_k'));
+  ev = fh('9');
+  check('9 풀하우스는 일반 풀하우스만', has(ev, 'p0', 'tichu.fullhouse_win') && !has(ev, 'p0', 'tichu.fullhouse_k'));
+
+  // 스트레이트 플러시 폭탄.
+  const gf = mk();
+  gf.state = 'playing';
+  gf.hands.p0 = ['spade_3', 'spade_4', 'spade_5', 'spade_6', 'spade_7', 'heart_K'];
+  gf.currentPlayer = 'p0';
+  const rf = gf.handleAction('p0', { type: 'play_cards', cards: ['spade_3', 'spade_4', 'spade_5', 'spade_6', 'spade_7'] });
+  const evf = gf.drainMissionEvents();
+  check('스트레이트 플러시 폭탄', rf.success && has(evf, 'p0', 'tichu.straight_flush') && has(evf, 'p0', 'tichu.bomb_played'), JSON.stringify([rf.success, evf]));
+  const g4k = mk();
+  g4k.state = 'playing';
+  g4k.hands.p0 = ['spade_9', 'heart_9', 'club_9', 'diamond_9', 'spade_2'];
+  g4k.currentPlayer = 'p0';
+  g4k.handleAction('p0', { type: 'play_cards', cards: ['spade_9', 'heart_9', 'club_9', 'diamond_9'] });
+  check('4장 폭탄은 스트레이트 플러시가 아님', !has(g4k.drainMissionEvents(), 'p0', 'tichu.straight_flush'));
+
+  // 봉황 단독으로 A 잡기.
+  const gp = mk();
+  gp.state = 'playing';
+  gp.hands.p0 = ['special_phoenix', 'spade_2'];
+  gp.hands.p1 = ['spade_3', 'spade_4'];
+  gp.currentTrick = [{ playerId: 'p1', cards: ['spade_A'], combo: { type: 'single', length: 1, value: 14 } }];
+  gp.lastPlayedBy = 'p1';
+  gp.currentPlayer = 'p0';
+  const rp = gp.handleAction('p0', { type: 'play_cards', cards: ['special_phoenix'] });
+  check('봉황 단독으로 A 잡기', rp.success && has(gp.drainMissionEvents(), 'p0', 'tichu.phoenix_ace'), JSON.stringify(rp));
+  const gk = mk();
+  gk.state = 'playing';
+  gk.hands.p0 = ['special_phoenix', 'spade_2'];
+  gk.currentTrick = [{ playerId: 'p1', cards: ['spade_K'], combo: { type: 'single', length: 1, value: 13 } }];
+  gk.lastPlayedBy = 'p1';
+  gk.currentPlayer = 'p0';
+  gk.handleAction('p0', { type: 'play_cards', cards: ['special_phoenix'] });
+  check('K 를 잡은 건 아님', !has(gk.drainMissionEvents(), 'p0', 'tichu.phoenix_ace'));
+}
+
+{
   const ids = ['p0', 'p1', 'p2', 'p3', 'p4'];
   const names = Object.fromEntries(ids.map((i) => [i, i]));
   const g = new MightyGame(ids, names, {});
@@ -203,6 +307,50 @@ const has = (evs, pid, event, amount) =>
   g._collectRoundMissionEvents({ success: false, declarerPoints: 9 });
   ev = g.drainMissionEvents();
   check('실패하면 야당 셋이 막은 걸로', has(ev, 'p2', 'mighty.defend') && has(ev, 'p3', 'mighty.defend') && has(ev, 'p4', 'mighty.defend') && !has(ev, 'p0', 'mighty.defend') && !has(ev, 'p1', 'mighty.defend'), JSON.stringify(ev));
+}
+
+{
+  // 마이티: 한 '트릭'에서 먹은 점수 카드 수 / 조커콜로 주공 조커 죽이기.
+  const ids = ['p0', 'p1', 'p2', 'p3', 'p4'];
+  const names = Object.fromEntries(ids.map((i) => [i, i]));
+  const mk = () => {
+    const g = new MightyGame(ids, names, {});
+    g.start();
+    g.trumpSuit = 'heart';
+    g.declarer = 'p0'; g.partner = 'p1';
+    g.currentBid = { points: 15, suit: 'heart', bidder: 'p0' };
+    g.pointCards = { p0: [], p1: [], p2: [], p3: [], p4: [] };
+    g.tricks = [];
+    g.currentTrick = [];
+    return g;
+  };
+  const trick = (plays, setup) => {
+    const g = mk();
+    if (setup) setup(g);
+    g.currentTrick = plays.map(([pid, cardId]) => ({ pid, cardId }));
+    g._resolveTrick();
+    return g.drainMissionEvents();
+  };
+  // 점수 카드: A·K·Q·J·10 (같은 문양으로 5장 = 모두 점수 카드).
+  let ev = trick([['p0', 'mighty_heart_A'], ['p1', 'mighty_heart_K'], ['p2', 'mighty_heart_Q'], ['p3', 'mighty_heart_J'], ['p4', 'mighty_heart_10']]);
+  check('한 트릭에 점수 카드 5장 → 2·4·5장 모두', has(ev, 'p0', 'mighty.point_trick2') && has(ev, 'p0', 'mighty.point_trick4') && has(ev, 'p0', 'mighty.point_trick5'), JSON.stringify(ev));
+  ev = trick([['p0', 'mighty_heart_A'], ['p1', 'mighty_heart_K'], ['p2', 'mighty_heart_Q'], ['p3', 'mighty_heart_J'], ['p4', 'mighty_heart_2']]);
+  check('점수 카드 4장 → 2·4장, 5장은 아님', has(ev, 'p0', 'mighty.point_trick4') && has(ev, 'p0', 'mighty.point_trick2') && !has(ev, 'p0', 'mighty.point_trick5'), JSON.stringify(ev));
+  ev = trick([['p0', 'mighty_heart_A'], ['p1', 'mighty_heart_K'], ['p2', 'mighty_heart_3'], ['p3', 'mighty_heart_4'], ['p4', 'mighty_heart_2']]);
+  check('점수 카드 2장 → 2장만', has(ev, 'p0', 'mighty.point_trick2') && !has(ev, 'p0', 'mighty.point_trick4'), JSON.stringify(ev));
+  ev = trick([['p0', 'mighty_heart_A'], ['p1', 'mighty_heart_5'], ['p2', 'mighty_heart_3'], ['p3', 'mighty_heart_4'], ['p4', 'mighty_heart_2']]);
+  check('점수 카드 1장은 해당 없음', !ev.some((e) => e.event.startsWith('mighty.point_trick')), JSON.stringify(ev));
+
+  // 조커콜: 친구(p1)가 조커콜 카드를 선으로 내고, 주공(p0)이 조커를 냈다.
+  const callCard = mk().getJokerCallCard();
+  ev = trick([['p1', callCard], ['p0', 'mighty_joker'], ['p2', 'mighty_diamond_3'], ['p3', 'mighty_diamond_4'], ['p4', 'mighty_diamond_5']], (g) => { g.jokerCallActive = true; });
+  check('친구가 조커콜로 주공의 조커를 죽임', has(ev, 'p1', 'mighty.joker_kill_friend') && !has(ev, 'p1', 'mighty.joker_kill_defender'), JSON.stringify(ev));
+  ev = trick([['p2', callCard], ['p0', 'mighty_joker'], ['p1', 'mighty_diamond_3'], ['p3', 'mighty_diamond_4'], ['p4', 'mighty_diamond_5']], (g) => { g.jokerCallActive = true; });
+  check('야당이 조커콜로 주공의 조커를 죽임', has(ev, 'p2', 'mighty.joker_kill_defender') && !has(ev, 'p2', 'mighty.joker_kill_friend'), JSON.stringify(ev));
+  ev = trick([['p2', callCard], ['p3', 'mighty_joker'], ['p1', 'mighty_diamond_3'], ['p0', 'mighty_diamond_4'], ['p4', 'mighty_diamond_5']], (g) => { g.jokerCallActive = true; });
+  check('주공이 아닌 사람의 조커는 해당 없음', ev.every((e) => !e.event.startsWith('mighty.joker_kill')), JSON.stringify(ev));
+  ev = trick([['p2', callCard], ['p0', 'mighty_joker'], ['p1', 'mighty_diamond_3'], ['p3', 'mighty_diamond_4'], ['p4', 'mighty_diamond_5']], (g) => { g.jokerCallActive = false; });
+  check('조커콜을 선언하지 않았으면 해당 없음', ev.every((e) => !e.event.startsWith('mighty.joker_kill')), JSON.stringify(ev));
 }
 
 {

@@ -9513,126 +9513,6 @@ abstract class L10n {
   /// **'Love Letter'**
   String get missionsGameLoveLetter;
 
-  /// No description provided for @missionTichuPlay.
-  ///
-  /// In en, this message translates to:
-  /// **'Play 5 games of Tichu'**
-  String get missionTichuPlay;
-
-  /// No description provided for @missionTichuWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a game of Tichu'**
-  String get missionTichuWin;
-
-  /// No description provided for @missionTichuSmall.
-  ///
-  /// In en, this message translates to:
-  /// **'Make a Small Tichu'**
-  String get missionTichuSmall;
-
-  /// No description provided for @missionTichuLarge.
-  ///
-  /// In en, this message translates to:
-  /// **'Make a Grand Tichu'**
-  String get missionTichuLarge;
-
-  /// No description provided for @missionTichuOnetwo.
-  ///
-  /// In en, this message translates to:
-  /// **'Finish 1st and 2nd with your team'**
-  String get missionTichuOnetwo;
-
-  /// No description provided for @missionTichuDogFinish.
-  ///
-  /// In en, this message translates to:
-  /// **'Go out 1st or 2nd with the Dog as your last card'**
-  String get missionTichuDogFinish;
-
-  /// No description provided for @missionTichuBomb30.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 30 points with bombs'**
-  String get missionTichuBomb30;
-
-  /// No description provided for @missionMightyPlay.
-  ///
-  /// In en, this message translates to:
-  /// **'Play 5 games of Mighty'**
-  String get missionMightyPlay;
-
-  /// No description provided for @missionMightyWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a game of Mighty'**
-  String get missionMightyWin;
-
-  /// No description provided for @missionMightyBid20.
-  ///
-  /// In en, this message translates to:
-  /// **'Succeed with a 20-point bid'**
-  String get missionMightyBid20;
-
-  /// No description provided for @missionMightyNt.
-  ///
-  /// In en, this message translates to:
-  /// **'Succeed with a No Trump bid'**
-  String get missionMightyNt;
-
-  /// No description provided for @missionMightyAll20.
-  ///
-  /// In en, this message translates to:
-  /// **'Take all 20 point cards as the declaring team'**
-  String get missionMightyAll20;
-
-  /// No description provided for @missionMightyFriend7.
-  ///
-  /// In en, this message translates to:
-  /// **'As the friend, take 7 or more points in a round'**
-  String get missionMightyFriend7;
-
-  /// No description provided for @missionSkPlay.
-  ///
-  /// In en, this message translates to:
-  /// **'Play 5 games of Skull King'**
-  String get missionSkPlay;
-
-  /// No description provided for @missionSkWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a game of Skull King'**
-  String get missionSkWin;
-
-  /// No description provided for @missionSkPirates2.
-  ///
-  /// In en, this message translates to:
-  /// **'Capture two pirates with the Skull King in one trick'**
-  String get missionSkPirates2;
-
-  /// No description provided for @missionSkMermaidKing.
-  ///
-  /// In en, this message translates to:
-  /// **'Capture the Skull King with a Mermaid'**
-  String get missionSkMermaidKing;
-
-  /// No description provided for @missionSkTenWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with a number 10'**
-  String get missionSkTenWin;
-
-  /// No description provided for @missionLlPlay.
-  ///
-  /// In en, this message translates to:
-  /// **'Play 5 games of Love Letter'**
-  String get missionLlPlay;
-
-  /// No description provided for @missionLlWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a game of Love Letter'**
-  String get missionLlWin;
-
   /// No description provided for @tokenShopTitle.
   ///
   /// In en, this message translates to:
@@ -9945,173 +9825,359 @@ abstract class L10n {
   /// **'Until midnight today'**
   String get missionsExpiresToday;
 
-  /// No description provided for @missionTichuWin2.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 games of Tichu'**
-  String get missionTichuWin2;
-
-  /// No description provided for @missionTichuDragonWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with the Dragon'**
-  String get missionTichuDragonWin;
-
-  /// No description provided for @missionTichuPhoenixWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 tricks with the Phoenix in your play'**
-  String get missionTichuPhoenixWin;
-
-  /// No description provided for @missionTichuStraightWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 tricks with a straight'**
-  String get missionTichuStraightWin;
-
-  /// No description provided for @missionTichuFullhouseWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 tricks with a full house'**
-  String get missionTichuFullhouseWin;
-
-  /// No description provided for @missionTichuStepsWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with consecutive pairs'**
-  String get missionTichuStepsWin;
-
-  /// No description provided for @missionTichuBombPlay2.
-  ///
-  /// In en, this message translates to:
-  /// **'Play 2 bombs'**
-  String get missionTichuBombPlay2;
-
-  /// No description provided for @missionTichuFirstOut3.
-  ///
-  /// In en, this message translates to:
-  /// **'Go out first in 3 rounds'**
-  String get missionTichuFirstOut3;
-
-  /// No description provided for @missionTichuBreakTichu.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop an opposing Tichu call'**
-  String get missionTichuBreakTichu;
-
-  /// No description provided for @missionMightyMightyWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with the Mighty'**
-  String get missionMightyMightyWin;
-
-  /// No description provided for @missionMightyJokerWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with the Joker'**
-  String get missionMightyJokerWin;
-
-  /// No description provided for @missionMightyTrump3.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 3 tricks with trump cards'**
-  String get missionMightyTrump3;
-
-  /// No description provided for @missionMightyPointTrick.
-  ///
-  /// In en, this message translates to:
-  /// **'Take 3+ point cards in one trick'**
-  String get missionMightyPointTrick;
-
-  /// No description provided for @missionMightyDeclarerSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Succeed as the declarer'**
-  String get missionMightyDeclarerSuccess;
-
-  /// No description provided for @missionMightyDefend.
-  ///
-  /// In en, this message translates to:
-  /// **'Stop the declarer as a defender'**
-  String get missionMightyDefend;
-
-  /// No description provided for @missionMightyFriendSuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Help the declarer win as the friend'**
-  String get missionMightyFriendSuccess;
-
-  /// No description provided for @missionMightyBid18.
-  ///
-  /// In en, this message translates to:
-  /// **'Succeed with a bid of 18 or more'**
-  String get missionMightyBid18;
-
-  /// No description provided for @missionSkBidHit3.
-  ///
-  /// In en, this message translates to:
-  /// **'Hit your bid exactly 3 times'**
-  String get missionSkBidHit3;
-
-  /// No description provided for @missionSkZeroHit.
-  ///
-  /// In en, this message translates to:
-  /// **'Succeed with a bid of 0'**
-  String get missionSkZeroHit;
-
-  /// No description provided for @missionSkPirateWin2.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 tricks with a pirate'**
-  String get missionSkPirateWin2;
-
-  /// No description provided for @missionSkMermaidWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a trick with a mermaid'**
-  String get missionSkMermaidWin;
-
-  /// No description provided for @missionSkSkullkingWin2.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 2 tricks with the Skull King'**
-  String get missionSkSkullkingWin2;
-
-  /// No description provided for @missionLlGuardHit.
-  ///
-  /// In en, this message translates to:
-  /// **'Guess a card right with the Guard'**
-  String get missionLlGuardHit;
-
-  /// No description provided for @missionLlBaronWin.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a Baron showdown'**
-  String get missionLlBaronWin;
-
-  /// No description provided for @missionLlRoundWin3.
-  ///
-  /// In en, this message translates to:
-  /// **'Win 3 rounds'**
-  String get missionLlRoundWin3;
-
-  /// No description provided for @missionLlLastStanding.
-  ///
-  /// In en, this message translates to:
-  /// **'Win a round by knocking out everyone'**
-  String get missionLlLastStanding;
-
-  /// No description provided for @missionLlKnockOut3.
-  ///
-  /// In en, this message translates to:
-  /// **'Knock out 3 opponents'**
-  String get missionLlKnockOut3;
-
   /// No description provided for @missionCompletedMulti.
   ///
   /// In en, this message translates to:
   /// **'{n} missions complete!'**
   String missionCompletedMulti(String n);
+
+  /// No description provided for @missionTichuPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play 5 games of Tichu (only games played to the end)'**
+  String get missionTichuPlay;
+
+  /// No description provided for @missionTichuWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 games of Tichu'**
+  String get missionTichuWin;
+
+  /// No description provided for @missionTichuWinStreak4.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 Tichu games in a row (a loss resets it)'**
+  String get missionTichuWinStreak4;
+
+  /// No description provided for @missionTichuOnetwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish 1-2 with your team twice'**
+  String get missionTichuOnetwo;
+
+  /// No description provided for @missionTichuDogFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Go out with the Dog as your last card (only as 1st or 2nd)'**
+  String get missionTichuDogFinish;
+
+  /// No description provided for @missionTichuBomb50.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 50 points from tricks won with bombs'**
+  String get missionTichuBomb50;
+
+  /// No description provided for @missionTichuStraightWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 tricks with a straight'**
+  String get missionTichuStraightWin;
+
+  /// No description provided for @missionTichuFullhouseWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 tricks with a full house'**
+  String get missionTichuFullhouseWin;
+
+  /// No description provided for @missionTichuStepsWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 tricks with consecutive pairs'**
+  String get missionTichuStepsWin;
+
+  /// No description provided for @missionTichuBombPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play 4 bombs'**
+  String get missionTichuBombPlay;
+
+  /// No description provided for @missionTichuFirstOut5.
+  ///
+  /// In en, this message translates to:
+  /// **'Go out first in 5 rounds'**
+  String get missionTichuFirstOut5;
+
+  /// No description provided for @missionTichuBreakTichu.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop opposing Tichu calls twice'**
+  String get missionTichuBreakTichu;
+
+  /// No description provided for @missionMightyPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play 5 games of Mighty (only games played to the end)'**
+  String get missionMightyPlay;
+
+  /// No description provided for @missionMightyWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 games of Mighty'**
+  String get missionMightyWin;
+
+  /// No description provided for @missionMightyWinStreak4.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 Mighty games in a row (a loss resets it)'**
+  String get missionMightyWinStreak4;
+
+  /// No description provided for @missionMightyBid18.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed twice with a bid of 18 or more'**
+  String get missionMightyBid18;
+
+  /// No description provided for @missionMightyNt.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed with a No Trump bid (any points)'**
+  String get missionMightyNt;
+
+  /// No description provided for @missionMightyAll20.
+  ///
+  /// In en, this message translates to:
+  /// **'Take all 20 point cards as the declaring team'**
+  String get missionMightyAll20;
+
+  /// No description provided for @missionMightyFriend7.
+  ///
+  /// In en, this message translates to:
+  /// **'As the friend, take 7+ points in a single round'**
+  String get missionMightyFriend7;
+
+  /// No description provided for @missionMightyMightyWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 tricks with the Mighty'**
+  String get missionMightyMightyWin;
+
+  /// No description provided for @missionMightyTrump8.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 8 tricks with trump cards'**
+  String get missionMightyTrump8;
+
+  /// No description provided for @missionMightyJokerWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 tricks with the Joker'**
+  String get missionMightyJokerWin;
+
+  /// No description provided for @missionMightyDeclarerSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed twice as the declarer'**
+  String get missionMightyDeclarerSuccess;
+
+  /// No description provided for @missionSkPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play 5 games of Skull King (only games played to the end)'**
+  String get missionSkPlay;
+
+  /// No description provided for @missionSkWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 games of Skull King'**
+  String get missionSkWin;
+
+  /// No description provided for @missionSkWinStreak4.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 Skull King games in a row (a loss resets it)'**
+  String get missionSkWinStreak4;
+
+  /// No description provided for @missionSkPirates2.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture two pirates with the Skull King in one trick'**
+  String get missionSkPirates2;
+
+  /// No description provided for @missionSkMermaidKing.
+  ///
+  /// In en, this message translates to:
+  /// **'Capture the Skull King with a Mermaid'**
+  String get missionSkMermaidKing;
+
+  /// No description provided for @missionSkTenWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 tricks with a number 10'**
+  String get missionSkTenWin;
+
+  /// No description provided for @missionSkBidHit6.
+  ///
+  /// In en, this message translates to:
+  /// **'Hit your bid exactly 6 times'**
+  String get missionSkBidHit6;
+
+  /// No description provided for @missionSkBidHit12.
+  ///
+  /// In en, this message translates to:
+  /// **'Hit your bid exactly 12 times'**
+  String get missionSkBidHit12;
+
+  /// No description provided for @missionSkZeroHit.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed with a bid of 0 twice'**
+  String get missionSkZeroHit;
+
+  /// No description provided for @missionSkPirateWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 tricks with a pirate'**
+  String get missionSkPirateWin;
+
+  /// No description provided for @missionSkMermaidWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 tricks with a mermaid'**
+  String get missionSkMermaidWin;
+
+  /// No description provided for @missionSkSkullkingWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 tricks with the Skull King'**
+  String get missionSkSkullkingWin;
+
+  /// No description provided for @missionLlPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play 5 games of Love Letter (only games played to the end)'**
+  String get missionLlPlay;
+
+  /// No description provided for @missionLlWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 3 games of Love Letter'**
+  String get missionLlWin;
+
+  /// No description provided for @missionLlWinStreak4.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 4 Love Letter games in a row (a loss resets it)'**
+  String get missionLlWinStreak4;
+
+  /// No description provided for @missionLlGuardHit.
+  ///
+  /// In en, this message translates to:
+  /// **'Guess a card right with the Guard twice'**
+  String get missionLlGuardHit;
+
+  /// No description provided for @missionLlBaronWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 Baron showdowns'**
+  String get missionLlBaronWin;
+
+  /// No description provided for @missionLlRoundWin.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 6 rounds'**
+  String get missionLlRoundWin;
+
+  /// No description provided for @missionLlLastStanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Win 2 rounds by knocking out everyone'**
+  String get missionLlLastStanding;
+
+  /// No description provided for @missionLlKnockOut6.
+  ///
+  /// In en, this message translates to:
+  /// **'Knock out 6 opponents'**
+  String get missionLlKnockOut6;
+
+  /// No description provided for @missionTichuStraight8.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a straight of 8 or more cards'**
+  String get missionTichuStraight8;
+
+  /// No description provided for @missionTichuStraight10.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a straight of 10 or more cards'**
+  String get missionTichuStraight10;
+
+  /// No description provided for @missionTichuFullhouseK.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a trick with a K-high full house (triple of K or A)'**
+  String get missionTichuFullhouseK;
+
+  /// No description provided for @missionTichuFullhouseA.
+  ///
+  /// In en, this message translates to:
+  /// **'Win a trick with an Ace full house (triple of Aces)'**
+  String get missionTichuFullhouseA;
+
+  /// No description provided for @missionTichuStraightFlush.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a straight-flush bomb'**
+  String get missionTichuStraightFlush;
+
+  /// No description provided for @missionTichuPhoenixAce.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat an Ace with the Phoenix played alone'**
+  String get missionTichuPhoenixAce;
+
+  /// No description provided for @missionTichuCounterSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a counter Small Tichu when the opponents also call Small Tichu'**
+  String get missionTichuCounterSmall;
+
+  /// No description provided for @missionTichuCounterLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a counter Grand Tichu when the opponents also call Grand Tichu'**
+  String get missionTichuCounterLarge;
+
+  /// No description provided for @missionTichuTichuOnetwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Tichu and finish 1-2 with your team'**
+  String get missionTichuTichuOnetwo;
+
+  /// No description provided for @missionMightyNt20.
+  ///
+  /// In en, this message translates to:
+  /// **'Succeed with a 20-point No Trump bid'**
+  String get missionMightyNt20;
+
+  /// No description provided for @missionMightyPoint2.
+  ///
+  /// In en, this message translates to:
+  /// **'Take 2 or more point cards in one trick'**
+  String get missionMightyPoint2;
+
+  /// No description provided for @missionMightyPoint4.
+  ///
+  /// In en, this message translates to:
+  /// **'Take 4 or more point cards in one trick'**
+  String get missionMightyPoint4;
+
+  /// No description provided for @missionMightyPoint5.
+  ///
+  /// In en, this message translates to:
+  /// **'Take 5 point cards in one trick'**
+  String get missionMightyPoint5;
+
+  /// No description provided for @missionMightyJokerKillFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'As the friend, use the Joker Call to kill the declarer\'s Joker'**
+  String get missionMightyJokerKillFriend;
+
+  /// No description provided for @missionMightyJokerKillDefender.
+  ///
+  /// In en, this message translates to:
+  /// **'As a defender, use the Joker Call to kill the declarer\'s Joker'**
+  String get missionMightyJokerKillDefender;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

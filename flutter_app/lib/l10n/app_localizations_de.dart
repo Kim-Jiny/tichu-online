@@ -5443,71 +5443,6 @@ class L10nDe extends L10n {
   String get missionsGameLoveLetter => 'Love Letter';
 
   @override
-  String get missionTichuPlay => '5 Tichu-Spiele spielen';
-
-  @override
-  String get missionTichuWin => 'Ein Tichu-Spiel gewinnen';
-
-  @override
-  String get missionTichuSmall => 'Ein kleines Tichu schaffen';
-
-  @override
-  String get missionTichuLarge => 'Ein großes Tichu schaffen';
-
-  @override
-  String get missionTichuOnetwo => 'Mit deinem Team Erster und Zweiter werden';
-
-  @override
-  String get missionTichuDogFinish =>
-      'Als Erster oder Zweiter mit dem Hund aussteigen';
-
-  @override
-  String get missionTichuBomb30 => '30 Punkte mit Bomben gewinnen';
-
-  @override
-  String get missionMightyPlay => '5 Mighty-Spiele spielen';
-
-  @override
-  String get missionMightyWin => 'Ein Mighty-Spiel gewinnen';
-
-  @override
-  String get missionMightyBid20 => 'Mit einem 20-Punkte-Gebot gewinnen';
-
-  @override
-  String get missionMightyNt => 'Mit einem No-Trump-Gebot gewinnen';
-
-  @override
-  String get missionMightyAll20 =>
-      'Als Spielerpartei alle 20 Punktkarten holen';
-
-  @override
-  String get missionMightyFriend7 =>
-      'Als Freund in einer Runde mindestens 7 Punkte holen';
-
-  @override
-  String get missionSkPlay => '5 Skull-King-Spiele spielen';
-
-  @override
-  String get missionSkWin => 'Ein Skull-King-Spiel gewinnen';
-
-  @override
-  String get missionSkPirates2 =>
-      'Mit dem Skull King zwei Piraten in einem Stich fangen';
-
-  @override
-  String get missionSkMermaidKing =>
-      'Den Skull King mit einer Meerjungfrau fangen';
-
-  @override
-  String get missionSkTenWin => 'Einen Stich mit einer 10 gewinnen';
-
-  @override
-  String get missionLlPlay => '5 Love-Letter-Spiele spielen';
-
-  @override
-  String get missionLlWin => 'Ein Love-Letter-Spiel gewinnen';
-
-  @override
   String get tokenShopTitle => 'Token-Shop';
 
   @override
@@ -5686,93 +5621,215 @@ class L10nDe extends L10n {
   String get missionsExpiresToday => 'Bis heute Mitternacht';
 
   @override
-  String get missionTichuWin2 => '2 Tichu-Spiele gewinnen';
-
-  @override
-  String get missionTichuDragonWin => 'Einen Stich mit dem Drachen gewinnen';
-
-  @override
-  String get missionTichuPhoenixWin => '2 Stiche mit dem Phönix gewinnen';
-
-  @override
-  String get missionTichuStraightWin => '2 Stiche mit einer Straße gewinnen';
-
-  @override
-  String get missionTichuFullhouseWin =>
-      '2 Stiche mit einem Full House gewinnen';
-
-  @override
-  String get missionTichuStepsWin => 'Einen Stich mit Treppenpaaren gewinnen';
-
-  @override
-  String get missionTichuBombPlay2 => '2 Bomben spielen';
-
-  @override
-  String get missionTichuFirstOut3 => 'In 3 Runden als Erster aussteigen';
-
-  @override
-  String get missionTichuBreakTichu => 'Ein gegnerisches Tichu verhindern';
-
-  @override
-  String get missionMightyMightyWin => 'Einen Stich mit dem Mighty gewinnen';
-
-  @override
-  String get missionMightyJokerWin => 'Einen Stich mit dem Joker gewinnen';
-
-  @override
-  String get missionMightyTrump3 => '3 Stiche mit Trumpfkarten gewinnen';
-
-  @override
-  String get missionMightyPointTrick =>
-      '3 oder mehr Punktkarten in einem Stich holen';
-
-  @override
-  String get missionMightyDeclarerSuccess => 'Als Spieler erfolgreich sein';
-
-  @override
-  String get missionMightyDefend => 'Als Verteidiger den Spieler stoppen';
-
-  @override
-  String get missionMightyFriendSuccess =>
-      'Als Freund dem Spieler zum Sieg verhelfen';
-
-  @override
-  String get missionMightyBid18 => 'Mit einem Gebot ab 18 gewinnen';
-
-  @override
-  String get missionSkBidHit3 => '3-mal das Gebot genau treffen';
-
-  @override
-  String get missionSkZeroHit => 'Mit Gebot 0 erfolgreich sein';
-
-  @override
-  String get missionSkPirateWin2 => '2 Stiche mit einem Piraten gewinnen';
-
-  @override
-  String get missionSkMermaidWin =>
-      'Einen Stich mit einer Meerjungfrau gewinnen';
-
-  @override
-  String get missionSkSkullkingWin2 => '2 Stiche mit dem Skull King gewinnen';
-
-  @override
-  String get missionLlGuardHit => 'Mit der Wache eine Karte richtig raten';
-
-  @override
-  String get missionLlBaronWin => 'Ein Baron-Duell gewinnen';
-
-  @override
-  String get missionLlRoundWin3 => '3 Runden gewinnen';
-
-  @override
-  String get missionLlLastStanding =>
-      'Eine Runde gewinnen, indem alle anderen ausscheiden';
-
-  @override
-  String get missionLlKnockOut3 => '3 Gegner ausschalten';
-
-  @override
   String missionCompletedMulti(String n) {
     return '$n Missionen geschafft!';
   }
+
+  @override
+  String get missionTichuPlay =>
+      '5 Tichu-Spiele spielen (nur bis zum Ende gespielte)';
+
+  @override
+  String get missionTichuWin => '3 Tichu-Spiele gewinnen';
+
+  @override
+  String get missionTichuWinStreak4 =>
+      '4 Tichu-Spiele in Folge gewinnen (eine Niederlage setzt zurück)';
+
+  @override
+  String get missionTichuOnetwo =>
+      'Zweimal mit dem Team Erster und Zweiter werden';
+
+  @override
+  String get missionTichuDogFinish =>
+      'Mit dem Hund als letzter Karte aussteigen (nur als Erster oder Zweiter)';
+
+  @override
+  String get missionTichuBomb50 =>
+      '50 Punkte aus mit Bomben gewonnenen Stichen holen';
+
+  @override
+  String get missionTichuStraightWin => '4 Stiche mit einer Straße gewinnen';
+
+  @override
+  String get missionTichuFullhouseWin =>
+      '4 Stiche mit einem Full House gewinnen';
+
+  @override
+  String get missionTichuStepsWin => '3 Stiche mit Treppenpaaren gewinnen';
+
+  @override
+  String get missionTichuBombPlay => '4 Bomben spielen';
+
+  @override
+  String get missionTichuFirstOut5 => 'In 5 Runden als Erster aussteigen';
+
+  @override
+  String get missionTichuBreakTichu =>
+      'Zwei gegnerische Tichu-Ansagen verhindern';
+
+  @override
+  String get missionMightyPlay =>
+      '5 Mighty-Spiele spielen (nur bis zum Ende gespielte)';
+
+  @override
+  String get missionMightyWin => '3 Mighty-Spiele gewinnen';
+
+  @override
+  String get missionMightyWinStreak4 =>
+      '4 Mighty-Spiele in Folge gewinnen (eine Niederlage setzt zurück)';
+
+  @override
+  String get missionMightyBid18 => 'Zweimal mit einem Gebot ab 18 gewinnen';
+
+  @override
+  String get missionMightyNt =>
+      'Mit einem No-Trump-Gebot gewinnen (beliebige Punktzahl)';
+
+  @override
+  String get missionMightyAll20 =>
+      'Als Spielerpartei alle 20 Punktkarten holen';
+
+  @override
+  String get missionMightyFriend7 =>
+      'Als Freund in einer einzigen Runde mindestens 7 Punkte holen';
+
+  @override
+  String get missionMightyMightyWin => '2 Stiche mit dem Mighty gewinnen';
+
+  @override
+  String get missionMightyTrump8 => '8 Stiche mit Trumpfkarten gewinnen';
+
+  @override
+  String get missionMightyJokerWin => '2 Stiche mit dem Joker gewinnen';
+
+  @override
+  String get missionMightyDeclarerSuccess =>
+      'Zweimal als Spieler erfolgreich sein';
+
+  @override
+  String get missionSkPlay =>
+      '5 Skull-King-Spiele spielen (nur bis zum Ende gespielte)';
+
+  @override
+  String get missionSkWin => '3 Skull-King-Spiele gewinnen';
+
+  @override
+  String get missionSkWinStreak4 =>
+      '4 Skull-King-Spiele in Folge gewinnen (eine Niederlage setzt zurück)';
+
+  @override
+  String get missionSkPirates2 =>
+      'Mit dem Skull King zwei Piraten in einem Stich fangen';
+
+  @override
+  String get missionSkMermaidKing =>
+      'Den Skull King mit einer Meerjungfrau fangen';
+
+  @override
+  String get missionSkTenWin => '2 Stiche mit einer 10 gewinnen';
+
+  @override
+  String get missionSkBidHit6 => '6-mal das Gebot genau treffen';
+
+  @override
+  String get missionSkBidHit12 => '12-mal das Gebot genau treffen';
+
+  @override
+  String get missionSkZeroHit => 'Zweimal mit Gebot 0 erfolgreich sein';
+
+  @override
+  String get missionSkPirateWin => '4 Stiche mit einem Piraten gewinnen';
+
+  @override
+  String get missionSkMermaidWin => '2 Stiche mit einer Meerjungfrau gewinnen';
+
+  @override
+  String get missionSkSkullkingWin => '3 Stiche mit dem Skull King gewinnen';
+
+  @override
+  String get missionLlPlay =>
+      '5 Love-Letter-Spiele spielen (nur bis zum Ende gespielte)';
+
+  @override
+  String get missionLlWin => '3 Love-Letter-Spiele gewinnen';
+
+  @override
+  String get missionLlWinStreak4 =>
+      '4 Love-Letter-Spiele in Folge gewinnen (eine Niederlage setzt zurück)';
+
+  @override
+  String get missionLlGuardHit =>
+      'Mit der Wache zweimal eine Karte richtig raten';
+
+  @override
+  String get missionLlBaronWin => '2 Baron-Duelle gewinnen';
+
+  @override
+  String get missionLlRoundWin => '6 Runden gewinnen';
+
+  @override
+  String get missionLlLastStanding =>
+      'Zwei Runden gewinnen, indem alle anderen ausscheiden';
+
+  @override
+  String get missionLlKnockOut6 => '6 Gegner ausschalten';
+
+  @override
+  String get missionTichuStraight8 =>
+      'Eine Straße mit 8 oder mehr Karten spielen';
+
+  @override
+  String get missionTichuStraight10 =>
+      'Eine Straße mit 10 oder mehr Karten spielen';
+
+  @override
+  String get missionTichuFullhouseK =>
+      'Einen Stich mit einem K-Full-House gewinnen (Drilling aus K oder A)';
+
+  @override
+  String get missionTichuFullhouseA =>
+      'Einen Stich mit einem Ass-Full-House gewinnen (Drilling aus Assen)';
+
+  @override
+  String get missionTichuStraightFlush => 'Eine Straight-Flush-Bombe spielen';
+
+  @override
+  String get missionTichuPhoenixAce =>
+      'Ein Ass mit dem einzeln gespielten Phönix schlagen';
+
+  @override
+  String get missionTichuCounterSmall =>
+      'Ein Gegen-Tichu schaffen, wenn die Gegner ebenfalls ein kleines Tichu ansagen';
+
+  @override
+  String get missionTichuCounterLarge =>
+      'Ein Gegen-Tichu schaffen, wenn die Gegner ebenfalls ein großes Tichu ansagen';
+
+  @override
+  String get missionTichuTichuOnetwo =>
+      'Tichu ansagen und mit dem Team Erster und Zweiter werden';
+
+  @override
+  String get missionMightyNt20 =>
+      'Mit einem No-Trump-Gebot über 20 Punkte gewinnen';
+
+  @override
+  String get missionMightyPoint2 =>
+      '2 oder mehr Punktkarten in einem Stich holen';
+
+  @override
+  String get missionMightyPoint4 =>
+      '4 oder mehr Punktkarten in einem Stich holen';
+
+  @override
+  String get missionMightyPoint5 => '5 Punktkarten in einem Stich holen';
+
+  @override
+  String get missionMightyJokerKillFriend =>
+      'Als Freund mit dem Joker-Call den Joker des Spielers ausschalten';
+
+  @override
+  String get missionMightyJokerKillDefender =>
+      'Als Verteidiger mit dem Joker-Call den Joker des Spielers ausschalten';
 }

@@ -121,8 +121,9 @@ void main() {
     t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       (call) async {
-        if (call.method == 'Clipboard.getData')
+        if (call.method == 'Clipboard.getData') {
           return <String, dynamic>{'text': ' summer-2026 \n'};
+        }
         return null;
       },
     );
@@ -150,8 +151,9 @@ void main() {
     t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       (call) async {
-        if (call.method == 'Clipboard.getData')
+        if (call.method == 'Clipboard.getData') {
           return <String, dynamic>{'text': ''};
+        }
         return null;
       },
     );

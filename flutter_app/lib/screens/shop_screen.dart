@@ -302,17 +302,12 @@ class _ShopScreenState extends State<ShopScreen> {
                   _hideAttendanceBubble();
                   _showAttendanceDialog(game);
                 },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                // 꼬리를 몸통 위에 겹쳐 그려 꼬리 밑변 자리의 테두리 줄을 가린다.
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 14),
-                      child: CustomPaint(
-                        size: const Size(16, 9),
-                        painter: _BubbleTailPainter(),
-                      ),
-                    ),
                     Container(
+                      margin: const EdgeInsets.only(top: 9),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
@@ -330,6 +325,14 @@ class _ShopScreenState extends State<ShopScreen> {
                           weight: FontWeight.w800,
                           height: 1.25,
                         ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 14,
+                      child: CustomPaint(
+                        size: const Size(16, 11),
+                        painter: _BubbleTailPainter(),
                       ),
                     ),
                   ],
@@ -4974,6 +4977,7 @@ class _AttendanceFxState extends State<_AttendanceFx>
 class _BubbleTailPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    // 밑변은 선 없이 종이색으로만 채워 몸통의 윗 테두리를 덮는다.
     final path = Path()
       ..moveTo(0, size.height)
       ..lineTo(size.width / 2, 0)

@@ -4178,41 +4178,40 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             )
           else
-            // 남의 패는 두 줄 작은 카드로. 이름은 창 밖 알약으로 빼서 창이 낮다.
+            // 남의 패는 한 줄로 살짝 겹쳐 크게 — 두 줄이면 아래 좌석을 가리고,
+            // 겹치면 같은 높이에서 카드를 키울 수 있다(왼쪽 위 숫자는 보인다).
             Padding(
               padding: const EdgeInsets.only(bottom: 2),
               child: LayoutBuilder(
                 builder: (context, c) {
                   final cards = viewingPlayer.cards;
-                  final perRow = (cards.length / 2).ceil();
-                  const gap = 3.0;
-                  final w = ((c.maxWidth - gap * (perRow - 1)) / perRow).clamp(
-                    18.0,
-                    32.0,
-                  );
-                  Widget row(List<String> r) => Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (int i = 0; i < r.length; i++) ...[
-                        if (i > 0) const SizedBox(width: gap),
-                        PlayingCard(
-                          cardId: _displayCardId(r[i]),
-                          width: w,
-                          height: w * 1.4,
-                          isInteractive: false,
-                        ),
-                      ],
-                    ],
-                  );
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      row(cards.take(perRow).toList()),
-                      if (cards.length > perRow) ...[
-                        const SizedBox(height: 3),
-                        row(cards.skip(perRow).toList()),
-                      ],
-                    ],
+                  final n = cards.length;
+                  const w = 44.0;
+                  const h = w * 1.4;
+                  final step = n <= 1
+                      ? 0.0
+                      : math.min(w + 4, (c.maxWidth - w) / (n - 1));
+                  final total = n <= 1 ? w : w + step * (n - 1);
+                  return Center(
+                    child: SizedBox(
+                      width: total,
+                      height: h,
+                      child: Stack(
+                        children: [
+                          for (int i = 0; i < n; i++)
+                            Positioned(
+                              left: step * i,
+                              top: 0,
+                              child: PlayingCard(
+                                cardId: _displayCardId(cards[i]),
+                                width: w,
+                                height: h,
+                                isInteractive: false,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),

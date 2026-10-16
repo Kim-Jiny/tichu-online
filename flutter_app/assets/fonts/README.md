@@ -10,4 +10,4 @@
 
     # 원본: https://github.com/google/fonts/raw/main/ofl/jua/Jua-Regular.ttf (SIL OFL 1.1)
     # 글자 = arb 값 + ASCII + lib/**/*.dart 의 비 ASCII 글자. layout_features=['*'], hinting=False
-    # 2026-10-16 마지막으로 다시 만듦(미션·토큰 상점 문구 추가분 포함, 973자 요청 / 약 443KB)
+    # 2026-10-16 마지막으로 다시 만듦(방 목록 강조 이름 추가분 포함, 미션·토큰 상점 문구 추가분 포함, 981자 요청 / 약 443KB)

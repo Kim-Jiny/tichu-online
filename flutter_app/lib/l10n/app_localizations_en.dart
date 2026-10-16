@@ -5648,4 +5648,17 @@ class L10nEn extends L10n {
   String tokenHistoryBalance(String n) {
     return 'Balance $n';
   }
+
+  @override
+  String get missionsDropConfirmTitle => 'Give up this mission?';
+
+  @override
+  String get missionsDropConfirmBody =>
+      'Giving up won\'t give back today\'s pick, so you may not be able to choose another one today.';
+
+  @override
+  String get missionsDropConfirmYes => 'Give up';
+
+  @override
+  String get missionsDropConfirmNo => 'Keep going';
 }

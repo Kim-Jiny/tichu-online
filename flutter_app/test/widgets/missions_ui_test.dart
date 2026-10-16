@@ -259,7 +259,17 @@ void main() {
     await t.pump();
     expect(game.calls, contains('reroll:tichu'));
     await t.tap(find.text('포기'));
-    await t.pump();
+    await t.pump(const Duration(milliseconds: 400));
+    // 바로 포기되지 않고 한 번 묻는다.
+    expect(game.calls.where((c) => c.startsWith('drop:')), isEmpty);
+    expect(find.text('이 미션을 포기할까요?'), findsOneWidget);
+    await t.tap(find.text('계속하기'));
+    await t.pump(const Duration(milliseconds: 400));
+    expect(game.calls.where((c) => c.startsWith('drop:')), isEmpty);
+    await t.tap(find.text('포기'));
+    await t.pump(const Duration(milliseconds: 400));
+    await t.tap(find.text('포기하기'));
+    await t.pump(const Duration(milliseconds: 400));
     expect(game.calls, contains('drop:tichu_bomb30'));
   });
 

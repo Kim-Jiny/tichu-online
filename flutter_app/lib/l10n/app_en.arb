@@ -3384,5 +3384,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "missionsDropConfirmTitle": "Give up this mission?",
+  "missionsDropConfirmBody": "Giving up won't give back today's pick, so you may not be able to choose another one today.",
+  "missionsDropConfirmYes": "Give up",
+  "missionsDropConfirmNo": "Keep going"
 }

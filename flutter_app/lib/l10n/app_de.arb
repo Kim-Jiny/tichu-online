@@ -2106,5 +2106,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "missionsDropConfirmTitle": "Diese Mission aufgeben?",
+  "missionsDropConfirmBody": "Aufgeben gibt die heutige Wahl nicht zurück – du kannst heute eventuell keine neue Mission mehr wählen.",
+  "missionsDropConfirmYes": "Aufgeben",
+  "missionsDropConfirmNo": "Weitermachen"
 }

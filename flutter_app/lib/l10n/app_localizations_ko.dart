@@ -5522,4 +5522,17 @@ class L10nKo extends L10n {
   String tokenHistoryBalance(String n) {
     return '보유 $n';
   }
+
+  @override
+  String get missionsDropConfirmTitle => '이 미션을 포기할까요?';
+
+  @override
+  String get missionsDropConfirmBody =>
+      '포기해도 오늘 고른 수는 돌아오지 않아요. 오늘은 새 미션을 더 고를 수 없을 수도 있어요.';
+
+  @override
+  String get missionsDropConfirmYes => '포기하기';
+
+  @override
+  String get missionsDropConfirmNo => '계속하기';
 }

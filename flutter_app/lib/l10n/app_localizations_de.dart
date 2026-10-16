@@ -5685,4 +5685,17 @@ class L10nDe extends L10n {
   String tokenHistoryBalance(String n) {
     return 'Guthaben $n';
   }
+
+  @override
+  String get missionsDropConfirmTitle => 'Diese Mission aufgeben?';
+
+  @override
+  String get missionsDropConfirmBody =>
+      'Aufgeben gibt die heutige Wahl nicht zurück – du kannst heute eventuell keine neue Mission mehr wählen.';
+
+  @override
+  String get missionsDropConfirmYes => 'Aufgeben';
+
+  @override
+  String get missionsDropConfirmNo => 'Weitermachen';
 }

@@ -2106,5 +2106,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "missionsDropConfirmTitle": "이 미션을 포기할까요?",
+  "missionsDropConfirmBody": "포기해도 오늘 고른 수는 돌아오지 않아요. 오늘은 새 미션을 더 고를 수 없을 수도 있어요.",
+  "missionsDropConfirmYes": "포기하기",
+  "missionsDropConfirmNo": "계속하기"
 }

@@ -14,10 +14,20 @@ class SpectatorBottomFill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inset = MediaQuery.of(context).padding.bottom;
-    if (inset <= 0) return const SizedBox.shrink();
+    // Stack 안에 있으므로 비울 때도 Positioned 여야 한다. 그냥 SizedBox.shrink 를
+    // 돌려주면 위치 없는 0 크기 자식이 되어 Stack 이 0x0 으로 쪼그라들고, 그 위에
+    // 얹은 게임 화면 전체가 흰 화면이 된다(웹·홈 바 없는 기기·관전 결과 화면).
+    const none = Positioned(
+      left: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      child: SizedBox.shrink(),
+    );
+    if (inset <= 0) return none;
     return Consumer<GameService>(
       builder: (context, game, _) {
-        if (!when(game)) return const SizedBox.shrink();
+        if (!when(game)) return none;
         return Positioned(
           left: 0,
           right: 0,

@@ -5407,7 +5407,7 @@ class L10nEn extends L10n {
   String get missionsGameLoveLetter => 'Love Letter';
 
   @override
-  String get missionTichuPlay => 'Finish a game of Tichu';
+  String get missionTichuPlay => 'Play 5 games of Tichu';
 
   @override
   String get missionTichuWin => 'Win a game of Tichu';
@@ -5429,7 +5429,7 @@ class L10nEn extends L10n {
   String get missionTichuBomb30 => 'Win 30 points with bombs';
 
   @override
-  String get missionMightyPlay => 'Finish a game of Mighty';
+  String get missionMightyPlay => 'Play 5 games of Mighty';
 
   @override
   String get missionMightyWin => 'Win a game of Mighty';
@@ -5449,7 +5449,7 @@ class L10nEn extends L10n {
       'As the friend, take 7 or more points in a round';
 
   @override
-  String get missionSkPlay => 'Finish a game of Skull King';
+  String get missionSkPlay => 'Play 5 games of Skull King';
 
   @override
   String get missionSkWin => 'Win a game of Skull King';
@@ -5465,7 +5465,7 @@ class L10nEn extends L10n {
   String get missionSkTenWin => 'Win a trick with a number 10';
 
   @override
-  String get missionLlPlay => 'Finish a game of Love Letter';
+  String get missionLlPlay => 'Play 5 games of Love Letter';
 
   @override
   String get missionLlWin => 'Win a game of Love Letter';
@@ -5649,9 +5649,6 @@ class L10nEn extends L10n {
   String get missionsExpiresToday => 'Until midnight today';
 
   @override
-  String get missionTichuPlay3 => 'Finish 3 games of Tichu';
-
-  @override
   String get missionTichuWin2 => 'Win 2 games of Tichu';
 
   @override
@@ -5680,9 +5677,6 @@ class L10nEn extends L10n {
   String get missionTichuBreakTichu => 'Stop an opposing Tichu call';
 
   @override
-  String get missionMightyPlay2 => 'Finish 2 games of Mighty';
-
-  @override
   String get missionMightyMightyWin => 'Win a trick with the Mighty';
 
   @override
@@ -5708,9 +5702,6 @@ class L10nEn extends L10n {
   String get missionMightyBid18 => 'Succeed with a bid of 18 or more';
 
   @override
-  String get missionSkPlay2 => 'Finish 2 games of Skull King';
-
-  @override
   String get missionSkBidHit3 => 'Hit your bid exactly 3 times';
 
   @override
@@ -5724,9 +5715,6 @@ class L10nEn extends L10n {
 
   @override
   String get missionSkSkullkingWin2 => 'Win 2 tricks with the Skull King';
-
-  @override
-  String get missionLlPlay2 => 'Finish 2 games of Love Letter';
 
   @override
   String get missionLlGuardHit => 'Guess a card right with the Guard';

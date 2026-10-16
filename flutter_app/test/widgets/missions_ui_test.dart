@@ -265,7 +265,7 @@ void main() {
     expect(find.text('폭탄으로 점수 30점 얻기'), findsWidgets);
     expect(find.text('15/30'), findsOneWidget);
     expect(find.text('3/7일'), findsOneWidget);
-    expect(find.text('티츄 한 판 끝까지 하기'), findsOneWidget);
+    expect(find.text('티츄 5판 하기'), findsOneWidget);
     // 이미 받은 미션은 '진행 중' 버튼, 나머지는 받기.
     // 외곽선 글자라 한 라벨이 Text 두 개(테두리+채움)로 그려진다.
     expect(find.text('받기'), findsNWidgets(4));
@@ -294,7 +294,7 @@ void main() {
     expect(game.calls, contains('history'));
     expect(find.text('토큰 내역'), findsOneWidget);
     expect(find.text('연속 달성 보너스'), findsOneWidget);
-    expect(find.text('티츄 한 판 끝까지 하기'), findsWidgets);
+    expect(find.text('티츄 5판 하기'), findsWidgets);
     expect(find.text('상점 구매: 민트 구름'), findsOneWidget);
     expect(find.text('운영자 지급'), findsOneWidget);
     expect(find.text('+5'), findsOneWidget);

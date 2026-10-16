@@ -5443,7 +5443,7 @@ class L10nDe extends L10n {
   String get missionsGameLoveLetter => 'Love Letter';
 
   @override
-  String get missionTichuPlay => 'Ein Tichu-Spiel zu Ende spielen';
+  String get missionTichuPlay => '5 Tichu-Spiele spielen';
 
   @override
   String get missionTichuWin => 'Ein Tichu-Spiel gewinnen';
@@ -5465,7 +5465,7 @@ class L10nDe extends L10n {
   String get missionTichuBomb30 => '30 Punkte mit Bomben gewinnen';
 
   @override
-  String get missionMightyPlay => 'Ein Mighty-Spiel zu Ende spielen';
+  String get missionMightyPlay => '5 Mighty-Spiele spielen';
 
   @override
   String get missionMightyWin => 'Ein Mighty-Spiel gewinnen';
@@ -5485,7 +5485,7 @@ class L10nDe extends L10n {
       'Als Freund in einer Runde mindestens 7 Punkte holen';
 
   @override
-  String get missionSkPlay => 'Ein Skull-King-Spiel zu Ende spielen';
+  String get missionSkPlay => '5 Skull-King-Spiele spielen';
 
   @override
   String get missionSkWin => 'Ein Skull-King-Spiel gewinnen';
@@ -5502,7 +5502,7 @@ class L10nDe extends L10n {
   String get missionSkTenWin => 'Einen Stich mit einer 10 gewinnen';
 
   @override
-  String get missionLlPlay => 'Ein Love-Letter-Spiel zu Ende spielen';
+  String get missionLlPlay => '5 Love-Letter-Spiele spielen';
 
   @override
   String get missionLlWin => 'Ein Love-Letter-Spiel gewinnen';
@@ -5686,9 +5686,6 @@ class L10nDe extends L10n {
   String get missionsExpiresToday => 'Bis heute Mitternacht';
 
   @override
-  String get missionTichuPlay3 => '3 Tichu-Spiele zu Ende spielen';
-
-  @override
   String get missionTichuWin2 => '2 Tichu-Spiele gewinnen';
 
   @override
@@ -5717,9 +5714,6 @@ class L10nDe extends L10n {
   String get missionTichuBreakTichu => 'Ein gegnerisches Tichu verhindern';
 
   @override
-  String get missionMightyPlay2 => '2 Mighty-Spiele zu Ende spielen';
-
-  @override
   String get missionMightyMightyWin => 'Einen Stich mit dem Mighty gewinnen';
 
   @override
@@ -5746,9 +5740,6 @@ class L10nDe extends L10n {
   String get missionMightyBid18 => 'Mit einem Gebot ab 18 gewinnen';
 
   @override
-  String get missionSkPlay2 => '2 Skull-King-Spiele zu Ende spielen';
-
-  @override
   String get missionSkBidHit3 => '3-mal das Gebot genau treffen';
 
   @override
@@ -5763,9 +5754,6 @@ class L10nDe extends L10n {
 
   @override
   String get missionSkSkullkingWin2 => '2 Stiche mit dem Skull King gewinnen';
-
-  @override
-  String get missionLlPlay2 => '2 Love-Letter-Spiele zu Ende spielen';
 
   @override
   String get missionLlGuardHit => 'Mit der Wache eine Karte richtig raten';

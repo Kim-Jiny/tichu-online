@@ -9516,7 +9516,7 @@ abstract class L10n {
   /// No description provided for @missionTichuPlay.
   ///
   /// In en, this message translates to:
-  /// **'Finish a game of Tichu'**
+  /// **'Play 5 games of Tichu'**
   String get missionTichuPlay;
 
   /// No description provided for @missionTichuWin.
@@ -9558,7 +9558,7 @@ abstract class L10n {
   /// No description provided for @missionMightyPlay.
   ///
   /// In en, this message translates to:
-  /// **'Finish a game of Mighty'**
+  /// **'Play 5 games of Mighty'**
   String get missionMightyPlay;
 
   /// No description provided for @missionMightyWin.
@@ -9594,7 +9594,7 @@ abstract class L10n {
   /// No description provided for @missionSkPlay.
   ///
   /// In en, this message translates to:
-  /// **'Finish a game of Skull King'**
+  /// **'Play 5 games of Skull King'**
   String get missionSkPlay;
 
   /// No description provided for @missionSkWin.
@@ -9624,7 +9624,7 @@ abstract class L10n {
   /// No description provided for @missionLlPlay.
   ///
   /// In en, this message translates to:
-  /// **'Finish a game of Love Letter'**
+  /// **'Play 5 games of Love Letter'**
   String get missionLlPlay;
 
   /// No description provided for @missionLlWin.
@@ -9945,12 +9945,6 @@ abstract class L10n {
   /// **'Until midnight today'**
   String get missionsExpiresToday;
 
-  /// No description provided for @missionTichuPlay3.
-  ///
-  /// In en, this message translates to:
-  /// **'Finish 3 games of Tichu'**
-  String get missionTichuPlay3;
-
   /// No description provided for @missionTichuWin2.
   ///
   /// In en, this message translates to:
@@ -10005,12 +9999,6 @@ abstract class L10n {
   /// **'Stop an opposing Tichu call'**
   String get missionTichuBreakTichu;
 
-  /// No description provided for @missionMightyPlay2.
-  ///
-  /// In en, this message translates to:
-  /// **'Finish 2 games of Mighty'**
-  String get missionMightyPlay2;
-
   /// No description provided for @missionMightyMightyWin.
   ///
   /// In en, this message translates to:
@@ -10059,12 +10047,6 @@ abstract class L10n {
   /// **'Succeed with a bid of 18 or more'**
   String get missionMightyBid18;
 
-  /// No description provided for @missionSkPlay2.
-  ///
-  /// In en, this message translates to:
-  /// **'Finish 2 games of Skull King'**
-  String get missionSkPlay2;
-
   /// No description provided for @missionSkBidHit3.
   ///
   /// In en, this message translates to:
@@ -10094,12 +10076,6 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Win 2 tricks with the Skull King'**
   String get missionSkSkullkingWin2;
-
-  /// No description provided for @missionLlPlay2.
-  ///
-  /// In en, this message translates to:
-  /// **'Finish 2 games of Love Letter'**
-  String get missionLlPlay2;
 
   /// No description provided for @missionLlGuardHit.
   ///

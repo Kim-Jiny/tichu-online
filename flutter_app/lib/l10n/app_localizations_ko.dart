@@ -5288,7 +5288,7 @@ class L10nKo extends L10n {
   String get missionsGameLoveLetter => '러브레터';
 
   @override
-  String get missionTichuPlay => '티츄 한 판 끝까지 하기';
+  String get missionTichuPlay => '티츄 5판 하기';
 
   @override
   String get missionTichuWin => '티츄 한 판 이기기';
@@ -5309,7 +5309,7 @@ class L10nKo extends L10n {
   String get missionTichuBomb30 => '폭탄으로 점수 30점 얻기';
 
   @override
-  String get missionMightyPlay => '마이티 한 판 끝까지 하기';
+  String get missionMightyPlay => '마이티 5판 하기';
 
   @override
   String get missionMightyWin => '마이티 한 판 이기기';
@@ -5327,7 +5327,7 @@ class L10nKo extends L10n {
   String get missionMightyFriend7 => '친구로 참여해 점수 7점 이상 먹기';
 
   @override
-  String get missionSkPlay => '스컬킹 한 판 끝까지 하기';
+  String get missionSkPlay => '스컬킹 5판 하기';
 
   @override
   String get missionSkWin => '스컬킹 한 판 이기기';
@@ -5342,7 +5342,7 @@ class L10nKo extends L10n {
   String get missionSkTenWin => '숫자 10 카드로 트릭 이기기';
 
   @override
-  String get missionLlPlay => '러브레터 한 판 끝까지 하기';
+  String get missionLlPlay => '러브레터 5판 하기';
 
   @override
   String get missionLlWin => '러브레터 한 판 이기기';
@@ -5523,9 +5523,6 @@ class L10nKo extends L10n {
   String get missionsExpiresToday => '오늘 자정까지';
 
   @override
-  String get missionTichuPlay3 => '티츄 3판 끝까지 하기';
-
-  @override
   String get missionTichuWin2 => '티츄 2판 이기기';
 
   @override
@@ -5553,9 +5550,6 @@ class L10nKo extends L10n {
   String get missionTichuBreakTichu => '상대 팀의 티츄 막아 내기';
 
   @override
-  String get missionMightyPlay2 => '마이티 2판 끝까지 하기';
-
-  @override
   String get missionMightyMightyWin => '마이티 카드로 트릭 이기기';
 
   @override
@@ -5580,9 +5574,6 @@ class L10nKo extends L10n {
   String get missionMightyBid18 => '비딩 18점 이상으로 성공하기';
 
   @override
-  String get missionSkPlay2 => '스컬킹 2판 끝까지 하기';
-
-  @override
   String get missionSkBidHit3 => '비딩을 3번 정확히 맞추기';
 
   @override
@@ -5596,9 +5587,6 @@ class L10nKo extends L10n {
 
   @override
   String get missionSkSkullkingWin2 => '스컬킹으로 트릭 2번 이기기';
-
-  @override
-  String get missionLlPlay2 => '러브레터 2판 끝까지 하기';
 
   @override
   String get missionLlGuardHit => '경비병으로 상대 카드 맞히기';

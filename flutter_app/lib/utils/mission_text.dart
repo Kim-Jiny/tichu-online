@@ -43,8 +43,6 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionLlPlay;
     case 'll_win':
       return l10n.missionLlWin;
-    case 'tichu_play3':
-      return l10n.missionTichuPlay3;
     case 'tichu_win2':
       return l10n.missionTichuWin2;
     case 'tichu_dragon_win':
@@ -63,8 +61,6 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionTichuFirstOut3;
     case 'tichu_break_tichu':
       return l10n.missionTichuBreakTichu;
-    case 'mighty_play2':
-      return l10n.missionMightyPlay2;
     case 'mighty_mighty_win':
       return l10n.missionMightyMightyWin;
     case 'mighty_joker_win':
@@ -81,8 +77,6 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionMightyFriendSuccess;
     case 'mighty_bid18':
       return l10n.missionMightyBid18;
-    case 'sk_play2':
-      return l10n.missionSkPlay2;
     case 'sk_bid_hit3':
       return l10n.missionSkBidHit3;
     case 'sk_zero_hit':
@@ -93,8 +87,6 @@ String missionTitle(L10n l10n, String key) {
       return l10n.missionSkMermaidWin;
     case 'sk_skullking_win2':
       return l10n.missionSkSkullkingWin2;
-    case 'll_play2':
-      return l10n.missionLlPlay2;
     case 'll_guard_hit':
       return l10n.missionLlGuardHit;
     case 'll_baron_win':

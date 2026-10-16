@@ -46,7 +46,7 @@ const GAMES = ['tichu', 'mighty', 'skull_king', 'love_letter'];
  */
 const MISSIONS = [
   // ── 티츄 ──
-  { key: 'tichu_play',      game: 'tichu', tier: 1, tokens: 1, event: 'tichu.game_end',     target: 1 },
+  { key: 'tichu_play', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.game_end', target: 5 },
   { key: 'tichu_win',       game: 'tichu', tier: 1, tokens: 1, event: 'tichu.game_win',     target: 1 },
   { key: 'tichu_small',     game: 'tichu', tier: 2, tokens: 2, event: 'tichu.small_success', target: 1 },
   { key: 'tichu_large',     game: 'tichu', tier: 3, tokens: 4, event: 'tichu.large_success', target: 1 },
@@ -55,7 +55,7 @@ const MISSIONS = [
   { key: 'tichu_bomb30',    game: 'tichu', tier: 3, tokens: 3, event: 'tichu.bomb_points',  target: 30 },
 
   // ── 마이티 ──
-  { key: 'mighty_play',     game: 'mighty', tier: 1, tokens: 1, event: 'mighty.game_end',   target: 1 },
+  { key: 'mighty_play', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.game_end', target: 5 },
   { key: 'mighty_win',      game: 'mighty', tier: 1, tokens: 1, event: 'mighty.game_win',   target: 1 },
   { key: 'mighty_bid20',    game: 'mighty', tier: 2, tokens: 2, event: 'mighty.bid20_success', target: 1 },
   { key: 'mighty_nt',       game: 'mighty', tier: 3, tokens: 3, event: 'mighty.nt_success', target: 1 },
@@ -63,18 +63,17 @@ const MISSIONS = [
   { key: 'mighty_friend7',  game: 'mighty', tier: 3, tokens: 3, event: 'mighty.friend_points', target: 7 },
 
   // ── 스컬킹 ──
-  { key: 'sk_play',         game: 'skull_king', tier: 1, tokens: 1, event: 'sk.game_end',   target: 1 },
+  { key: 'sk_play', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.game_end', target: 5 },
   { key: 'sk_win',          game: 'skull_king', tier: 1, tokens: 1, event: 'sk.game_win',   target: 1 },
   { key: 'sk_pirates2',     game: 'skull_king', tier: 3, tokens: 3, event: 'sk.skullking_two_pirates', target: 1 },
   { key: 'sk_mermaid_king', game: 'skull_king', tier: 3, tokens: 4, event: 'sk.mermaid_takes_skullking', target: 1 },
   { key: 'sk_ten_win',      game: 'skull_king', tier: 2, tokens: 2, event: 'sk.win_with_ten', target: 1 },
 
   // ── 러브레터 ──
-  { key: 'll_play',         game: 'love_letter', tier: 1, tokens: 1, event: 'll.game_end', target: 1 },
+  { key: 'll_play', game: 'love_letter', tier: 2, tokens: 2, event: 'll.game_end', target: 5 },
   { key: 'll_win',          game: 'love_letter', tier: 2, tokens: 2, event: 'll.game_win', target: 1 },
 
   // ── 추가 미션(다양하게) ──
-  { key: 'tichu_play3', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.game_end', target: 3 },
   { key: 'tichu_win2', game: 'tichu', tier: 3, tokens: 3, event: 'tichu.game_win', target: 2 },
   { key: 'tichu_dragon_win', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.dragon_win', target: 1 },
   { key: 'tichu_phoenix_win', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.phoenix_win', target: 2 },
@@ -84,7 +83,6 @@ const MISSIONS = [
   { key: 'tichu_bomb_play2', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.bomb_played', target: 2 },
   { key: 'tichu_first_out3', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.first_out', target: 3 },
   { key: 'tichu_break_tichu', game: 'tichu', tier: 2, tokens: 2, event: 'tichu.tichu_broken', target: 1 },
-  { key: 'mighty_play2', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.game_end', target: 2 },
   { key: 'mighty_mighty_win', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.mighty_win', target: 1 },
   { key: 'mighty_joker_win', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.joker_win', target: 1 },
   { key: 'mighty_trump3', game: 'mighty', tier: 1, tokens: 1, event: 'mighty.trump_win', target: 3 },
@@ -93,13 +91,11 @@ const MISSIONS = [
   { key: 'mighty_defend', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.defend', target: 1 },
   { key: 'mighty_friend_success', game: 'mighty', tier: 2, tokens: 2, event: 'mighty.friend_success', target: 1 },
   { key: 'mighty_bid18', game: 'mighty', tier: 3, tokens: 3, event: 'mighty.bid18_success', target: 1 },
-  { key: 'sk_play2', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.game_end', target: 2 },
   { key: 'sk_bid_hit3', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.bid_hit', target: 3 },
   { key: 'sk_zero_hit', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.zero_hit', target: 1 },
   { key: 'sk_pirate_win2', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.pirate_win', target: 2 },
   { key: 'sk_mermaid_win', game: 'skull_king', tier: 1, tokens: 1, event: 'sk.mermaid_win', target: 1 },
   { key: 'sk_skullking_win2', game: 'skull_king', tier: 2, tokens: 2, event: 'sk.skullking_win', target: 2 },
-  { key: 'll_play2', game: 'love_letter', tier: 1, tokens: 1, event: 'll.game_end', target: 2 },
   { key: 'll_guard_hit', game: 'love_letter', tier: 1, tokens: 1, event: 'll.guard_hit', target: 1 },
   { key: 'll_baron_win', game: 'love_letter', tier: 1, tokens: 1, event: 'll.baron_win', target: 1 },
   { key: 'll_round_win3', game: 'love_letter', tier: 2, tokens: 2, event: 'll.round_win', target: 3 },

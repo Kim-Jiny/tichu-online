@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui' show ImageFilter;
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -89,6 +90,7 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _countdownTimer;
   int _remainingSeconds = 0;
   int _lastTickSoundSecond = 999;
+  bool _wasMyTurn = false;
   bool _birdCallDialogOpen = false;
   bool _roundEndReady = false; // delay before showing round end dialog
 
@@ -178,6 +180,12 @@ class _GameScreenState extends State<GameScreen> {
     if (!mounted) return;
     final state =
         _gameService?.gameState ?? context.read<GameService>().gameState;
+    // 내 차례가 막 시작되면 짧게 진동해서 다른 곳을 보고 있어도 알아채게 한다.
+    final myTurnNow = state != null && state.isMyTurn;
+    if (myTurnNow && !_wasMyTurn && state.phase == 'playing') {
+      HapticFeedback.mediumImpact();
+    }
+    _wasMyTurn = myTurnNow;
     if (state == null || state.turnDeadline == null) {
       if (_remainingSeconds != 0) {
         setState(() => _remainingSeconds = 0);
@@ -193,6 +201,7 @@ class _GameScreenState extends State<GameScreen> {
           remaining > 0 &&
           remaining != _lastTickSoundSecond) {
         _lastTickSoundSecond = remaining;
+        HapticFeedback.heavyImpact();
         context.read<GameService>().playCountdownTick();
       }
     }
@@ -2132,12 +2141,18 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _buildBottomArea(GameStateData state, GameService game) {
     final isMyTurn = state.isMyTurn;
+    // 내 차례에 5초 이하로 남으면 바탕이 붉어져 시간이 없다는 걸 한눈에 보여 준다.
+    final urgent = isMyTurn && _remainingSeconds > 0 && _remainingSeconds <= 5;
     return Container(
       padding: EdgeInsets.all(10 * _s),
       // 내 차례엔 노란 바탕과 두꺼운 윗줄, 아니면 크림 바탕. 번지는 그림자 대신
       // 윗줄 하나로만 구분한다.
       decoration: BoxDecoration(
-        color: isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        color: urgent
+            ? const Color(0xFFFFC9C4)
+            : isMyTurn
+                ? const Color(0xFFFFF1B8)
+                : Cartoon.paper,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),

@@ -87,6 +87,10 @@ pool.on('connect', (client) => {
   client.query("SET TIME ZONE 'UTC'").catch(() => {});
 });
 
+// 미션·토큰: 풀을 받아서 쓰고, 테이블은 아래 마이그레이션에서 만든다.
+const missions = require('../missions/missions');
+missions.init(pool);
+
 // Initialize database tables (tc_ prefix for tichu)
 /**
  * 마이그레이션은 실패하면 부팅을 멈춘다(아래 initDatabase 참고). 그래서 잠깐의
@@ -732,6 +736,9 @@ async function runMigrations() {
     await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_last_date DATE`);
     await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_ignored SMALLINT NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE tc_attendance ADD COLUMN IF NOT EXISTS push_muted_until DATE`);
+
+    // 미션·토큰·토큰 상점(missions/missions.js).
+    await missions.ensureSchema(client);
 
     // Seed the 5 agreed tiers, inactive by default. ON CONFLICT DO NOTHING so
     // re-runs never clobber admin-edited gold/bonus/active values.
@@ -2006,6 +2013,7 @@ async function deleteUser(nickname) {
     await client.query('DELETE FROM tc_dm_messages WHERE sender_nickname = $1 OR receiver_nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_user_equips WHERE nickname = $1', [nickname]);
     await client.query('DELETE FROM tc_user_items WHERE nickname = $1', [nickname]);
+    await missions.deleteUser(client, nickname);
     // The nickname becomes available again, and these rows are keyed by it —
     // whoever takes it next would inherit this account's switched-off passes.
     await client.query('DELETE FROM tc_user_feature_off WHERE nickname = $1', [nickname]);
@@ -6249,6 +6257,8 @@ async function changeNickname(oldNickname, newNickname) {
       `UPDATE tc_user_equips SET nickname = $2 WHERE nickname = $1`,
       [oldNickname, trimmed]
     );
+
+    await missions.renameUser(client, oldNickname, trimmed);
 
     // Update nickname in tc_user_feature_off. Left behind, a switched-off pass
     // would quietly switch itself back on the moment someone renames.

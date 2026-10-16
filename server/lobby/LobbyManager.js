@@ -45,6 +45,11 @@ class LobbyManager {
     return true;
   }
 
+  /** 방장의 방 목록 강조 키를 찾는 함수(server.js 가 넣는다). */
+  setHighlightResolver(fn) {
+    this.highlightResolver = fn;
+  }
+
   getRoomList() {
     const list = [];
     for (const [id, room] of this.rooms) {
@@ -71,6 +76,8 @@ class LobbyManager {
         targetScore: room.targetScore,
         skExpansions: [...(room.skExpansions || [])],
         randomSeating: !!room.randomSeating,
+        // 토큰 상점의 '방 목록 강조'를 쓰는 방장의 방이면 그 모양의 키.
+        highlight: (this.highlightResolver && this.highlightResolver(room.hostNickname)) || null,
       });
     }
     return list;

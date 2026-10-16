@@ -30,6 +30,10 @@ class TichuGame {
     this.state = STATE.WAITING;
     this.round = 0;
     this._suppressBotSearchLogs = false;
+    // 미션 판정용 이벤트 — { playerId, event, amount }. 서버가 액션 뒤에 비워 간다
+    // (drainMissionEvents). 게임 규칙에는 아무 영향이 없고, 봇 탐색용 복제본에서는
+    // 쌓여도 버려진다.
+    this.missionEvents = [];
 
     // Per-round state
     this.resetRound();
@@ -556,6 +560,10 @@ class TichuGame {
       this.finishOrder.push(playerId);
       result.broadcast.playerFinished = true;
       result.broadcast.finishPosition = this.finishOrder.length;
+      // 개로 손패를 턴 것 — 1·2등일 때만 미션으로 인정한다.
+      if (this.finishOrder.length <= 2) {
+        this._pushMissionEvent({ playerId, event: 'tichu.dog_finish', amount: 1 });
+      }
 
       // Check for 1-2 finish (same team finishes 1st and 2nd)
       if (this.finishOrder.length === 2) {
@@ -712,6 +720,14 @@ class TichuGame {
 
     // Check if Dragon won the trick
     const lastPlay = this.currentTrick[this.currentTrick.length - 1];
+    // 폭탄으로 딴 트릭의 점수(미션). 폭탄이 이긴 트릭은 용이 들어 있어도 폭탄을 낸
+    // 사람이 가져간다.
+    if (lastPlay.combo && String(lastPlay.combo.type).startsWith('bomb_')) {
+      const pts = calculateTrickPoints(allTrickCards);
+      if (pts > 0) {
+        this._pushMissionEvent({ playerId: winner, event: 'tichu.bomb_points', amount: pts });
+      }
+    }
     if (lastPlay.cards.includes('special_dragon')) {
       // Dragon winner must give trick to an opponent
       this.dragonPending = true;
@@ -1178,6 +1194,8 @@ class TichuGame {
       logScoreDebug(`[SCORE DEBUG] result: teamA=${roundScores.teamA}, teamB=${roundScores.teamB}, sum=${roundScores.teamA + roundScores.teamB}`);
     }
 
+    this.collectRoundMissionEvents();
+
     this.totalScores.teamA += roundScores.teamA;
     this.totalScores.teamB += roundScores.teamB;
 
@@ -1194,6 +1212,38 @@ class TichuGame {
     }
 
     this.lastRoundScores = roundScores;
+  }
+
+  /** 라운드가 끝난 시점의 미션 이벤트: 티츄 성공, 1·2등 독식. */
+  collectRoundMissionEvents() {
+    const first = this.finishOrder[0];
+    for (const pid of this.smallTichuDeclarations) {
+      if (pid === first) this._pushMissionEvent({ playerId: pid, event: 'tichu.small_success', amount: 1 });
+    }
+    for (const pid of this.largeTichuDeclarations) {
+      if (pid === first) this._pushMissionEvent({ playerId: pid, event: 'tichu.large_success', amount: 1 });
+    }
+    if (this.finishOrder.length >= 2) {
+      const teamOf = (pid) => (this.teams.teamA.includes(pid) ? 'teamA' : 'teamB');
+      if (teamOf(this.finishOrder[0]) === teamOf(this.finishOrder[1])) {
+        for (const pid of [this.finishOrder[0], this.finishOrder[1]]) {
+          this._pushMissionEvent({ playerId: pid, event: 'tichu.one_two', amount: 1 });
+        }
+      }
+    }
+  }
+
+  /** 쌓인 미션 이벤트를 꺼내 간다(꺼낸 건 비운다). */
+  // 직렬화로 복원된 게임에는 생성자가 안 돌아 missionEvents 가 없다.
+  _pushMissionEvent(e) {
+    if (!this.missionEvents) this.missionEvents = [];
+    this.missionEvents.push(e);
+  }
+
+  drainMissionEvents() {
+    const out = this.missionEvents || [];
+    this.missionEvents = [];
+    return out;
   }
 
   // Start next round

@@ -18,6 +18,8 @@ const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
 const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const webApp = require('./webApp');
+const missions = require('./missions/missions');
+const missionDefs = require('./missions/defs');
 const {
   initDatabase, registerUser, loginUser, checkNickname, deleteUser,
   blockUser, unblockUser, getBlockedUsers, reportUser, getReportedNicknames,
@@ -3671,6 +3673,27 @@ async function handleMessage(ws, data) {
     case 'request_bank_deposit':
       await handleRequestBankDeposit(ws, data);
       break;
+    case 'get_missions':
+      await handleGetMissions(ws);
+      break;
+    case 'pick_mission':
+      await handlePickMission(ws, data);
+      break;
+    case 'drop_mission':
+      await handleDropMission(ws, data);
+      break;
+    case 'reroll_missions':
+      await handleRerollMissions(ws, data);
+      break;
+    case 'get_token_shop':
+      await handleGetTokenShop(ws);
+      break;
+    case 'buy_token_item':
+      await handleBuyTokenItem(ws, data);
+      break;
+    case 'equip_token_item':
+      await handleEquipTokenItem(ws, data);
+      break;
     case 'get_attendance_state':
       await handleGetAttendanceState(ws);
       break;
@@ -4343,6 +4366,7 @@ async function handleReconnection(ws) {
   ws.titleKey = titleKey;
   ws.titleName = titleName;
   ws.bannerKey = bannerKey;
+  await refreshTokenEquips(ws);
   // Public avatar URL, only while the paid photo is active + unexpired. Null
   // falls the client back to the default avatar. The object itself is publicly
   // fetchable, so per-viewer block filtering is done client-side (except the
@@ -6444,6 +6468,15 @@ async function saveGameResult(room) {
   delete timeoutCounts[room.id];
 
   if (room.gameType === 'skull_king') {
+    try {
+      const winCutoff = Math.floor(room.game.playerCount / 2);
+      const ranks = room.game.getRankings();
+      recordGameEndMissions(
+        room, 'sk',
+        ranks.filter((r) => !r.playerId.startsWith('bot_')).map((r) => r.nickname),
+        new Set(ranks.filter((r) => r.rank <= winCutoff).map((r) => r.nickname)),
+      );
+    } catch (e) { console.error('[missions] sk end failed:', e.message); }
     await saveSKGameResult(room);
     await refreshConnectedRatings(room);
     return;
@@ -6451,12 +6484,28 @@ async function saveGameResult(room) {
 
   // Love Letter: no separate DB save for now (uses SK format)
   if (room.gameType === 'love_letter') {
+    try {
+      const ranks = room.game.getRankings();
+      recordGameEndMissions(
+        room, 'll',
+        ranks.filter((r) => !r.playerId.startsWith('bot_')).map((r) => r.nickname),
+        new Set(ranks.filter((r) => r.rank === 1).map((r) => r.nickname)),
+      );
+    } catch (e) { console.error('[missions] ll end failed:', e.message); }
     await saveLLGameResult(room);
     await refreshConnectedRatings(room);
     return;
   }
 
   if (room.gameType === 'mighty') {
+    try {
+      const players = buildMightyPlayers(room.game);
+      recordGameEndMissions(
+        room, 'mighty',
+        players.filter((p) => !p.isBot).map((p) => p.nickname),
+        new Set(players.filter((p) => p.isWinner).map((p) => p.nickname)),
+      );
+    } catch (e) { console.error('[missions] mighty end failed:', e.message); }
     await saveMightyGameResult(room);
     await refreshConnectedRatings(room);
     return;
@@ -6473,6 +6522,14 @@ async function saveGameResult(room) {
 
   const teamAPlayers = teams.teamA;
   const teamBPlayers = teams.teamB;
+
+  try {
+    const humans = playerIds.filter((pid) => !pid.startsWith('bot_'));
+    const winners = new Set(
+      (winnerTeam === 'A' ? teamAPlayers : teamBPlayers).map((pid) => playerNames[pid]),
+    );
+    recordGameEndMissions(room, 'tichu', humans.map((pid) => playerNames[pid]), winners);
+  } catch (e) { console.error('[missions] tichu end failed:', e.message); }
 
   try {
     await saveMatchResultWithStats(
@@ -6696,6 +6753,7 @@ function sendGameStateToAll(roomId) {
 function _sendGameStateToAllImpl(roomId) {
   const room = lobby.getRoom(roomId);
   if (!room || !room.game) return;
+  processMissionEvents(room);
   // Do NOT clear the Love Letter effect_resolve auto-ack timer here. It owns the
   // 2.5s advance; clearing+resetting it on every re-broadcast (e.g. a human's
   // client activity in the room) keeps postponing the ack and strands the
@@ -8689,7 +8747,8 @@ async function handleChatMessage(ws, data) {
   }
 
   // 방에 메시지 저장
-  room.addChatMessage(ws.nickname, ws.playerId, message, ws.photoUrl || null);
+  const bubble = (ws.tokenEquips && ws.tokenEquips.bubble) || null;
+  room.addChatMessage(ws.nickname, ws.playerId, message, ws.photoUrl || null, bubble);
 
   const chatData = {
     type: 'chat_message',
@@ -8697,6 +8756,7 @@ async function handleChatMessage(ws, data) {
     senderId: ws.playerId,
     message: message,
     timestamp: Date.now(),
+    ...(bubble ? { bubble } : {}),
   };
 
   // Users who blocked the sender (to filter them from the broadcast). This ran
@@ -9114,6 +9174,141 @@ async function handleGetWallet(ws) {
   }
   const result = await getWallet(ws.nickname);
   sendTo(ws, { type: 'wallet_result', ...result });
+}
+
+// ───────────────────────── 미션 · 토큰 · 토큰 상점 ─────────────────────────
+//
+// 판정은 전부 여기서 한다. 앱이 "깼다"고 알리는 메시지는 없다 — 엔진이 남긴
+// 이벤트(game.drainMissionEvents)와 판 결과만 센다.
+
+/** 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지). */
+const MISSION_MIN_HUMANS = 2;
+
+/** 다른 사람에게 보여 줄 장착 상태(닉네임별 캐시). 로그인·구매·장착 때 갱신한다. */
+const tokenEquipsByNick = new Map();
+lobby.setHighlightResolver((nickname) => {
+  const eq = tokenEquipsByNick.get(nickname);
+  return eq ? eq.roomHighlight : null;
+});
+
+async function refreshTokenEquips(ws) {
+  if (!ws || !ws.nickname) return null;
+  try {
+    const eq = await missions.getEquippedKeys(ws.nickname);
+    ws.tokenEquips = eq;
+    tokenEquipsByNick.set(ws.nickname, eq);
+    return eq;
+  } catch (e) {
+    console.error('[missions] equip refresh failed:', e.message);
+    return null;
+  }
+}
+
+function missionEligible(room) {
+  if (!room || fillerRooms.isFillerRoom(room.id)) return false;
+  const humans = (room.players || []).filter((p) => p && !p.isBot && p.nickname).length;
+  return humans >= MISSION_MIN_HUMANS;
+}
+
+function notifyMissionResults(nickname, done) {
+  if (!done || !done.length) return;
+  const ws = findWsByNickname(nickname);
+  if (!ws) return;
+  missions.getBalance(nickname).then((balance) => {
+    for (const d of done) sendTo(ws, { type: 'mission_completed', ...d, balance });
+  }).catch(() => {});
+}
+
+async function recordMission(nickname, event, amount = 1) {
+  const done = await missions.record(nickname, event, amount);
+  notifyMissionResults(nickname, done);
+}
+
+/** 엔진이 남긴 이벤트를 꺼내 기록한다. 자격이 안 되는 방이어도 꼭 비워서 쌓이지 않게 한다. */
+function processMissionEvents(room) {
+  const game = room && room.game;
+  if (!game || typeof game.drainMissionEvents !== 'function') return;
+  const events = game.drainMissionEvents();
+  if (!events.length || !missionEligible(room)) return;
+  for (const e of events) {
+    if (!e.playerId || String(e.playerId).startsWith('bot_')) continue;
+    const nickname = game.playerNames && game.playerNames[e.playerId];
+    if (!nickname) continue;
+    recordMission(nickname, e.event, e.amount).catch((err) => console.error('[missions] record failed:', err.message));
+  }
+}
+
+/** 판이 끝났을 때: 끝까지 했다 / 이겼다. winners 는 닉네임 집합. */
+function recordGameEndMissions(room, prefix, participants, winners) {
+  if (!missionEligible(room)) return;
+  for (const nickname of participants) {
+    if (!nickname) continue;
+    recordMission(nickname, `${prefix}.game_end`).catch(() => {});
+    if (winners.has(nickname)) recordMission(nickname, `${prefix}.game_win`).catch(() => {});
+  }
+}
+
+async function handleGetMissions(ws) {
+  if (!ws.nickname) return sendTo(ws, { type: 'missions_state', success: false, message: t(ws.locale, 'login_required') });
+  try {
+    sendTo(ws, { type: 'missions_state', success: true, ...(await missions.getState(ws.nickname)) });
+  } catch (e) {
+    console.error('[missions] state failed:', e.message);
+    sendTo(ws, { type: 'missions_state', success: false, message: 'state_failed' });
+  }
+}
+
+async function replyMissionAction(ws, type, result) {
+  const state = result.success ? await missions.getState(ws.nickname) : null;
+  sendTo(ws, { type, success: result.success, reason: result.reason || null, state });
+}
+
+async function handlePickMission(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
+  await replyMissionAction(ws, 'mission_action_result', await missions.pick(ws.nickname, String(data.key || '')));
+}
+
+async function handleDropMission(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
+  await replyMissionAction(ws, 'mission_action_result', await missions.drop(ws.nickname, String(data.key || '')));
+}
+
+async function handleRerollMissions(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'mission_action_result', success: false, reason: 'login_required' });
+  await replyMissionAction(ws, 'mission_action_result', await missions.reroll(ws.nickname, String(data.game || '')));
+}
+
+async function handleGetTokenShop(ws) {
+  if (!ws.nickname) return sendTo(ws, { type: 'token_shop', success: false, message: t(ws.locale, 'login_required') });
+  try {
+    sendTo(ws, { type: 'token_shop', success: true, ...(await missions.getShop(ws.nickname)) });
+  } catch (e) {
+    console.error('[missions] shop failed:', e.message);
+    sendTo(ws, { type: 'token_shop', success: false, message: 'shop_failed' });
+  }
+}
+
+/** 장착이 바뀌면 이 사람이 있는 방 목록·채팅에 곧바로 반영되게 방 목록을 다시 보낸다. */
+async function afterTokenEquipChange(ws) {
+  await refreshTokenEquips(ws);
+  broadcastRoomList();
+}
+
+async function handleBuyTokenItem(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'token_buy_result', success: false, reason: 'login_required' });
+  const result = await missions.buy(ws.nickname, String(data.key || ''));
+  if (result.success) await afterTokenEquipChange(ws);
+  const shop = await missions.getShop(ws.nickname);
+  sendTo(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, shop });
+}
+
+async function handleEquipTokenItem(ws, data) {
+  if (!ws.nickname) return sendTo(ws, { type: 'token_equip_result', success: false, reason: 'login_required' });
+  const key = data.key == null ? null : String(data.key);
+  const result = await missions.equip(ws.nickname, String(data.slot || ''), key);
+  if (result.success) await afterTokenEquipChange(ws);
+  const shop = await missions.getShop(ws.nickname);
+  sendTo(ws, { type: 'token_equip_result', success: result.success, reason: result.reason || null, shop });
 }
 
 // Daily attendance state (7-day streak). Pure read; the client uses

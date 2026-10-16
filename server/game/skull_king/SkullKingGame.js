@@ -57,6 +57,9 @@ class SkullKingGame {
     this.lastTrickVoided = false;
     this.nextPhaseAfterTrickEnd = null;
 
+    // 미션 판정용 이벤트 — { playerId, event, amount }. 서버가 액션 뒤에 꺼내 간다.
+    this.missionEvents = [];
+
     this.resultSaved = false;
     this.deserted = false;
   }
@@ -247,6 +250,7 @@ class SkullKingGame {
     if (!voided) {
       this.tricks[result.winnerId]++;
       this.bonuses[result.winnerId] += result.bonus;
+      this._collectTrickMissionEvents(result);
 
       // Loot: the player who played it and the trick winner form an alliance.
       // Each gets +20 per Loot card, but only if BOTH made their bid exactly —
@@ -278,6 +282,36 @@ class SkullKingGame {
     const cardsRemaining = Object.values(this.hands).some(h => h.length > 0);
     this.nextPhaseAfterTrickEnd = cardsRemaining ? 'playing' : 'round_end';
     return { success: true };
+  }
+
+  /** 트릭 결과에서 나오는 미션 이벤트: 스컬킹이 해적 둘 이상, 인어가 스컬킹, 숫자 10 으로 승리. */
+  _collectTrickMissionEvents(result) {
+    const winner = result.winnerId;
+    for (const d of result.bonusDetail || []) {
+      if (d.type === 'sk_captures_pirates' && d.count >= 2) {
+        this._pushMissionEvent({ playerId: winner, event: 'sk.skullking_two_pirates', amount: 1 });
+      }
+      if (d.type === 'mermaid_captures_sk') {
+        this._pushMissionEvent({ playerId: winner, event: 'sk.mermaid_takes_skullking', amount: 1 });
+      }
+    }
+    const winPlay = this.currentTrick.find((p) => p.playerId === winner);
+    const info = winPlay ? getCardInfo(winPlay.cardId) : null;
+    if (info && info.type === CARD_TYPE.NUMBER && info.value === 10) {
+      this._pushMissionEvent({ playerId: winner, event: 'sk.win_with_ten', amount: 1 });
+    }
+  }
+
+  // 직렬화로 복원된 게임에는 생성자가 안 돌아 missionEvents 가 없다.
+  _pushMissionEvent(e) {
+    if (!this.missionEvents) this.missionEvents = [];
+    this.missionEvents.push(e);
+  }
+
+  drainMissionEvents() {
+    const out = this.missionEvents || [];
+    this.missionEvents = [];
+    return out;
   }
 
   advanceAfterTrickEnd() {

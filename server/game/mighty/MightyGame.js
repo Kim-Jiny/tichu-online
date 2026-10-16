@@ -67,6 +67,8 @@ class MightyGame {
     this.discarded = [];
     this.dealerIndex = 0;
     this.roundResult = null;
+    // 미션 판정용 이벤트 — { playerId, event, amount }. 서버가 액션 뒤에 꺼내 간다.
+    this.missionEvents = [];
     this.jokerSuitDeclared = null; // When joker is led, declarer chooses a suit
     this.jokerCallActive = false; // true when joker-call card is played with jokerCall flag
     this.lastTrickCards = [];
@@ -1233,6 +1235,37 @@ class MightyGame {
 
   // ─── ROUND END ──────────────────────────────────────────
 
+  /** 라운드 결과에서 나오는 미션 이벤트: 비딩 성공, 노트럼프 성공, 여당 20장 독식, 친구 점수. */
+  _collectRoundMissionEvents(result) {
+    const declarer = this.declarer;
+    if (!declarer) return;
+    const push = (playerId, event, amount = 1) => this._pushMissionEvent({ playerId, event, amount });
+    if (result.success && this.currentBid.points >= 20) push(declarer, 'mighty.bid20_success');
+    if (result.success && this.trumpSuit === 'no_trump') push(declarer, 'mighty.nt_success');
+    // 여당(주공 + 친구)이 점수 카드 20장을 전부 먹음.
+    if (result.declarerPoints >= 20) {
+      push(declarer, 'mighty.declarer_all20');
+      if (this.partner && this.partner !== declarer) push(this.partner, 'mighty.declarer_all20');
+    }
+    // 친구로서 한 라운드에 7점 이상.
+    if (this.partner && this.partner !== declarer) {
+      const friendPoints = (this.pointCards[this.partner] || []).length;
+      if (friendPoints >= 7) push(this.partner, 'mighty.friend_points', 7);
+    }
+  }
+
+  // 직렬화로 복원된 게임에는 생성자가 안 돌아 missionEvents 가 없다.
+  _pushMissionEvent(e) {
+    if (!this.missionEvents) this.missionEvents = [];
+    this.missionEvents.push(e);
+  }
+
+  drainMissionEvents() {
+    const out = this.missionEvents || [];
+    this.missionEvents = [];
+    return out;
+  }
+
   _endRound() {
     this.state = 'round_end';
 
@@ -1270,6 +1303,8 @@ class MightyGame {
       result.scores[this.declarer] = (result.scores[this.declarer] || 0) + dealMissBonus;
     }
     result.dealMissBonus = dealMissBonus;
+
+    this._collectRoundMissionEvents(result);
 
     const historyScores = { ...result.scores };
 

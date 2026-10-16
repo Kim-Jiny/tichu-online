@@ -1,3 +1,4 @@
+import '../widgets/spectator_bottom_fill.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -169,177 +170,208 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 colors: themeColors,
               ),
             ),
-            child: SafeArea(
-              child: Consumer<GameService>(
-                builder: (context, game, _) {
-                  if (session.isRestoring || _waitingForRoomRecovery) {
-                    return _buildRecoveryLoading(
-                      title: session.isRestoring
-                          ? L10n.of(context).skGameRecoveringGame
-                          : L10n.of(context).skGameCheckingState,
-                    );
-                  }
+            child: Stack(
+              children: [
+                SpectatorBottomFill(
+                  when: (g) =>
+                      g.isSpectator &&
+                      const [
+                        'bidding',
+                        'playing',
+                        'trick_end',
+                      ].contains(g.skGameState?.phase),
+                ),
+                Positioned.fill(
+                  child: SafeArea(
+                    child: Consumer<GameService>(
+                      builder: (context, game, _) {
+                        if (session.isRestoring || _waitingForRoomRecovery) {
+                          return _buildRecoveryLoading(
+                            title: session.isRestoring
+                                ? L10n.of(context).skGameRecoveringGame
+                                : L10n.of(context).skGameCheckingState,
+                          );
+                        }
 
-                  final state = game.skGameState;
-                  // A spectator with no game is routed to the shared waiting
-                  // room before this screen is ever built; from here on it is
-                  // only ever the board, watched or played.
-                  final isSpectating = game.isSpectator;
-                  if (state == null) {
-                    if (game.hasRoom) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) _recoverRoomState();
-                      });
-                      return _buildRecoveryLoading(
-                        title: L10n.of(context).skGameReloadingRoom,
-                      );
-                    }
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).skGameLoadingState,
-                    );
-                  }
+                        final state = game.skGameState;
+                        // A spectator with no game is routed to the shared waiting
+                        // room before this screen is ever built; from here on it is
+                        // only ever the board, watched or played.
+                        final isSpectating = game.isSpectator;
+                        if (state == null) {
+                          if (game.hasRoom) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _recoverRoomState();
+                            });
+                            return _buildRecoveryLoading(
+                              title: L10n.of(context).skGameReloadingRoom,
+                            );
+                          }
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).skGameLoadingState,
+                          );
+                        }
 
-                  // A partial/early reconnect snapshot can arrive with an
-                  // empty player list; several builders below resolve the self
-                  // player via players.firstWhere(..., orElse: players.first),
-                  // which throws StateError on an empty list. Hold on the
-                  // loading view until the roster is populated.
-                  if (state.players.isEmpty) {
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).skGameLoadingState,
-                    );
-                  }
+                        // A partial/early reconnect snapshot can arrive with an
+                        // empty player list; several builders below resolve the self
+                        // player via players.firstWhere(..., orElse: players.first),
+                        // which throws StateError on an empty list. Hold on the
+                        // loading view until the roster is populated.
+                        if (state.players.isEmpty) {
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).skGameLoadingState,
+                          );
+                        }
 
-                  _syncGameEndCountdown(state.phase);
+                        _syncGameEndCountdown(state.phase);
 
-                  // Clear selected card and bid when a NEW round's bidding starts
-                  if (state.phase == 'bidding' &&
-                      state.round != _lastBiddingRound) {
-                    _lastBiddingRound = state.round;
-                    if (_selectedCard != null || _selectedBid != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() {
-                            _selectedCard = null;
-                            _selectedBid = null;
+                        // Clear selected card and bid when a NEW round's bidding starts
+                        if (state.phase == 'bidding' &&
+                            state.round != _lastBiddingRound) {
+                          _lastBiddingRound = state.round;
+                          if (_selectedCard != null || _selectedBid != null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedCard = null;
+                                  _selectedBid = null;
+                                });
+                              }
+                            });
+                          }
+                        }
+                        // Clear selected card if it's no longer in hand
+                        if (_selectedCard != null &&
+                            !state.myCards.contains(_selectedCard)) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) setState(() => _selectedCard = null);
                           });
                         }
-                      });
-                    }
-                  }
-                  // Clear selected card if it's no longer in hand
-                  if (_selectedCard != null &&
-                      !state.myCards.contains(_selectedCard)) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _selectedCard = null);
-                    });
-                  }
-                  // Clear queued pre-selection on trick boundaries: the lead
-                  // suit changes each new trick, so yesterday's pick may no
-                  // longer be legal.
-                  if (_lastSkTrickNumber != state.trickNumber) {
-                    if (_lastSkTrickNumber != -1 && _selectedCard != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() => _selectedCard = null);
-                      });
-                    }
-                    _lastSkTrickNumber = state.trickNumber;
-                  }
+                        // Clear queued pre-selection on trick boundaries: the lead
+                        // suit changes each new trick, so yesterday's pick may no
+                        // longer be legal.
+                        if (_lastSkTrickNumber != state.trickNumber) {
+                          if (_lastSkTrickNumber != -1 &&
+                              _selectedCard != null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              setState(() => _selectedCard = null);
+                            });
+                          }
+                          _lastSkTrickNumber = state.trickNumber;
+                        }
 
-                  if (isSpectating) {
-                    return Stack(
-                      children: [
-                        Column(
+                        if (isSpectating) {
+                          return Stack(
+                            children: [
+                              Column(
+                                children: [
+                                  _buildSpectatorTopBar(state, game),
+                                  if ([
+                                    'bidding',
+                                    'playing',
+                                    'trick_end',
+                                  ].contains(state.phase))
+                                    _buildBoardStage(
+                                      board: _buildSpectatorScoreboard(
+                                        state,
+                                        game,
+                                      ),
+                                      bottomOverlay:
+                                          _buildSpectatorBottomOverlay(
+                                            _buildSpectatorHandArea(
+                                              state,
+                                              game,
+                                            ),
+                                          ),
+                                    ),
+                                  if (state.phase == 'round_end')
+                                    _buildBoardStage(
+                                      board: _buildSpectatorScoreboard(
+                                        state,
+                                        game,
+                                      ),
+                                      // Marker 로 감싸서 좌석 영역(bottomPadding) 이
+                                      // playing 상태와 동일하게 50dp 유지 — 라운드
+                                      // 결과가 뜰 때마다 좌석이 밀리던 문제 해소.
+                                      bottomOverlay:
+                                          _buildSpectatorBottomOverlay(
+                                            _buildRoundEndUI(state),
+                                          ),
+                                    ),
+                                  if (state.phase == 'game_end')
+                                    _buildBoardStage(
+                                      board: _buildSpectatorScoreboard(
+                                        state,
+                                        game,
+                                      ),
+                                      bottomOverlay:
+                                          _buildSpectatorBottomOverlay(
+                                            _buildGameEndUI(state, game),
+                                          ),
+                                    ),
+                                ],
+                              ),
+                              if (_moreOpen) _buildMoreMenu(game),
+                              if (_soundPanelOpen) _buildSoundPanel(game),
+                              if (_chatOpen) _buildChatPanel(game),
+                            ],
+                          );
+                        }
+
+                        return Stack(
                           children: [
-                            _buildSpectatorTopBar(state, game),
-                            if ([
-                              'bidding',
-                              'playing',
-                              'trick_end',
-                            ].contains(state.phase))
-                              _buildBoardStage(
-                                board: _buildSpectatorScoreboard(state, game),
-                                bottomOverlay: _buildSpectatorBottomOverlay(
-                                  _buildSpectatorHandArea(state, game),
-                                ),
+                            Column(
+                              children: [
+                                _buildTopBar(state, game),
+                                if (state.phase == 'bidding') ...[
+                                  _buildBoardStage(
+                                    board: _buildScoreboard(state, game),
+                                    bottomOverlay: SingleChildScrollView(
+                                      child: _buildBiddingUI(state, game),
+                                    ),
+                                  ),
+                                ],
+                                if (state.phase == 'playing' ||
+                                    state.phase == 'trick_end')
+                                  _buildBoardStage(
+                                    board: _buildScoreboard(state, game),
+                                    bottomOverlay: _buildHandArea(state, game),
+                                  ),
+                                if (state.phase == 'round_end')
+                                  _buildBoardStage(
+                                    board: _buildScoreboard(state, game),
+                                    bottomOverlay: _buildRoundEndUI(state),
+                                  ),
+                                if (state.phase == 'game_end')
+                                  _buildBoardStage(
+                                    board: _buildScoreboard(state, game),
+                                    bottomOverlay: _buildGameEndUI(state, game),
+                                  ),
+                              ],
+                            ),
+                            if (game.errorMessage != null)
+                              _buildSKErrorBanner(game.errorMessage!),
+                            if (game.timeoutPlayerName != null)
+                              _buildSKTimeoutBanner(game.timeoutPlayerName!),
+                            if (game.desertedPlayerName != null)
+                              _buildSKDesertionBanner(
+                                game.desertedPlayerName!,
+                                game.desertedReason ?? 'leave',
                               ),
-                            if (state.phase == 'round_end')
-                              _buildBoardStage(
-                                board: _buildSpectatorScoreboard(state, game),
-                                // Marker 로 감싸서 좌석 영역(bottomPadding) 이
-                                // playing 상태와 동일하게 50dp 유지 — 라운드
-                                // 결과가 뜰 때마다 좌석이 밀리던 문제 해소.
-                                bottomOverlay: _buildSpectatorBottomOverlay(
-                                  _buildRoundEndUI(state),
-                                ),
-                              ),
-                            if (state.phase == 'game_end')
-                              _buildBoardStage(
-                                board: _buildSpectatorScoreboard(state, game),
-                                bottomOverlay: _buildSpectatorBottomOverlay(
-                                  _buildGameEndUI(state, game),
-                                ),
-                              ),
+                            if (game.hasIncomingCardViewRequests)
+                              _buildCardViewRequestPopup(game),
+                            if (_moreOpen) _buildMoreMenu(game),
+                            if (_viewersOpen) _buildViewersPanel(game),
+                            if (_soundPanelOpen) _buildSoundPanel(game),
+                            if (_chatOpen) _buildChatPanel(game),
                           ],
-                        ),
-                        if (_moreOpen) _buildMoreMenu(game),
-                        if (_soundPanelOpen) _buildSoundPanel(game),
-                        if (_chatOpen) _buildChatPanel(game),
-                      ],
-                    );
-                  }
-
-                  return Stack(
-                    children: [
-                      Column(
-                        children: [
-                          _buildTopBar(state, game),
-                          if (state.phase == 'bidding') ...[
-                            _buildBoardStage(
-                              board: _buildScoreboard(state, game),
-                              bottomOverlay: SingleChildScrollView(
-                                child: _buildBiddingUI(state, game),
-                              ),
-                            ),
-                          ],
-                          if (state.phase == 'playing' ||
-                              state.phase == 'trick_end')
-                            _buildBoardStage(
-                              board: _buildScoreboard(state, game),
-                              bottomOverlay: _buildHandArea(state, game),
-                            ),
-                          if (state.phase == 'round_end')
-                            _buildBoardStage(
-                              board: _buildScoreboard(state, game),
-                              bottomOverlay: _buildRoundEndUI(state),
-                            ),
-                          if (state.phase == 'game_end')
-                            _buildBoardStage(
-                              board: _buildScoreboard(state, game),
-                              bottomOverlay: _buildGameEndUI(state, game),
-                            ),
-                        ],
-                      ),
-                      if (game.errorMessage != null)
-                        _buildSKErrorBanner(game.errorMessage!),
-                      if (game.timeoutPlayerName != null)
-                        _buildSKTimeoutBanner(game.timeoutPlayerName!),
-                      if (game.desertedPlayerName != null)
-                        _buildSKDesertionBanner(
-                          game.desertedPlayerName!,
-                          game.desertedReason ?? 'leave',
-                        ),
-                      if (game.hasIncomingCardViewRequests)
-                        _buildCardViewRequestPopup(game),
-                      if (_moreOpen) _buildMoreMenu(game),
-                      if (_viewersOpen) _buildViewersPanel(game),
-                      if (_soundPanelOpen) _buildSoundPanel(game),
-                      if (_chatOpen) _buildChatPanel(game),
-                    ],
-                  );
-                },
-              ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

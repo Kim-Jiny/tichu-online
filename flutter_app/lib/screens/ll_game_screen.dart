@@ -1,3 +1,4 @@
+import '../widgets/spectator_bottom_fill.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -173,56 +174,83 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   colors: themeColors,
                 ),
               ),
-              child: SafeArea(
-                child: ConnectionOverlay(
-                  child: Stack(
-                    children: [
-                      Column(
-                        children: [
-                          _buildTopBar(context, gs, llState),
-                          Expanded(child: _buildGameArea(context, gs, llState)),
-                          if (gs.isSpectator &&
-                              llState.phase != 'game_end' &&
-                              llState.phase != 'round_end')
-                            const SizedBox(height: 100)
-                          else
-                            _buildBottomArea(context, gs, llState),
-                        ],
-                      ),
-                      if (gs.isSpectator &&
-                          llState.phase != 'game_end' &&
-                          llState.phase != 'round_end')
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _buildLLEventLog(llState, gs, L10n.of(context)),
-                              _buildBottomArea(context, gs, llState),
-                            ],
-                          ),
-                        ),
-                      if (llState.phase == 'effect_resolve' &&
-                          llState.pendingEffect != null &&
-                          _isEffectInteractive(llState.pendingEffect!, gs))
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: _buildEffectResolve(context, gs, llState),
-                        ),
-                      if (gs.hasIncomingCardViewRequests)
-                        _buildCardViewRequestPopup(gs),
-                      if (_viewersOpen) _buildViewersPanel(gs),
-                      if (_moreOpen) _buildMoreMenu(gs),
-                      if (_soundPanelOpen) _buildSoundPanel(gs),
-                      if (_chatOpen) _buildChatPanel(context, gs),
-                    ],
+              child: Stack(
+                children: [
+                  SpectatorBottomFill(
+                    when: (g) =>
+                        g.isSpectator &&
+                        g.llGameState != null &&
+                        g.llGameState!.phase != 'game_end' &&
+                        g.llGameState!.phase != 'round_end',
                   ),
-                ),
+                  Positioned.fill(
+                    child: SafeArea(
+                      child: ConnectionOverlay(
+                        child: Stack(
+                          children: [
+                            Column(
+                              children: [
+                                _buildTopBar(context, gs, llState),
+                                Expanded(
+                                  child: _buildGameArea(context, gs, llState),
+                                ),
+                                if (gs.isSpectator &&
+                                    llState.phase != 'game_end' &&
+                                    llState.phase != 'round_end')
+                                  const SizedBox(height: 100)
+                                else
+                                  _buildBottomArea(context, gs, llState),
+                              ],
+                            ),
+                            if (gs.isSpectator &&
+                                llState.phase != 'game_end' &&
+                                llState.phase != 'round_end')
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildLLEventLog(
+                                      llState,
+                                      gs,
+                                      L10n.of(context),
+                                    ),
+                                    _buildBottomArea(context, gs, llState),
+                                  ],
+                                ),
+                              ),
+                            if (llState.phase == 'effect_resolve' &&
+                                llState.pendingEffect != null &&
+                                _isEffectInteractive(
+                                  llState.pendingEffect!,
+                                  gs,
+                                ))
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                child: _buildEffectResolve(
+                                  context,
+                                  gs,
+                                  llState,
+                                ),
+                              ),
+                            if (gs.hasIncomingCardViewRequests)
+                              _buildCardViewRequestPopup(gs),
+                            if (_viewersOpen) _buildViewersPanel(gs),
+                            if (_moreOpen) _buildMoreMenu(gs),
+                            if (_soundPanelOpen) _buildSoundPanel(gs),
+                            if (_chatOpen) _buildChatPanel(context, gs),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );

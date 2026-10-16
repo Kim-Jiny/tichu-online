@@ -1,3 +1,4 @@
+import '../widgets/spectator_bottom_fill.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math' as math;
@@ -117,42 +118,57 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 colors: context.watch<GameService>().themeGradient,
               ),
             ),
-            child: SafeArea(
-              bottom: !isLandscape,
-              child: Consumer<GameService>(
-                builder: (context, game, _) {
-                  if (session.isRestoring) {
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).spectatorRecovering,
-                      subtitle: localizeRestorePhase(session, L10n.of(context)),
-                    );
-                  }
+            child: Stack(
+              children: [
+                if (!isLandscape) SpectatorBottomFill(when: (_) => true),
+                Positioned.fill(
+                  child: SafeArea(
+                    bottom: !isLandscape,
+                    child: Consumer<GameService>(
+                      builder: (context, game, _) {
+                        if (session.isRestoring) {
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).spectatorRecovering,
+                            subtitle: localizeRestorePhase(
+                              session,
+                              L10n.of(context),
+                            ),
+                          );
+                        }
 
-                  final destination = game.currentDestination;
-                  if (destination != AppDestination.spectator) {
-                    if (!_isLeaving) {
-                      _isLeaving = true;
-                    }
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).spectatorTransitioning,
-                      subtitle: L10n.of(context).spectatorRecheckingState,
-                    );
-                  }
-                  if (_isLeaving) {
-                    _isLeaving = false;
-                  }
+                        final destination = game.currentDestination;
+                        if (destination != AppDestination.spectator) {
+                          if (!_isLeaving) {
+                            _isLeaving = true;
+                          }
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).spectatorTransitioning,
+                            subtitle: L10n.of(context).spectatorRecheckingState,
+                          );
+                        }
+                        if (_isLeaving) {
+                          _isLeaving = false;
+                        }
 
-                  final state = game.spectatorGameState;
-                  // No board yet: the router sends a spectator with no game to
-                  // the shared waiting room, so this is only the instant
-                  // between the two. A spinner, not a second waiting room.
-                  if (!game.hasSpectatorGameState || state == null) {
-                    return const Center(child: CartoonLoader());
-                  }
+                        final state = game.spectatorGameState;
+                        // No board yet: the router sends a spectator with no game to
+                        // the shared waiting room, so this is only the instant
+                        // between the two. A spinner, not a second waiting room.
+                        if (!game.hasSpectatorGameState || state == null) {
+                          return const Center(child: CartoonLoader());
+                        }
 
-                  return _buildSpectatorView(context, game, state, isLandscape);
-                },
-              ),
+                        return _buildSpectatorView(
+                          context,
+                          game,
+                          state,
+                          isLandscape,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

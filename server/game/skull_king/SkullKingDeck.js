@@ -29,7 +29,17 @@ const CARD_TYPE = {
 };
 
 // Known expansion ids
-const SK_EXPANSIONS = ['kraken', 'white_whale', 'loot'];
+const SK_EXPANSIONS = ['kraken', 'white_whale', 'loot', 'pirate_abilities'];
+
+// 해적 5명의 이름(카드 id 의 번호 → 이름). 능력은 'pirate_abilities' 모드를 켰을 때만
+// 쓸 수 있고, 모드가 꺼져 있어도 카드는 그대로 쓴다(능력만 없다).
+const PIRATE_NAMES = { 1: 'rascal', 2: 'rosie', 3: 'bendt', 4: 'harry', 5: 'juanita' };
+
+/** `sk_pirate_3` → 'bendt'. 해적 카드가 아니거나 번호가 없으면 null. */
+function pirateNameOf(cardId) {
+  const m = /^sk_pirate_(\d+)$/.exec(cardId || '');
+  return m ? (PIRATE_NAMES[Number(m[1])] || null) : null;
+}
 
 function createDeck(expansions = []) {
   const deck = [];
@@ -53,8 +63,8 @@ function createDeck(expansions = []) {
     deck.push({ id: `sk_escape_${i}`, suit: 'special', rank: 'escape', value: 0, type: CARD_TYPE.ESCAPE });
   }
 
-  // 4 Pirate cards
-  for (let i = 1; i <= 4; i++) {
+  // 5 Pirate cards (Rascal / Rosie / Bendt / Harry / Juanita)
+  for (let i = 1; i <= 5; i++) {
     deck.push({ id: `sk_pirate_${i}`, suit: 'special', rank: 'pirate', value: 0, type: CARD_TYPE.PIRATE });
   }
 
@@ -101,6 +111,11 @@ function shuffle(deck) {
 }
 
 function deal(deck, playerCount, cardsPerPlayer) {
+  return dealWithRest(deck, playerCount, cardsPerPlayer).hands;
+}
+
+/** deal 과 같지만 나눠 주고 남은 카드(Bendt 가 뽑고 Juanita 가 보는 더미)도 돌려준다. */
+function dealWithRest(deck, playerCount, cardsPerPlayer) {
   const shuffled = shuffle(deck);
   const hands = [];
   for (let i = 0; i < playerCount; i++) {
@@ -111,7 +126,7 @@ function deal(deck, playerCount, cardsPerPlayer) {
       hands[p].push(shuffled[c * playerCount + p]);
     }
   }
-  return hands;
+  return { hands, rest: shuffled.slice(cardsPerPlayer * playerCount) };
 }
 
 function getCardInfo(cardId) {
@@ -186,5 +201,6 @@ function sortCards(cards) {
 
 module.exports = {
   SK_SUITS, SK_RANKS, SK_RANK_VALUES, CARD_TYPE, SK_EXPANSIONS,
-  createDeck, shuffle, deal, getCardInfo, sortCards,
+  PIRATE_NAMES, pirateNameOf,
+  createDeck, shuffle, deal, dealWithRest, getCardInfo, sortCards,
 };

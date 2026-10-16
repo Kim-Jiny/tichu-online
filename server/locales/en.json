@@ -244,6 +244,8 @@
   "sk_invalid_card": "Invalid card",
   "sk_tigress_choice_required": "Tigress choice required (pirate/escape)",
   "sk_not_round_end": "Not in the round-end state",
+  "sk_ability_not_pending": "It's not time to use a pirate ability",
+  "sk_ability_invalid": "That pirate ability choice isn't valid",
   "ll_update_required": "Please update the app to play Love Letter",
   "mighty_update_required": "Please update the app to play Mighty",
   "banner_update_required": "Please update the app to buy or use this banner",

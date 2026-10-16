@@ -247,6 +247,8 @@
   "sk_invalid_card": "Ungültige Karte",
   "sk_tigress_choice_required": "Tigress-Auswahl erforderlich (Pirat/Flucht)",
   "sk_not_round_end": "Nicht im Rundenend-Zustand",
+  "sk_ability_not_pending": "Gerade kann keine Piratenfähigkeit eingesetzt werden",
+  "sk_ability_invalid": "Diese Wahl für die Piratenfähigkeit ist ungültig",
   "ll_update_required": "Bitte aktualisiere die App, um Love Letter zu spielen",
   "ll_not_play_phase": "Nicht in der Spielphase",
   "ll_not_your_turn": "Du bist nicht am Zug",

@@ -31,7 +31,8 @@ function playerStillNeedsToAct(gameType, game, playerId) {
 
   if (gameType === 'skull_king') {
     return (state === 'playing' && game.currentPlayer === playerId)
-      || (state === 'bidding' && !!game.bids && game.bids[playerId] === null);
+      || (state === 'bidding' && !!game.bids && game.bids[playerId] === null)
+      || (state === 'pirate_ability' && !!game.pendingAbility && game.pendingAbility.playerId === playerId);
   }
 
   if (gameType === 'love_letter') {

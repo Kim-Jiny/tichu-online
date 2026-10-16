@@ -743,6 +743,8 @@ function renderMarketingPage({
 // Skull King version gating
 const SK_MIN_VERSION = '2.0.0';
 const SK_EXPANSION_MIN_VERSION = '2.1.0';
+// 해적 능력 모드('pirate_abilities'): 새 phase(pirate_ability)와 액션이 생겨 이전 앱은 멈춘다.
+const SK_PIRATE_MIN_VERSION = '3.3.0';
 // Love Letter version gating
 const LL_MIN_VERSION = '2.2.0';
 // Mighty version gating
@@ -796,6 +798,16 @@ function clientSupportsSK(ws) {
 
 function clientSupportsSKExpansions(ws) {
   return compareVersions(ws.appVersion, SK_EXPANSION_MIN_VERSION) >= 0;
+}
+
+function clientSupportsSKPirate(ws) {
+  return compareVersions(ws.appVersion, SK_PIRATE_MIN_VERSION) >= 0;
+}
+
+function roomHasSKPirateAbilities(room) {
+  return room && room.gameType === 'skull_king'
+    && Array.isArray(room.skExpansions)
+    && room.skExpansions.includes('pirate_abilities');
 }
 
 function roomHasSKExpansions(room) {
@@ -883,6 +895,7 @@ function clientCanAccessRoom(ws, room) {
   if (room.gameType !== 'skull_king') return true;
   if (!clientSupportsSK(ws)) return false;
   if (roomHasSKExpansions(room) && !clientSupportsSKExpansions(ws)) return false;
+  if (roomHasSKPirateAbilities(room) && !clientSupportsSKPirate(ws)) return false;
   return true;
 }
 
@@ -3556,6 +3569,7 @@ async function handleMessage(ws, data) {
     // Game actions (Skull King)
     case 'submit_bid':
     case 'play_card':
+    case 'use_pirate_ability':
     // Game actions (Love Letter)
     case 'select_target':
     case 'guard_guess':
@@ -4850,8 +4864,8 @@ function handleCreateRoom(ws, data) {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 4);
   } else if (gameType === 'skull_king') {
     maxPlayers = Math.min(Math.max(parseInt(data.maxPlayers) || 4, 2), 6);
-    // Validate skExpansions: accept only known ids, dedupe, cap to 3
-    const allowed = new Set(['kraken', 'white_whale', 'loot']);
+    // Validate skExpansions: accept only known ids, dedupe
+    const allowed = new Set(['kraken', 'white_whale', 'loot', 'pirate_abilities']);
     if (Array.isArray(data.skExpansions)) {
       const seen = new Set();
       for (const x of data.skExpansions) {
@@ -4862,6 +4876,10 @@ function handleCreateRoom(ws, data) {
       }
     }
     if (skExpansions.length > 0 && !clientSupportsSKExpansions(ws)) {
+      sendTo(ws, { type: 'error', message: t(ws.locale, 'sk_expansion_update_required') });
+      return;
+    }
+    if (skExpansions.includes('pirate_abilities') && !clientSupportsSKPirate(ws)) {
       sendTo(ws, { type: 'error', message: t(ws.locale, 'sk_expansion_update_required') });
       return;
     }
@@ -7536,6 +7554,21 @@ function startTurnTimer(roomId) {
     turnWaitingOn[roomId] = pending;
     turnTimers[roomId] = setTimeout(() => {
       handlePhaseTimeout(roomId, 'sk_bidding');
+    }, timeLimit);
+    return;
+  }
+
+  // SK pirate ability: the trick winner owes one choice (default applied on timeout)
+  if (room.gameType === 'skull_king' && gameState === 'pirate_ability') {
+    const actor = room.game.pendingAbility && room.game.pendingAbility.playerId;
+    if (turnTimers[roomId] && turnWaitingOn[roomId]?.[0] === actor) return;
+    clearTurnTimer(roomId);
+    if (!actor || seatIsAutoPlayed(room, actor)) return;
+    const timeLimit = turnTimeLimitMs(room, actor);
+    room.turnDeadline = Date.now() + timeLimit;
+    turnWaitingOn[roomId] = [actor];
+    turnTimers[roomId] = setTimeout(() => {
+      handleTurnTimeout(roomId, actor);
     }, timeLimit);
     return;
   }

@@ -14,11 +14,72 @@ function decideSKBotAction(game, botId) {
     return decideBid(game, botId);
   }
 
+  if (game.state === 'pirate_ability' && game.pendingAbility
+      && game.pendingAbility.playerId === botId) {
+    return decideAbility(game, botId);
+  }
+
   if (game.state === 'playing' && game.currentPlayer === botId) {
     return decidePlay(game, botId);
   }
 
   return null;
+}
+
+// 해적 능력 — 이긴 직후라 이번 트릭은 이미 센 상태(tricks 에 포함)다.
+function decideAbility(game, botId) {
+  const ab = game.pendingAbility;
+  const bid = game.bids[botId];
+  const won = game.tricks[botId] || 0;
+  const hand = game.hands[botId] || [];
+  const need = bid - won; // >0 이면 더 이겨야 하고, 0 이면 딱 맞았고, <0 이면 이미 넘쳤다
+
+  switch (ab.pirate) {
+    case 'rosie': {
+      // 더 이겨야 하면 내가 선두를 잡고, 아니면 이길 일이 급한 사람(더 이겨야 하는 사람)에게 넘기지 않는다.
+      if (need > 0) return { type: 'use_pirate_ability', leaderId: botId };
+      const others = game.playerIds.filter(p => p !== botId);
+      const satisfied = others.filter(p => (game.tricks[p] || 0) >= game.bids[p]);
+      const pool = satisfied.length ? satisfied : others;
+      return { type: 'use_pirate_ability', leaderId: pool[Math.floor(Math.random() * pool.length)] };
+    }
+    case 'bendt': {
+      const strength = (id) => {
+        const i = getCardInfo(id);
+        switch (i.type) {
+          case CARD_TYPE.SKULL_KING: return 100;
+          case CARD_TYPE.MERMAID: return 80;
+          case CARD_TYPE.PIRATE: return 70;
+          case CARD_TYPE.TIGRESS: return 60;
+          case CARD_TYPE.WHITE_WHALE: return 55;
+          case CARD_TYPE.KRAKEN: return 50;
+          case CARD_TYPE.NUMBER: return (i.suit === 'black' ? 20 : 0) + i.value;
+          case CARD_TYPE.LOOT: return 3;
+          default: return 1; // escape
+        }
+      };
+      const n = (ab.drawn || []).length;
+      const sorted = [...hand].sort((a, b) => strength(a) - strength(b));
+      // 더 이겨야 하면 약한 카드를, 아니면 센 카드(이기게 되는 카드)를 버린다.
+      const discard = need > 0 ? sorted.slice(0, n) : sorted.slice(-n);
+      return { type: 'use_pirate_ability', discard };
+    }
+    case 'rascal': {
+      // 지금 딱 맞아 있고 남은 카드가 적을수록 안전하다. 더 이겨야 하면 걸지 않는다.
+      let wager = 0;
+      if (need === 0) wager = hand.length <= 2 ? 20 : (hand.length <= 4 ? 10 : 0);
+      return { type: 'use_pirate_ability', wager };
+    }
+    case 'harry': {
+      let delta = 0;
+      if (hand.length === 0) delta = Math.abs(won - bid) === 1 ? won - bid : 0; // 마지막이면 정확히 맞춘다
+      else if (won - bid === 1) delta = 1; // 한 판 넘쳤으면 입찰을 올려 맞춘다
+      if (bid + delta < 0 || bid + delta > game.round) delta = 0;
+      return { type: 'use_pirate_ability', delta };
+    }
+    default: // juanita — 보기만 한다
+      return { type: 'use_pirate_ability' };
+  }
 }
 
 function decideBid(game, botId) {

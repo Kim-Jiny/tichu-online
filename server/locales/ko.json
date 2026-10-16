@@ -244,6 +244,8 @@
   "sk_invalid_card": "유효하지 않은 카드입니다",
   "sk_tigress_choice_required": "Tigress 선택이 필요합니다 (pirate/escape)",
   "sk_not_round_end": "라운드 종료 상태가 아닙니다",
+  "sk_ability_not_pending": "지금은 해적 능력을 쓸 때가 아닙니다",
+  "sk_ability_invalid": "해적 능력을 그렇게 쓸 수 없습니다",
   "ll_update_required": "러브레터를 플레이하려면 앱을 업데이트해 주세요",
   "mighty_update_required": "마이티를 플레이하려면 앱을 업데이트해 주세요",
   "banner_update_required": "이 배너를 구매·사용하려면 앱을 업데이트해 주세요",

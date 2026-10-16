@@ -6,13 +6,15 @@
  * 2-6 players, individual play (no teams)
  */
 
-const { createDeck, deal, getCardInfo, sortCards, CARD_TYPE, SK_EXPANSIONS } = require('./SkullKingDeck');
+const { createDeck, dealWithRest, getCardInfo, sortCards, pirateNameOf, CARD_TYPE, SK_EXPANSIONS } = require('./SkullKingDeck');
 const { resolveTrick } = require('./SkullKingTrickResolver');
 const { calculateRoundScore } = require('./SkullKingScoreCalc');
 const { mapKeys } = require('../historyIds');
 
 const TOTAL_ROUNDS = 10;
 const LOOT_BONUS_POINTS = 20;
+const RASCAL_WAGERS = [0, 10, 20];
+const BENDT_DRAW = 2;
 
 class SkullKingGame {
   constructor(playerIds, playerNames, options = {}) {
@@ -22,9 +24,17 @@ class SkullKingGame {
     this.gameType = 'skull_king';
     this.initialDealerIndex = 0;
 
-    // Enabled expansions: subset of SK_EXPANSIONS ['kraken', 'white_whale', 'loot']
+    // Enabled expansions: subset of SK_EXPANSIONS ['kraken', 'white_whale', 'loot', 'pirate_abilities']
     const requested = Array.isArray(options.expansions) ? options.expansions : [];
     this.expansions = SK_EXPANSIONS.filter(x => requested.includes(x));
+
+    // 해적 능력 모드. 해적 5장은 모드와 상관없이 덱에 있고, 켰을 때만 트릭을 이긴 사람이 능력을 쓴다.
+    this.pendingAbility = null;   // { playerId, pirate, cardId, started, drawn? } — 쓰는 중인 능력
+    this.nextLeaderOverride = null; // Rosie 가 지목한 다음 트릭 선
+    this.rascalWagers = {};       // playerId -> 0|10|20 (이번 라운드 Rascal 내기)
+    this.undealt = [];            // 이번 라운드에 안 나눠 준 카드(Bendt 가 뽑고 Juanita 가 본다)
+    this.lastAbility = null;      // 방금 쓴 능력 — 모두에게 보여 줄 알림용(공개 정보만)
+    this.abilitySeq = 0;          // lastAbility 가 바뀔 때마다 +1 (앱이 알림을 한 번만 띄우는 용도)
 
     this.state = 'waiting';
     this.round = 0;
@@ -79,7 +89,11 @@ class SkullKingGame {
 
     // Deal cards: round N → N cards per player
     const deck = createDeck(this.expansions);
-    const hands = deal(deck, this.playerCount, this.round);
+    const { hands, rest } = dealWithRest(deck, this.playerCount, this.round);
+    this.undealt = rest.map(c => c.id);
+    this.pendingAbility = null;
+    this.nextLeaderOverride = null;
+    this.rascalWagers = {};
 
     this.hands = {};
     this.bids = {};
@@ -113,6 +127,9 @@ class SkullKingGame {
   // fire false recoveries. Surface a real non-bidder instead: a bot → the
   // watchdog recovers it; a human → the watchdog's own isBot check stands down.
   getPendingActor() {
+    if (this.state === 'pirate_ability' && this.pendingAbility) {
+      return this.pendingAbility.playerId;
+    }
     if (this.state === 'bidding') {
       for (const pid of this.playerIds) {
         if (this.bids[pid] === null) return pid;
@@ -128,6 +145,8 @@ class SkullKingGame {
         return this.handleSubmitBid(playerId, data.bid);
       case 'play_card':
         return this.handlePlayCard(playerId, data.cardId, data.tigressChoice);
+      case 'use_pirate_ability':
+        return this.handleUsePirateAbility(playerId, data);
       case 'next_round':
         return this.handleNextRound();
       default:
@@ -177,9 +196,11 @@ class SkullKingGame {
       const dealerIndex = (this.initialDealerIndex + this.round - 1) % this.playerCount;
       this.trickStarter = this.playerIds[(dealerIndex + 1) % this.playerCount];
     } else {
-      // Subsequent tricks are led by the previous trick winner.
-      this.trickStarter = this.lastTrickWinner || this.playerIds[0];
+      // Subsequent tricks are led by the previous trick winner — unless Rosie
+      // handed the lead to someone else.
+      this.trickStarter = this.nextLeaderOverride || this.lastTrickWinner || this.playerIds[0];
     }
+    this.nextLeaderOverride = null;
 
     this.currentPlayer = this.trickStarter;
     this.state = 'playing';
@@ -281,7 +302,107 @@ class SkullKingGame {
 
     const cardsRemaining = Object.values(this.hands).some(h => h.length > 0);
     this.nextPhaseAfterTrickEnd = cardsRemaining ? 'playing' : 'round_end';
+    this.pendingAbility = voided ? null : this._abilityForWinner(result.winnerId, cardsRemaining);
     return { success: true };
+  }
+
+  /**
+   * 트릭을 이긴 카드가 이름 있는 해적(Tigress 로 낸 해적은 아님)이면 그 능력을 쓸 권리가 생긴다.
+   * 마지막 트릭 뒤에는 Harry 만 의미가 있다(나머지는 쓸 곳이 없다). 쓸 곳이 없으면 아예 건너뛴다.
+   */
+  _abilityForWinner(winnerId, cardsRemaining) {
+    if (!this.expansions.includes('pirate_abilities')) return null;
+    const play = this.currentTrick.find(p => p.playerId === winnerId);
+    const pirate = play ? pirateNameOf(play.cardId) : null;
+    if (!pirate) return null;
+    if (!cardsRemaining && pirate !== 'harry') return null;
+    if (pirate === 'bendt' && (this.undealt.length === 0 || (this.hands[winnerId] || []).length === 0)) return null;
+    if (pirate === 'juanita' && this.undealt.length === 0) return null;
+    return { playerId: winnerId, pirate, cardId: play.cardId, started: false };
+  }
+
+  _beginAbility() {
+    const ab = this.pendingAbility;
+    ab.started = true;
+    this.state = 'pirate_ability';
+    this.currentPlayer = ab.playerId;
+    if (ab.pirate === 'bendt') {
+      // 더미에서 2장을 손에 넣고, 이어서 아무 2장이나 버린다(방금 뽑은 것도 가능).
+      const n = Math.min(BENDT_DRAW, this.undealt.length);
+      ab.drawn = this.undealt.splice(0, n);
+      this.hands[ab.playerId] = sortCards([...this.hands[ab.playerId], ...ab.drawn]);
+    }
+  }
+
+  handleUsePirateAbility(playerId, data) {
+    const ab = this.pendingAbility;
+    if (this.state !== 'pirate_ability' || !ab) {
+      return { success: false, messageKey: 'sk_ability_not_pending' };
+    }
+    if (playerId !== ab.playerId) {
+      return { success: false, messageKey: 'sk_not_your_turn' };
+    }
+    const bad = { success: false, messageKey: 'sk_ability_invalid' };
+    const info = { playerId, pirate: ab.pirate };
+
+    switch (ab.pirate) {
+      case 'rosie': {
+        if (!this.playerIds.includes(data.leaderId)) return bad;
+        this.nextLeaderOverride = data.leaderId;
+        info.targetId = data.leaderId;
+        break;
+      }
+      case 'bendt': {
+        const discard = Array.isArray(data.discard) ? data.discard : [];
+        const need = (ab.drawn || []).length;
+        const hand = this.hands[playerId] || [];
+        if (discard.length !== need || new Set(discard).size !== need) return bad;
+        if (!discard.every(id => hand.includes(id))) return bad;
+        this.hands[playerId] = hand.filter(id => !discard.includes(id));
+        info.count = need;
+        break;
+      }
+      case 'rascal': {
+        const wager = Number(data.wager);
+        if (!RASCAL_WAGERS.includes(wager)) return bad;
+        this.rascalWagers[playerId] = wager;
+        info.wager = wager;
+        break;
+      }
+      case 'juanita':
+        break; // 보기만 한다 — 확인하면 끝
+      case 'harry': {
+        const delta = Number(data.delta);
+        if (![-1, 0, 1].includes(delta)) return bad;
+        const next = this.bids[playerId] + delta;
+        if (next < 0 || next > this.round) return bad;
+        this.bids[playerId] = next;
+        info.delta = delta;
+        info.bid = next;
+        break;
+      }
+      default:
+        return bad;
+    }
+
+    this.pendingAbility = null;
+    this.lastAbility = info;
+    this.abilitySeq++;
+    this._continueAfterTrick();
+    return { success: true };
+  }
+
+  /** 능력을 쓰지 못하는 상황(타임아웃·탈락)에서 기본 선택. */
+  _defaultAbilityAction() {
+    const ab = this.pendingAbility;
+    if (!ab) return null;
+    switch (ab.pirate) {
+      case 'rosie': return { type: 'use_pirate_ability', leaderId: ab.playerId };
+      case 'bendt': return { type: 'use_pirate_ability', discard: [...(ab.drawn || [])] };
+      case 'rascal': return { type: 'use_pirate_ability', wager: 0 };
+      case 'harry': return { type: 'use_pirate_ability', delta: 0 };
+      default: return { type: 'use_pirate_ability' };
+    }
   }
 
   /** 트릭 결과에서 나오는 미션 이벤트: 스컬킹이 해적 둘 이상, 인어가 스컬킹, 숫자 10 으로 승리. */
@@ -325,11 +446,19 @@ class SkullKingGame {
   advanceAfterTrickEnd() {
     if (this.state !== 'trick_end') return;
 
+    // 이긴 해적의 능력이 남아 있으면 먼저 쓰게 한다.
+    if (this.pendingAbility && !this.pendingAbility.started) {
+      this._beginAbility();
+      return;
+    }
+    this._continueAfterTrick();
+  }
+
+  _continueAfterTrick() {
     if (this.nextPhaseAfterTrickEnd === 'round_end') {
       this.endRound();
       return;
     }
-
     this.startTrick();
   }
 
@@ -355,7 +484,10 @@ class SkullKingGame {
       const bid = this.bids[pid];
       const tricksWon = this.tricks[pid];
       const bonus = this.bonuses[pid] + lootBonus[pid];
-      const roundScore = calculateRoundScore(bid, tricksWon, this.round, bonus);
+      let roundScore = calculateRoundScore(bid, tricksWon, this.round, bonus);
+      // Rascal 의 내기: 입찰을 맞히면 걸어 둔 점수를 더 받고, 못 맞히면 그만큼 잃는다.
+      const wager = (this.rascalWagers || {})[pid] || 0;
+      if (wager) roundScore += this._bidMet(pid) ? wager : -wager;
 
       this.totalScores[pid] += roundScore;
       this.lastRoundScores[pid] = roundScore;
@@ -370,6 +502,7 @@ class SkullKingGame {
         bid,
         tricks: tricksWon,
         bonus: bidSuccess ? bonus : 0,
+        wager,
         roundScore,
         totalScore: this.totalScores[pid],
       };
@@ -543,9 +676,19 @@ class SkullKingGame {
     }));
 
     // Legal cards for current player
-    const legalCards = this.currentPlayer === playerId
+    const legalCards = this.currentPlayer === playerId && this.state === 'playing'
       ? this.getLegalCards(playerId)
       : [];
+    // 능력을 쓰는 동안 currentPlayer 는 능력 주인이지만 카드를 낼 차례는 아니다.
+    const isMyTurn = this.currentPlayer === playerId && this.state !== 'pirate_ability';
+    const ab = this.pendingAbility;
+    const abilityInfo = ab && ab.playerId === playerId
+      ? {
+        // 내 능력일 때만 주는 비공개 정보: Bendt 가 방금 뽑은 카드, Juanita 가 보는 안 나눈 카드.
+        drawn: ab.drawn ? [...ab.drawn] : undefined,
+        undealt: ab.pirate === 'juanita' ? sortCards(this.undealt) : undefined,
+      }
+      : null;
 
     return {
       gameType: 'skull_king',
@@ -556,7 +699,7 @@ class SkullKingGame {
       players,
       myCards: this.hands[playerId] || [],
       currentPlayer: this.currentPlayer,
-      isMyTurn: this.currentPlayer === playerId,
+      isMyTurn,
       currentTrick,
       legalCards,
       totalScores: { ...this.totalScores },
@@ -569,6 +712,13 @@ class SkullKingGame {
       trickStarter: this.trickStarter,
       roundStarter: this._getRoundStarter(),
       expansions: [...this.expansions],
+      pendingAbility: this.pendingAbility
+        ? { playerId: this.pendingAbility.playerId, pirate: this.pendingAbility.pirate, cardId: this.pendingAbility.cardId }
+        : null,
+      lastAbility: this.lastAbility,
+      abilitySeq: this.abilitySeq,
+      rascalWagers: { ...(this.rascalWagers || {}) },
+      abilityInfo,
     };
   }
 
@@ -611,6 +761,12 @@ class SkullKingGame {
       trickStarter: this.trickStarter,
       roundStarter: this._getRoundStarter(),
       expansions: [...this.expansions],
+      pendingAbility: this.pendingAbility
+        ? { playerId: this.pendingAbility.playerId, pirate: this.pendingAbility.pirate, cardId: this.pendingAbility.cardId }
+        : null,
+      lastAbility: this.lastAbility,
+      abilitySeq: this.abilitySeq,
+      rascalWagers: { ...(this.rascalWagers || {}) },
     };
   }
 
@@ -632,6 +788,10 @@ class SkullKingGame {
       // 것은 라운드가 아직 0인 순간(딜 직전)에 거절당하지 않게 하기 위한
       // 것이고, 그 경우 0으로 떨어진다.
       return { type: 'submit_bid', bid: Math.min(1, this.round) };
+    }
+    if (this.state === 'pirate_ability' && this.pendingAbility
+        && this.pendingAbility.playerId === playerId) {
+      return this._defaultAbilityAction();
     }
     if (this.state === 'playing' && this.currentPlayer === playerId) {
       const legalCards = this.getLegalCards(playerId);
@@ -672,6 +832,20 @@ class SkullKingGame {
     if (this.tricks.hasOwnProperty(oldPlayerId)) {
       this.tricks[newPlayerId] = this.tricks[oldPlayerId];
       delete this.tricks[oldPlayerId];
+    }
+
+    // Update pirate-ability state
+    if (this.pendingAbility && this.pendingAbility.playerId === oldPlayerId) {
+      this.pendingAbility.playerId = newPlayerId;
+    }
+    if (this.nextLeaderOverride === oldPlayerId) this.nextLeaderOverride = newPlayerId;
+    if (this.rascalWagers && this.rascalWagers.hasOwnProperty(oldPlayerId)) {
+      this.rascalWagers[newPlayerId] = this.rascalWagers[oldPlayerId];
+      delete this.rascalWagers[oldPlayerId];
+    }
+    if (this.lastAbility) {
+      if (this.lastAbility.playerId === oldPlayerId) this.lastAbility.playerId = newPlayerId;
+      if (this.lastAbility.targetId === oldPlayerId) this.lastAbility.targetId = newPlayerId;
     }
 
     // Update loot alliances

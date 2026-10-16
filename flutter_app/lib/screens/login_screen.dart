@@ -446,7 +446,7 @@ class _LoginScreenState extends State<LoginScreen> {
           from: const Offset(0, -70),
           child: CartoonFloat(
             child: Image.asset(
-              'assets/dragon_icon.webp',
+              'assets/dragon_head.webp',
               width: compact ? 88 : 104,
               height: compact ? 88 : 104,
             ),

@@ -262,7 +262,12 @@ class _CartoonButtonState extends State<CartoonButton> {
           border: Border.all(color: Cartoon.ink, width: Cartoon.border),
           boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, depth))],
         ),
+        // alignment 로 가운데에 두고 자식은 그대로 쓴다. 예전에는 Center 로 감쌌는데, Center 는
+        // 폭이 정해진 자리(ListTile.trailing 처럼)에서 남는 폭을 전부 차지해 expand:false 버튼이
+        // 줄 전체 폭으로 부풀었고, 우편함의 '받기' 버튼이 "Trailing widget consumes the entire
+        // tile width" 로 레이아웃을 깨뜨려 보상이 든 우편이 아예 안 보였다.
         child: Stack(
+          alignment: Alignment.center,
           children: [
             // 위쪽 하이라이트 띠: 빛을 받은 통통한 느낌
             Positioned(
@@ -277,7 +282,7 @@ class _CartoonButtonState extends State<CartoonButton> {
                 ),
               ),
             ),
-            Center(child: widget.child),
+            widget.child,
           ],
         ),
       ),

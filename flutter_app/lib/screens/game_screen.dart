@@ -1,3 +1,4 @@
+import '../utils/tichu_combo.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -223,41 +224,16 @@ class _GameScreenState extends State<GameScreen> {
     setState(() => _selectedCards.clear());
   }
 
-  bool _isBombCombo(List<String> cards) {
-    // Four of a kind: 4 non-special cards with same rank
-    if (cards.length == 4) {
-      if (cards.any((c) => c.startsWith('special_'))) return false;
-      final ranks = cards.map((c) => c.split('_')[1]).toSet();
-      return ranks.length == 1;
-    }
-    // Straight flush: 5+ same-suit consecutive cards (no specials)
-    if (cards.length >= 5) {
-      if (cards.any((c) => c.startsWith('special_'))) return false;
-      final suits = cards.map((c) => c.split('_')[0]).toSet();
-      if (suits.length != 1) return false;
-      const rankValues = {
-        '2': 2,
-        '3': 3,
-        '4': 4,
-        '5': 5,
-        '6': 6,
-        '7': 7,
-        '8': 8,
-        '9': 9,
-        '10': 10,
-        'J': 11,
-        'Q': 12,
-        'K': 13,
-        'A': 14,
-      };
-      final values = cards.map((c) => rankValues[c.split('_')[1]] ?? 0).toList()
-        ..sort();
-      for (int i = 1; i < values.length; i++) {
-        if (values[i] != values[i - 1] + 1) return false;
-      }
-      return true;
-    }
-    return false;
+  // 고른 패가 지금 낼 수 있는 조합인지(조합 성립 + 앞 패를 이기는지). 소원 의무는 서버가 판정.
+  bool _canPlaySelected(GameStateData state) {
+    final last = state.currentTrick.isEmpty ? null : state.currentTrick.last;
+    return tichuCanPlay(
+      _selectedCards.toList(),
+      myTurn: state.isMyTurn,
+      trickType: last?.combo,
+      trickLength: last?.cards.length ?? 0,
+      trickValue: last?.comboValue ?? 0,
+    );
   }
 
   void _showBirdCallDialog() {
@@ -2273,8 +2249,7 @@ class _GameScreenState extends State<GameScreen> {
                 (state.phase == 'playing' &&
                         _selectedCards.isNotEmpty &&
                         !state.dragonPending &&
-                        (state.isMyTurn ||
-                            _isBombCombo(_selectedCards.toList())))
+                        _canPlaySelected(state))
                     ? _playCards
                     : null,
                 color: Cartoon.green,

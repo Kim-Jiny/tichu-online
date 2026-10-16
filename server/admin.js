@@ -142,7 +142,7 @@ function redirect(res, location) {
 
 // 모양(CSS·사이드바·아이콘)은 admin_theme.js 에 있다. 여기서는 사이드바 배지와 접속 현황 같은
 // "페이지가 열릴 때의 값"만 모아서 넘긴다.
-const { renderLayout, renderLoginPage } = require('./admin_theme');
+const { renderLayout, renderLoginPage, icon: themeIcon } = require('./admin_theme');
 
 // 사이드바 배지(미처리 문의·신고·입금)는 모든 페이지가 쓰는데 layout() 은 동기 함수라서, 30초마다
 // 갱신해 두는 값을 읽는다. 조회가 실패하면 직전 값을 그대로 둔다.
@@ -981,10 +981,10 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
           const totalGamesAll = (parseInt(p.total_games) || 0) + (parseInt(p.sk_total_games) || 0) + (parseInt(p.ll_total_games) || 0) + (parseInt(p.mighty_total_games) || 0);
           return `<tr>
             <td style="text-align:center">${medal}</td>
-            <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(p.nickname)}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(p.nickname)}</a></td>
             <td style="font-weight:800">${formatNumber(rankGames)}판</td>
             <td style="font-size:12px;color:#666;line-height:1.6">
-              <span style="color:#5f62d6">티츄 ${formatNumber(tichuGames)}</span> ·
+              <span style="color:var(--orange-deep)">티츄 ${formatNumber(tichuGames)}</span> ·
               <span style="color:#ff7043">SK ${formatNumber(skGames)}</span> ·
               <span style="color:#E91E63">LL ${formatNumber(llGames)}</span> ·
               <span style="color:#1565C0">마이티 ${formatNumber(mightyGames)}</span>
@@ -1756,7 +1756,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       roomsTable = `<div class="table-wrap"><table>
         <tr><th>방</th><th>방장</th><th>게임</th><th>인원</th><th>상태</th><th>유형</th><th>관전</th></tr>
         ${allRooms.map(r => `<tr>
-          <td><a href="/tc-backstage/rooms/${encodeURIComponent(r.id)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(r.name)}</a></td>
+          <td><a href="/tc-backstage/rooms/${encodeURIComponent(r.id)}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(r.name)}</a></td>
           <td>${escapeHtml(r.hostName)}</td>
           <td>${gameTypeBadge(r.gameType)}</td>
           <td>${r.playerCount}/${r.maxPlayers}</td>
@@ -1800,13 +1800,34 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       { n: stats.pendingReports, t: '미처리 신고', href: '/tc-backstage/reports' },
       { n: stats.pendingInquiries, t: '미처리 문의', href: '/tc-backstage/inquiries' },
       { n: pendingDeposits, t: '입금 확인 대기', href: '/tc-backstage/deposits' },
-      { n: stats.todayRefundCount || 0, t: '오늘 환불', href: '/tc-backstage/refunds' },
+      { n: stats.todayRefundCount || 0, t: '오늘 환불', href: '/tc-backstage/iap-receipts', ic: 'refund' },
     ].filter((t) => t.n > 0);
+    const TODO_ICONS = { '/tc-backstage/reports': 'report', '/tc-backstage/inquiries': 'inquiry', '/tc-backstage/deposits': 'bank' };
     const todoHtml = todos.length === 0
-      ? '<div class="todo-clear">처리할 항목이 없습니다.</div>'
+      ? `<div class="todo-clear">${themeIcon('shield', 20)}처리할 항목이 없습니다. 깔끔해요!</div>`
       : `<div class="todo-row">${todos.map((t) => `<a class="todo" href="${t.href}">
-          <span class="n">${formatNumber(t.n)}</span><span class="t">${t.t}</span>
+          <span class="todo-ic">${themeIcon(t.ic || TODO_ICONS[t.href] || 'issue', 24)}</span><span class="n">${formatNumber(t.n)}</span><span class="t">${t.t}</span>
         </a>`).join('')}</div>`;
+
+    // 자주 쓰는 운영 동작으로 바로 가는 타일.
+    const QUICK = [
+      { href: '/tc-backstage/notices/new', t: '공지 작성', ic: 'megaphone' },
+      { href: '/tc-backstage/push', t: '푸시 보내기', ic: 'bell' },
+      { href: '/tc-backstage/mail', t: '우편 보내기', ic: 'mail' },
+      { href: '/tc-backstage/coupons', t: '쿠폰', ic: 'ticket' },
+      { href: '/tc-backstage/missions/grant', t: '토큰 지급', ic: 'token' },
+      { href: '/tc-backstage/users', t: '유저 찾기', ic: 'users' },
+      { href: '/tc-backstage/maintenance', t: '점검 설정', ic: 'wrench' },
+      { href: '/tc-backstage/logs', t: '서버 로그', ic: 'log' },
+    ];
+    const quickHtml = `<div class="quick-grid">${QUICK.map((q) => `<a class="quick" href="${q.href}">
+      <span class="quick-ic">${themeIcon(q.ic, 26)}</span><span class="quick-t">${q.t}</span></a>`).join('')}</div>`;
+    const mt = getMaintenanceStatus ? getMaintenanceStatus('ko') : {};
+    const statePill = mt && mt.maintenance
+      ? '<span class="state-pill bad">점검 중</span>'
+      : mt && mt.notice
+        ? '<span class="state-pill warn">점검 예고 중</span>'
+        : '<span class="state-pill ok">서버 정상</span>';
 
     // 7일 막대. 게임은 종류별로 쌓고, 그날 값이 0인 종류는 범례에서 흐리게
     // 둬서 "안 쓰는 모드"와 "오늘만 없는 모드"를 구분할 수 있게 한다.
@@ -1845,6 +1866,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <a href="/tc-backstage/users" class="btn btn-primary">유저 관리</a>
         `
       )}
+
+      <div class="dash-hero">
+        <img src="/tc-backstage/_a/dragon_full.webp" alt="">
+        <div class="dh-text">
+          <div class="dh-hello">오늘도 수고 많아요! ${statePill}</div>
+          <div class="dh-line">오늘 ${formatNumber(gamesToday)}판 · 신규 가입 ${formatNumber(signupsToday)}명 · 24시간 활성 ${formatNumber(stats.activeUsers24h)}명</div>
+        </div>
+        ${quickHtml}
+      </div>
 
       <div class="dash-section">
         <div class="dash-head"><h2>처리 대기</h2></div>
@@ -1946,7 +1976,6 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             ${matchesTable}
           </div>
         </div>
-      </div>
       </div>
       <script>
         (() => {
@@ -2458,7 +2487,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>닉네임</th><th>기간 출석</th><th>7일완주</th><th>현재 연속</th><th>누적 출석</th><th>지급 골드</th><th>최근 출석</th></tr>
           ${attTopUsers.map(u => `<tr>
-            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="font-weight:700;color:#5f62d6;text-decoration:none">${escapeHtml(u.nickname || '-')}</a></td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="font-weight:700;color:var(--orange-deep);text-decoration:none">${escapeHtml(u.nickname || '-')}</a></td>
             <td style="font-weight:700">${formatNumber(u.claims || 0)}회</td>
             <td>${formatNumber(u.finales || 0)}</td>
             <td style="font-weight:700;color:#2e8b57">${formatNumber(u.current_streak || 0)}일</td>
@@ -3851,7 +3880,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         ${data.rows.map(u => {
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
           return `<tr>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
           <td>
             ${u.is_deleted ? '<span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : `<span class="badge" style="background:${u.is_admin ? '#ede7f6' : '#f5f5f5'};color:${u.is_admin ? '#5e35b1' : '#888'}">${u.is_admin ? '관리자' : '일반'}</span>`}
           </td>
@@ -3865,7 +3894,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <button type="submit" class="btn btn-primary" style="font-size:10px;padding:2px 6px">Go</button>
             </form>
           </td>
-          <td style="color:#0f6c5c;font-weight:600">${formatNumber(tokenBalances.get(u.nickname) || 0)}
+          <td style="color:var(--orange-deep);font-weight:600">${formatNumber(tokenBalances.get(u.nickname) || 0)}
             <form method="POST" action="/tc-backstage/missions/grant" style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">
               <input type="hidden" name="nicknames" value="${escapeHtml(u.nickname)}">
               <input type="hidden" name="send_push" value="1">
@@ -4033,7 +4062,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 10px">지급</button>
             </form>
           </div>
-          <div class="label">미션 토큰</div><div class="value" style="color:#0f6c5c;font-weight:600">${formatNumber(await missions.getBalance(user.nickname))}
+          <div class="label">미션 토큰</div><div class="value" style="color:var(--orange-deep);font-weight:600">${formatNumber(await missions.getBalance(user.nickname))}
             <form method="POST" action="/tc-backstage/missions/grant" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px">
               <input type="hidden" name="nicknames" value="${escapeHtml(user.nickname)}">
               <input type="hidden" name="send_push" value="1">
@@ -4552,7 +4581,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <td>${tierChip(m.tier)}</td>
               <td style="text-align:right;font-weight:700">${m.effectiveTokens}</td>
               <td style="text-align:right">${formatNumber(m.picked)}</td>
-              <td style="text-align:right;font-weight:700;color:#0f6c5c">${formatNumber(m.done)}</td>
+              <td style="text-align:right;font-weight:700;color:var(--orange-deep)">${formatNumber(m.done)}</td>
               <td>${bar(pct(m.done, m.picked))}</td>
               <td style="text-align:right">${formatNumber(m.active)}</td>
             </tr>`).join('')}
@@ -4806,7 +4835,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <td style="font-size:12.5px">${deadline}</td>
         <td style="text-align:right">${formatNumber(m.recipients)}</td>
         <td style="text-align:right">${formatNumber(m.read_count)}</td>
-        <td style="text-align:right;font-weight:700;color:#0f6c5c">${formatNumber(m.claimed_count)}</td>
+        <td style="text-align:right;font-weight:700;color:var(--orange-deep)">${formatNumber(m.claimed_count)}</td>
         <td style="font-size:12px;color:#888">${escapeHtml(m.created_by || '-')}<br>${formatDate(m.created_at)}</td>
       </tr>`;
     }).join('');
@@ -5039,7 +5068,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div style="margin-top:14px;display:flex;gap:22px;flex-wrap:wrap;font-size:13px">
           <div>받는 사람 <b>${formatNumber(recipients.length)}</b></div>
           <div>읽음 <b>${formatNumber(readCount)}</b></div>
-          <div>수령 <b style="color:#0f6c5c">${formatNumber(claimedCount)}</b></div>
+          <div>수령 <b style="color:var(--orange-deep)">${formatNumber(claimedCount)}</b></div>
           <div>보낸이 ${escapeHtml(mail.created_by || '-')}</div>
           <div>표시 이름 ${mail.sender_name
             ? escapeHtml(mail.sender_name)
@@ -6639,7 +6668,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div class="table-wrap"><table>
           <tr><th>닉네임</th><th>출석</th><th>7일완주</th><th>현재 연속</th><th>지급 골드</th></tr>
           ${users.map(u => `<tr>
-            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="color:#5f62d6;text-decoration:none;font-weight:600">${escapeHtml(u.nickname || '-')}</a></td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname || '')}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(u.nickname || '-')}</a></td>
             <td style="font-weight:700">${formatNumber(u.claims || 0)}회</td>
             <td>${formatNumber(u.finales || 0)}</td>
             <td style="color:#2e8b57;font-weight:600">${formatNumber(u.current_streak || 0)}일</td>
@@ -7914,9 +7943,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       tableHtml = `<div class="table-wrap"><table>
         <tr><th>닉네임</th><th>기기</th><th>방</th><th>상태</th><th></th></tr>
         ${users.map(u => `<tr>
-          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:#6c63ff;text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
+          <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
           <td style="white-space:nowrap">${platformBadge(platformByNick.get(u.nickname))}</td>
-          <td>${u.room ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}" style="color:#6c63ff;text-decoration:none">${escapeHtml(u.room)}</a>` : '<span style="color:#888">-</span>'}</td>
+          <td>${u.room ? `<a href="/tc-backstage/rooms/${encodeURIComponent(u.roomId)}" style="color:var(--orange-deep);text-decoration:none">${escapeHtml(u.room)}</a>` : '<span style="color:#888">-</span>'}</td>
           <td>${escapeHtml(u.status)}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
         </tr>`).join('')}

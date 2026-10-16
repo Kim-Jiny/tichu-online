@@ -361,7 +361,8 @@ async function getState(nickname) {
 
   const rerolls = {};
   for (const r of rerollRes.rows) rerolls[r.game] = r.used;
-  const active = activeRes.rows.map(missionRow);
+  // 정의에서 빠진(없앤) 미션이 DB 에 남아 있어도 화면에는 내지 않는다.
+  const active = activeRes.rows.filter((r) => defs.MISSION_BY_KEY.has(r.mission_key)).map(missionRow);
   const activeKeys = new Set(active.filter((m) => m.status === 'active').map((m) => m.key));
 
   const offers = {};
@@ -481,13 +482,27 @@ async function reroll(nickname, game) {
 async function record(nickname, event, amount = 1) {
   if (!nickname || !(amount > 0)) return [];
   const eventKeys = defs.MISSIONS.filter((m) => m.event === event).map((m) => m.key);
-  if (!eventKeys.length) return [];
+  // '연속' 미션: 이 이벤트(예: 패배)가 오면 진행도가 0 으로 돌아간다.
+  const resetKeys = defs.MISSIONS.filter((m) => m.resetOn === event).map((m) => m.key);
+  if (!eventKeys.length && !resetKeys.length) return [];
   await loadOverrides();
   const client = await pool.connect();
   const completed = [];
   try {
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock($1)', [hash32(`mission|${nickname}`)]);
+    if (resetKeys.length) {
+      await client.query(
+        `UPDATE tc_user_missions SET progress = 0
+          WHERE nickname = $1 AND status = 'active' AND mission_key = ANY($2)
+            AND progress > 0`,
+        [nickname, resetKeys]
+      );
+    }
+    if (!eventKeys.length) {
+      await client.query('COMMIT');
+      return [];
+    }
     const rows = await client.query(
       `SELECT id, mission_key, progress, target FROM tc_user_missions
         WHERE nickname = $1 AND status = 'active' AND mission_key = ANY($2)

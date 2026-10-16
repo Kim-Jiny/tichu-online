@@ -9243,7 +9243,8 @@ function recordGameEndMissions(room, prefix, participants, winners) {
   for (const nickname of participants) {
     if (!nickname) continue;
     recordMission(nickname, `${prefix}.game_end`).catch(() => {});
-    if (winners.has(nickname)) recordMission(nickname, `${prefix}.game_win`).catch(() => {});
+    // 이기면 win, 지면 loss — '연속' 미션은 loss 에서 진행도가 0 으로 돌아간다.
+    recordMission(nickname, winners.has(nickname) ? `${prefix}.game_win` : `${prefix}.game_loss`).catch(() => {});
   }
 }
 

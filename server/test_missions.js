@@ -165,6 +165,34 @@ async function main() {
   const ov = await missions.adminOverview();
   check('개요가 미션·상품 전부를 낸다', ov.missions.length === defs.MISSIONS.length && ov.products.length === 9);
 
+  // ── 연속 미션: 지면 0 으로 ──
+  const n5 = '연승테스터';
+  await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
+    VALUES ($1, 'tichu_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]);
+  await missions.record(n5, 'tichu.game_win');
+  await missions.record(n5, 'tichu.game_win');
+  let ss = await missions.getState(n5);
+  check('연승 2/4', ss.active.find((m) => m.key === 'tichu_win_streak4').progress === 2);
+  await missions.record(n5, 'tichu.game_loss');
+  ss = await missions.getState(n5);
+  check('지면 0 으로 돌아간다', ss.active.find((m) => m.key === 'tichu_win_streak4').progress === 0);
+  for (let i = 0; i < 3; i++) await missions.record(n5, 'tichu.game_win');
+  check('3연승까지는 미완료', (await missions.getState(n5)).active.find((m) => m.key === 'tichu_win_streak4').status === 'active');
+  const dn = await missions.record(n5, 'tichu.game_win');
+  check('4연승이면 완료(보상 5)', dn.length === 1 && dn[0].tokens === 5, JSON.stringify(dn));
+  check('이미 완료한 연승은 패배로 되돌아가지 않는다', (await missions.record(n5, 'tichu.game_loss')).length === 0 && (await missions.getState(n5)).active.find((m) => m.key === 'tichu_win_streak4').status === 'done');
+  // 다른 게임의 패배는 영향 없다.
+  await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
+    VALUES ($1, 'mighty_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]);
+  await missions.record(n5, 'mighty.game_win');
+  await missions.record(n5, 'tichu.game_loss');
+  check('다른 게임의 패배는 영향 없음', (await missions.getState(n5)).active.find((m) => m.key === 'mighty_win_streak4').progress === 1);
+  // 정의에서 없앤 미션이 DB 에 남아 있어도 상태 조회가 죽지 않는다.
+  await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
+    VALUES ($1, 'removed_old_mission', CURRENT_DATE, CURRENT_DATE, 1)`, [n5]);
+  const ss2 = await missions.getState(n5);
+  check('없앤 미션은 목록에서 빠진다', !ss2.active.some((m) => m.key === 'removed_old_mission'));
+
   // ── 내 토큰 내역 ──
   const hist = await missions.getHistory(n4, { limit: 2 });
   check('내역은 최신순이고 한 장 더 있으면 hasMore', hist.rows.length === 2 && hist.hasMore === true && hist.rows[0].id > hist.rows[1].id, JSON.stringify(hist));

@@ -516,8 +516,16 @@ void main() {
     // 구매 버튼: 5개(나머지 1개는 이미 가짐) × 외곽선 글자 2겹.
     expect(find.text('구매'), findsNWidgets(10));
     // 카드 크기: 가진 카드와 안 가진 카드의 높이가 같다(사도 크기가 변하지 않는다).
-    final owned = t.getSize(find.ancestor(of: find.text('민트 구름'), matching: find.byType(Container)).first);
-    final notOwned = t.getSize(find.ancestor(of: find.text('빨간 하트'), matching: find.byType(Container)).first);
+    final owned = t.getSize(
+      find
+          .ancestor(of: find.text('민트 구름'), matching: find.byType(Container))
+          .first,
+    );
+    final notOwned = t.getSize(
+      find
+          .ancestor(of: find.text('빨간 하트'), matching: find.byType(Container))
+          .first,
+    );
     expect(owned.height, notOwned.height);
     await _snap(t, key, 'token_shop');
 
@@ -538,6 +546,41 @@ void main() {
     await t.tap(find.text('구매').first);
     await t.pump();
     expect(game.calls, contains('buy:room_highlight_1'));
+  });
+
+  testWidgets('하단 내비게이션 바가 있어도 마지막 줄이 가려지지 않는다(상점·미션)', (t) async {
+    await t.binding.setSurfaceSize(const Size(420, 800));
+    // 아래 시스템 바가 34px 인 기기.
+    Widget withInset(Widget child) => MediaQuery(
+      data: const MediaQueryData(
+        size: Size(420, 800),
+        viewPadding: EdgeInsets.only(bottom: 34),
+        padding: EdgeInsets.only(bottom: 34),
+      ),
+      child: child,
+    );
+    final game = _FakeGame(_state(), _shop());
+    await t.pumpWidget(withInset(_app(game, const TokenShopScreen())));
+    await t.pump(const Duration(milliseconds: 800));
+    // 맨 아래까지 끌어 내린 뒤 마지막 카드의 아래쪽이 시스템 바 위에 온다.
+    await t.drag(find.byType(ListView).last, const Offset(0, -2000));
+    await t.pump(const Duration(milliseconds: 400));
+    final lastCard = find.text('번개');
+    expect(lastCard, findsOneWidget);
+    final bottom = t
+        .getRect(
+          find.ancestor(of: lastCard, matching: find.byType(Container)).first,
+        )
+        .bottom;
+    expect(bottom, lessThanOrEqualTo(800 - 34));
+
+    await t.pumpWidget(withInset(_app(game, const MissionsScreen())));
+    await t.pump(const Duration(milliseconds: 800));
+    await t.drag(find.byType(ListView).first, const Offset(0, -3000));
+    await t.pump(const Duration(milliseconds: 400));
+    final rules = find.textContaining('사람이');
+    expect(rules, findsOneWidget);
+    expect(t.getRect(rules).bottom, lessThanOrEqualTo(800 - 34));
   });
 
   testWidgets('토큰이 모자라면 구매 버튼이 눌리지 않는다', (t) async {

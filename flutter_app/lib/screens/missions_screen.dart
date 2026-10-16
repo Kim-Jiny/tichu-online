@@ -255,7 +255,13 @@ class _MissionsScreenState extends State<MissionsScreen> {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+        // 아래 시스템 내비게이션 바(홈 바) 높이만큼 더 띄운다 — 마지막 줄이 가려지지 않게.
+        padding: EdgeInsets.fromLTRB(
+          14,
+          0,
+          14,
+          28 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
         children: [
           _streakCard(l10n, st),
           const SizedBox(height: 14),

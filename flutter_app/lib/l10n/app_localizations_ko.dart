@@ -2413,7 +2413,7 @@ class L10nKo extends L10n {
   String get rulesLlGuardSub => '상대의 카드를 추측하여 탈락시킴';
 
   @override
-  String get rulesLlSpy => '스파이 (Spy)';
+  String get rulesLlSpy => '사제 (Priest)';
 
   @override
   String get rulesLlSpySub => '상대의 카드를 몰래 확인';
@@ -2467,7 +2467,7 @@ class L10nKo extends L10n {
   String get rulesLlEffectGuardLine2 => '정확히 맞히면 해당 플레이어는 탈락합니다.';
 
   @override
-  String get rulesLlEffectSpyTitle => '스파이 (2)';
+  String get rulesLlEffectSpyTitle => '사제 (2)';
 
   @override
   String get rulesLlEffectSpyLine1 => '다른 플레이어를 지목하고 그 플레이어의 손 카드를 비공개로 확인합니다.';
@@ -3868,7 +3868,7 @@ class L10nKo extends L10n {
 
   @override
   String llSpyEffect(String name) {
-    return '$name이(가) 스파이를 사용합니다...';
+    return '$name이(가) 사제를 사용합니다...';
   }
 
   @override
@@ -3962,7 +3962,7 @@ class L10nKo extends L10n {
   String get llCardGuard => '가드';
 
   @override
-  String get llCardSpy => '스파이';
+  String get llCardSpy => '사제';
 
   @override
   String get llCardBaron => '남작';
@@ -3997,7 +3997,7 @@ class L10nKo extends L10n {
   String get llDescGuard => '1 · 가드: 상대를 지목하고 카드를 추측합니다. 맞으면 탈락!';
 
   @override
-  String get llDescSpy => '2 · 스파이: 상대의 카드를 몰래 확인합니다.';
+  String get llDescSpy => '2 · 사제: 상대의 카드를 몰래 확인합니다.';
 
   @override
   String get llDescBaron => '3 · 남작: 상대와 카드를 비교합니다. 낮은 쪽이 탈락!';

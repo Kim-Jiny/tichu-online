@@ -2481,7 +2481,7 @@ class L10nDe extends L10n {
       'Rate die Karte eines Gegners, um ihn zu eliminieren';
 
   @override
-  String get rulesLlSpy => 'Spion (Spy)';
+  String get rulesLlSpy => 'Priester (Priest)';
 
   @override
   String get rulesLlSpySub => 'Sieh dir heimlich die Karte eines Gegners an';
@@ -2540,7 +2540,7 @@ class L10nDe extends L10n {
       'Bei richtigem Tipp wird dieser Spieler eliminiert.';
 
   @override
-  String get rulesLlEffectSpyTitle => 'Spion (2)';
+  String get rulesLlEffectSpyTitle => 'Priester (2)';
 
   @override
   String get rulesLlEffectSpyLine1 =>
@@ -3996,7 +3996,7 @@ class L10nDe extends L10n {
 
   @override
   String llSpyEffect(String name) {
-    return '$name setzt den Spion ein...';
+    return '$name setzt den Priester ein...';
   }
 
   @override
@@ -4090,7 +4090,7 @@ class L10nDe extends L10n {
   String get llCardGuard => 'Wache';
 
   @override
-  String get llCardSpy => 'Spion';
+  String get llCardSpy => 'Priester';
 
   @override
   String get llCardBaron => 'Baron';
@@ -4127,7 +4127,7 @@ class L10nDe extends L10n {
 
   @override
   String get llDescSpy =>
-      '2 · Spion: Sieh dir heimlich die Karte eines Spielers an.';
+      '2 · Priester: Sieh dir heimlich die Karte eines Spielers an.';
 
   @override
   String get llDescBaron =>

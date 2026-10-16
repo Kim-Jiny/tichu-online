@@ -778,7 +778,7 @@
   "rulesLlCardCompositionTitle": "카드 구성 (총 16장)",
   "rulesLlGuard": "가드 (Guard)",
   "rulesLlGuardSub": "상대의 카드를 추측하여 탈락시킴",
-  "rulesLlSpy": "스파이 (Spy)",
+  "rulesLlSpy": "사제 (Priest)",
   "rulesLlSpySub": "상대의 카드를 몰래 확인",
   "rulesLlBaron": "남작 (Baron)",
   "rulesLlBaronSub": "상대와 카드 비교, 낮은 쪽 탈락",
@@ -796,7 +796,7 @@
   "rulesLlEffectGuardTitle": "가드 (1)",
   "rulesLlEffectGuardLine1": "다른 플레이어를 지목하고 가드를 제외한 카드 이름을 추측합니다.",
   "rulesLlEffectGuardLine2": "정확히 맞히면 해당 플레이어는 탈락합니다.",
-  "rulesLlEffectSpyTitle": "스파이 (2)",
+  "rulesLlEffectSpyTitle": "사제 (2)",
   "rulesLlEffectSpyLine1": "다른 플레이어를 지목하고 그 플레이어의 손 카드를 비공개로 확인합니다.",
   "rulesLlEffectBaronTitle": "남작 (3)",
   "rulesLlEffectBaronLine1": "다른 플레이어를 지목하고 서로 카드를 비교합니다.",
@@ -1247,7 +1247,7 @@
       }
     }
   },
-  "llSpyEffect": "{name}이(가) 스파이를 사용합니다...",
+  "llSpyEffect": "{name}이(가) 사제를 사용합니다...",
   "@llSpyEffect": {
     "placeholders": {
       "name": {
@@ -1401,7 +1401,7 @@
   "llSetAsideHidden": "비공개 제외 카드",
   "llPlayed": "사용한 카드:",
   "llCardGuard": "가드",
-  "llCardSpy": "스파이",
+  "llCardSpy": "사제",
   "llCardBaron": "남작",
   "llCardHandmaid": "시녀",
   "llCardPrince": "왕자",
@@ -1412,7 +1412,7 @@
   "llGuardPeek": "보기",
   "llDiscardedCardsTitle": "{playerName} 사용 카드",
   "llDescGuard": "1 · 가드: 상대를 지목하고 카드를 추측합니다. 맞으면 탈락!",
-  "llDescSpy": "2 · 스파이: 상대의 카드를 몰래 확인합니다.",
+  "llDescSpy": "2 · 사제: 상대의 카드를 몰래 확인합니다.",
   "llDescBaron": "3 · 남작: 상대와 카드를 비교합니다. 낮은 쪽이 탈락!",
   "llDescHandmaid": "4 · 시녀: 다음 턴까지 모든 효과로부터 보호받습니다.",
   "llDescPrince": "5 · 왕자: 상대의 카드를 버리게 합니다. 공주를 버리면 탈락!",

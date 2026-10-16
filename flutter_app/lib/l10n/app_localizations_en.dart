@@ -2469,7 +2469,7 @@ class L10nEn extends L10n {
   String get rulesLlGuardSub => 'Guess an opponent\'s card to eliminate them';
 
   @override
-  String get rulesLlSpy => 'Spy';
+  String get rulesLlSpy => 'Priest';
 
   @override
   String get rulesLlSpySub => 'Secretly view an opponent\'s card';
@@ -2525,7 +2525,7 @@ class L10nEn extends L10n {
       'If correct, that player is eliminated from the round.';
 
   @override
-  String get rulesLlEffectSpyTitle => 'Spy (2)';
+  String get rulesLlEffectSpyTitle => 'Priest (2)';
 
   @override
   String get rulesLlEffectSpyLine1 =>
@@ -3962,7 +3962,7 @@ class L10nEn extends L10n {
 
   @override
   String llSpyEffect(String name) {
-    return '$name is using Spy...';
+    return '$name is using Priest...';
   }
 
   @override
@@ -4056,7 +4056,7 @@ class L10nEn extends L10n {
   String get llCardGuard => 'Guard';
 
   @override
-  String get llCardSpy => 'Spy';
+  String get llCardSpy => 'Priest';
 
   @override
   String get llCardBaron => 'Baron';
@@ -4092,7 +4092,8 @@ class L10nEn extends L10n {
       '1 · Guard: Name a player and guess their card. If correct, they\'re eliminated!';
 
   @override
-  String get llDescSpy => '2 · Spy: Secretly look at another player\'s card.';
+  String get llDescSpy =>
+      '2 · Priest: Secretly look at another player\'s card.';
 
   @override
   String get llDescBaron =>

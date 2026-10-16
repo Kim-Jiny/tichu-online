@@ -50,7 +50,7 @@ class LoveLetterCard extends StatelessWidget {
 
   static const Map<String, String> cardNames = {
     'guard': 'Guard',
-    'spy': 'Spy',
+    'spy': 'Priest',
     'baron': 'Baron',
     'handmaid': 'Handmaid',
     'prince': 'Prince',

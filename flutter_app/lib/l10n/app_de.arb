@@ -788,7 +788,7 @@
   "rulesLlCardCompositionTitle": "Kartenzusammensetzung (16 Karten)",
   "rulesLlGuard": "Wache (Guard)",
   "rulesLlGuardSub": "Rate die Karte eines Gegners, um ihn zu eliminieren",
-  "rulesLlSpy": "Spion (Spy)",
+  "rulesLlSpy": "Priester (Priest)",
   "rulesLlSpySub": "Sieh dir heimlich die Karte eines Gegners an",
   "rulesLlBaron": "Baron",
   "rulesLlBaronSub": "Kartenvergleich; niedrigere Karte wird eliminiert",
@@ -806,7 +806,7 @@
   "rulesLlEffectGuardTitle": "Wache (1)",
   "rulesLlEffectGuardLine1": "Nenne einen Spieler und rate eine Nicht-Wache-Karte, die er haben könnte.",
   "rulesLlEffectGuardLine2": "Bei richtigem Tipp wird dieser Spieler eliminiert.",
-  "rulesLlEffectSpyTitle": "Spion (2)",
+  "rulesLlEffectSpyTitle": "Priester (2)",
   "rulesLlEffectSpyLine1": "Wähle einen Spieler und sieh dir heimlich seine Handkarte an.",
   "rulesLlEffectBaronTitle": "Baron (3)",
   "rulesLlEffectBaronLine1": "Wähle einen Spieler und vergleicht eure Handkarten privat.",
@@ -1229,7 +1229,7 @@
   "llGuardPeek": "Schauen",
   "llDiscardedCardsTitle": "Abgelegte Karten von {playerName}",
   "llDescGuard": "1 · Wache: Nenne einen Spieler und rate seine Karte. Richtig = eliminiert!",
-  "llDescSpy": "2 · Spion: Sieh dir heimlich die Karte eines Spielers an.",
+  "llDescSpy": "2 · Priester: Sieh dir heimlich die Karte eines Spielers an.",
   "llDescBaron": "3 · Baron: Vergleiche Karten mit einem Spieler. Niedrigere Karte wird eliminiert!",
   "llDescHandmaid": "4 · Zofe: Bis zu deinem nächsten Zug vor allen Effekten geschützt.",
   "llDescPrince": "5 · Prinz: Zwinge einen Spieler, seine Karte abzuwerfen. Prinzessin = eliminiert!",
@@ -1389,7 +1389,7 @@
       }
     }
   },
-  "llSpyEffect": "{name} setzt den Spion ein...",
+  "llSpyEffect": "{name} setzt den Priester ein...",
   "@llSpyEffect": {
     "placeholders": {
       "name": {
@@ -1543,7 +1543,7 @@
   "llSetAsideHidden": "Beiseitegelegt (verdeckt)",
   "llPlayed": "Gespielt:",
   "llCardGuard": "Wache",
-  "llCardSpy": "Spion",
+  "llCardSpy": "Priester",
   "llCardBaron": "Baron",
   "llCardHandmaid": "Zofe",
   "llCardPrince": "Prinz",

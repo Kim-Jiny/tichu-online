@@ -1323,7 +1323,7 @@
   "rulesLlCardCompositionTitle": "Card Composition (16 cards total)",
   "rulesLlGuard": "Guard",
   "rulesLlGuardSub": "Guess an opponent's card to eliminate them",
-  "rulesLlSpy": "Spy",
+  "rulesLlSpy": "Priest",
   "rulesLlSpySub": "Secretly view an opponent's card",
   "rulesLlBaron": "Baron",
   "rulesLlBaronSub": "Compare cards; lower card is eliminated",
@@ -1341,7 +1341,7 @@
   "rulesLlEffectGuardTitle": "Guard (1)",
   "rulesLlEffectGuardLine1": "Name a player and guess a non-Guard card they might hold.",
   "rulesLlEffectGuardLine2": "If correct, that player is eliminated from the round.",
-  "rulesLlEffectSpyTitle": "Spy (2)",
+  "rulesLlEffectSpyTitle": "Priest (2)",
   "rulesLlEffectSpyLine1": "Choose a player and secretly look at their hand card.",
   "rulesLlEffectBaronTitle": "Baron (3)",
   "rulesLlEffectBaronLine1": "Choose a player and privately compare hand cards.",
@@ -2159,7 +2159,7 @@
       }
     }
   },
-  "llSpyEffect": "{name} is using Spy...",
+  "llSpyEffect": "{name} is using Priest...",
   "@llSpyEffect": {
     "placeholders": {
       "name": {
@@ -2313,7 +2313,7 @@
   "llSetAsideHidden": "Set aside (hidden)",
   "llPlayed": "Played:",
   "llCardGuard": "Guard",
-  "llCardSpy": "Spy",
+  "llCardSpy": "Priest",
   "llCardBaron": "Baron",
   "llCardHandmaid": "Handmaid",
   "llCardPrince": "Prince",
@@ -2331,7 +2331,7 @@
     }
   },
   "llDescGuard": "1 · Guard: Name a player and guess their card. If correct, they're eliminated!",
-  "llDescSpy": "2 · Spy: Secretly look at another player's card.",
+  "llDescSpy": "2 · Priest: Secretly look at another player's card.",
   "llDescBaron": "3 · Baron: Compare cards with a player. Lower card is eliminated!",
   "llDescHandmaid": "4 · Handmaid: Protected from all effects until your next turn.",
   "llDescPrince": "5 · Prince: Force a player to discard. If they discard Princess, eliminated!",

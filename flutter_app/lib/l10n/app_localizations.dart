@@ -4530,7 +4530,7 @@ abstract class L10n {
   /// No description provided for @rulesLlSpy.
   ///
   /// In en, this message translates to:
-  /// **'Spy'**
+  /// **'Priest'**
   String get rulesLlSpy;
 
   /// No description provided for @rulesLlSpySub.
@@ -4638,7 +4638,7 @@ abstract class L10n {
   /// No description provided for @rulesLlEffectSpyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Spy (2)'**
+  /// **'Priest (2)'**
   String get rulesLlEffectSpyTitle;
 
   /// No description provided for @rulesLlEffectSpyLine1.
@@ -7098,7 +7098,7 @@ abstract class L10n {
   /// No description provided for @llSpyEffect.
   ///
   /// In en, this message translates to:
-  /// **'{name} is using Spy...'**
+  /// **'{name} is using Priest...'**
   String llSpyEffect(String name);
 
   /// No description provided for @llBaronEffect.
@@ -7224,7 +7224,7 @@ abstract class L10n {
   /// No description provided for @llCardSpy.
   ///
   /// In en, this message translates to:
-  /// **'Spy'**
+  /// **'Priest'**
   String get llCardSpy;
 
   /// No description provided for @llCardBaron.
@@ -7290,7 +7290,7 @@ abstract class L10n {
   /// No description provided for @llDescSpy.
   ///
   /// In en, this message translates to:
-  /// **'2 · Spy: Secretly look at another player\'s card.'**
+  /// **'2 · Priest: Secretly look at another player\'s card.'**
   String get llDescSpy;
 
   /// No description provided for @llDescBaron.

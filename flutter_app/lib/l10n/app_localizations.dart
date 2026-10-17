@@ -10500,44 +10500,44 @@ abstract class L10n {
   /// No description provided for @skAbilityEventRosie.
   ///
   /// In en, this message translates to:
-  /// **'{name} chose {target} to lead next'**
-  String skAbilityEventRosie(String name, String target);
+  /// **'{name} used {pirate}\'s ability to make {target} lead next'**
+  String skAbilityEventRosie(String name, String target, String pirate);
 
   /// No description provided for @skAbilityEventBendt.
   ///
   /// In en, this message translates to:
-  /// **'{name} swapped {count} cards'**
-  String skAbilityEventBendt(String name, int count);
+  /// **'{name} used {pirate}\'s ability to swap {count} cards'**
+  String skAbilityEventBendt(String name, int count, String pirate);
 
   /// No description provided for @skAbilityEventRascal.
   ///
   /// In en, this message translates to:
-  /// **'{name} bet {points} points'**
-  String skAbilityEventRascal(String name, int points);
+  /// **'{name} used {pirate}\'s ability to wager {points} points'**
+  String skAbilityEventRascal(String name, int points, String pirate);
 
   /// No description provided for @skAbilityEventRascalNone.
   ///
   /// In en, this message translates to:
-  /// **'{name} placed no bet'**
-  String skAbilityEventRascalNone(String name);
+  /// **'{name} used {pirate}\'s ability but wagered nothing'**
+  String skAbilityEventRascalNone(String name, String pirate);
 
   /// No description provided for @skAbilityEventJuanita.
   ///
   /// In en, this message translates to:
-  /// **'{name} checked the remaining deck'**
-  String skAbilityEventJuanita(String name);
+  /// **'{name} used {pirate}\'s ability to check the remaining deck'**
+  String skAbilityEventJuanita(String name, String pirate);
 
   /// No description provided for @skAbilityEventHarry.
   ///
   /// In en, this message translates to:
-  /// **'{name} changed their bid to {bid}'**
-  String skAbilityEventHarry(String name, int bid);
+  /// **'{name} used {pirate}\'s ability to change their bid (→ {bid})'**
+  String skAbilityEventHarry(String name, int bid, String pirate);
 
   /// No description provided for @skAbilityEventHarryKeep.
   ///
   /// In en, this message translates to:
-  /// **'{name} kept their bid'**
-  String skAbilityEventHarryKeep(String name);
+  /// **'{name} used {pirate}\'s ability but kept their bid'**
+  String skAbilityEventHarryKeep(String name, String pirate);
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

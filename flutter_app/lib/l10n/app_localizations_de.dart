@@ -6030,37 +6030,37 @@ class L10nDe extends L10n {
   }
 
   @override
-  String skAbilityEventRosie(String name, String target) {
-    return '$name bestimmt $target als nächsten Ausspieler';
+  String skAbilityEventRosie(String name, String target, String pirate) {
+    return '$name hat mit ${pirate}s Fähigkeit $target als Nächste(n) bestimmt';
   }
 
   @override
-  String skAbilityEventBendt(String name, int count) {
-    return '$name hat $count Karten getauscht';
+  String skAbilityEventBendt(String name, int count, String pirate) {
+    return '$name hat mit ${pirate}s Fähigkeit $count Karten getauscht';
   }
 
   @override
-  String skAbilityEventRascal(String name, int points) {
-    return '$name setzt $points Punkte';
+  String skAbilityEventRascal(String name, int points, String pirate) {
+    return '$name hat mit ${pirate}s Fähigkeit $points Punkte gesetzt';
   }
 
   @override
-  String skAbilityEventRascalNone(String name) {
-    return '$name setzt nichts';
+  String skAbilityEventRascalNone(String name, String pirate) {
+    return '$name hat ${pirate}s Fähigkeit genutzt, aber nichts gesetzt';
   }
 
   @override
-  String skAbilityEventJuanita(String name) {
-    return '$name hat den Reststapel angesehen';
+  String skAbilityEventJuanita(String name, String pirate) {
+    return '$name hat mit ${pirate}s Fähigkeit den Reststapel angesehen';
   }
 
   @override
-  String skAbilityEventHarry(String name, int bid) {
-    return '$name ändert das Gebot auf $bid';
+  String skAbilityEventHarry(String name, int bid, String pirate) {
+    return '$name hat mit ${pirate}s Fähigkeit das Gebot geändert (→ $bid)';
   }
 
   @override
-  String skAbilityEventHarryKeep(String name) {
-    return '$name behält das Gebot';
+  String skAbilityEventHarryKeep(String name, String pirate) {
+    return '$name hat ${pirate}s Fähigkeit genutzt, das Gebot aber behalten';
   }
 }

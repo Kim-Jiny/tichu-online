@@ -5826,37 +5826,37 @@ class L10nKo extends L10n {
   }
 
   @override
-  String skAbilityEventRosie(String name, String target) {
-    return '$name님이 $target님을 다음 선으로 골랐어요';
+  String skAbilityEventRosie(String name, String target, String pirate) {
+    return '$name님이 $pirate의 능력으로 $target님을 다음 선으로 골랐어요';
   }
 
   @override
-  String skAbilityEventBendt(String name, int count) {
-    return '$name님이 카드 $count장을 바꿨어요';
+  String skAbilityEventBendt(String name, int count, String pirate) {
+    return '$name님이 $pirate의 능력으로 카드 $count장을 바꿨어요';
   }
 
   @override
-  String skAbilityEventRascal(String name, int points) {
-    return '$name님이 $points점을 걸었어요';
+  String skAbilityEventRascal(String name, int points, String pirate) {
+    return '$name님이 $pirate의 능력으로 $points점을 걸었어요';
   }
 
   @override
-  String skAbilityEventRascalNone(String name) {
-    return '$name님은 점수를 걸지 않았어요';
+  String skAbilityEventRascalNone(String name, String pirate) {
+    return '$name님은 $pirate의 능력을 썼지만 점수를 걸지 않았어요';
   }
 
   @override
-  String skAbilityEventJuanita(String name) {
-    return '$name님이 남은 카드 더미를 확인했어요';
+  String skAbilityEventJuanita(String name, String pirate) {
+    return '$name님이 $pirate의 능력으로 남은 카드 더미를 확인했어요';
   }
 
   @override
-  String skAbilityEventHarry(String name, int bid) {
-    return '$name님이 입찰을 바꿨어요 (→ $bid)';
+  String skAbilityEventHarry(String name, int bid, String pirate) {
+    return '$name님이 $pirate의 능력으로 입찰을 바꿨어요 (→ $bid)';
   }
 
   @override
-  String skAbilityEventHarryKeep(String name) {
-    return '$name님은 입찰을 그대로 뒀어요';
+  String skAbilityEventHarryKeep(String name, String pirate) {
+    return '$name님은 $pirate의 능력을 썼지만 입찰을 그대로 뒀어요';
   }
 }

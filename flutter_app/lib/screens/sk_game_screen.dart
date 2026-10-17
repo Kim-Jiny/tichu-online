@@ -2077,27 +2077,33 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return id;
   }
 
+  /// 능력을 다 쓴 뒤 띄우는 알림.
+  ///
+  /// 해적 이름을 반드시 넣는다. 결과만 적으면("○○님이 △△님을 다음 선으로
+  /// 골랐어요") 능력을 처음 보는 사람은 왜 선이 바뀌었는지 알 수 없다.
   String _abilityEventText(SKGameStateData state, SKAbilityEvent ev) {
     final l10n = L10n.of(context);
     final name = _abilityPlayerName(state, ev.playerId);
+    final pirate = skPirateName(l10n, ev.pirate);
     switch (ev.pirate) {
       case 'rosie':
         return l10n.skAbilityEventRosie(
           name,
           _abilityPlayerName(state, ev.targetId ?? ''),
+          pirate,
         );
       case 'bendt':
-        return l10n.skAbilityEventBendt(name, ev.count ?? 2);
+        return l10n.skAbilityEventBendt(name, ev.count ?? 2, pirate);
       case 'rascal':
         return (ev.wager ?? 0) > 0
-            ? l10n.skAbilityEventRascal(name, ev.wager!)
-            : l10n.skAbilityEventRascalNone(name);
+            ? l10n.skAbilityEventRascal(name, ev.wager!, pirate)
+            : l10n.skAbilityEventRascalNone(name, pirate);
       case 'harry':
         return (ev.delta ?? 0) != 0
-            ? l10n.skAbilityEventHarry(name, ev.bid ?? 0)
-            : l10n.skAbilityEventHarryKeep(name);
+            ? l10n.skAbilityEventHarry(name, ev.bid ?? 0, pirate)
+            : l10n.skAbilityEventHarryKeep(name, pirate);
       default:
-        return l10n.skAbilityEventJuanita(name);
+        return l10n.skAbilityEventJuanita(name, pirate);
     }
   }
 
@@ -2164,6 +2170,12 @@ class _SKGameScreenState extends State<SKGameScreen> {
             highlighted: highlighted,
             showName: true,
           ),
+          // 로지로 다음 선을 고를 때 테이블과 같은 자리에 놓기 위해,
+          // 좌석 각도 계산을 그대로 넘긴다. 관전자는 자기 자리가 없어
+          // 각도 표가 다르므로 그쪽 계산을 쓴다.
+          seatAngle: (i, count) => game.isSpectator
+              ? _spectatorSeatAngleForIndex(i, count)
+              : _topSeatAngleForIndex(i, count),
           onUse: ({leaderId, discard, wager, delta}) => game.skUsePirateAbility(
             leaderId: leaderId,
             discard: discard,

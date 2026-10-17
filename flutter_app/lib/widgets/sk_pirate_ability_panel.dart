@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -73,10 +75,19 @@ class SkAbilityPanel extends StatefulWidget {
     required this.state,
     required this.buildCard,
     required this.onUse,
+    this.seatAngle,
   });
 
   final SKGameStateData state;
   final SkCardBuilder buildCard;
+
+  /// 상대 i번째 자리의 각도(라디안). 게임 화면의 좌석 계산을 그대로 넘긴다.
+  ///
+  /// 로지로 다음 선을 고를 때, 이름만 나열하면 "왼쪽 사람"을 고르려는
+  /// 사람이 목록에서 그게 누군지 다시 찾아야 한다. 테이블과 같은 자리에
+  /// 놓으면 보고 있던 그대로 누르면 된다. 넘기지 않으면 이름 목록으로
+  /// 되돌아간다(테스트나 다른 화면에서 쓸 때).
+  final double Function(int index, int opponentCount)? seatAngle;
 
   /// 능력마다 필요한 값만 채워서 부른다.
   final void Function({
@@ -175,9 +186,30 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
                   widget.buildCard(skPirateCardId(pirate), size: 62),
                   const SizedBox(width: 12),
                   Flexible(
-                    child: Text(
-                      l10n.skAbilityTitle(name),
-                      style: Cartoon.text(size: 21),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.skAbilityTitle(name),
+                          style: Cartoon.text(size: 21),
+                        ),
+                        // 이 해적이 무엇을 하는 해적인지. 능력은 트릭을 이겨야
+                        // 열리고 자주 나오지 않아서, 막상 창이 떴을 때 무엇을
+                        // 고르는 중인지 모르는 일이 생긴다. 아래 안내문은
+                        // "무엇을 할지"만 말하고 "왜 할 수 있는지"는 말하지
+                        // 않으므로, 그 한 줄을 여기 둔다.
+                        const SizedBox(height: 4),
+                        Text(
+                          skPirateAbilityDesc(l10n, pirate),
+                          style: Cartoon.userText(
+                            size: 12.5,
+                            weight: FontWeight.w600,
+                            color: Cartoon.ink.withValues(alpha: 0.72),
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -200,34 +232,95 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
     ),
   );
 
+  /// 다음 선을 고른다 — 테이블과 같은 자리 배치로.
+  ///
+  /// 이름만 나열하면 "내 왼쪽 사람" 을 고르려는 사람이 목록에서 그게
+  /// 누군지 다시 찾아야 한다. 보고 있던 자리 그대로 누르게 한다.
   Widget _rosie(L10n l10n) {
-    final players = [...widget.state.players]
-      ..sort(
-        (a, b) =>
-            (a.position == 'self' ? 0 : 1) - (b.position == 'self' ? 0 : 1),
+    final self = widget.state.players.cast<SKPlayer?>().firstWhere(
+      (p) => p?.position == 'self',
+      orElse: () => null,
+    );
+    final opponents = widget.state.players
+        .where((p) => p.position != 'self')
+        .toList(growable: false);
+    final angleOf = widget.seatAngle;
+
+    // 각도를 못 받았으면(테스트·다른 화면) 예전처럼 이름 목록으로.
+    if (angleOf == null || opponents.isEmpty) {
+      final players = [...widget.state.players]
+        ..sort(
+          (a, b) =>
+              (a.position == 'self' ? 0 : 1) - (b.position == 'self' ? 0 : 1),
+        );
+      return Column(
+        children: [
+          _prompt(l10n.skAbilityRosiePrompt),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final p in players) _rosieSeatButton(l10n, p, wide: true),
+            ],
+          ),
+        ],
       );
+    }
+
+    // 좌석 링. 게임 화면과 같은 각도를 쓰되, 좁은 창에 맞게 반지름만 줄인다.
+    const seatW = 104.0, seatH = 46.0;
+    const ringW = 300.0, ringH = 188.0;
+    final rx = (ringW - seatW) / 2, ry = (ringH - seatH) / 2 - 10;
     return Column(
       children: [
         _prompt(l10n.skAbilityRosiePrompt),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final p in players)
-              gameButton(
-                p.position == 'self'
-                    ? '${l10n.skAbilityMe} (${p.name})'
-                    : p.name,
-                _sent ? null : () => _send(leaderId: p.id),
-                color: p.position == 'self' ? Cartoon.green : Cartoon.orange,
-                height: 44,
-                size: 16,
-                hPad: 16,
-              ),
-          ],
+        SizedBox(
+          width: ringW,
+          height: ringH + seatH + 8,
+          child: Stack(
+            children: [
+              for (int i = 0; i < opponents.length; i++)
+                Builder(
+                  builder: (_) {
+                    final a = angleOf(i, opponents.length);
+                    // 화면 좌표는 y 가 아래로 자라므로 sin 을 더한다 —
+                    // 게임 화면의 좌석 배치와 같은 계산이다.
+                    final cx = ringW / 2 + math.cos(a) * rx;
+                    final cy = ringH / 2 + math.sin(a) * ry;
+                    return Positioned(
+                      left: (cx - seatW / 2).clamp(0.0, ringW - seatW),
+                      top: (cy - seatH / 2).clamp(0.0, ringH - seatH),
+                      width: seatW,
+                      child: _rosieSeatButton(l10n, opponents[i]),
+                    );
+                  },
+                ),
+              // 나는 테이블에서처럼 맨 아래 가운데.
+              if (self != null)
+                Positioned(
+                  left: (ringW - seatW) / 2,
+                  bottom: 0,
+                  width: seatW,
+                  child: _rosieSeatButton(l10n, self),
+                ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _rosieSeatButton(L10n l10n, SKPlayer p, {bool wide = false}) {
+    final isSelf = p.position == 'self';
+    return gameButton(
+      isSelf ? '${l10n.skAbilityMe} (${p.name})' : p.name,
+      _sent ? null : () => _send(leaderId: p.id),
+      color: isSelf ? Cartoon.green : Cartoon.orange,
+      height: 44,
+      size: wide ? 16 : 14,
+      hPad: wide ? 16 : 8,
+      expand: !wide,
     );
   }
 

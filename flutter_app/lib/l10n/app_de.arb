@@ -2247,7 +2247,7 @@
       }
     }
   },
-  "skAbilityEventRosie": "{name} bestimmt {target} als nächsten Ausspieler",
+  "skAbilityEventRosie": "{name} hat mit {pirate}s Fähigkeit {target} als Nächste(n) bestimmt",
   "@skAbilityEventRosie": {
     "placeholders": {
       "name": {
@@ -2258,7 +2258,7 @@
       }
     }
   },
-  "skAbilityEventBendt": "{name} hat {count} Karten getauscht",
+  "skAbilityEventBendt": "{name} hat mit {pirate}s Fähigkeit {count} Karten getauscht",
   "@skAbilityEventBendt": {
     "placeholders": {
       "name": {
@@ -2269,7 +2269,7 @@
       }
     }
   },
-  "skAbilityEventRascal": "{name} setzt {points} Punkte",
+  "skAbilityEventRascal": "{name} hat mit {pirate}s Fähigkeit {points} Punkte gesetzt",
   "@skAbilityEventRascal": {
     "placeholders": {
       "name": {
@@ -2280,7 +2280,7 @@
       }
     }
   },
-  "skAbilityEventRascalNone": "{name} setzt nichts",
+  "skAbilityEventRascalNone": "{name} hat {pirate}s Fähigkeit genutzt, aber nichts gesetzt",
   "@skAbilityEventRascalNone": {
     "placeholders": {
       "name": {
@@ -2288,7 +2288,7 @@
       }
     }
   },
-  "skAbilityEventJuanita": "{name} hat den Reststapel angesehen",
+  "skAbilityEventJuanita": "{name} hat mit {pirate}s Fähigkeit den Reststapel angesehen",
   "@skAbilityEventJuanita": {
     "placeholders": {
       "name": {
@@ -2296,7 +2296,7 @@
       }
     }
   },
-  "skAbilityEventHarry": "{name} ändert das Gebot auf {bid}",
+  "skAbilityEventHarry": "{name} hat mit {pirate}s Fähigkeit das Gebot geändert (→ {bid})",
   "@skAbilityEventHarry": {
     "placeholders": {
       "name": {
@@ -2307,7 +2307,7 @@
       }
     }
   },
-  "skAbilityEventHarryKeep": "{name} behält das Gebot",
+  "skAbilityEventHarryKeep": "{name} hat {pirate}s Fähigkeit genutzt, das Gebot aber behalten",
   "@skAbilityEventHarryKeep": {
     "placeholders": {
       "name": {

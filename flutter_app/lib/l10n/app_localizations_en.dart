@@ -5980,37 +5980,37 @@ class L10nEn extends L10n {
   }
 
   @override
-  String skAbilityEventRosie(String name, String target) {
-    return '$name chose $target to lead next';
+  String skAbilityEventRosie(String name, String target, String pirate) {
+    return '$name used $pirate\'s ability to make $target lead next';
   }
 
   @override
-  String skAbilityEventBendt(String name, int count) {
-    return '$name swapped $count cards';
+  String skAbilityEventBendt(String name, int count, String pirate) {
+    return '$name used $pirate\'s ability to swap $count cards';
   }
 
   @override
-  String skAbilityEventRascal(String name, int points) {
-    return '$name bet $points points';
+  String skAbilityEventRascal(String name, int points, String pirate) {
+    return '$name used $pirate\'s ability to wager $points points';
   }
 
   @override
-  String skAbilityEventRascalNone(String name) {
-    return '$name placed no bet';
+  String skAbilityEventRascalNone(String name, String pirate) {
+    return '$name used $pirate\'s ability but wagered nothing';
   }
 
   @override
-  String skAbilityEventJuanita(String name) {
-    return '$name checked the remaining deck';
+  String skAbilityEventJuanita(String name, String pirate) {
+    return '$name used $pirate\'s ability to check the remaining deck';
   }
 
   @override
-  String skAbilityEventHarry(String name, int bid) {
-    return '$name changed their bid to $bid';
+  String skAbilityEventHarry(String name, int bid, String pirate) {
+    return '$name used $pirate\'s ability to change their bid (→ $bid)';
   }
 
   @override
-  String skAbilityEventHarryKeep(String name) {
-    return '$name kept their bid';
+  String skAbilityEventHarryKeep(String name, String pirate) {
+    return '$name used $pirate\'s ability but kept their bid';
   }
 }

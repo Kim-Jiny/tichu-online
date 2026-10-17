@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tichu_online/l10n/app_localizations.dart';
 import 'package:tichu_online/models/sk_game_state.dart';
+import 'package:tichu_online/theme/cartoon.dart';
 import 'package:tichu_online/widgets/sk_pirate_ability_panel.dart';
 
 Map<String, dynamic> _json({
@@ -101,6 +102,7 @@ void main() {
     Map<String, dynamic> json, {
     Locale locale = const Locale('ko'),
     Size size = const Size(400, 800),
+    double Function(int, int)? seatAngle,
   }) async {
     final calls = <Map<String, Object?>>[];
     await t.binding.setSurfaceSize(size);
@@ -118,6 +120,7 @@ void main() {
           body: Center(
             child: SkAbilityPanel(
               state: SKGameStateData.fromJson(json),
+              seatAngle: seatAngle,
               buildCard: (id, {size = 60, highlighted = false}) => Container(
                 key: ValueKey('card:$id'),
                 width: size * 0.7,
@@ -186,12 +189,72 @@ void main() {
     await t.pump(const Duration(seconds: 3));
   });
 
+  testWidgets('창에 그 능력이 무엇인지 적혀 있다', (t) async {
+    // 능력은 트릭을 이겨야 열리고 자주 나오지 않는다. 창이 떴을 때
+    // "무엇을 고르는 중인지" 만 있고 "왜 고를 수 있는지" 가 없으면,
+    // 처음 보는 사람은 창을 읽고도 모른다.
+    await pump(t, _json(pirate: 'rosie'));
+    final l = L10n.of(t.element(find.byType(SkAbilityPanel)));
+    expect(find.text(l.skAbilityTitle(l.skCardRosie)), findsOneWidget);
+    expect(find.text(l.skAbilityDescRosie), findsOneWidget);
+  });
+
+  testWidgets('로지: 좌석 각도를 주면 테이블과 같은 자리에 놓는다', (t) async {
+    // 이름만 나열하면 "왼쪽 사람" 을 고르려는 사람이 목록에서 그게
+    // 누군지 다시 찾아야 한다. 각도를 주면 보던 자리 그대로 눌러야 한다.
+    //
+    // 상대 2명: 왼쪽 위(200°) 와 오른쪽 위(340°) — 게임 화면과 같은 값.
+    final calls = await pump(
+      t,
+      _json(pirate: 'rosie'),
+      seatAngle: (i, n) => [200.0, 340.0][i] * 3.141592653589793 / 180,
+    );
+    // 버튼 안에서만 찾는다. 창 위쪽의 능력 설명에도 '나' 가 들어 있어서
+    // ("…사람을 나를 포함해 아무나 지목합니다") 아무 Text 나 집으면
+    // 설명 줄의 위치를 재게 된다.
+    //
+    // CartoonButton 은 글자를 외곽선과 채움 두 겹으로 그리므로 같은
+    // 텍스트가 두 개씩 잡힌다 — 위치만 보면 되니 첫 번째를 쓴다.
+    Finder inButton(String label) => find.descendant(
+      of: find.byType(CartoonButton),
+      matching: find.textContaining(label),
+    );
+    final left = t.getCenter(inButton('철수').first);
+    final right = t.getCenter(inButton('영희').first);
+    final me = t.getCenter(inButton('나').first);
+
+    expect(left.dx, lessThan(right.dx), reason: '철수가 영희보다 왼쪽이어야 한다');
+    expect(me.dy, greaterThan(left.dy), reason: '나는 둘보다 아래(내 자리)여야 한다');
+    expect(me.dy, greaterThan(right.dy));
+
+    // 그래도 눌러서 고를 수 있어야 한다.
+    await t.tap(find.text('철수').first);
+    await t.pump();
+    expect(calls.single['leaderId'], 'p1');
+    await t.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('로지: 각도를 안 주면 이름 목록으로 돌아간다', (t) async {
+    final calls = await pump(t, _json(pirate: 'rosie'));
+    await t.tap(find.text('철수').first);
+    await t.pump();
+    expect(calls.single['leaderId'], 'p1');
+    await t.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('해리: 입찰 범위를 벗어나는 버튼은 눌리지 않는다', (t) async {
     final calls = await pump(t, _json(pirate: 'harry', bid: 0));
     expect(find.textContaining('지금 0'), findsWidgets);
-    await t.tap(find.textContaining('-1').first, warnIfMissed: false);
+    // 버튼 안에서만 찾는다. 창 위쪽의 능력 설명에도 '+1'·'-1' 이 들어
+    // 있어서, 아무 Text 나 집으면 설명을 눌러 놓고 "안 눌렸다" 고
+    // 넘어가 버린다 — 실제로 그렇게 통과하던 단정이었다.
+    Finder btn(String label) => find.descendant(
+      of: find.byType(CartoonButton),
+      matching: find.textContaining(label),
+    );
+    await t.tap(btn('-1').first, warnIfMissed: false);
     expect(calls, isEmpty);
-    await t.tap(find.textContaining('+1').first);
+    await t.tap(btn('+1').first);
     expect(calls.single['delta'], 1);
     await t.pump(const Duration(seconds: 3));
   });

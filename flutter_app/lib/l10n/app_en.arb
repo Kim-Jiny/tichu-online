@@ -3532,7 +3532,7 @@
       }
     }
   },
-  "skAbilityEventRosie": "{name} chose {target} to lead next",
+  "skAbilityEventRosie": "{name} used {pirate}'s ability to make {target} lead next",
   "@skAbilityEventRosie": {
     "placeholders": {
       "name": {
@@ -3540,10 +3540,13 @@
       },
       "target": {
         "type": "String"
+      },
+      "pirate": {
+        "type": "String"
       }
     }
   },
-  "skAbilityEventBendt": "{name} swapped {count} cards",
+  "skAbilityEventBendt": "{name} used {pirate}'s ability to swap {count} cards",
   "@skAbilityEventBendt": {
     "placeholders": {
       "name": {
@@ -3551,10 +3554,13 @@
       },
       "count": {
         "type": "int"
+      },
+      "pirate": {
+        "type": "String"
       }
     }
   },
-  "skAbilityEventRascal": "{name} bet {points} points",
+  "skAbilityEventRascal": "{name} used {pirate}'s ability to wager {points} points",
   "@skAbilityEventRascal": {
     "placeholders": {
       "name": {
@@ -3562,26 +3568,35 @@
       },
       "points": {
         "type": "int"
+      },
+      "pirate": {
+        "type": "String"
       }
     }
   },
-  "skAbilityEventRascalNone": "{name} placed no bet",
+  "skAbilityEventRascalNone": "{name} used {pirate}'s ability but wagered nothing",
   "@skAbilityEventRascalNone": {
     "placeholders": {
       "name": {
         "type": "String"
-      }
-    }
-  },
-  "skAbilityEventJuanita": "{name} checked the remaining deck",
-  "@skAbilityEventJuanita": {
-    "placeholders": {
-      "name": {
+      },
+      "pirate": {
         "type": "String"
       }
     }
   },
-  "skAbilityEventHarry": "{name} changed their bid to {bid}",
+  "skAbilityEventJuanita": "{name} used {pirate}'s ability to check the remaining deck",
+  "@skAbilityEventJuanita": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
+  "skAbilityEventHarry": "{name} used {pirate}'s ability to change their bid (→ {bid})",
   "@skAbilityEventHarry": {
     "placeholders": {
       "name": {
@@ -3589,13 +3604,19 @@
       },
       "bid": {
         "type": "int"
+      },
+      "pirate": {
+        "type": "String"
       }
     }
   },
-  "skAbilityEventHarryKeep": "{name} kept their bid",
+  "skAbilityEventHarryKeep": "{name} used {pirate}'s ability but kept their bid",
   "@skAbilityEventHarryKeep": {
     "placeholders": {
       "name": {
+        "type": "String"
+      },
+      "pirate": {
         "type": "String"
       }
     }

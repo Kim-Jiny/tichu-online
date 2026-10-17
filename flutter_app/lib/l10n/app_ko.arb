@@ -2247,7 +2247,7 @@
       }
     }
   },
-  "skAbilityEventRosie": "{name}님이 {target}님을 다음 선으로 골랐어요",
+  "skAbilityEventRosie": "{name}님이 {pirate}의 능력으로 {target}님을 다음 선으로 골랐어요",
   "@skAbilityEventRosie": {
     "placeholders": {
       "name": {
@@ -2258,7 +2258,7 @@
       }
     }
   },
-  "skAbilityEventBendt": "{name}님이 카드 {count}장을 바꿨어요",
+  "skAbilityEventBendt": "{name}님이 {pirate}의 능력으로 카드 {count}장을 바꿨어요",
   "@skAbilityEventBendt": {
     "placeholders": {
       "name": {
@@ -2269,7 +2269,7 @@
       }
     }
   },
-  "skAbilityEventRascal": "{name}님이 {points}점을 걸었어요",
+  "skAbilityEventRascal": "{name}님이 {pirate}의 능력으로 {points}점을 걸었어요",
   "@skAbilityEventRascal": {
     "placeholders": {
       "name": {
@@ -2280,7 +2280,7 @@
       }
     }
   },
-  "skAbilityEventRascalNone": "{name}님은 점수를 걸지 않았어요",
+  "skAbilityEventRascalNone": "{name}님은 {pirate}의 능력을 썼지만 점수를 걸지 않았어요",
   "@skAbilityEventRascalNone": {
     "placeholders": {
       "name": {
@@ -2288,7 +2288,7 @@
       }
     }
   },
-  "skAbilityEventJuanita": "{name}님이 남은 카드 더미를 확인했어요",
+  "skAbilityEventJuanita": "{name}님이 {pirate}의 능력으로 남은 카드 더미를 확인했어요",
   "@skAbilityEventJuanita": {
     "placeholders": {
       "name": {
@@ -2296,7 +2296,7 @@
       }
     }
   },
-  "skAbilityEventHarry": "{name}님이 입찰을 바꿨어요 (→ {bid})",
+  "skAbilityEventHarry": "{name}님이 {pirate}의 능력으로 입찰을 바꿨어요 (→ {bid})",
   "@skAbilityEventHarry": {
     "placeholders": {
       "name": {
@@ -2307,7 +2307,7 @@
       }
     }
   },
-  "skAbilityEventHarryKeep": "{name}님은 입찰을 그대로 뒀어요",
+  "skAbilityEventHarryKeep": "{name}님은 {pirate}의 능력을 썼지만 입찰을 그대로 뒀어요",
   "@skAbilityEventHarryKeep": {
     "placeholders": {
       "name": {

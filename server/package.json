@@ -4,7 +4,13 @@
   "description": "Tichu Online card game server",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "./run_tests.sh",
+    "test:self": "./run_tests.sh self",
+    "test:integration": "./run_tests.sh integration",
+    "test:slow": "./run_tests.sh slow",
+    "test:all": "./run_tests.sh all",
+    "test:bots": "./run_tests.sh bots"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

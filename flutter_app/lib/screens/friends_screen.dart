@@ -43,6 +43,9 @@ class _FriendsScreenState extends State<FriendsScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 친구 화면을 열자마자(한 프레임 안에) 닫으면 여기서 context.read 가
+      // 사라진 위젯을 뒤진다. 이 묶음의 다른 콜백들과 같은 가드.
+      if (!mounted) return;
       final game = context.read<GameService>();
       _gameService = game;
       game.requestFriends();

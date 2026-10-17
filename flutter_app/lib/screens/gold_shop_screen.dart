@@ -43,6 +43,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         ..onSuccess = _handleSuccess
         ..onError = _handleError
         ..onPending = () {
+          // L10n.of(context) 는 _toast 의 가드보다 먼저 평가된다. 화면이
+          // 사라진 뒤에 이 콜백이 불리면 죽은 context 에서 번역을 읽게
+          // 되는데, _buy 의 주석이 경계하는 바로 그 상황이다.
+          // (dispose 가 콜백을 떼므로 창은 좁지만, 떼기 전에 불릴 수 있다)
+          if (!mounted) return;
           _toast(L10n.of(context).goldPaymentProcessing);
         }
         ..onSettled = (_) {

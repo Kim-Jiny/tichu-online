@@ -198,6 +198,10 @@ class L10nEn extends L10n {
   String get settingsAccountManagement => 'Account Management';
 
   @override
+  String get settingsDeleteAccountFailed =>
+      'Could not delete your account. Please try again.';
+
+  @override
   String get settingsDeleteAccountWithdraw => 'Withdraw';
 
   @override

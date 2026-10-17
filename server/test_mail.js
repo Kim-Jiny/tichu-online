@@ -213,10 +213,20 @@ const goldOf = async (n) => Number((await db.pool.query(
     title: `기한지난보상 ${run}`, body: 'x', rewardGold: 100,
     expiresAt: '2020-01-01 00:00:00', targetKind: 'user', nicknames: [B], createdBy: 'tester',
   });
+  // 기한이 지난 보상 편지는 읽기와 무관하게 아예 세지 않는다.
+  //
+  // 전에는 "읽으면 빠진다"(beforeDead - 1)로 기대했는데, 그건 보내는
+  // 순간부터 세고 있다는 뜻이다. getUnreadMailCount 는 만료를 읽음 여부와
+  // 따로 본다 — `m.expires_at IS NULL OR m.expires_at >= NOW()` 가 읽음
+  // 조건보다 앞에 있다. 받을 게 없는 편지로는 처음부터 재촉하지 않는
+  // 쪽이 맞고, 제품이 그렇게 동작한다. 틀린 건 이 단정이었다.
   const beforeDead = await db.getUnreadMailCount(B);
+  const afterDeadSent = await db.getUnreadMailCount(B);
+  check('기한이 지난 보상은 보낸 순간부터 세지 않는다',
+    afterDeadSent === beforeDead, `${beforeDead} → ${afterDeadSent}`);
   await db.markMailRead(B, deadMail.id);
-  check('기한이 지난 보상은 읽으면 빠진다 (받을 게 없으니 재촉하지 않는다)',
-    (await db.getUnreadMailCount(B)) === beforeDead - 1,
+  check('읽어도 그대로다 (애초에 세지 않았으므로)',
+    (await db.getUnreadMailCount(B)) === beforeDead,
     `${beforeDead} → ${await db.getUnreadMailCount(B)}`);
   for (const m of [plainMail, rewardMail, deadMail]) await db.deleteMail(m.id);
 

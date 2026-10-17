@@ -173,7 +173,17 @@ async function main() {
       check(`관리자 ${path} 가 열린다`, r.status === 200 && r.body.includes(needle), String(r.status));
     }
     const side = await req('GET', '/tc-backstage/missions', null, cookie);
-    check('사이드바에 "미션" 묶음이 따로 있다', side.body.includes('nav-section-label">미션<') && side.body.includes('/tc-backstage/missions/manage') && side.body.includes('/tc-backstage/missions/ledger'));
+    // 사이드바는 접히는 묶음(details.nav-group)으로 바뀌었다. 전에는
+    // 'nav-section-label">미션<' 을 찾았는데, 재설계 때 클래스가
+    // nav-group/ng-label 로, 라벨이 '미션·토큰' 으로 바뀌어 이 단정만
+    // 낡은 채 빨간 줄로 남아 있었다 — 제품이 아니라 테스트가 틀렸다.
+    //
+    // 묶음 id 로 본다. 라벨 글자는 또 바뀔 수 있지만 data-group 은 코드가
+    // 참조하는 식별자다.
+    check('사이드바에 미션 묶음이 따로 있다',
+      side.body.includes('data-group="missions"')
+      && side.body.includes('/tc-backstage/missions/manage')
+      && side.body.includes('/tc-backstage/missions/ledger'));
     const home = await req('GET', '/tc-backstage/stats', null, cookie);
     check('다른 페이지 사이드바에도 미션 묶음', home.body.includes('/tc-backstage/missions/shop'));
 

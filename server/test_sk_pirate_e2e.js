@@ -1,5 +1,5 @@
 /**
- * 실제 서버에 해적 능력 모드로 스컬킹 한 판을 태운다(쓰고 버리는 DB, 8098 포트).
+ * 실제 서버에 해적 능력 모드로 스컬킹 한 판을 태운다(쓰고 버리는 DB, 8092 포트).
  * 사람 1 + 빠른 봇 2. 사람은 아무 합법 카드나 내고, 능력 차례가 오면 기본 선택을 한다.
  *   node server/test_sk_pirate_e2e.js
  */
@@ -9,7 +9,9 @@ const WebSocket = require('ws');
 
 const ADMIN_URL = process.env.TEST_PG_ADMIN || 'postgresql://jiny@localhost:5432/postgres';
 const DB = 'tichu_sk_pirate_e2e';
-const PORT = 8098;
+// 8092. 8098 은 test_profile_privacy 가 쓴다 — 같은 번호면 두 테스트를
+// 나란히 돌릴 수 없고, 뒤에 오는 쪽이 EADDRINUSE 로 죽는다.
+const PORT = Number(process.env.TEST_PORT) || 8092;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let failures = 0;
 const check = (label, cond, detail = '') => {
@@ -56,7 +58,7 @@ async function main() {
   let log = '';
   srv.stdout.on('data', (d) => { log += d; });
   srv.stderr.on('data', (d) => { log += d; });
-  for (let i = 0; i < 100 && !/listening|running|8098/i.test(log); i++) await sleep(200);
+  for (let i = 0; i < 100 && !new RegExp(`listening|running|${PORT}`, 'i').test(log); i++) await sleep(200);
   await sleep(800);
 
   try {

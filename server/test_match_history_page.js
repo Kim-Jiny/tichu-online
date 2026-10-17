@@ -48,7 +48,18 @@ async function walk(nickname, gameType, pageSize) {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, cap);
   console.log(`  ..  ${flat.length} matches on record, paging reaches ${cap}`);
-  check('there is enough history to page through', flat.length > 5, `${flat.length}`);
+  // 기록이 없으면 건너뛴다. 실패로 세지 않는 이유: 이 테스트는 머리말대로
+  // 개발 DB 의 실제 계정을 걸어 보는 도구이고, 그 계정에 판이 없다는 것은
+  // 페이징이 틀렸다는 뜻이 아니다. 빨간 줄로 세우면 "고칠 것이 있다"는
+  // 신호를 흐리게 만들고, 실제로 그렇게 묻혀 있었다.
+  //
+  // 닉네임은 인자로 바꿀 수 있다: node test_match_history_page.js <닉네임>
+  if (flat.length <= 5) {
+    console.log(`\n  skip  '${nickname}' 의 기록이 ${flat.length}판뿐이라 페이징을 걸어 볼 수 없습니다.`);
+    console.log('        판이 쌓인 계정을 인자로 넘겨 주세요:');
+    console.log('        node test_match_history_page.js <닉네임>\n');
+    process.exit(0);
+  }
 
   for (const size of [3, 7, 20]) {
     const walked = await walk(nickname, 'all', size);

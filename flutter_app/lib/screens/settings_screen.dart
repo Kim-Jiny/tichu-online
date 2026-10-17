@@ -364,9 +364,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ).whenComplete(controller.dispose);
   }
 
-  void _deleteAccount() {
+  /// 탈퇴. 서버가 지웠다고 답할 때만 로그아웃한다.
+  ///
+  /// 전에는 결과와 무관하게 로그아웃해서, 지워지지 않았는데도 사용자는
+  /// 탈퇴된 줄 알고 떠났다 — 개인정보 삭제 요청이 조용히 실패하는 건
+  /// 그냥 버그가 아니라 약속을 못 지킨 것이다.
+  Future<void> _deleteAccount() async {
     final game = context.read<GameService>();
-    game.deleteAccount().whenComplete(_logout);
+    final l10n = L10n.of(context);
+    final r = await game.deleteAccount();
+    if (!mounted) return;
+    if (r.ok) {
+      _logout();
+      return;
+    }
+    // 실패했으면 로그인 상태를 유지한다. 다시 시도하거나 문의할 수 있어야 한다.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          r.message == null || r.message!.isEmpty
+              ? l10n.settingsDeleteAccountFailed
+              : localizeServiceMessage(r.message!, l10n),
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _openMailbox() {

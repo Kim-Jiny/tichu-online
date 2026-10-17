@@ -15,6 +15,7 @@
 const WebSocket = require('ws');
 const http = require('http');
 const db = require('./db/database.js');
+const minioClient = require('./storage/minioClient');
 
 const SERVER_URL = process.argv[2] || 'ws://localhost:8080';
 const ADMIN_BASE = process.argv[3] || 'http://localhost:8080';
@@ -85,6 +86,21 @@ function adminLogin() {
 }
 
 (async () => {
+  // 사진 저장소가 설정돼 있어야 돈다.
+  //
+  // cleanupExpiredProfilePhotos 의 첫 줄이 `if (!minioClient.isEnabled())
+  // return;` 이다. 저장소가 없으면 정리가 통째로 건너뛰어지므로 만료된
+  // 사진이 지워지지도, 접속 중인 세션에서 내려가지도 않는다 — 그건 만료
+  // 처리가 틀렸다는 뜻이 아니라 이 환경에 저장소가 없다는 뜻이다.
+  //
+  // 빨간 줄로 세우면 진짜 고칠 것의 신호가 묻힌다. MINIO_* 환경변수를
+  // 주고 돌리면 검사가 실제로 수행된다.
+  if (!minioClient.isEnabled()) {
+    console.log('\n  skip  사진 저장소(MinIO)가 설정되지 않아 만료 정리를 걸어 볼 수 없습니다.');
+    console.log('        MINIO_ENDPOINT / MINIO_ACCESS_KEY / MINIO_SECRET_KEY 를 주고 다시 돌려주세요.\n');
+    process.exit(0);
+  }
+
   const NICK = `사진WS${RUN}`;
   const acct = { username: `photo_${RUN}`, password: 'phototest1234!', nickname: NICK };
   const a = await client('주인');

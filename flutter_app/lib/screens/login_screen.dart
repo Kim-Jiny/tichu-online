@@ -83,6 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _loadAppVersion();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 한 프레임 뒤에 돈다. 그 사이 화면이 사라졌으면 _attemptAutoLogin 의
+      // context.read 가 사라진 위젯을 뒤진다 — 이 파일의 다른 postFrame
+      // 콜백들과 같은 가드다.
+      if (!mounted) return;
       _tryAutoLogin();
     });
   }

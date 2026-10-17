@@ -70,6 +70,8 @@ class GameService extends ChangeNotifier {
   int _pushPrefsLoadVersion = 0;
   final Map<String, DateTime> _roomInviteCooldowns = {};
   Completer<String?>? _shareInviteLinkCompleter;
+  /// 탈퇴 요청의 서버 응답(account_deleted)을 기다리는 곳.
+  Completer<({bool ok, String? message})>? _deleteAccountCompleter;
   GameStateData? _prevGameState;
   SKGameStateData? _prevSKGameState;
   LLGameStateData? _prevLLGameState;
@@ -2311,6 +2313,13 @@ class GameService extends ChangeNotifier {
         _shareInviteLinkCompleter?.complete(data['url'] as String?);
         _shareInviteLinkCompleter = null;
         break;
+      case 'account_deleted':
+        _deleteAccountCompleter?.complete((
+          ok: data['success'] == true,
+          message: data['message'] as String?,
+        ));
+        _deleteAccountCompleter = null;
+        break;
 
       case 'share_invite_link_error':
         final message =
@@ -3786,9 +3795,31 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_maintenance_status'});
   }
 
-  Future<void> deleteAccount() async {
+  /// 계정을 지운다. 서버가 실제로 지웠는지까지 확인하고 돌려준다.
+  ///
+  /// 전에는 보내고 150ms 기다린 뒤 결과와 무관하게 로그아웃했다. 서버는
+  /// account_deleted 로 성공·실패를 답하는데 아무도 듣지 않았고, 그래서
+  /// 지워지지 않았는데도(DB 오류, 재접속 중 메시지 유실) 사용자는 탈퇴된
+  /// 줄 알고 로그아웃됐다. 개인정보 삭제 요청이 조용히 실패해서는 안 된다.
+  Future<({bool ok, String? message})> deleteAccount() {
+    final existing = _deleteAccountCompleter;
+    if (existing != null && !existing.isCompleted) return existing.future;
+
+    final completer = Completer<({bool ok, String? message})>();
+    _deleteAccountCompleter = completer;
     _network.send({'type': 'delete_account'});
-    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    return completer.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        if (identical(_deleteAccountCompleter, completer)) {
+          _deleteAccountCompleter = null;
+        }
+        // 못 지웠다고 답한다. "모른다"를 성공으로 보여 주면 사용자는
+        // 지워졌다고 믿고 떠난다.
+        return (ok: false, message: null);
+      },
+    );
   }
 
   void setAdminAlertPush({bool? inquiry, bool? report, bool? payment}) {
@@ -5426,6 +5457,11 @@ class GameService extends ChangeNotifier {
   void dispose() {
     _disposed = true; // C2: Mark as disposed
     _matchIncomingTimer?.cancel();
+    if (_deleteAccountCompleter != null &&
+        !_deleteAccountCompleter!.isCompleted) {
+      _deleteAccountCompleter!.complete((ok: false, message: null));
+    }
+    _deleteAccountCompleter = null;
     if (_shareInviteLinkCompleter != null &&
         !_shareInviteLinkCompleter!.isCompleted) {
       _shareInviteLinkCompleter!.completeError(

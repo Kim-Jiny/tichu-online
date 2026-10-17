@@ -79,6 +79,7 @@
   "settingsSubmitInquiry": "Submit Inquiry",
   "settingsInquiryHistory": "Inquiry History",
   "settingsAccountManagement": "Account Management",
+  "settingsDeleteAccountFailed": "Could not delete your account. Please try again.",
   "settingsDeleteAccountWithdraw": "Withdraw",
   "settingsLinkComplete": "Linking completed",
   "settingsLinkFailed": "Linking failed: {error}",

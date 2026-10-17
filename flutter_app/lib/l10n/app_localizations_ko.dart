@@ -190,6 +190,9 @@ class L10nKo extends L10n {
   String get settingsAccountManagement => '계정 관리';
 
   @override
+  String get settingsDeleteAccountFailed => '탈퇴를 처리하지 못했습니다. 다시 시도해 주세요.';
+
+  @override
   String get settingsDeleteAccountWithdraw => '탈퇴';
 
   @override

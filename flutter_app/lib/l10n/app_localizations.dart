@@ -447,6 +447,12 @@ abstract class L10n {
   /// **'Account Management'**
   String get settingsAccountManagement;
 
+  /// No description provided for @settingsDeleteAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete your account. Please try again.'**
+  String get settingsDeleteAccountFailed;
+
   /// No description provided for @settingsDeleteAccountWithdraw.
   ///
   /// In en, this message translates to:

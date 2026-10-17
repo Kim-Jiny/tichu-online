@@ -72,6 +72,7 @@
   "settingsSubmitInquiry": "Anfrage senden",
   "settingsInquiryHistory": "Anfragenverlauf",
   "settingsAccountManagement": "Kontoverwaltung",
+  "settingsDeleteAccountFailed": "Konto konnte nicht gelöscht werden. Bitte versuche es erneut.",
   "settingsDeleteAccountWithdraw": "Löschen",
   "settingsLinkComplete": "Verknüpfung abgeschlossen",
   "settingsLinkFailed": "Verknüpfung fehlgeschlagen: {error}",

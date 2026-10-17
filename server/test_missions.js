@@ -6,6 +6,19 @@ const { Pool } = require('pg');
 const missions = require('./missions/missions');
 const defs = require('./missions/defs');
 
+// 날짜 픽스처는 KST 로 넣는다.
+//
+// 이 테스트는 세션을 UTC 로 고정하고(아래 SET TIME ZONE) 실서버도 UTC 다.
+// 그래서 CURRENT_DATE 는 어디서든 UTC 날짜인데, 미션의 하루 경계는 KST 다
+// (expireOld / getState / pick 전부 DATE(timezone('Asia/Seoul', NOW()))).
+//
+// 두 기준이 겹치지 않는 구간 — KST 00~09시(UTC 로는 전날 15~24시) — 에는
+// CURRENT_DATE 가 KST 오늘보다 하루 이르다. 그 시간에 돌리면 방금 넣은
+// 미션이 expires_day < KST오늘 이 되어 삽입 즉시 'expired' 로 쓸려 나가고,
+// getState().active 에서 사라져 테스트가 깨진다. 로컬만의 문제가 아니라
+// 매일 그 9시간 동안 어디서 돌려도 깨졌다.
+const KST_TODAY = "DATE(timezone('Asia/Seoul', NOW()))";
+
 const ADMIN_URL = process.env.TEST_PG_ADMIN || 'postgresql://jiny@localhost:5432/postgres';
 const DB = 'tichu_missions_test';
 let failures = 0;
@@ -70,13 +83,13 @@ async function main() {
   await pool.query('DELETE FROM tc_user_missions WHERE nickname = $1', [nick]);
   await pool.query(
     `INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-     VALUES ($1, 'tichu_bomb50', CURRENT_DATE, CURRENT_DATE + 2, 50)`, [nick]);
+     VALUES ($1, 'tichu_bomb50', ${KST_TODAY}, ${KST_TODAY} + 2, 50)`, [nick]);
   await missions.record(nick, 'tichu.bomb_points', 25);
   st = await missions.getState(nick);
   check('누적 진행(25/50)', st.active.find((m) => m.key === 'tichu_bomb50').progress === 25);
 
   // 기간이 지난 미션은 만료.
-  await pool.query(`UPDATE tc_user_missions SET expires_day = CURRENT_DATE - 1 WHERE nickname = $1`, [nick]);
+  await pool.query(`UPDATE tc_user_missions SET expires_day = ${KST_TODAY} - 1 WHERE nickname = $1`, [nick]);
   await missions.record(nick, 'tichu.bomb_points', 25);
   st = await missions.getState(nick);
   check('기간 지난 미션은 진행되지 않고 사라짐', !st.active.some((m) => m.key === 'tichu_bomb50'));
@@ -91,7 +104,7 @@ async function main() {
   await pool.query(`INSERT INTO tc_mission_streak (nickname, last_day, streak) VALUES ($1, DATE(timezone('Asia/Seoul', NOW())) - 1, 6)`, [n2]);
   await pool.query(
     `INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-     VALUES ($1, 'tichu_play', CURRENT_DATE, CURRENT_DATE + 2, 1)`, [n2]);
+     VALUES ($1, 'tichu_play', ${KST_TODAY}, ${KST_TODAY} + 2, 1)`, [n2]);
   const d = await missions.record(n2, 'tichu.game_end');
   check('7일째 미션 완료 시 보너스 토큰', d[0] && d[0].streakBonus === defs.STREAK_BONUS_TOKENS, JSON.stringify(d));
   st = await missions.getState(n2);
@@ -168,7 +181,7 @@ async function main() {
   // ── 연속 미션: 지면 0 으로 ──
   const n5 = '연승테스터';
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, 'tichu_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]); // 목표 4 로 직접 넣어 검사한다
+    VALUES ($1, 'tichu_win_streak4', ${KST_TODAY}, ${KST_TODAY}, 4)`, [n5]); // 목표 4 로 직접 넣어 검사한다
   await missions.record(n5, 'tichu.game_win');
   await missions.record(n5, 'tichu.game_win');
   let ss = await missions.getState(n5);
@@ -183,20 +196,20 @@ async function main() {
   check('이미 완료한 연승은 패배로 되돌아가지 않는다', (await missions.record(n5, 'tichu.game_loss')).length === 0 && (await missions.getState(n5)).active.find((m) => m.key === 'tichu_win_streak4').status === 'done');
   // 다른 게임의 패배는 영향 없다.
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, 'mighty_win_streak4', CURRENT_DATE, CURRENT_DATE, 4)`, [n5]);
+    VALUES ($1, 'mighty_win_streak4', ${KST_TODAY}, ${KST_TODAY}, 4)`, [n5]);
   await missions.record(n5, 'mighty.game_win');
   await missions.record(n5, 'tichu.game_loss');
   check('다른 게임의 패배는 영향 없음', (await missions.getState(n5)).active.find((m) => m.key === 'mighty_win_streak4').progress === 1);
   // 정의에서 없앤 미션이 DB 에 남아 있어도 상태 조회가 죽지 않는다.
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, 'removed_old_mission', CURRENT_DATE, CURRENT_DATE, 1)`, [n5]);
+    VALUES ($1, 'removed_old_mission', ${KST_TODAY}, ${KST_TODAY}, 1)`, [n5]);
   const ss2 = await missions.getState(n5);
   check('없앤 미션은 목록에서 빠진다', !ss2.active.some((m) => m.key === 'removed_old_mission'));
 
   // ── '한 판에' · '한 라운드에' · '연속 원투' 미션은 범위가 끝나면 0 으로 ──
   const n6 = '범위테스터';
   const add = (key, target) => pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, $2, CURRENT_DATE, CURRENT_DATE, $3)`, [n6, key, target]);
+    VALUES ($1, $2, ${KST_TODAY}, ${KST_TODAY}, $3)`, [n6, key, target]);
   const prog = async (key) => (await missions.getState(n6)).active.find((m) => m.key === key).progress;
   await add('tichu_first_out5', 5); await add('mighty_win5', 5); await add('tichu_onetwo', 2);
   for (let i = 0; i < 3; i++) await missions.record(n6, 'tichu.first_out');
@@ -218,7 +231,7 @@ async function main() {
   // 판 시작도 '한 판에' 미션을 0 으로(중간에 끝난 판의 진행이 새지 않게).
   const n7 = '판시작테스터';
   await pool.query(`INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-    VALUES ($1, 'sk_bid_hit6', CURRENT_DATE, CURRENT_DATE, 6), ($1, 'mighty_win5', CURRENT_DATE, CURRENT_DATE, 5)`, [n7]);
+    VALUES ($1, 'sk_bid_hit6', ${KST_TODAY}, ${KST_TODAY}, 6), ($1, 'mighty_win5', ${KST_TODAY}, ${KST_TODAY}, 5)`, [n7]);
   await missions.record(n7, 'sk.bid_hit'); await missions.record(n7, 'sk.bid_hit');
   await missions.record(n7, 'mighty.trick_win');
   await missions.record(n7, 'sk.game_start');

@@ -75,6 +75,23 @@ async function page(c, opts) {
   check('it echoes what was asked for',
     first.nickname === TARGET && first.gameType === 'all' && first.offset === 0,
     JSON.stringify({ n: first.nickname, g: first.gameType, o: first.offset }));
+  // 페이징을 걸어 볼 판이 없으면 여기서 멈춘다.
+  //
+  // 머리말대로 이 테스트는 개발 DB 의 실제 계정을 겨눈다. 그 계정에 판이
+  // 없다는 것은 소켓 경로가 틀렸다는 뜻이 아니다 — 위의 "요청에 답한다",
+  // "물어본 것을 되읊는다", 그리고 아래 "기록 없는 계정은 오류가 아니라
+  // 빈 답을 준다" 까지가 데이터 없이 확인할 수 있는 전부다. 빨간 줄로
+  // 세우면 진짜 고칠 것의 신호가 묻힌다.
+  //
+  // 닉네임은 인자로 바꿀 수 있다: node test_match_history_ws.js <닉네임>
+  if (first.matches.length < PAGE) {
+    console.log(`\n  skip  '${TARGET}' 의 판이 ${first.matches.length}개뿐이라`
+      + ` 한 장(${PAGE}개)을 채우지 못해 페이징을 걸어 볼 수 없습니다.`);
+    console.log('        판이 쌓인 계정을 인자로 넘겨 주세요:');
+    console.log('        node test_match_history_ws.js <닉네임>\n');
+    me.ws.close();
+    return;
+  }
   check('a full first page comes back', first.matches.length === PAGE,
     `${first.matches.length}`);
   check('and says there is more', first.hasMore === true);

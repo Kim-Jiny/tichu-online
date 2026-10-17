@@ -5905,6 +5905,11 @@ class L10nDe extends L10n {
   String get skCardSkullKing => 'Skull King';
 
   @override
+  String skCardPirateNamed(String pirate) {
+    return 'Pirat · $pirate';
+  }
+
+  @override
   String get skCardPirate => 'Pirat';
 
   @override

@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/sk_game_state.dart';
 import '../theme/cartoon.dart';
 import 'game_chrome.dart';
+import 'sk_card_highlight.dart';
 
 /// 해적 이름(id 의 번호 → 이름 키). 서버 `PIRATE_NAMES` 와 같아야 한다.
 const skPirateByNumber = {
@@ -65,8 +66,11 @@ String skPirateAbilityDesc(L10n l10n, String pirate) {
 }
 
 /// 카드 한 장을 그려 주는 함수(게임 화면의 `_buildCard` 를 넘겨 받는다).
+///
+/// 강조를 bool 이 아니라 [SkCardHighlight] 로 받는다. bool 로 받던 때는
+/// "강조됨" 하나뿐이어서, 벤트로 가져온 카드에 트릭 승리 표식이 붙었다.
 typedef SkCardBuilder =
-    Widget Function(String cardId, {double size, bool highlighted});
+    Widget Function(String cardId, {double size, SkCardHighlight highlight});
 
 /// 트릭을 이긴 해적의 능력을 쓰는 사람에게 뜨는 선택 패널.
 class SkAbilityPanel extends StatefulWidget {
@@ -356,7 +360,11 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
                         child: widget.buildCard(
                           id,
                           size: 70,
-                          highlighted: widget.state.abilityDrawn.contains(id),
+                          // 덱에서 방금 가져온 카드. 이긴 카드가 아니다 —
+                          // 손패 중 어느 게 새로 온 것인지만 알려 준다.
+                          highlight: widget.state.abilityDrawn.contains(id)
+                              ? SkCardHighlight.drawn
+                              : SkCardHighlight.none,
                         ),
                       ),
                       if (_picked.contains(id))

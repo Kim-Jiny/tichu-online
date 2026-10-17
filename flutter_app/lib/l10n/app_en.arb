@@ -3449,6 +3449,14 @@
   "couponEnterCode": "Enter the code",
   "appForceUpdateLater": "See you after the update!",
   "skCardSkullKing": "Skull King",
+  "skCardPirateNamed": "Pirate · {pirate}",
+  "@skCardPirateNamed": {
+    "placeholders": {
+      "pirate": {
+        "type": "String"
+      }
+    }
+  },
   "skCardPirate": "Pirate",
   "skCardRascal": "Rascal",
   "skCardRosie": "Rosie",

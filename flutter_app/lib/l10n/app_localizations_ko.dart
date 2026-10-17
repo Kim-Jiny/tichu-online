@@ -5703,6 +5703,11 @@ class L10nKo extends L10n {
   String get skCardSkullKing => '스컬킹';
 
   @override
+  String skCardPirateNamed(String pirate) {
+    return '해적 · $pirate';
+  }
+
+  @override
   String get skCardPirate => '해적';
 
   @override

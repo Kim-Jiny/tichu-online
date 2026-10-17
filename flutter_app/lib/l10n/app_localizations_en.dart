@@ -5855,6 +5855,11 @@ class L10nEn extends L10n {
   String get skCardSkullKing => 'Skull King';
 
   @override
+  String skCardPirateNamed(String pirate) {
+    return 'Pirate · $pirate';
+  }
+
+  @override
   String get skCardPirate => 'Pirate';
 
   @override

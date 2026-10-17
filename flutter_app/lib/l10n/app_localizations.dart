@@ -10287,6 +10287,12 @@ abstract class L10n {
   /// **'Skull King'**
   String get skCardSkullKing;
 
+  /// No description provided for @skCardPirateNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pirate · {pirate}'**
+  String skCardPirateNamed(String pirate);
+
   /// No description provided for @skCardPirate.
   ///
   /// In en, this message translates to:

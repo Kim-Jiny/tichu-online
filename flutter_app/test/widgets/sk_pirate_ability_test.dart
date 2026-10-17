@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tichu_online/l10n/app_localizations.dart';
 import 'package:tichu_online/models/sk_game_state.dart';
 import 'package:tichu_online/theme/cartoon.dart';
+import 'package:tichu_online/widgets/sk_card_highlight.dart';
 import 'package:tichu_online/widgets/sk_pirate_ability_panel.dart';
 
 Map<String, dynamic> _json({
@@ -103,6 +104,7 @@ void main() {
     Locale locale = const Locale('ko'),
     Size size = const Size(400, 800),
     double Function(int, int)? seatAngle,
+    Map<String, SkCardHighlight>? highlights,
   }) async {
     final calls = <Map<String, Object?>>[];
     await t.binding.setSurfaceSize(size);
@@ -121,12 +123,17 @@ void main() {
             child: SkAbilityPanel(
               state: SKGameStateData.fromJson(json),
               seatAngle: seatAngle,
-              buildCard: (id, {size = 60, highlighted = false}) => Container(
-                key: ValueKey('card:$id'),
-                width: size * 0.7,
-                height: size,
-                color: highlighted ? Colors.blue : Colors.grey,
-              ),
+              buildCard: (id, {size = 60, highlight = SkCardHighlight.none}) {
+                highlights?[id] = highlight;
+                return Container(
+                  key: ValueKey('card:$id'),
+                  width: size * 0.7,
+                  height: size,
+                  color: highlight == SkCardHighlight.none
+                      ? Colors.grey
+                      : Colors.blue,
+                );
+              },
               onUse: ({leaderId, discard, wager, delta}) => calls.add({
                 'leaderId': leaderId,
                 'discard': discard,
@@ -175,6 +182,33 @@ void main() {
     expect(find.text('버리기 (2/2)'), findsWidgets);
     await t.tap(find.text('버리기 (2/2)').first);
     expect(calls.single['discard'], ['sk_yellow_1', 'sk_green_2']);
+    await t.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('벤트: 가져온 카드에는 승리 표식이 아니라 가져온 표식', (t) async {
+    // 전에는 강조가 bool 하나여서, 덱에서 가져온 카드에 트릭 승리
+    // 표식(트로피)이 붙었다. 가져온 카드는 이긴 카드가 아니다.
+    final marks = <String, SkCardHighlight>{};
+    await pump(
+      t,
+      _json(
+        pirate: 'bendt',
+        hand: ['sk_yellow_1', 'sk_green_2', 'sk_black_3', 'sk_purple_4'],
+        info: {
+          'drawn': ['sk_black_3', 'sk_purple_4'],
+        },
+      ),
+      highlights: marks,
+    );
+    expect(marks['sk_black_3'], SkCardHighlight.drawn);
+    expect(marks['sk_purple_4'], SkCardHighlight.drawn);
+    expect(marks['sk_yellow_1'], SkCardHighlight.none);
+    expect(marks['sk_green_2'], SkCardHighlight.none);
+    expect(
+      marks.values,
+      isNot(contains(SkCardHighlight.winner)),
+      reason: '가져온 카드에 승리 표식',
+    );
     await t.pump(const Duration(seconds: 3));
   });
 

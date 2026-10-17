@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import '../theme/cartoon.dart';
 import '../services/game_service.dart';
@@ -22,9 +23,11 @@ import '../widgets/spectator_controls.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../widgets/mid_game_join.dart';
+import '../widgets/sk_card_highlight.dart';
 import '../widgets/sk_number_card.dart';
 import '../widgets/sk_pirate_ability_panel.dart';
 import '../widgets/sk_expansion_guide.dart';
+import 'sk_board_layout.dart';
 
 class SKGameScreen extends StatefulWidget {
   const SKGameScreen({super.key});
@@ -428,30 +431,45 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }
 
   Widget _buildBoardStage({required Widget board, Widget? bottomOverlay}) {
-    // 관전자용 bottomPadding — 승인받아 상대 손패를 볼 때 8~10 라운드는
-    // 카드가 두 줄이라 110dp 로도 좌석을 살짝 가렸다. 130 이면 두 줄
-    // 카드가 다 들어간다.
-    final bottomPadding = bottomOverlay is _SKSpectatorHandAreaMarker
-        ? 130.0
-        : 130.0;
+    // 보드가 비우는 높이는 130 으로 둔다(좌석 크기와 위치가 여기서 나온다).
+    //
+    // 잰 손패 높이로 이 값을 늘리면 보드가 통째로 줄어, 손패가 두 줄인
+    // 라운드마다 좌석이 작아지고 위로 몰린다. 손패에 가리는 문제는 보드를
+    // 줄여서가 아니라 내가 낸 카드의 위치를 제한해서 푼다
+    // (_bottomOverlayHeight 를 쓰는 곳은 거기 한 곳이다).
     return Expanded(
       child: Stack(
         children: [
           Positioned.fill(
             child: Padding(
-              padding: EdgeInsets.only(bottom: bottomPadding),
+              padding: const EdgeInsets.only(bottom: 130),
               child: board,
             ),
           ),
           if (bottomOverlay != null)
             Align(
               alignment: Alignment.bottomCenter,
-              child: SizedBox(width: double.infinity, child: bottomOverlay),
+              child: SizedBox(
+                width: double.infinity,
+                child: _MeasureHeight(
+                  onChange: (h) {
+                    if (!mounted) return;
+                    // 1dp 미만 변화는 무시한다 — 애니메이션 중에 매 프레임
+                    // setState 하면 보드가 떨린다.
+                    if ((h - _bottomOverlayHeight).abs() < 1) return;
+                    setState(() => _bottomOverlayHeight = h);
+                  },
+                  child: bottomOverlay,
+                ),
+              ),
             ),
         ],
       ),
     );
   }
+
+  /// 아래 창(손패·입찰·라운드 결과)이 실제로 차지하는 높이.
+  double _bottomOverlayHeight = 130;
 
   Widget _buildSpectatorBottomOverlay(Widget child) {
     return _SKSpectatorHandAreaMarker(child: child);
@@ -727,12 +745,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // phone. Narrower box + the avatar moved onto its own row (where it no
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
-    // Sized in the LayoutBuilder below — see boardScale.
-    const seatWidthBase = 98.0;
-    // Taller than the player board's seat: a spectator seat also carries a
-    // score and a bid chip under the photo, so at 118 the photo was the row
-    // that gave way.
-    const seatHeightBase = 128.0;
+    // 크기는 sk_board_layout 의 kSkSeatWidthBase /
+    // kSkSpectatorSeatHeightBase 에 있다(관전 자리가 더 높은 이유도 거기에).
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -740,14 +754,19 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
-          final boardScale = math
-              .min(width / 360.0, height / 400.0)
-              .clamp(0.78, 1.45);
-          final seatWidth = seatWidthBase * boardScale;
-          final seatHeight = seatHeightBase * boardScale;
-          final playedCardHeight = 72.0 * boardScale;
-          final playedCardW = playedCardHeight * 0.7;
+          // 플레이어 보드와 같은 계산을 쓴다 — 관전이라고 자리가 더 작아야
+          // 할 이유는 없고, 표가 두 벌이면 한쪽만 손보게 된다.
           final playerCount = state.players.length;
+          final board = solveSkBoardLayout(
+            size: Size(width, height),
+            opponentCount: playerCount,
+            isLandscape: isLandscape,
+            spectator: true,
+          );
+          final seatWidth = board.seatWidth;
+          final seatHeight = board.seatHeight;
+          final playedCardHeight = board.playedCardHeight;
+          final playedCardW = board.playedCardWidth;
           final centerX = width / 2;
           // 인원별로 링 중심을 아래로 조금씩 내려서 세로 반경 여유를 확보.
           // 예전엔 6인 만 특별 케이스였는데, 3~5인도 상·하단 좌석 간격이
@@ -860,8 +879,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         (play) => play?.playerId == p.id,
                         orElse: () => null,
                       );
+                  // 무효 트릭에는 이긴 사람이 없다. lastTrickWinner 는
+                  // 그때 "다음 선을 잡을 사람" 을 담고 있을 뿐이라,
+                  // 그대로 읽으면 크라켄으로 무효가 된 트릭에서 승리
+                  // 표식이 뜬다.
                   final isTrickWinner =
-                      _trickShown(state) && state.lastTrickWinner == p.id;
+                      _trickShown(state) &&
+                      !state.lastTrickVoided &&
+                      state.lastTrickWinner == p.id;
 
                   if (trickPlay == null) return const SizedBox.shrink();
                   return Positioned(
@@ -1197,9 +1222,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // phone. Narrower box + the avatar moved onto its own row (where it no
     // longer competes with the name for width) buys the clearance and a bigger
     // avatar at the same time.
-    // Sized in the LayoutBuilder below — see boardScale.
-    const seatWidthBase = 98.0;
-    const seatHeightBase = 118.0;
+    // 크기는 sk_board_layout 의 kSkSeatWidthBase / kSkSeatHeightBase 에 있다.
     final opponents = state.players
         .where((p) => p.position != 'self')
         .toList(growable: false);
@@ -1213,8 +1236,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
             (play) => play?.playerId == selfPlayer.id,
             orElse: () => null,
           );
+    // 무효 트릭에는 이긴 사람이 없다 — 위 상대 자리와 같은 이유.
     final isSelfTrickWinner =
-        _trickShown(state) && state.lastTrickWinner == selfPlayer?.id;
+        _trickShown(state) &&
+        !state.lastTrickVoided &&
+        state.lastTrickWinner == selfPlayer?.id;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
@@ -1222,29 +1248,27 @@ class _SKGameScreenState extends State<SKGameScreen> {
         builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
-          final boardScale = math
-              .min(width / 360.0, height / 400.0)
-              .clamp(0.78, 1.45);
-          final seatWidth = seatWidthBase * boardScale;
-          final seatHeight = seatHeightBase * boardScale;
-          final playedCardHeight = 72.0 * boardScale;
-          final playedCardW = playedCardHeight * 0.7;
+          // 자리·카드 크기와 링 반지름은 sk_board_layout 이 정한다.
+          //
+          // 전에는 여기서 상수를 곱해 썼는데, 그러면 "조금 키우기" 가
+          // 인원수마다 다른 작업이 된다 — 2~3인에서 알맞은 크기가 5~6인
+          // 에서는 겹친다. solve 가 그 화면·그 인원에서 겹치지 않는 가장
+          // 큰 값을 찾아 준다(테스트: sk_board_layout_test.dart).
           final opponentCount = opponents.length;
-          final centerX = width / 2;
-          final centerY = isLandscape ? height * 0.42 : height * 0.46;
-          final maxSeatRadiusX = math.max(0.0, centerX - seatWidth / 2 - 10);
-          final seatRadiusX = math.min(
-            width * _seatRadiusXFactor(opponentCount),
-            math.min(
-              _seatRadiusXCap(width, opponentCount, spectator: false),
-              maxSeatRadiusX,
-            ),
+          final board = solveSkBoardLayout(
+            size: Size(width, height),
+            opponentCount: opponentCount,
+            isLandscape: isLandscape,
+            spectator: false,
           );
-          final maxSeatRadiusY = math.max(0.0, centerY - seatHeight / 2 - 6);
-          final seatRadiusY = math.min(
-            height * (isLandscape ? 0.35 : 0.36),
-            math.min(_seatRadiusYCap(height, spectator: false), maxSeatRadiusY),
-          );
+          final seatWidth = board.seatWidth;
+          final seatHeight = board.seatHeight;
+          final playedCardHeight = board.playedCardHeight;
+          final playedCardW = board.playedCardWidth;
+          final centerX = board.center.dx;
+          final centerY = board.center.dy;
+          final seatRadiusX = board.radiusX;
+          final seatRadiusY = board.radiusY;
           final bottomMostOpponentCardTop = opponents.isEmpty
               ? centerY
               : List.generate(
@@ -1257,8 +1281,26 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       2,
                 ).reduce(math.max);
           final trickBoxLowerBound = height * (isLandscape ? 0.60 : 0.64);
+          // 내가 낸 카드는 손패 위에 머물러야 한다.
+          //
+          // 보드는 아래 130 만 비우는데 손패는 카드가 두 줄이면 그보다
+          // 높아진다(라운드가 올라가면 10장까지 간다). 그 차이만큼 카드가
+          // 덮였다 — "간혹" 이던 이유도 이것이다. 장수가 적은 라운드에서는
+          // 130 안에 들어가 가려지지 않는다.
+          //
+          // 보드를 줄이는 대신 카드만 올린다. 보드를 줄이면 좌석 크기와
+          // 자리가 손에 든 장수에 따라 흔들린다.
+          const boardBottomPad = 130.0;
+          final handTopInBoard =
+              height +
+              boardBottomPad -
+              math.max(boardBottomPad, _bottomOverlayHeight);
+          final selfCardCeiling = math.min(
+            height - playedCardHeight - 4,
+            handTopInBoard - playedCardHeight - 6,
+          );
           final selfCardTop = math.min(
-            height - 60,
+            selfCardCeiling,
             math.max(bottomMostOpponentCardTop + 40, trickBoxLowerBound),
           );
 
@@ -1276,13 +1318,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   // 상대 2~3명은 상단에 몰리므로 트릭을 -0.15 로 올리고,
                   // 4명(5인 게임) 도 옆 두 자리(172°/368°) 가 mid-side 라
                   // 트릭이 링 아래에 붙어 보이던 것을 -0.05 로 조금 올린다.
+                  //
+                  // 5명(6인 게임)은 자리가 아래까지 내려와 트릭이 링 바닥에
+                  // 붙었다. 0.46 → 0.30 으로 올린다. 좌석이 커지면서 링도
+                  // 함께 넓어져 아래쪽 여유가 줄어든 탓이 크다.
                   alignment: Alignment(
                     0,
                     opponents.length <= 3
                         ? (isLandscape ? -0.18 : -0.15)
                         : opponents.length == 4
                         ? (isLandscape ? -0.08 : -0.05)
-                        : (isLandscape ? 0.36 : 0.46),
+                        : (isLandscape ? 0.22 : 0.30),
                   ),
                   child: Transform.translate(
                     offset: Offset(
@@ -1353,8 +1399,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
                         (play) => play?.playerId == p.id,
                         orElse: () => null,
                       );
+                  // 무효 트릭에는 이긴 사람이 없다. lastTrickWinner 는
+                  // 그때 "다음 선을 잡을 사람" 을 담고 있을 뿐이라,
+                  // 그대로 읽으면 크라켄으로 무효가 된 트릭에서 승리
+                  // 표식이 뜬다.
                   final isTrickWinner =
-                      _trickShown(state) && state.lastTrickWinner == p.id;
+                      _trickShown(state) &&
+                      !state.lastTrickVoided &&
+                      state.lastTrickWinner == p.id;
 
                   if (trickPlay == null) return const SizedBox.shrink();
                   return Positioned(
@@ -1439,40 +1491,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return _seatAngleForIndex(index, playerCount, includeBottomSeat: false);
   }
 
-  List<double>? _customSeatAnglesDeg(int count) {
-    switch (count) {
-      case 3:
-        // 4인 게임 플레이어 시점 — 옆 두 자리를 원래 arc 210°/330° 에서
-        // 200°/340° 로 살짝 낮춘다 (sin -0.5 → -0.34, 약 32dp 아래).
-        // 세 자리가 모두 위쪽에 뭉쳐 보이던 걸 살짝 풀어준다.
-        return const [200.0, 270.0, 340.0];
-      case 4:
-        return const [172, 238, 302, 368];
-      case 5:
-        // top(270) + two vertical columns. Lower seats mirror the upper ones
-        // across the horizontal axis so each side shares the same X: left
-        // column at 207.5/152.5 (cos ≈ -0.887), right at 332.5/387.5
-        // (cos ≈ +0.887). Order: lower-left, upper-left, top, upper-right,
-        // lower-right.
-        return const [152.5, 207.5, 270.0, 332.5, 387.5];
-      default:
-        return null;
-    }
-  }
+  /// 자리 각도 표는 sk_board_layout.dart 에 한 벌만 둔다.
+  ///
+  /// 보드 크기를 정하는 계산(solveSkBoardLayout)과 자리를 그리는 이쪽이
+  /// 다른 표를 쓰면, 겹치지 않는다고 계산해 놓고 화면에서는 겹친다.
+  List<double>? _customSeatAnglesDeg(int count) =>
+      skSeatAnglesDeg(count, spectator: false);
 
-  List<double>? _customSpectatorSeatAnglesDeg(int count) {
-    switch (count) {
-      case 3:
-        // 관전자는 자기 자리가 없으니 3인 게임을 top(270) + bottom-left(155) +
-        // bottom-right(385) 로 벌린다. 플레이어 모드에서 쓰는 [200/270/340]
-        // (전부 상단) 대신 사이 세로 간격을 확보한다.
-        return const [155.0, 270.0, 385.0];
-      case 6:
-        return const [132, 180, 236, 304, 360, 408];
-      default:
-        return null;
-    }
-  }
+  List<double>? _customSpectatorSeatAnglesDeg(int count) =>
+      skSeatAnglesDeg(count, spectator: true);
 
   double _seatRadiusXFactor(int count) {
     if (count >= 5) return 0.44;
@@ -2164,12 +2191,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
         alignment: Alignment.center,
         child: SkAbilityPanel(
           state: state,
-          buildCard: (id, {size = 60, highlighted = false}) => _buildCard(
-            id,
-            size: size,
-            highlighted: highlighted,
-            showName: true,
-          ),
+          buildCard: (id, {size = 60, highlight = SkCardHighlight.none}) =>
+              _buildCard(
+                id,
+                size: size,
+                highlightKind: highlight,
+                showName: true,
+              ),
           // 로지로 다음 선을 고를 때 테이블과 같은 자리에 놓기 위해,
           // 좌석 각도 계산을 그대로 넘긴다. 관전자는 자기 자리가 없어
           // 각도 표가 다르므로 그쪽 계산을 쓴다.
@@ -3437,6 +3465,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
           cardId,
           size: cardHeight,
           highlighted: isSelected,
+          highlightKind: isSelected
+              ? SkCardHighlight.selected
+              : SkCardHighlight.none,
           showName: true,
         ),
       );
@@ -3450,7 +3481,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               : null,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            transform: Matrix4.translationValues(0, isSelected ? -12 : 0, 0),
+            transform: Matrix4.translationValues(0, isSelected ? -18 : 0, 0),
             child: Opacity(
               opacity: !isMyTurn || isLegal ? 1.0 : 0.4,
               child: Padding(
@@ -3459,6 +3490,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   cardId,
                   size: cardHeight,
                   highlighted: isSelected,
+                  highlightKind: isSelected
+                      ? SkCardHighlight.selected
+                      : SkCardHighlight.none,
                   showName: true,
                 ),
               ),
@@ -4112,8 +4146,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
       case 'skull_king':
         return l10n.skCardSkullKing;
       case 'pirate':
+        // 이름표에는 "해적 · 라스칼" 로 적는다. 이름만 적으면 처음 보는
+        // 사람에게 라스칼이 해적 다섯 중 하나라는 게 안 보인다 — 능력
+        // 모드를 켜야 나오는 이름이라 더 그렇다.
+        //
+        // 능력 창 제목이나 알림에는 쓰지 않는다. "해적 · 라스칼의 능력으로"
+        // 는 읽기 나쁘고, 거기서는 이미 해적 카드 그림이 같이 보인다.
         final key = skPirateByNumber[info.number];
-        return key == null ? l10n.skCardPirate : skPirateName(l10n, key);
+        return key == null
+            ? l10n.skCardPirate
+            : l10n.skCardPirateNamed(skPirateName(l10n, key));
       case 'mermaid':
         return l10n.skCardMermaid;
       case 'escape':
@@ -4129,6 +4171,61 @@ class _SKGameScreenState extends State<SKGameScreen> {
       default:
         return '';
     }
+  }
+
+  /// 이긴 카드 표식. 테두리 대신 카드 위에 얹는다.
+  ///
+  /// 색 테두리로는 눈에 띄지 않았다 — 카드 그림이 대부분 파랑·보라·크림
+  /// 계열이라 어떤 색을 써도 그림에 묻힌다. 그래서 그림 밖으로 나오는
+  /// 금색 뱃지와 움직임을 쓴다.
+  ///
+  /// 손패에서 고른 카드에는 뱃지를 붙이지 않는다. 그쪽은 카드가 위로
+  /// 들리고 그림자가 주황으로 바뀌는 것만으로 충분하고, 열 장이 늘어선
+  /// 줄에 뱃지가 끼면 오히려 어수선하다.
+  ///
+  /// 뱃지는 카드 밖(위 모서리)으로 나가므로 감싸는 쪽이 clipBehavior 를
+  /// 잘라서는 안 된다. Stack 은 Clip.none 으로 둔다.
+  Widget _withCardHighlight(Widget card, SkCardHighlight kind, double size) {
+    if (kind != SkCardHighlight.winner && kind != SkCardHighlight.drawn) {
+      return card;
+    }
+    final isWin = kind == SkCardHighlight.winner;
+    final badge = size * 0.34;
+    final marker = Container(
+      width: badge,
+      height: badge,
+      decoration: BoxDecoration(
+        // 이긴 카드는 노랑, 가져온 카드는 초록. 뜻이 다른 두 표식이라
+        // 색과 그림을 모두 다르게 둔다 — 모양만 다르면 작은 화면에서
+        // 구분이 안 된다.
+        color: isWin ? const Color(0xFFFFC21A) : const Color(0xFF4CAF50),
+        shape: BoxShape.circle,
+        border: Border.all(color: Cartoon.ink, width: 1.8),
+        boxShadow: const [
+          BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.6)),
+        ],
+      ),
+      child: Icon(
+        isWin ? Icons.emoji_events_rounded : Icons.south_rounded,
+        size: badge * 0.62,
+        color: isWin ? Cartoon.ink : Cartoon.paper,
+      ),
+    );
+    final marked = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        card,
+        Positioned(top: -badge * 0.3, right: -badge * 0.28, child: marker),
+      ],
+    );
+    // 가져온 카드는 띄우지도 키우지도 않는다. 손패가 늘어선 줄에서 "어느
+    // 게 새로 온 카드인가" 만 알려 주면 되는 자리이고, 그 줄의 카드는
+    // 눌러서 버릴 대상이라 흔들리면 누르기 어렵다.
+    if (!isWin) return marked;
+    return CartoonFloat(
+      amplitude: 3,
+      child: Transform.scale(scale: 1.06, child: marked),
+    );
   }
 
   Widget _withNameTag(Widget card, String label, double size) {
@@ -4181,7 +4278,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
     bool showName = false,
     String? nameOverride,
     String? playedAs,
+
+    /// 강조의 뜻. 넘기지 않으면 [highlighted] 로 정한다 — 이긴 카드 쪽이
+    /// 기본값인 이유는 그게 먼저 있던 용도여서다.
+    SkCardHighlight? highlightKind,
   }) {
+    final highlight =
+        highlightKind ??
+        (highlighted ? SkCardHighlight.winner : SkCardHighlight.none);
     var info = _parseCardId(cardId);
     // 낸 티그리스는 고른 모양의 그림으로 보여 준다. 손패에서만 티그리스
     // 그림(칼+백기)이고, 테이블에 놓이는 순간부터는 해적이거나 탈출이다 —
@@ -4201,29 +4305,50 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final h = size;
     final radius = BorderRadius.circular((size * 0.09).clamp(5.0, 9.0));
 
-    // 입체감: 진한 테두리 + 아래로 어긋난 단색 그림자. 강조(이긴 카드)는 파란 테두리와
-    // 파란 그림자로 한 단계 더 떠 보이게.
+    // 입체감: 진한 테두리 + 아래로 어긋난 단색 그림자.
+    //
+    // 강조는 두 가지인데 뜻이 다르다 — 내가 고른 카드(손패)와 트릭을 이긴
+    // 카드(테이블). 전에는 둘 다 같은 파란 테두리였고, 카드 그림이 대부분
+    // 파랑·보라 계열이라 거기 묻혔다.
+    //
+    // 고른 카드는 주황, 이긴 카드는 노랑으로 나눈다. 둘 다 카드 그림에
+    // 거의 쓰이지 않는 색이라 눈에 걸리고, 색만으로 어느 쪽인지 읽힌다.
+    // 테두리도 2.6 → 3.6 으로 올리고 그림자를 같은 색으로 맞춰 띄운다.
+    final isWinner = highlight == SkCardHighlight.winner;
+    final isPicked = highlight == SkCardHighlight.selected;
+    final isDrawn = highlight == SkCardHighlight.drawn;
+    // 테두리는 평소 그대로 둔다. 색만 바꾸면 카드 그림(대부분 파랑·보라·
+    // 크림)에 묻혀 눈에 띄지 않는다 — 강조는 카드 위에 얹는 표식과
+    // 움직임이 맡는다(_withCardHighlight).
     final border = Border.all(
-      color: highlighted
-          ? const Color(0xFF2F7DE0)
-          : const Color(0xFF3B2A20).withValues(alpha: 0.7),
-      width: highlighted ? 2.6 : 1.5,
+      color: const Color(0xFF3B2A20).withValues(alpha: 0.7),
+      width: 1.5,
     );
     final shadow = [
       BoxShadow(
-        color: highlighted ? const Color(0xFF1F4F94) : const Color(0xFF8C7B6C),
-        offset: Offset(0, highlighted ? 4 : 2.5),
+        color: isWinner
+            ? const Color(0xFFB07A00)
+            : isPicked
+            ? const Color(0xFFB0470A)
+            : isDrawn
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFF8C7B6C),
+        offset: Offset(0, isWinner || isPicked || isDrawn ? 4.5 : 2.5),
       ),
     ];
 
     // ── Number card: playing-card style ──
     if (info.type == 'number') {
-      return SkNumberCard(
-        suit: info.suit,
-        rank: info.rank,
-        size: size,
-        border: border,
-        shadow: shadow,
+      return _withCardHighlight(
+        SkNumberCard(
+          suit: info.suit,
+          rank: info.rank,
+          size: size,
+          border: border,
+          shadow: shadow,
+        ),
+        highlight,
+        size,
       );
     }
 
@@ -4259,10 +4384,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
             )
           : _buildSpecialFallback(fallbackLabel, size),
     );
-    if (!showName) return specialCard;
-    return _withNameTag(
-      specialCard,
-      nameOverride ?? _skCardLabel(cardId, info),
+    if (!showName) return _withCardHighlight(specialCard, highlight, size);
+    return _withCardHighlight(
+      _withNameTag(
+        specialCard,
+        nameOverride ?? _skCardLabel(cardId, info),
+        size,
+      ),
+      highlight,
       size,
     );
   }
@@ -4366,6 +4495,42 @@ class _CardInfo {
     this.rank = '',
     this.number = '',
   });
+}
+
+/// 자식이 실제로 차지한 높이를 알려준다.
+///
+/// 보드가 아래 창(손패)만큼을 비우기 위해 쓴다. 창 높이는 손에 든 장수에
+/// 따라 바뀌어서(두 줄이 되면 크게 는다) 상수로는 맞출 수 없다.
+class _MeasureHeight extends SingleChildRenderObjectWidget {
+  const _MeasureHeight({required this.onChange, required Widget super.child});
+
+  final ValueChanged<double> onChange;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderMeasureHeight(onChange);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderMeasureHeight ro) {
+    ro.onChange = onChange;
+  }
+}
+
+class _RenderMeasureHeight extends RenderProxyBox {
+  _RenderMeasureHeight(this.onChange);
+
+  ValueChanged<double> onChange;
+  double? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final h = size.height;
+    if (_last == h) return;
+    _last = h;
+    // 레이아웃 도중에 setState 를 부를 수 없다. 한 프레임 뒤로 미룬다.
+    WidgetsBinding.instance.addPostFrameCallback((_) => onChange(h));
+  }
 }
 
 class _SKSpectatorHandAreaMarker extends StatelessWidget {

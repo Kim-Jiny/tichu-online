@@ -10,4 +10,30 @@
 
     # 원본: https://github.com/google/fonts/raw/main/ofl/jua/Jua-Regular.ttf (SIL OFL 1.1)
     # 글자 = arb 값 + ASCII + lib/**/*.dart 의 비 ASCII 글자. layout_features=['*'], hinting=False
-    # 2026-10-16 마지막으로 다시 만듦(방 목록 강조 이름 추가분 포함, 미션·토큰 상점 문구 추가분 포함, 981자 요청 / 약 443KB)
+    # 2026-10-18 마지막으로 다시 만듦(해적 능력 문구·루트 표기 변경분 포함,
+    #            1001자 요청 중 원본에 있는 935자 / 약 445KB)
+
+**문구를 바꿨으면 반드시 다시 만든다.** 서브셋에 없는 글자는 기본 폰트로
+넘어가 그 글자만 모양이 달라진다 — 한 글자라서 "깨졌다" 로 보인다
+(예: "그대로 뒀어요" 의 '뒀'). 아래로 빠진 글자를 먼저 확인할 수 있다:
+
+```sh
+cd flutter_app && python3 - <<'EOF'
+import glob, json, io
+from fontTools.ttLib import TTFont
+have = set()
+for t in TTFont('assets/fonts/Jua-sub.ttf')['cmap'].tables:
+    have |= {chr(c) for c in t.cmap}
+need = set()
+for p in glob.glob('lib/l10n/app_*.arb'):
+    for k, v in json.load(io.open(p, encoding='utf-8')).items():
+        if not k.startswith('@') and isinstance(v, str): need |= set(v)
+for p in glob.glob('lib/**/*.dart', recursive=True):
+    need |= {c for c in io.open(p, encoding='utf-8').read() if ord(c) > 127}
+need |= set(chr(c) for c in range(32, 127))
+print(''.join(sorted(c for c in need if c not in have and c.strip())))
+EOF
+```
+
+이모지와 일부 기호(♠ ← ✓ 🃏 …)는 Jua 원본에 없다. 그건 빠진 채로 두는 게
+맞고, 시스템 이모지 폰트가 그린다.

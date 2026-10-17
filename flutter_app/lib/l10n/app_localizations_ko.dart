@@ -1214,6 +1214,11 @@ class L10nKo extends L10n {
   String get skGameCheckingCards => '카드 확인 중...';
 
   @override
+  String skGameLootPending(int loot) {
+    return '루트 +$loot — 둘 다 공약 성공 시';
+  }
+
+  @override
   String skGameBonusWithLoot(int bonus, int loot) {
     return '보너스 +$bonus (💰 +$loot)';
   }
@@ -5337,6 +5342,12 @@ class L10nKo extends L10n {
 
   @override
   String get tokenShopBought => '구매했어요';
+
+  @override
+  String get tokenShopEquipDone => '장착했어요';
+
+  @override
+  String get tokenShopUnequipDone => '해제했어요';
 
   @override
   String get tokenShopPreview => '미리보기';

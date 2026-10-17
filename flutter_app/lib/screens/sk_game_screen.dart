@@ -2877,8 +2877,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final bonus = state.lastTrickBonus;
 
     // Parse bonusDetail to detect expansion effects
+    //
+    // 무효 사유 문구는 만들지 않는다. 배너는 설명 글을 그리지 않고(카드
+    // 그림과 제목이 그 역할을 한다) 어느 카드였는지는 isKraken 으로 고른다.
     final detail = state.lastTrickBonusDetail;
-    String? voidReason;
     String? whaleNullifyLabel;
     int lootBonusPoints = 0;
     bool isKraken = false;
@@ -2886,10 +2888,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
     for (final entry in detail) {
       final type = entry['type'];
       if (type == 'kraken_void') {
-        voidReason = L10n.of(context).skGameKrakenActivated;
         isKraken = true;
       } else if (type == 'white_whale_void') {
-        voidReason = L10n.of(context).skGameWhiteWhaleActivated;
         hasWhiteWhaleEffect = true;
       } else if (type == 'white_whale_nullify') {
         whaleNullifyLabel = L10n.of(context).skGameWhiteWhaleNullify;
@@ -2898,10 +2898,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
         lootBonusPoints = (entry['winnerPoints'] as num?)?.toInt() ?? 0;
       }
     }
-    if (isKraken) {
-      voidReason = L10n.of(context).skGameKrakenActivated;
-      hasWhiteWhaleEffect = false;
-    }
+    // 크라켄이 있으면 크라켄 배너가 이긴다 — 둘이 같이 나온 트릭에서
+    // 흰고래 연출로 보이면 왜 무효가 됐는지 읽을 수 없다.
+    if (isKraken) hasWhiteWhaleEffect = false;
     final isVoided = state.lastTrickVoided;
 
     // Voided trick → distinct banner
@@ -2911,7 +2910,6 @@ class _SKGameScreenState extends State<SKGameScreen> {
         cardSize: 62,
         color: isKraken ? const Color(0xFFE2D4F7) : const Color(0xFFD3ECFF),
         title: L10n.of(context).skGameTrickVoided,
-        subtitle: voidReason ?? '',
         footer: L10n.of(context).skGameLeadPlayer(winnerName),
         timer: _buildCenterTimerBadge(state),
       );
@@ -2923,13 +2921,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         cardSize: 62,
         color: const Color(0xFFD3ECFF),
         title: L10n.of(context).skGameTrickWinner(winnerName),
-        subtitle:
-            whaleNullifyLabel ?? L10n.of(context).skGameWhiteWhaleActivated,
-        bonusText: bonus > 0
-            ? (lootBonusPoints > 0
-                  ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
-                  : L10n.of(context).skGameBonus(bonus))
-            : null,
+        bonusText: _skBonusText(context, bonus, lootBonusPoints),
         timer: _buildCenterTimerBadge(state),
       );
     }
@@ -2994,10 +2986,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
           if (ended && bonus > 0) ...[
             const SizedBox(height: 6),
             _skInfoChip(
-              lootBonusPoints > 0
-                  ? L10n.of(context).skGameBonusWithLoot(bonus, lootBonusPoints)
-                  : L10n.of(context).skGameBonus(bonus),
+              L10n.of(context).skGameBonus(bonus),
               const Color(0xFFCDEFD6),
+            ),
+          ],
+          // 루트는 라운드 끝에 동맹 양쪽이 공약을 맞혀야 들어온다. 받은
+          // 점수와 같은 칩에 더해 버리면 확정된 것처럼 보이므로 따로,
+          // 조건을 적어 보여준다.
+          if (ended && lootBonusPoints > 0) ...[
+            const SizedBox(height: 6),
+            _skInfoChip(
+              L10n.of(context).skGameLootPending(lootBonusPoints),
+              const Color(0xFFFFE9C7),
             ),
           ],
           _buildCenterTimerBadge(state),
@@ -3025,6 +3025,22 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
+  /// 트릭 보너스 칩에 적을 글. 확정된 점수만 적는다.
+  ///
+  /// 루트는 라운드 끝에 동맹 양쪽이 공약을 맞혀야 지급되므로(서버
+  /// SkullKingGame.endRound) 여기 더하지 않는다. 더하면 자주 못 받는
+  /// +20/+40 을 받은 것처럼 광고하게 된다. 루트만 있고 확정 보너스가
+  /// 없으면 조건을 적어 그 사실을 알린다.
+  String? _skBonusText(BuildContext context, int bonus, int lootPoints) {
+    final l10n = L10n.of(context);
+    if (bonus > 0 && lootPoints > 0) {
+      return '${l10n.skGameBonus(bonus)} · ${l10n.skGameLootPending(lootPoints)}';
+    }
+    if (bonus > 0) return l10n.skGameBonus(bonus);
+    if (lootPoints > 0) return l10n.skGameLootPending(lootPoints);
+    return null;
+  }
+
   Widget _skInfoChip(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -3036,12 +3052,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// 크라켄·흰고래 같은 특수 카드 효과: 설명 글 없이 연출만.
   /// 카드가 쾅 하고 커지며 흔들리고, 뒤에서 색종이가 터진다. 글자는 짧은 제목
   /// 알약 하나(와 있으면 보너스 칩)뿐이다 — 설명은 읽기 전에 사라진다.
+  // subtitle 파라미터는 없다. 위 주석대로 설명 글을 일부러 그리지 않는데,
+  // required 로 받아 두면 호출하는 쪽은 그 글이 화면에 나온다고 믿고 문구를
+  // 만들어 넘긴다 — 크라켄 사유와 흰고래 무효 라벨이 그렇게 조용히 버려지고
+  // 있었다. 받지 않으면 넘길 수 없다.
   Widget _skEffectPanel({
     required String cardId,
     required double cardSize,
     required Color color,
     required String title,
-    required String subtitle,
     String? footer,
     String? bonusText,
     Widget? timer,

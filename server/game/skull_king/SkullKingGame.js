@@ -288,12 +288,22 @@ class SkullKingGame {
         for (const lootPid of lootPlayers) {
           this.lootAlliances.push({ winnerId: result.winnerId, looterId: lootPid });
         }
-        this.lastTrickBonus += winnerLoot;
+        // lastTrickBonus 에는 더하지 않는다.
+        //
+        // 이 값은 "이 트릭으로 지금 받은 점수"로 화면에 나가지만, 루트는
+        // 라운드가 끝날 때 동맹 양쪽이 모두 공약을 맞혀야 지급된다
+        // (endRound 의 _bidMet 검사). 더해 두면 자주 못 받는 +20/+40 을
+        // 받은 것처럼 광고하고, 라운드 끝에 그 차이를 설명하는 것도 없다.
+        //
+        // 대신 detail 에 pending 으로 남겨, 화면이 "조건이 맞으면 받는다"로
+        // 그릴 수 있게 한다.
         this.lastTrickBonusDetail.push({
           type: 'loot_bonus',
           count: lootPlayers.length,
           winnerPoints: winnerLoot,
           playerPoints: LOOT_BONUS_POINTS,
+          // 아직 확정되지 않았다는 표시. 옛 앱은 이 키를 모르고 지나간다.
+          pending: true,
         });
       }
     }

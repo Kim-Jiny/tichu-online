@@ -1243,6 +1243,11 @@ class L10nEn extends L10n {
   String get skGameCheckingCards => 'Checking cards...';
 
   @override
+  String skGameLootPending(int loot) {
+    return 'Loot +$loot if both make their bid';
+  }
+
+  @override
   String skGameBonusWithLoot(int bonus, int loot) {
     return 'Bonus +$bonus (💰 +$loot)';
   }
@@ -5462,6 +5467,12 @@ class L10nEn extends L10n {
 
   @override
   String get tokenShopBought => 'Purchased';
+
+  @override
+  String get tokenShopEquipDone => 'Equipped';
+
+  @override
+  String get tokenShopUnequipDone => 'Unequipped';
 
   @override
   String get tokenShopPreview => 'Preview';

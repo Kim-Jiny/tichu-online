@@ -56,6 +56,11 @@ class SeatHandoff {
   });
 }
 
+/// 토큰 상점에서 방금 무엇을 했는가. 구매와 장착은 같은 응답 타입을 쓰지
+/// 않지만 클라이언트의 한 case 로 모이므로, 결과 안내를 고르려면 구분이
+/// 필요하다.
+enum TokenShopAction { buy, equip, unequip }
+
 class GameService extends ChangeNotifier {
   final NetworkService _network;
   StreamSubscription? _subscription;
@@ -573,7 +578,17 @@ class GameService extends ChangeNotifier {
   // 미션 · 토큰 · 토큰 상점. 판정은 서버가 하고 앱은 상태를 받아 보여 준다.
   MissionsState? missionsState;
   TokenShopState? tokenShopState;
+  /// 토큰 상점 응답이 무엇에 대한 것인지. 결과 안내 문구를 고르는 데 쓴다.
+  TokenShopAction? tokenShopAction;
+  /// 상점을 받아오는 중인가. false 이고 tokenShopState 가 null 이면 실패다.
+  bool tokenShopLoading = false;
+  Timer? _tokenShopLoadTimer;
+  /// 마지막 equip 요청의 key — null 이면 해제 요청이었다.
+  String? _lastEquipKey;
+
   bool missionsLoading = false;
+  /// requestMissions 의 응답 대기 타임아웃. 머리말 참고.
+  Timer? _missionsLoadTimer;
 
   /// 토큰 내역(최신순). 더 보기를 누르면 뒤에 이어 붙는다.
   List<TokenHistoryEntry> tokenHistory = const [];
@@ -2534,6 +2549,7 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'missions_state':
+        _missionsLoadTimer?.cancel();
         missionsLoading = false;
         if (data['success'] == true) {
           missionsState = MissionsState.fromJson(data);
@@ -2583,6 +2599,10 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
       case 'token_shop':
+        _tokenShopLoadTimer?.cancel();
+        // 성공이든 실패든 로딩은 끝났다. 실패에서 내리지 않으면 화면이
+        // 계속 스피너를 돌리고 재시도 버튼이 나오지 않는다.
+        tokenShopLoading = false;
         if (data['success'] == true) {
           tokenShopState = TokenShopState.fromJson(data);
         }
@@ -2598,6 +2618,15 @@ class GameService extends ChangeNotifier {
         tokenShopReason = data['success'] == true
             ? null
             : (data['reason'] as String? ?? 'error');
+        // 어떤 동작의 결과인지 남긴다. 두 응답이 한 case 를 쓰고 성공 시
+        // 둘 다 reason 을 null 로 두므로, 이게 없으면 화면이 구매와 장착을
+        // 구분할 수 없다 — 가진 말풍선에 장착을 눌러도 "구매했어요"가 떠서
+        // 토큰이 또 빠진 것처럼 읽혔다.
+        tokenShopAction = type == 'token_buy_result'
+            ? TokenShopAction.buy
+            : (_lastEquipKey == null
+                  ? TokenShopAction.unequip
+                  : TokenShopAction.equip);
         tokenShopResultSeq++;
         notifyListeners();
         break;
@@ -3533,6 +3562,19 @@ class GameService extends ChangeNotifier {
     myCustomTitleColor = null;
     profilePrivateHidePhoto = false;
     isAdminUser = false;
+    // 미션·토큰도 계정에 묶인 값이다.
+    //
+    // reset() 에도 같은 초기화가 있지만 이 함수는 "logout() 이 돌지 않은
+    // 계정 전환"을 덮는 자리다(머리말 참고). 여기 없으면 A 로 보던 미션이
+    // B 의 로비에 뱃지로 남고, tokenBalance 가 A 의 잔액을 돌려주고,
+    // A 에게 띄우려고 줄 세워 둔 완료 토스트가 B 에게 뜬다.
+    missionsState = null;
+    tokenShopState = null;
+    missionsLoading = false;
+    missionBadgeCount = 0;
+    _pendingMissionToasts.clear();
+    tokenHistory = const [];
+    tokenHistoryHasMore = false;
   }
 
   void reset() {
@@ -3540,6 +3582,10 @@ class GameService extends ChangeNotifier {
     _dogClearTimer = null;
     _inquiryBannerTimer?.cancel();
     _inquiryBannerTimer = null;
+    _missionsLoadTimer?.cancel();
+    _missionsLoadTimer = null;
+    _tokenShopLoadTimer?.cancel();
+    _tokenShopLoadTimer = null;
     _pushToggleTimer?.cancel();
     _pushToggleTimer = null;
     _prevGameState = null;
@@ -3856,8 +3902,23 @@ class GameService extends ChangeNotifier {
   String? tokenShopReason;
   int tokenShopResultSeq = 0;
 
+  /// 미션 상태를 다시 받아온다.
+  ///
+  /// 타임아웃이 꼭 있어야 한다. 이 요청은 보내고 잊는 메시지이고,
+  /// missionsLoading 을 내리는 것은 들어오는 missions_state 뿐이다. 재접속
+  /// 중에 한 번 유실되면 플래그가 세션 내내 켜진 채로 남아 미션 화면이
+  /// 영원히 돌고(재시도 버튼은 그 분기에서 나오지 않는다), 로비의
+  /// `missionsNeedRefresh && !missionsLoading` 조건도 계속 거짓이 되어
+  /// 미션 뱃지와 힌트까지 함께 죽는다.
   void requestMissions() {
     missionsLoading = true;
+    _missionsLoadTimer?.cancel();
+    _missionsLoadTimer = Timer(const Duration(seconds: 8), () {
+      if (_disposed) return;
+      if (!missionsLoading) return;
+      missionsLoading = false;
+      notifyListeners();
+    });
     notifyListeners();
     _network.send({'type': 'get_missions'});
   }
@@ -3867,7 +3928,23 @@ class GameService extends ChangeNotifier {
   void rerollMissions(String game) =>
       _network.send({'type': 'reroll_missions', 'game': game});
 
-  void requestTokenShop() => _network.send({'type': 'get_token_shop'});
+  /// 토큰 상점을 받아온다.
+  ///
+  /// requestMissions 와 같은 이유로 타임아웃이 필요하다. 이 요청도 보내고
+  /// 잊는 메시지이고, 화면은 tokenShopState 가 null 이면 스피너를 돌린다 —
+  /// 응답이 유실되면 재시도할 방법 없이 계속 돈다.
+  void requestTokenShop() {
+    tokenShopLoading = true;
+    _tokenShopLoadTimer?.cancel();
+    _tokenShopLoadTimer = Timer(const Duration(seconds: 8), () {
+      if (_disposed) return;
+      if (!tokenShopLoading) return;
+      tokenShopLoading = false;
+      notifyListeners();
+    });
+    notifyListeners();
+    _network.send({'type': 'get_token_shop'});
+  }
 
   /// 첫 장을 새로 받는다. 이미 받은 게 있으면 그대로 보여 주면서 갱신한다.
   void requestTokenHistory() {
@@ -3885,8 +3962,12 @@ class GameService extends ChangeNotifier {
   }
   void buyTokenItem(String key) =>
       _network.send({'type': 'buy_token_item', 'key': key});
-  void equipTokenItem(String slot, String? key) =>
-      _network.send({'type': 'equip_token_item', 'slot': slot, 'key': key});
+  void equipTokenItem(String slot, String? key) {
+    // 해제는 key 가 null 로 오는 같은 메시지다. 응답에는 그 구분이 없으므로
+    // 보낼 때 기억해 둬야 "장착했어요"와 "해제했어요"를 가를 수 있다.
+    _lastEquipKey = key;
+    _network.send({'type': 'equip_token_item', 'slot': slot, 'key': key});
+  }
 
   void requestAttendanceState() {
     attendanceLoading = true;
@@ -5364,6 +5445,8 @@ class GameService extends ChangeNotifier {
     _fcmTokenSubscription?.cancel();
     _dogClearTimer?.cancel();
     _inquiryBannerTimer?.cancel();
+    _missionsLoadTimer?.cancel();
+    _tokenShopLoadTimer?.cancel();
     _pushToggleTimer?.cancel();
     super.dispose();
   }

@@ -3338,6 +3338,9 @@ wss.on('connection', (ws, req) => {
       // Fire and forget — the friends list is the only thing that reads it,
       // and a disconnect must not wait on a write.
       touchLastSeen(ws.nickname);
+      // 장착 캐시도 놓아준다 — 닉네임으로 들고 있으므로, 탈퇴 후 그
+      // 닉네임을 가져간 다음 사람이 남의 유료 효과를 물려받는다.
+      forgetTokenEquips(ws.nickname);
     }
     if (ws.roomId) {
       const room = lobby.getRoom(ws.roomId);
@@ -4052,6 +4055,9 @@ async function handleDeleteAccount(ws) {
 
   playerSessions.delete(nickname);
   spectatorSessions.delete(nickname);
+  // 토큰 장착 캐시도 비운다. 닉네임은 재사용되므로, 남겨 두면 이 닉네임을
+  // 다음에 가져가는 사람이 방금 지워진 계정의 유료 효과를 물려받는다.
+  forgetTokenEquips(nickname);
 
   const result = await deleteUser(nickname);
   // The row is gone, which means the object key is gone with it — delete the
@@ -8173,7 +8179,9 @@ async function handleDesertion(roomId, playerId, reason = 'leave', options = {})
   if (game.deserted) return;
 
   // 나간 사람은 이 판을 진 것으로 센다(아래에서 봇이 이어받든 판이 끝나든 같다).
-  try { recordLeaveLoss(room, playerId); } catch (e) { console.error('[missions] leave loss failed:', e.message); }
+  // options 를 넘겨야 penalize:false 가 여기도 적용된다 — 우리가 대신
+  // 결정한 이탈에 연승을 끊는 것은 이탈 카운트를 올리는 것과 같은 불이익이다.
+  try { recordLeaveLoss(room, playerId, options); } catch (e) { console.error('[missions] leave loss failed:', e.message); }
 
   // Rooms that allow mid-match seat changes don't end the match when one
   // person goes — a bot inherits the seat and everyone else plays on. This
@@ -9313,8 +9321,44 @@ const MISSION_MIN_HUMANS = missionDefs.MIN_HUMANS;
 
 /** 다른 사람에게 보여 줄 장착 상태(닉네임별 캐시). 로그인·구매·장착 때 갱신한다. */
 const tokenEquipsByNick = new Map();
+
+/// 캐시를 믿는 시간.
+///
+/// 장착 조회는 SQL 에서만 만료를 따진다(o.expires_at > NOW()). 캐시에
+/// 담아두면 그 판정이 담은 순간에 멈추므로, 30일 아이템이 접속 중에 만료
+/// 되어도 로그아웃할 때까지 계속 그려진다. 시간이 지나면 스스로 다시
+/// 읽게 해서 그 틈을 닫는다.
+///
+/// 5분인 이유는 틈의 길이와 질의 수의 거래다. 장착·구매는 즉시 갱신하므로
+/// (refreshTokenEquips) 이 값은 "만료가 늦게 반영되는 최대 시간"일 뿐이다.
+const TOKEN_EQUIP_TTL_MS = 5 * 60 * 1000;
+const tokenEquipAt = new Map();
+
+/// 캐시에서 지운다. 접속 종료·계정 삭제·닉네임 변경 때 부른다.
+///
+/// 지우지 않으면 두 가지가 생긴다. 첫째로 닉네임은 재사용된다 —
+/// missions.deleteUser 가 토큰 행을 지우므로, 탈퇴한 사람의 닉네임을
+/// 다음 사람이 가져가면 그 사람이 돈 들여 산 '방 목록 강조'를 공짜로
+/// 물려받는다(프로세스가 살아 있는 동안). 둘째로 이 Map 은 끝없이 커진다.
+function forgetTokenEquips(nickname) {
+  if (!nickname) return;
+  tokenEquipsByNick.delete(nickname);
+  tokenEquipAt.delete(nickname);
+}
+
+/// 캐시된 장착 상태. 너무 오래된 것은 없는 것으로 본다.
+function cachedTokenEquips(nickname) {
+  if (!nickname) return null;
+  const at = tokenEquipAt.get(nickname);
+  if (!at || Date.now() - at > TOKEN_EQUIP_TTL_MS) {
+    forgetTokenEquips(nickname);
+    return null;
+  }
+  return tokenEquipsByNick.get(nickname) || null;
+}
+
 lobby.setHighlightResolver((nickname) => {
-  const eq = tokenEquipsByNick.get(nickname);
+  const eq = cachedTokenEquips(nickname);
   return eq ? eq.roomHighlight : null;
 });
 
@@ -9324,6 +9368,7 @@ async function refreshTokenEquips(ws) {
     const eq = await missions.getEquippedKeys(ws.nickname);
     ws.tokenEquips = eq;
     tokenEquipsByNick.set(ws.nickname, eq);
+    tokenEquipAt.set(ws.nickname, Date.now());
     return eq;
   } catch (e) {
     console.error('[missions] equip refresh failed:', e.message);
@@ -9391,7 +9436,19 @@ function recordGameStartMissions(room) {
 }
 
 /** 판 도중에 나간 사람은 그 판을 진 것으로 센다 — 지는 판을 나가서 '연속 승리'를 지키는 걸 막는다. */
-function recordLeaveLoss(room, playerId) {
+/// 나간 사람에게 이 판을 진 것으로 기록한다.
+///
+/// [options] 는 handleDesertion 이 받은 것을 그대로 넘긴다.
+/// penalize:false 면 기록하지 않는다 — recordDesertionAgainst 가 이탈
+/// 카운트와 랭크 정지를 건너뛰는 것과 같은 조건이어야 한다. 그 플래그는
+/// "이 이탈은 본인이 고른 게 아니다"라는 뜻이고, game_loss 는 '연속 N판
+/// 승리' 미션의 진행도를 0 으로 되돌리므로 정확히 같은 성격의 불이익이다.
+///
+/// 이게 빠져 있어서, 블루/그린 배포 중 다른 인스턴스에 붙어 있던 사람이
+/// (server.js 의 no-show 경로, penalize:false) 자기와 무관한 배포 때문에
+/// 3판째 쌓아 둔 연승을 날렸다.
+function recordLeaveLoss(room, playerId, options = {}) {
+  if (options.penalize === false) return;
   const prefix = MISSION_PREFIX[room && room.gameType];
   if (!prefix || !playerId || String(playerId).startsWith('bot_') || !missionEligible(room)) return;
   const nickname = room.game && room.game.playerNames && room.game.playerNames[playerId];
@@ -9423,8 +9480,24 @@ async function handleGetMissions(ws) {
   }
 }
 
+/// 미션 액션의 결과를 돌려준다. 성공했으면 새 상태도 함께.
+///
+/// 상태 조회가 실패해도 결과는 반드시 보낸다. pick 과 reroll 은 되돌릴 수
+/// 없다 — 하루 세 번뿐인 선택 하나가 이미 소모된 뒤다. 여기서 던져 버리면
+/// 메시지 펌프가 로그만 남기고 앱은 응답을 못 받아 계속 돌고, 사용자는
+/// 안 된 줄 알고 다시 눌러 또 하나를 태운다.
+///
+/// state 가 null 로 가면 앱은 목록을 갱신하지 않고 그대로 둔다
+/// (data['state'] is Map 검사). 다음 화면 진입에서 다시 받아 간다.
 async function replyMissionAction(ws, type, result) {
-  const state = result.success ? await missions.getState(ws.nickname) : null;
+  let state = null;
+  if (result.success) {
+    try {
+      state = await missions.getState(ws.nickname);
+    } catch (e) {
+      console.error('[missions] state after action failed:', e.message);
+    }
+  }
   sendTo(ws, { type, success: result.success, reason: result.reason || null, state });
 }
 
@@ -9466,20 +9539,39 @@ async function afterTokenEquipChange(ws) {
   broadcastRoomList();
 }
 
+/// 토큰으로 상품을 산다.
+///
+/// 구매 뒤의 뒤처리(장착 갱신·상점 다시 읽기)가 실패해도 결과는 보낸다.
+/// missions.buy 는 이미 토큰을 깎았으므로, 여기서 던지면 앱은 응답을 못
+/// 받아 돌기만 하고 사용자는 안 산 줄 알고 다시 누른다 — 두 번 깎인다.
 async function handleBuyTokenItem(ws, data) {
   if (!ws.nickname) return sendTo(ws, { type: 'token_buy_result', success: false, reason: 'login_required' });
   const result = await missions.buy(ws.nickname, String(data.key || ''));
-  if (result.success) await afterTokenEquipChange(ws);
-  const shop = await missions.getShop(ws.nickname);
+  let shop = null;
+  try {
+    if (result.success) await afterTokenEquipChange(ws);
+    shop = await missions.getShop(ws.nickname);
+  } catch (e) {
+    console.error('[missions] post-buy refresh failed:', e.message);
+  }
   sendTo(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, shop });
 }
 
+/// 장착·해제(key 가 null 이면 해제).
+///
+/// 뒤처리 실패에도 결과를 보내는 이유는 handleBuyTokenItem 과 같다. 장착은
+/// 토큰을 쓰지 않지만, 응답이 없으면 화면이 멈춘 것처럼 보인다.
 async function handleEquipTokenItem(ws, data) {
   if (!ws.nickname) return sendTo(ws, { type: 'token_equip_result', success: false, reason: 'login_required' });
   const key = data.key == null ? null : String(data.key);
   const result = await missions.equip(ws.nickname, String(data.slot || ''), key);
-  if (result.success) await afterTokenEquipChange(ws);
-  const shop = await missions.getShop(ws.nickname);
+  let shop = null;
+  try {
+    if (result.success) await afterTokenEquipChange(ws);
+    shop = await missions.getShop(ws.nickname);
+  } catch (e) {
+    console.error('[missions] post-equip refresh failed:', e.message);
+  }
   sendTo(ws, { type: 'token_equip_result', success: result.success, reason: result.reason || null, shop });
 }
 
@@ -10615,9 +10707,16 @@ async function handleChangeNickname(ws, data) {
     sendTo(ws, { type: 'change_nickname_result', success: false, message: t(ws.locale, 'no_nickname_change_in_game') });
     return;
   }
+  const previousNickname = ws.nickname;
   const result = await changeNickname(ws.nickname, data.newNickname);
   if (result.success) {
     ws.nickname = result.newNickname;
+    // 캐시는 닉네임으로 들고 있다. 옛 이름의 항목을 지우지 않으면 그
+    // 이름을 가져가는 다음 사람이 이 사람의 효과를 물려받고, 새 이름은
+    // 캐시가 비어 강조가 사라진 것처럼 보인다.
+    forgetTokenEquips(previousNickname);
+    await refreshTokenEquips(ws);
+    broadcastRoomList();
   }
   sendTo(ws, { type: 'change_nickname_result', ...result });
 }
@@ -11275,7 +11374,7 @@ async function handleGetDmHistory(ws, data) {
   const bubbles = {};
   for (const nick of [ws.nickname, targetNickname]) {
     try {
-      const eq = tokenEquipsByNick.get(nick) || await missions.getEquippedKeys(nick);
+      const eq = cachedTokenEquips(nick) || await missions.getEquippedKeys(nick);
       if (eq && eq.bubble) bubbles[nick] = eq.bubble;
     } catch { /* 모양 없이 기본으로 */ }
   }

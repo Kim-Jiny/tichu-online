@@ -467,7 +467,13 @@ class LoveLetterGame {
         if (discardedInfo && discardedInfo.type === CARD_TYPE.PRINCESS) {
           // Forced to discard Princess = eliminated
           this._eliminatePlayer(targetId);
-          this._pushMissionEvent({ playerId: effect.playerId, event: 'll.knock_out', amount: 1 });
+          // 남을 탈락시킨 것만 센다. 왕자는 자기 자신을 지목할 수 있고
+          // (위 princeTargets), 공주를 들고 그렇게 하면 스스로 탈락한다 —
+          // 그걸 세면 '상대 10명 탈락시키기'(ll_knock_out6)가 자기 탈락으로
+          // 올라간다. 남작 쪽은 같은 이유로 loser === targetId 를 본다.
+          if (targetId !== effect.playerId) {
+            this._pushMissionEvent({ playerId: effect.playerId, event: 'll.knock_out', amount: 1 });
+          }
           effect.result = { discardedCard, eliminated: true };
         } else {
           // Draw a new card
@@ -592,8 +598,15 @@ class LoveLetterGame {
       for (const pid of roundWinners) {
         this.tokens[pid]++;
         this._pushMissionEvent({ playerId: pid, event: 'll.round_win', amount: 1 });
-        // 상대를 전부 탈락시켜 혼자 남아 이긴 라운드.
-        if (alive.length === 1) this._pushMissionEvent({ playerId: pid, event: 'll.last_standing', amount: 1 });
+        // 'll.last_standing'(상대를 전부 탈락시켜 혼자 남아 이긴 라운드)은
+        // 여기서 내보내지 않는다. 듣는 미션이 없었다 — 이름이 비슷한
+        // ll_last_standing 미션은 "압도적으로 승리하기(다른 사람에게 승리
+        // 토큰이 없는 상태에서 게임 승리)"로, 라운드가 아니라 게임 단위이고
+        // server.js 가 'll.dominant_win' 으로 따로 기록한다.
+        //
+        // 보내도 아무 일이 없으니 동작은 같지만, 남겨 두면 "혼자 남아 이긴
+        // 라운드가 집계되고 있다"고 읽힌다. 그 미션을 만들 때 여기서 다시
+        // 내보내면 된다.
       }
       this.currentPlayer = roundWinners[0]; // First winner leads next round
     }

@@ -58,8 +58,10 @@ class _MissionsScreenState extends State<MissionsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool(_helpSeenKey) == true || !mounted) return;
+      // 띄운 뒤에 저장한다. 먼저 저장하면, 그 사이 화면이 사라져 안내가
+      // 뜨지 않았는데도 "봤다"로 남아 다시는 자동으로 나오지 않는다.
+      _showHelp();
       await prefs.setBool(_helpSeenKey, true);
-      if (mounted) _showHelp();
     } catch (_) {
       // 저장소를 못 읽어도 화면은 정상이다(안내는 ? 버튼으로 볼 수 있다).
     }

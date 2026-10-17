@@ -442,8 +442,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     final wins = n('wins') + n('skWins') + n('mightyWins') + n('llWins');
     final losses =
         n('losses') + n('skLosses') + n('mightyLosses') + n('llLosses');
-    final decided = wins + losses;
-    final winRate = decided == 0 ? 0 : (wins * 100 / decided).round();
+    // 분모는 games 다. _GameTally.winRate 가 같은 규칙을 쓰고(그 주석대로
+    // 서버 반올림과 맞추기 위해), 아래 표시 가드도 `games == 0` 이다.
+    // wins+losses 로 재면 합계 승률만 게임별 타일과 다른 값이 되고, 승패가
+    // 갈리지 않은 판(이탈 등)이 있을 때 둘이 눈에 띄게 어긋난다.
+    final winRate = games == 0 ? 0 : (wins * 100 / games).round();
     final manner = _calcMannerScore(games, leaveCount, reportCount);
     final mannerColor = _mannerColor(manner);
 
@@ -1434,10 +1437,20 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
     widget.game.lastMatchHistoryPage = null;
     // A page that did not fill the viewport leaves nothing to scroll, and the
     // scroll listener would never ask for the next one.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_hasMore || _loading) return;
-      if (_scroll.hasClients && _scroll.position.maxScrollExtent <= 0) _load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefetchIfUnfilled());
+  }
+
+  /// 화면이 안 찼으면 다음 쪽을 가져온다.
+  ///
+  /// `_scroll.hasClients` 를 전제로 두면 안 된다. 걸러서 한 줄도 안 남으면
+  /// 목록 대신 가운데 스피너가 그려지므로 ScrollController 에 붙은 것이
+  /// 없고, 그러면 "스크롤 높이가 0 인가"를 물어볼 수조차 없다. 그 상태는
+  /// 화면이 안 찼다는 뜻이 확실하므로 바로 더 가져와야 한다 — 전에는
+  /// 여기서 빠져나가, 첫 쪽에 승리가 하나도 없는 사람이 승 필터를 누르면
+  /// 영원히 도는 스피너를 보게 됐다.
+  void _prefetchIfUnfilled() {
+    if (!mounted || !_hasMore || _loading) return;
+    if (!_scroll.hasClients || _scroll.position.maxScrollExtent <= 0) _load();
   }
 
   /// 0 전체, 1 승리, 2 패배 — 지금까지 불러온 줄에만 적용된다.
@@ -1464,12 +1477,9 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
         onTap: () {
           setState(() => _filter = i);
           // 걸러서 화면이 안 차면 다음 쪽을 더 가져온다.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted || !_hasMore || _loading) return;
-            if (_scroll.hasClients && _scroll.position.maxScrollExtent <= 0) {
-              _load();
-            }
-          });
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _prefetchIfUnfilled(),
+          );
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 3),

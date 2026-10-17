@@ -37,8 +37,17 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
   void _showResult(GameService game) {
     final l10n = L10n.of(context);
     final reason = game.tokenShopReason;
+    // 성공 안내는 무엇을 했는지에 맞춰 고른다. 전에는 reason == null 이면
+    // 무조건 "구매했어요"였고, 그래서 이미 가진 말풍선에 장착을 눌러도
+    // 토큰이 또 빠진 것처럼 읽혔다 — 장착은 아무 확인도 받지 못했다.
     final text = reason == null
-        ? l10n.tokenShopBought
+        ? switch (game.tokenShopAction) {
+            TokenShopAction.equip => l10n.tokenShopEquipDone,
+            TokenShopAction.unequip => l10n.tokenShopUnequipDone,
+            // 구매(또는 어느 동작인지 모를 때 — 그때는 구매가 맞을 확률이
+            // 높고, 장착은 화면의 '장착 중' 표시로도 확인된다).
+            _ => l10n.tokenShopBought,
+          }
         : (reason == 'not_enough'
               ? l10n.tokenShopNotEnough
               : l10n.missionsErrGeneric);
@@ -133,8 +142,28 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
       });
     }
     if (shop == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: Cartoon.orange, strokeWidth: 4),
+      // 받아오는 중이면 스피너, 실패했으면 재시도 — 미션 화면과 같은 모양.
+      // 전에는 늘 스피너여서, 응답이 한 번 유실되면 다시 시도할 방법이 없었다.
+      return Center(
+        child: game.tokenShopLoading
+            ? const CircularProgressIndicator(
+                color: Cartoon.orange,
+                strokeWidth: 4,
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.missionsLoadFailed,
+                    style: Cartoon.userText(size: 14),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: game.requestTokenShop,
+                    child: Text(l10n.missionsRetry),
+                  ),
+                ],
+              ),
       );
     }
     // 상품을 종류(말풍선·방 강조, 앞으로는 배너·테마도)로 묶는다. 종류가 늘어도 위의 탭만

@@ -677,6 +677,14 @@
     }
   },
   "skGameCheckingCards": "Checking cards...",
+  "skGameLootPending": "Loot +{loot} if both make their bid",
+  "@skGameLootPending": {
+    "placeholders": {
+      "loot": {
+        "type": "int"
+      }
+    }
+  },
   "skGameBonusWithLoot": "Bonus +{bonus} (💰 +{loot})",
   "@skGameBonusWithLoot": {
     "placeholders": {
@@ -3243,6 +3251,8 @@
   "tokenShopUnequip": "Unequip",
   "tokenShopNotEnough": "Not enough tokens",
   "tokenShopBought": "Purchased",
+  "tokenShopEquipDone": "Equipped",
+  "tokenShopUnequipDone": "Unequipped",
   "tokenShopPreview": "Preview",
   "tokenShopPreviewText": "Hello there!",
   "tokenShopRoomPreviewName": "Sample room",

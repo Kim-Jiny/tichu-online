@@ -76,7 +76,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Timer? _missionHintTimer;
   DateTime? _missionsRequestedAt;
 
-  /// 이미 안내를 보여 준 날(미션 상태의 다음 리셋 시각). 앱을 켜 둔 채 로비를 오가도 하루 한 번만.
+  /// 이미 안내를 보여 준 "계정@날" — 날은 미션 상태의 다음 리셋 시각.
+  ///
+  /// static 인 것은 의도다. 로비를 떠나면 이 State 가 사라지므로, 인스턴스
+  /// 필드에 두면 로비를 오갈 때마다 다시 뜬다.
+  ///
+  /// 계정을 키에 넣는 이유: 리셋 시각은 전역 KST 라 날짜만으로는 같은 기기의
+  /// 두 계정이 같은 키를 쓴다. 그러면 A 로 안내를 본 날 B 로 바꿔 들어온
+  /// 사람은 그날 안내를 아예 못 본다.
   static String? _missionHintShownFor;
 
   /// Which game's rooms are showing, or null for all of them.
@@ -2268,7 +2275,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         game.requestMissions();
       }
     }
-    final dayKey = game.missionsState?.resetAtUtc?.toIso8601String();
+    final resetKey = game.missionsState?.resetAtUtc?.toIso8601String();
+    // 계정이 바뀌면 다른 키가 되어야 한다 — 위 선언 머리말 참고.
+    final dayKey = resetKey == null ? null : '${game.playerName}@$resetKey';
     final wanted =
         inLobby &&
         game.hasUnpickedMissionsToday &&

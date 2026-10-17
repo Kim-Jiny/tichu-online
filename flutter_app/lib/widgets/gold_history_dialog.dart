@@ -124,8 +124,12 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
     final dt = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
     if (dt == null) return '';
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(dt.year, dt.month, dt.day);
+    // 날짜 차이는 달력으로 센다. 로컬 자정끼리 difference().inDays 를 쓰면
+    // 서머타임 전환일에 틀어진다 — 봄에 하루가 23시간이 되는 날은 어제와의
+    // 간격이 0 일로 내려가 "어제"가 "오늘"로 표시된다(독일어 사용자).
+    // UTC 로 날짜만 세우면 그 하루가 언제나 24시간이다.
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final day = DateTime.utc(dt.year, dt.month, dt.day);
     final diff = today.difference(day).inDays;
     if (diff == 0) return l10n.goldDateToday;
     if (diff == 1) return l10n.goldDateYesterday;

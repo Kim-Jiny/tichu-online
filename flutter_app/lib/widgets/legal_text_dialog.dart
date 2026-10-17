@@ -93,12 +93,18 @@ class _LegalBodyState extends State<_LegalBody> {
   @override
   void initState() {
     super.initState();
-    _scroll.addListener(() {
-      if (!_scroll.hasClients) return;
-      final max = _scroll.position.maxScrollExtent;
-      final p = max <= 0 ? 1.0 : (_scroll.offset / max).clamp(0.0, 1.0);
-      if ((p - _progress).abs() > 0.004) setState(() => _progress = p);
-    });
+    _scroll.addListener(_syncProgress);
+    // 내용이 화면보다 짧으면 스크롤이 생기지 않아 리스너가 한 번도 불리지
+    // 않는다. 그러면 다 읽었는데도 진행바가 0 에 머문다 — 첫 레이아웃
+    // 뒤에 한 번 맞춰 준다.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncProgress());
+  }
+
+  void _syncProgress() {
+    if (!mounted || !_scroll.hasClients) return;
+    final max = _scroll.position.maxScrollExtent;
+    final p = max <= 0 ? 1.0 : (_scroll.offset / max).clamp(0.0, 1.0);
+    if ((p - _progress).abs() > 0.004) setState(() => _progress = p);
   }
 
   @override

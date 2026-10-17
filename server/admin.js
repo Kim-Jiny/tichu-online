@@ -4635,12 +4635,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       tableContent = '<div class="empty">유저 없음</div>';
     }
 
+    // 목록에서 바로 지급·회수한 결과. 안 띄우면 거절된 회수가 성공처럼 보인다.
+    const listTokenGrant = url.searchParams.get('tokenGrant');
     const content = `
       ${pageHeader(
         '유저',
         '검색, 정렬, 최소 조건 필터를 유지하면서 현재 페이지의 상태 분포를 바로 읽을 수 있게 정리했습니다.',
         `<span class="btn btn-secondary" style="cursor:default">총 ${formatNumber(data.total)}명</span>`
       )}
+      ${listTokenGrant ? `<div class="card" style="border-left:4px solid ${listTokenGrant === 'ok' ? '#2e7d32' : '#c62828'};
+          color:${listTokenGrant === 'ok' ? '#2e7d32' : '#c62828'};font-weight:700;white-space:pre-wrap">${
+        escapeHtml(url.searchParams.get('msg') || (listTokenGrant === 'ok' ? '처리했습니다.' : '처리하지 못했습니다.'))
+      }</div>` : ''}
       ${summaryStrip([
         { label: '현재 페이지', value: formatNumber(data.rows.length), meta: search ? `검색어: ${escapeHtml(search)}` : '필터 결과' },
         { label: '관리자', value: formatNumber(adminCount), valueColor: '#5e35b1' },
@@ -4707,6 +4713,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       ? `<div style="margin-top:8px;color:#c62828;font-weight:700">${escapeHtml(url.searchParams.get('msg') || '연장하지 못했습니다.')}</div>`
       : '';
 
+    // 토큰 지급·회수 결과. 이걸 띄우지 않으면 거절된 회수가 성공처럼 보인다
+    // — 잔액이 그대로인 것은 "안 바뀐 것"과 "실패한 것"이 같은 모양이다.
+    const tokenGrant = url.searchParams.get('tokenGrant');
+    const tokenGrantNotice = tokenGrant
+      ? `<div class="card" style="border-left:4px solid ${tokenGrant === 'ok' ? '#2e7d32' : '#c62828'};
+             color:${tokenGrant === 'ok' ? '#2e7d32' : '#c62828'};font-weight:700;white-space:pre-wrap">${
+          escapeHtml(url.searchParams.get('msg') || (tokenGrant === 'ok' ? '처리했습니다.' : '처리하지 못했습니다.'))
+        }</div>`
+      : '';
+
     const winRate = user.total_games > 0 ? Math.round((user.wins / user.total_games) * 100) : 0;
     const purchaseSummary = purchaseHistory?.summary || {
       totalSpent: 0,
@@ -4730,6 +4746,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const content = `
       ${pageHeader('유저 상세', '플레이 기록, 골드 흐름, 실제 구매 아이템까지 한 페이지에서 확인할 수 있게 구성했습니다.')}
+      ${tokenGrantNotice}
       ${errorBanner}
       ${summaryStrip([
         { label: '현재 골드', value: formatNumber(user.gold || 0), valueColor: '#d07a16', meta: `레벨 ${formatNumber(user.level || 1)}` },
@@ -5472,8 +5489,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const memo = String(body.memo || '').trim();
     // 유저 목록·상세에서 바로 지급할 때는 그 화면으로 되돌아간다.
     const back = typeof body.back === 'string' && body.back.startsWith('/tc-backstage/users') ? body.back : null;
+    // 결과는 어느 화면으로 돌아가든 함께 간다.
+    //
+    // 전에는 back 이 있으면 ok 와 msg 를 버렸다. 그래서 10토큰 가진 사람에게
+    // -50 을 넣으면 insufficient 로 거절된 뒤 조용히 유저 화면으로 돌아왔고,
+    // 잔액이 그대로인 것이 성공과 구분되지 않았다. 아래에서 공들여 만든
+    // REASONS 와 lines 가 그 경로에서는 통째로 버려지고 있었다.
     const done = (ok, msg) => {
-      if (back) return redirect(res, back);
+      if (back) {
+        const sep = back.includes('?') ? '&' : '?';
+        return redirect(res,
+          `${back}${sep}tokenGrant=${ok ? 'ok' : 'fail'}&msg=${encodeURIComponent(msg)}`);
+      }
       return redirect(res, `${missionBase('grant')}?r=${ok ? 'ok' : 'fail'}&msg=${encodeURIComponent(msg)}`);
     };
     if (!nicknames.length || !Number.isFinite(amount) || amount === 0) {

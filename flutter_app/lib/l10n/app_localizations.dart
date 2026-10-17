@@ -2337,6 +2337,12 @@ abstract class L10n {
   /// **'Checking cards...'**
   String get skGameCheckingCards;
 
+  /// No description provided for @skGameLootPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Loot +{loot} if both make their bid'**
+  String skGameLootPending(int loot);
+
   /// No description provided for @skGameBonusWithLoot.
   ///
   /// In en, this message translates to:
@@ -9608,6 +9614,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Purchased'**
   String get tokenShopBought;
+
+  /// No description provided for @tokenShopEquipDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipped'**
+  String get tokenShopEquipDone;
+
+  /// No description provided for @tokenShopUnequipDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Unequipped'**
+  String get tokenShopUnequipDone;
 
   /// No description provided for @tokenShopPreview.
   ///

@@ -10404,7 +10404,7 @@ abstract class L10n {
   /// No description provided for @skAbilityDescBendt.
   ///
   /// In en, this message translates to:
-  /// **'After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.'**
+  /// **'After winning a trick, draw 2 cards from the remaining deck, then discard any 2 cards from your hand.'**
   String get skAbilityDescBendt;
 
   /// No description provided for @skAbilityDescHarry.
@@ -10416,7 +10416,7 @@ abstract class L10n {
   /// No description provided for @skAbilityDescJuanita.
   ///
   /// In en, this message translates to:
-  /// **'After winning a trick, privately look at the cards that were not dealt this round.'**
+  /// **'After winning a trick, privately look at the deck left over after this round\'s deal.'**
   String get skAbilityDescJuanita;
 
   /// No description provided for @skAbilityTitle.
@@ -10470,7 +10470,7 @@ abstract class L10n {
   /// No description provided for @skAbilityJuanitaPrompt.
   ///
   /// In en, this message translates to:
-  /// **'These cards were not dealt to anyone this round'**
+  /// **'These cards were left in the deck this round'**
   String get skAbilityJuanitaPrompt;
 
   /// No description provided for @skAbilityConfirm.
@@ -10524,7 +10524,7 @@ abstract class L10n {
   /// No description provided for @skAbilityEventJuanita.
   ///
   /// In en, this message translates to:
-  /// **'{name} peeked at the undealt cards'**
+  /// **'{name} checked the remaining deck'**
   String skAbilityEventJuanita(String name);
 
   /// No description provided for @skAbilityEventHarry.

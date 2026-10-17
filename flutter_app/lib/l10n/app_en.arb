@@ -3468,9 +3468,9 @@
   "rulesSkExpPirateDesc": "The 5 pirate cards are always in the deck, with or without this mode. When it is on, winning a trick with a pirate (not a Tigress played as a pirate) lets you use that pirate's ability right away, once. After the last trick of a round only Harry's ability can still be used.",
   "skAbilityDescRascal": "After winning a trick, bet 0, 10 or 20 points. At the end of the round you gain the bet if your bid was exact, and lose it otherwise.",
   "skAbilityDescRosie": "After winning a trick, choose any player (yourself included) to lead the next trick.",
-  "skAbilityDescBendt": "After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.",
+  "skAbilityDescBendt": "After winning a trick, draw 2 cards from the remaining deck, then discard any 2 cards from your hand.",
   "skAbilityDescHarry": "After winning a trick, change your bid by +1 or -1, or keep it. The only ability usable after the last trick of a round.",
-  "skAbilityDescJuanita": "After winning a trick, privately look at the cards that were not dealt this round.",
+  "skAbilityDescJuanita": "After winning a trick, privately look at the deck left over after this round's deal.",
   "skAbilityTitle": "{pirate}'s ability",
   "@skAbilityTitle": {
     "placeholders": {
@@ -3510,7 +3510,7 @@
       }
     }
   },
-  "skAbilityJuanitaPrompt": "These cards were not dealt to anyone this round",
+  "skAbilityJuanitaPrompt": "These cards were left in the deck this round",
   "skAbilityConfirm": "OK",
   "skAbilityHarryPrompt": "You may change your bid (now {bid})",
   "@skAbilityHarryPrompt": {
@@ -3573,7 +3573,7 @@
       }
     }
   },
-  "skAbilityEventJuanita": "{name} peeked at the undealt cards",
+  "skAbilityEventJuanita": "{name} checked the remaining deck",
   "@skAbilityEventJuanita": {
     "placeholders": {
       "name": {

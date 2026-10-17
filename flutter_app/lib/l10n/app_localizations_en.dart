@@ -5916,7 +5916,7 @@ class L10nEn extends L10n {
 
   @override
   String get skAbilityDescBendt =>
-      'After winning a trick, draw 2 cards from the undealt cards, then discard any 2 cards from your hand.';
+      'After winning a trick, draw 2 cards from the remaining deck, then discard any 2 cards from your hand.';
 
   @override
   String get skAbilityDescHarry =>
@@ -5924,7 +5924,7 @@ class L10nEn extends L10n {
 
   @override
   String get skAbilityDescJuanita =>
-      'After winning a trick, privately look at the cards that were not dealt this round.';
+      'After winning a trick, privately look at the deck left over after this round\'s deal.';
 
   @override
   String skAbilityTitle(String pirate) {
@@ -5961,7 +5961,7 @@ class L10nEn extends L10n {
 
   @override
   String get skAbilityJuanitaPrompt =>
-      'These cards were not dealt to anyone this round';
+      'These cards were left in the deck this round';
 
   @override
   String get skAbilityConfirm => 'OK';
@@ -6001,7 +6001,7 @@ class L10nEn extends L10n {
 
   @override
   String skAbilityEventJuanita(String name) {
-    return '$name peeked at the undealt cards';
+    return '$name checked the remaining deck';
   }
 
   @override

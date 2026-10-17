@@ -5763,7 +5763,7 @@ class L10nKo extends L10n {
 
   @override
   String get skAbilityDescBendt =>
-      '트릭을 이기면 안 나눠 준 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.';
+      '트릭을 이기면 남은 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.';
 
   @override
   String get skAbilityDescHarry =>
@@ -5771,7 +5771,7 @@ class L10nKo extends L10n {
 
   @override
   String get skAbilityDescJuanita =>
-      '트릭을 이기면 이번 라운드에 아무에게도 나눠 주지 않은 카드를 혼자 확인합니다.';
+      '트릭을 이기면 이번 라운드에 나눠 주고 남은 카드 더미를 혼자 확인합니다.';
 
   @override
   String skAbilityTitle(String pirate) {
@@ -5807,7 +5807,7 @@ class L10nKo extends L10n {
   }
 
   @override
-  String get skAbilityJuanitaPrompt => '이번 라운드에 아무에게도 나눠 주지 않은 카드예요';
+  String get skAbilityJuanitaPrompt => '이번 라운드에 나눠 주고 남은 카드예요';
 
   @override
   String get skAbilityConfirm => '확인';
@@ -5847,7 +5847,7 @@ class L10nKo extends L10n {
 
   @override
   String skAbilityEventJuanita(String name) {
-    return '$name님이 안 나눠 준 카드를 살펴봤어요';
+    return '$name님이 남은 카드 더미를 확인했어요';
   }
 
   @override

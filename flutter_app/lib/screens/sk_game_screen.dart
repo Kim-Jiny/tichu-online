@@ -184,15 +184,25 @@ class _SKGameScreenState extends State<SKGameScreen> {
             ),
             child: Stack(
               children: [
+                // 손패 창 아래의 안전 영역(홈 바 자리)을 창과 같은 색으로
+                // 채운다. 안 채우면 그 띠에 배경 그라데이션이 비쳐 창이
+                // 거기서 잘린 것처럼 보인다.
+                //
+                // 관전자뿐 아니라 플레이어에게도 필요하다 — 아래에 창을
+                // 그리는 건 둘 다 같다. 색은 손패 창을 따라간다: 내 차례면
+                // 노랗고 아니면 종이색이라, 고정 색으로 채우면 차례가 올
+                // 때마다 이음새가 생긴다.
                 SpectatorBottomFill(
-                  when: (g) =>
-                      g.isSpectator &&
-                      const [
-                        'bidding',
-                        'playing',
-                        'trick_end',
-                        'pirate_ability',
-                      ].contains(g.skGameState?.phase),
+                  when: (g) => const [
+                    'bidding',
+                    'playing',
+                    'trick_end',
+                    'pirate_ability',
+                  ].contains(g.skGameState?.phase),
+                  color: (g) =>
+                      !g.isSpectator && g.skGameState?.isMyTurn == true
+                      ? const Color(0xFFFFF1B8)
+                      : Cartoon.paper,
                 ),
                 Positioned.fill(
                   child: SafeArea(
@@ -3224,7 +3234,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(8, 8, 8, isLandscape ? 8 : 12),
       decoration: BoxDecoration(
-        color: state.isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        color: state.isMyTurn ? _handMyTurn : _handPaper,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(
@@ -4064,6 +4074,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
     'white_whale': 'WHITE\nWHALE',
     'loot': 'LOOT',
   };
+
+  /// 손패 창의 바탕색. 내 차례면 노랗다.
+  ///
+  /// 창 아래 안전 영역을 채우는 띠(SpectatorBottomFill)가 같은 값을 써야
+  /// 한다 — 두 곳에 숫자를 적어 두면 한쪽만 고쳐져 이음새가 생긴다.
+  static const _handPaper = Cartoon.paper;
+  static const _handMyTurn = Color(0xFFFFF1B8);
+
   static const _specialBgColors = {
     'skull_king': Color(0xFF1A1A1A),
     'pirate': Color(0xFF8B1A1A),

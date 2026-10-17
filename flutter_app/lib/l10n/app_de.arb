@@ -2183,9 +2183,9 @@
   "rulesSkExpPirateDesc": "Die 5 Piratenkarten sind immer im Deck – mit oder ohne diesen Modus. Ist er aktiv, darfst du nach einem Stichgewinn mit einem Piraten (nicht mit einer als Pirat gespielten Tigress) dessen Fähigkeit sofort einmal einsetzen. Nach dem letzten Stich einer Runde geht nur noch Harrys Fähigkeit.",
   "skAbilityDescRascal": "Nach einem Stichgewinn setzt du 0, 10 oder 20 Punkte. Am Rundenende bekommst du den Einsatz bei exaktem Gebot dazu, sonst verlierst du ihn.",
   "skAbilityDescRosie": "Nach einem Stichgewinn bestimmst du, wer den nächsten Stich ausspielt – auch du selbst.",
-  "skAbilityDescBendt": "Nach einem Stichgewinn ziehst du 2 Karten vom Stapel der nicht ausgeteilten Karten und wirfst dann beliebige 2 Handkarten ab.",
+  "skAbilityDescBendt": "Nach einem Stichgewinn ziehst du 2 Karten vom Reststapel und wirfst dann 2 beliebige Handkarten ab.",
   "skAbilityDescHarry": "Nach einem Stichgewinn änderst du dein Gebot um +1 oder -1 oder lässt es. Die einzige Fähigkeit, die nach dem letzten Stich noch geht.",
-  "skAbilityDescJuanita": "Nach einem Stichgewinn siehst du heimlich die Karten, die in dieser Runde nicht ausgeteilt wurden.",
+  "skAbilityDescJuanita": "Nach einem Stichgewinn siehst du heimlich den Reststapel dieser Runde an.",
   "skAbilityTitle": "Fähigkeit: {pirate}",
   "@skAbilityTitle": {
     "placeholders": {
@@ -2225,7 +2225,7 @@
       }
     }
   },
-  "skAbilityJuanitaPrompt": "Diese Karten wurden in dieser Runde an niemanden ausgeteilt",
+  "skAbilityJuanitaPrompt": "Diese Karten blieben in dieser Runde im Reststapel",
   "skAbilityConfirm": "OK",
   "skAbilityHarryPrompt": "Du darfst dein Gebot ändern (jetzt {bid})",
   "@skAbilityHarryPrompt": {
@@ -2288,7 +2288,7 @@
       }
     }
   },
-  "skAbilityEventJuanita": "{name} hat die nicht ausgeteilten Karten angesehen",
+  "skAbilityEventJuanita": "{name} hat den Reststapel angesehen",
   "@skAbilityEventJuanita": {
     "placeholders": {
       "name": {

@@ -4,12 +4,18 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
 
-/// 관전 화면은 SafeArea 안에서 아래 손패/안내 창을 그리기 때문에, 홈 바가 있는
-/// 기기에서는 창 아래 안전 영역이 배경 그라데이션으로 비어 창이 떠 보인다.
-/// 그 띠를 창과 같은 종이색으로 채운다. SafeArea 보다 먼저(뒤에) 놓는다.
+/// 화면은 SafeArea 안에서 아래 손패/안내 창을 그리기 때문에, 홈 바가 있는
+/// 기기에서는 창 아래 안전 영역이 배경 그라데이션으로 비어 창이 떠 보인다
+/// — 창이 거기서 잘린 것처럼 읽힌다. 그 띠를 창과 같은 색으로 채운다.
+/// SafeArea 보다 먼저(뒤에) 놓는다.
+///
+/// [color] 는 채울 색을 고른다. 창 색이 상황에 따라 바뀌면(스컬킹 손패는
+/// 내 차례일 때 노랗다) 같이 바뀌어야 한다 — 고정 색으로 채우면 차례마다
+/// 창과 띠 사이에 이음새가 보인다. 넘기지 않으면 종이색이다.
 class SpectatorBottomFill extends StatelessWidget {
   final bool Function(GameService game) when;
-  const SpectatorBottomFill({super.key, required this.when});
+  final Color Function(GameService game)? color;
+  const SpectatorBottomFill({super.key, required this.when, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +39,7 @@ class SpectatorBottomFill extends StatelessWidget {
           right: 0,
           bottom: 0,
           height: inset,
-          child: const ColoredBox(color: Cartoon.paper),
+          child: ColoredBox(color: color?.call(game) ?? Cartoon.paper),
         );
       },
     );

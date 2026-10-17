@@ -2183,9 +2183,9 @@
   "rulesSkExpPirateDesc": "해적 카드 5장은 이 모드와 상관없이 항상 덱에 있습니다. 모드를 켜면 해적 카드로 트릭을 이겼을 때(티그리스로 낸 해적은 제외) 그 해적의 능력을 바로 한 번 쓸 수 있습니다. 마지막 트릭 뒤에는 해리의 능력만 쓸 수 있습니다.",
   "skAbilityDescRascal": "트릭을 이기면 0·10·20점 중 하나를 겁니다. 라운드가 끝났을 때 입찰을 맞혔으면 건 점수를 더 받고, 못 맞혔으면 그만큼 잃습니다.",
   "skAbilityDescRosie": "트릭을 이기면 다음 트릭을 시작할 사람을 나를 포함해 아무나 지목합니다.",
-  "skAbilityDescBendt": "트릭을 이기면 안 나눠 준 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.",
+  "skAbilityDescBendt": "트릭을 이기면 남은 카드 더미에서 2장을 가져온 뒤, 손에서 아무 2장을 버립니다.",
   "skAbilityDescHarry": "트릭을 이기면 내 입찰을 +1, -1 하거나 그대로 둘 수 있습니다. 마지막 트릭 뒤에도 쓸 수 있는 유일한 능력입니다.",
-  "skAbilityDescJuanita": "트릭을 이기면 이번 라운드에 아무에게도 나눠 주지 않은 카드를 혼자 확인합니다.",
+  "skAbilityDescJuanita": "트릭을 이기면 이번 라운드에 나눠 주고 남은 카드 더미를 혼자 확인합니다.",
   "skAbilityTitle": "{pirate}의 능력",
   "@skAbilityTitle": {
     "placeholders": {
@@ -2225,7 +2225,7 @@
       }
     }
   },
-  "skAbilityJuanitaPrompt": "이번 라운드에 아무에게도 나눠 주지 않은 카드예요",
+  "skAbilityJuanitaPrompt": "이번 라운드에 나눠 주고 남은 카드예요",
   "skAbilityConfirm": "확인",
   "skAbilityHarryPrompt": "입찰을 바꿀 수 있어요 (지금 {bid})",
   "@skAbilityHarryPrompt": {
@@ -2288,7 +2288,7 @@
       }
     }
   },
-  "skAbilityEventJuanita": "{name}님이 안 나눠 준 카드를 살펴봤어요",
+  "skAbilityEventJuanita": "{name}님이 남은 카드 더미를 확인했어요",
   "@skAbilityEventJuanita": {
     "placeholders": {
       "name": {

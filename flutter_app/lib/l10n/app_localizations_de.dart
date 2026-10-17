@@ -5966,7 +5966,7 @@ class L10nDe extends L10n {
 
   @override
   String get skAbilityDescBendt =>
-      'Nach einem Stichgewinn ziehst du 2 Karten vom Stapel der nicht ausgeteilten Karten und wirfst dann beliebige 2 Handkarten ab.';
+      'Nach einem Stichgewinn ziehst du 2 Karten vom Reststapel und wirfst dann 2 beliebige Handkarten ab.';
 
   @override
   String get skAbilityDescHarry =>
@@ -5974,7 +5974,7 @@ class L10nDe extends L10n {
 
   @override
   String get skAbilityDescJuanita =>
-      'Nach einem Stichgewinn siehst du heimlich die Karten, die in dieser Runde nicht ausgeteilt wurden.';
+      'Nach einem Stichgewinn siehst du heimlich den Reststapel dieser Runde an.';
 
   @override
   String skAbilityTitle(String pirate) {
@@ -6011,7 +6011,7 @@ class L10nDe extends L10n {
 
   @override
   String get skAbilityJuanitaPrompt =>
-      'Diese Karten wurden in dieser Runde an niemanden ausgeteilt';
+      'Diese Karten blieben in dieser Runde im Reststapel';
 
   @override
   String get skAbilityConfirm => 'OK';
@@ -6051,7 +6051,7 @@ class L10nDe extends L10n {
 
   @override
   String skAbilityEventJuanita(String name) {
-    return '$name hat die nicht ausgeteilten Karten angesehen';
+    return '$name hat den Reststapel angesehen';
   }
 
   @override

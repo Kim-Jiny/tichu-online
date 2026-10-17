@@ -539,7 +539,10 @@ class _RulesScreenState extends State<RulesScreen> {
                 name: L10n.of(context).rulesSkExpKraken,
                 sub: '',
                 count: 1,
-                lines: [L10n.of(context).rulesSkExpKrakenDesc],
+                lines: [
+                  L10n.of(context).rulesSkExpKrakenDesc,
+                  L10n.of(context).rulesSkExpCreatureOrder,
+                ],
               ),
               const SizedBox(height: 10),
               _CardGuide(
@@ -549,7 +552,10 @@ class _RulesScreenState extends State<RulesScreen> {
                 name: L10n.of(context).rulesSkExpWhiteWhale,
                 sub: '',
                 count: 1,
-                lines: [L10n.of(context).rulesSkExpWhiteWhaleDesc],
+                lines: [
+                  L10n.of(context).rulesSkExpWhiteWhaleDesc,
+                  L10n.of(context).rulesSkExpCreatureOrder,
+                ],
               ),
               const SizedBox(height: 10),
               _CardGuide(

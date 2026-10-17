@@ -2459,6 +2459,10 @@ class L10nDe extends L10n {
       'Ein Stich mit dem Kraken wird ungültig. Niemand gewinnt den Stich und keine Boni werden vergeben. Der Spieler, der ohne Kraken gewonnen hätte, führt den nächsten Stich an.';
 
   @override
+  String get rulesSkExpCreatureOrder =>
+      'Liegen beide im selben Stich, wirkt nur die zuletzt gespielte Karte; die frühere zählt als Flucht. Krake dann Weißwal → der Wal wirkt; Weißwal dann Krake → die Krake wirkt.';
+
+  @override
   String get rulesSkExpWhiteWhale => '🐋 White Whale';
 
   @override

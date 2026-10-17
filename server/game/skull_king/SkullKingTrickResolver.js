@@ -14,8 +14,16 @@
  *   privilege). If no numbers were played, the trick is voided.
  * - Loot: does not affect trick resolution — handled in SkullKingGame.completeTrick.
  *
- * Precedence when both Kraken and White Whale are in the same trick: Kraken wins
- * (the trick is voided).
+ * 크라켄과 흰고래가 한 트릭에 함께 나오면 — 공식 FAQ —
+ *   나중에 나온 쪽의 효과만 적용되고, 먼저 나온 쪽은 도주 카드로 취급한다.
+ *   · 크라켄 → 흰고래 : 흰고래가 적용된다(색과 무관하게 가장 높은 숫자가
+ *     트릭을 가져가고, 숫자가 없으면 무효). 크라켄은 도주다.
+ *   · 흰고래 → 크라켄 : 크라켄이 적용된다(트릭 무효). 흰고래는 도주이고,
+ *     다음 트릭은 "두 생물이 없었다면 이겼을 사람"이 시작한다.
+ *
+ * 리드 무늬(getLeadSuit)는 이 규칙에 영향을 받지 않는다. 그건 카드를 내는
+ * 순간순간 정해지는데, 그 시점에는 둘 중 어느 쪽이 나중이 될지 알 수 없다.
+ * 소급해서 바꾸면 이미 카드를 낸 사람이 봤던 합법 카드 목록이 달라진다.
  */
 
 const { CARD_TYPE, getCardInfo } = require('./SkullKingDeck');
@@ -47,27 +55,48 @@ function resolveTrick(trickPlays) {
     };
   });
 
+  // ── 크라켄과 흰고래가 함께 나왔을 때 ──────────────────────────────────
+  // 나중에 나온 쪽만 효과를 내고, 먼저 나온 쪽은 도주가 된다(머리말 참고).
+  // 덱에 각각 한 장뿐이라 findIndex 로 충분하다.
+  const krakenIdx = resolved.findIndex(r => r.effectiveType === CARD_TYPE.KRAKEN);
+  const whaleIdx = resolved.findIndex(r => r.effectiveType === CARD_TYPE.WHITE_WHALE);
+  // 먼저 나온 쪽을 도주로 바꿔 둔다. 아래 두 분기가 effectiveType 으로
+  // 판정하므로, 이 한 줄이 "먼저 나온 쪽은 아무 일도 하지 않는다"를
+  // 그대로 만든다 — 흰고래 분기의 숫자 세기에서도 자연히 빠진다.
+  let supersededCreature = null;
+  if (krakenIdx >= 0 && whaleIdx >= 0) {
+    const earlier = krakenIdx < whaleIdx ? krakenIdx : whaleIdx;
+    supersededCreature = krakenIdx < whaleIdx ? 'kraken' : 'white_whale';
+    resolved[earlier] = { ...resolved[earlier], effectiveType: CARD_TYPE.ESCAPE };
+  }
+
   // ── Expansion: Kraken ─────────────────────────────────────────────────────
   // Kraken voids the trick. To determine the next-trick leader, resolve the
   // trick as if the Kraken weren't played.
-  const hasKraken = resolved.some(r => r.effectiveType === CARD_TYPE.KRAKEN);
+  const hasKraken = krakenIdx >= 0
+    && resolved[krakenIdx].effectiveType === CARD_TYPE.KRAKEN;
   if (hasKraken) {
-    const withoutKraken = trickPlays.filter(p => {
+    // 두 생물을 모두 뺀 트릭에서 이겼을 사람이 다음을 시작한다. 흰고래가
+    // 함께 나왔다면 그건 도주가 됐지만, 다음 선을 정할 때는 "두 생물이
+    // 없었다면" 을 묻는 것이므로 둘 다 빼고 센다.
+    const withoutCreatures = trickPlays.filter(p => {
       const info = getCardInfo(p.cardId);
-      return info && info.type !== CARD_TYPE.KRAKEN;
+      return info
+        && info.type !== CARD_TYPE.KRAKEN
+        && info.type !== CARD_TYPE.WHITE_WHALE;
     });
     let nextLeaderId;
-    if (withoutKraken.length === 0) {
-      // Only a Kraken was played (shouldn't really happen with ≥2 players, but safe)
+    if (withoutCreatures.length === 0) {
+      // 생물만 나온 트릭(2인 이하에서나 가능). 첫 사람이 선을 잡는다.
       nextLeaderId = resolved[0].playerId;
     } else {
-      const inner = resolveTrick(withoutKraken);
+      const inner = resolveTrick(withoutCreatures);
       nextLeaderId = inner ? inner.winnerId : resolved[0].playerId;
     }
     return {
       winnerId: nextLeaderId,
       bonus: 0,
-      bonusDetail: [{ type: 'kraken_void' }],
+      bonusDetail: [{ type: 'kraken_void', supersededCreature }],
       voided: true,
     };
   }
@@ -76,7 +105,8 @@ function resolveTrick(trickPlays) {
   // White Whale nullifies all special card effects. Only number cards count,
   // and the highest value wins regardless of suit. If no numbers were played,
   // the trick is voided (the Whale player leads next).
-  const hasWhiteWhale = resolved.some(r => r.effectiveType === CARD_TYPE.WHITE_WHALE);
+  const hasWhiteWhale = whaleIdx >= 0
+    && resolved[whaleIdx].effectiveType === CARD_TYPE.WHITE_WHALE;
   if (hasWhiteWhale) {
     const numbered = resolved.filter(r => r.effectiveType === CARD_TYPE.NUMBER);
     if (numbered.length === 0) {
@@ -85,7 +115,7 @@ function resolveTrick(trickPlays) {
       return {
         winnerId: whalePlay.playerId,
         bonus: 0,
-        bonusDetail: [{ type: 'white_whale_void' }],
+        bonusDetail: [{ type: 'white_whale_void', supersededCreature }],
         voided: true,
       };
     }
@@ -97,7 +127,7 @@ function resolveTrick(trickPlays) {
     return {
       winnerId: winner.playerId,
       bonus: 0,
-      bonusDetail: [{ type: 'white_whale_nullify' }],
+      bonusDetail: [{ type: 'white_whale_nullify', supersededCreature }],
       voided: false,
     };
   }

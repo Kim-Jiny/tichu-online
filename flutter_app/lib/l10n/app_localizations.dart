@@ -4485,6 +4485,12 @@ abstract class L10n {
   /// **'A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.'**
   String get rulesSkExpKrakenDesc;
 
+  /// No description provided for @rulesSkExpCreatureOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'When both appear in one trick, only the later one takes effect; the earlier one counts as an Escape. Kraken then White Whale → the Whale applies; White Whale then Kraken → the Kraken applies.'**
+  String get rulesSkExpCreatureOrder;
+
   /// No description provided for @rulesSkExpWhiteWhale.
   ///
   /// In en, this message translates to:

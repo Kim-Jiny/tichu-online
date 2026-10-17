@@ -1335,6 +1335,7 @@
   "rulesSkExpansionBody": "Each expansion can be individually selected when creating a room. Expansion cards are shuffled into the base deck.",
   "rulesSkExpKraken": "🐙 Kraken",
   "rulesSkExpKrakenDesc": "A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.",
+  "rulesSkExpCreatureOrder": "When both appear in one trick, only the later one takes effect; the earlier one counts as an Escape. Kraken then White Whale → the Whale applies; White Whale then Kraken → the Kraken applies.",
   "rulesSkExpWhiteWhale": "🐋 White Whale",
   "rulesSkExpWhiteWhaleDesc": "Neutralizes all special card effects. Only number cards are compared in the trick, and the highest number wins regardless of suit. If no number cards are present, the trick is voided.",
   "rulesSkExpLoot": "💰 Loot",

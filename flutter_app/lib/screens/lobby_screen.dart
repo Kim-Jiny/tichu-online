@@ -20,6 +20,7 @@ import 'shop_screen.dart';
 import 'settings_screen.dart';
 import 'friends_screen.dart';
 import '../widgets/hint_bubble.dart';
+import '../widgets/sk_expansion_guide.dart';
 import '../widgets/token_cosmetics.dart';
 import '../widgets/cartoon_icons.dart';
 import '../widgets/connection_overlay.dart';
@@ -3986,6 +3987,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   _scrollChatToBottom();
                 }
               }),
+            ),
+          // 이 방에 들어간 확장팩 카드를 미리 본다.
+          //
+          // 확장팩은 방을 만들 때 정해지고 바꿀 수 없다. 처음 보는 카드가
+          // 무슨 일을 하는지는 그 카드가 트릭을 가져간 뒤가 아니라 그 전에
+          // 알아야 쓸모가 있어서, 게임 화면에만 있던 안내를 여기서도 연다.
+          //
+          // 확장팩이 없는 방(또는 스컬킹이 아닌 방)에서는 버튼도 없다 —
+          // 눌러도 빈 시트가 뜨는 버튼은 없느니만 못하다.
+          if (game.currentGameType == 'skull_king' &&
+              game.roomSkExpansions.isNotEmpty)
+            _roomIconButton(
+              icon: Icons.style_rounded,
+              onTap: () =>
+                  showSkExpansionGuide(context, game.roomSkExpansions),
             ),
           // Inviting is a seat-holder's business: an invitee joins the room,
           // and a spectator has no standing to fill it.

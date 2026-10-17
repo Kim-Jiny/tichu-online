@@ -2448,6 +2448,10 @@ class L10nEn extends L10n {
       'A trick containing the Kraken is voided. No one wins the trick and no bonuses are awarded. The player who would have won without the Kraken leads the next trick.';
 
   @override
+  String get rulesSkExpCreatureOrder =>
+      'When both appear in one trick, only the later one takes effect; the earlier one counts as an Escape. Kraken then White Whale → the Whale applies; White Whale then Kraken → the Kraken applies.';
+
+  @override
   String get rulesSkExpWhiteWhale => '🐋 White Whale';
 
   @override

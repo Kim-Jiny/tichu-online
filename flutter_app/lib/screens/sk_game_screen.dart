@@ -24,6 +24,7 @@ import '../l10n/l10n_helpers.dart';
 import '../widgets/mid_game_join.dart';
 import '../widgets/sk_number_card.dart';
 import '../widgets/sk_pirate_ability_panel.dart';
+import '../widgets/sk_expansion_guide.dart';
 
 class SKGameScreen extends StatefulWidget {
   const SKGameScreen({super.key});
@@ -1118,126 +1119,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
+  /// 이 방에 들어간 확장팩 카드 안내. 방 대기실과 같은 시트를 쓴다
+  /// (widgets/sk_expansion_guide.dart) — 설명이 두 벌이면 한쪽만 고쳐진다.
+  ///
+  /// 카드 그림은 이 화면의 것을 넘긴다. 테두리·그림자·이름표가 붙은
+  /// 모양이라 게임 중에 보던 것과 같아야 한다.
   void _showExpansionGuide(SKGameStateData state) {
-    final l10n = L10n.of(context);
-    final entries = <({String cardId, String name, String desc})>[
-      for (final id in state.expansions)
-        switch (id) {
-          'kraken' => (
-            cardId: 'sk_kraken',
-            name: l10n.rulesSkExpKraken,
-            desc: l10n.rulesSkExpKrakenDesc,
-          ),
-          'white_whale' => (
-            cardId: 'sk_white_whale',
-            name: l10n.rulesSkExpWhiteWhale,
-            desc: l10n.rulesSkExpWhiteWhaleDesc,
-          ),
-          'loot' => (
-            cardId: 'sk_loot_1',
-            name: l10n.rulesSkExpLoot,
-            desc: l10n.rulesSkExpLootDesc,
-          ),
-          'pirate_abilities' => (
-            cardId: '',
-            name: l10n.rulesSkExpPirate,
-            desc: l10n.rulesSkExpPirateDesc,
-          ),
-          _ => (cardId: '', name: id, desc: ''),
-        },
-      // 해적 능력 모드를 켰으면 5명의 능력을 카드 그림과 함께 이어서 설명한다.
-      if (state.hasPirateAbilities)
-        for (final pirate in skPirateByNumber.values)
-          (
-            cardId: skPirateCardId(pirate),
-            name: skPirateName(l10n, pirate),
-            desc: skPirateAbilityDesc(l10n, pirate),
-          ),
-    ];
-    if (entries.isEmpty) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Cartoon.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-        side: BorderSide(color: Cartoon.ink, width: 2.5),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Cartoon.ink.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.skGameIncludedExpansions,
-                style: Cartoon.text(size: 19),
-              ),
-              const SizedBox(height: 14),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: entries.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) {
-                    final e = entries[i];
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Cartoon.cream,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (e.cardId.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _buildCard(
-                                e.cardId,
-                                size: 86,
-                                showName: true,
-                              ),
-                            ),
-                          if (e.cardId.isNotEmpty) const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(e.name, style: Cartoon.text(size: 17)),
-                                if (e.desc.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    e.desc,
-                                    style: Cartoon.userText(
-                                      size: 13,
-                                      color: Cartoon.ink.withValues(alpha: 0.8),
-                                      weight: FontWeight.w600,
-                                      height: 1.45,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    showSkExpansionGuide(
+      context,
+      state.expansions,
+      cardBuilder: (cardId, size) =>
+          _buildCard(cardId, size: size, showName: true),
     );
   }
 
@@ -3057,6 +2949,27 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // required 로 받아 두면 호출하는 쪽은 그 글이 화면에 나온다고 믿고 문구를
   // 만들어 넘긴다 — 크라켄 사유와 흰고래 무효 라벨이 그렇게 조용히 버려지고
   // 있었다. 받지 않으면 넘길 수 없다.
+  /// 크라켄·흰고래 연출에 쓰는 '배경 없는 캐릭터' 그림.
+  ///
+  /// 카드 그림(sk_kraken.webp)은 카드 틀과 그라데이션 배경이 들어 있어서,
+  /// 효과 연출의 둥근 빛 번짐 위에 얹으면 배경이 두 겹으로 보인다.
+  /// art/cards 의 원본에서 배경만 지워 따로 뽑은 그림을 쓴다.
+  Widget _skCreatureArt(String cardId, double size) {
+    const art = {
+      'sk_kraken': 'assets/cards/sk_kraken_art.webp',
+      'sk_white_whale': 'assets/cards/sk_white_whale_art.webp',
+    };
+    final path = art[cardId];
+    if (path == null) return _buildCard(cardId, size: size);
+    return Image.asset(
+      path,
+      height: size * 1.15,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => _buildCard(cardId, size: size),
+    );
+  }
+
   Widget _skEffectPanel({
     required String cardId,
     required double cardSize,
@@ -3114,7 +3027,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       ),
                     );
                   },
-                  child: _buildCard(cardId, size: big),
+                  // 카드가 아니라 캐릭터만 띄운다. 배경을 지운 그림이라
+                  // 뒤의 둥근 빛 번짐 위에 바로 얹힌다 — 카드 틀과 그
+                  // 안의 배경색이 겹쳐 보이던 것이 사라진다.
+                  //
+                  // 그림이 없으면(구버전 번들) 카드로 돌아간다. 효과 연출이
+                  // 통째로 비는 것보다는 예전 모양이 낫다.
+                  child: _skCreatureArt(cardId, big),
                 ),
               ],
             ),

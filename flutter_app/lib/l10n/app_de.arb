@@ -793,6 +793,7 @@
   "rulesSkExpansionBody": "Jede Erweiterung kann beim Erstellen eines Raums einzeln ausgewählt werden. Erweiterungskarten werden in das Basisdeck gemischt.",
   "rulesSkExpKraken": "🐙 Kraken",
   "rulesSkExpKrakenDesc": "Ein Stich mit dem Kraken wird ungültig. Niemand gewinnt den Stich und keine Boni werden vergeben. Der Spieler, der ohne Kraken gewonnen hätte, führt den nächsten Stich an.",
+  "rulesSkExpCreatureOrder": "Liegen beide im selben Stich, wirkt nur die zuletzt gespielte Karte; die frühere zählt als Flucht. Krake dann Weißwal → der Wal wirkt; Weißwal dann Krake → die Krake wirkt.",
   "rulesSkExpWhiteWhale": "🐋 White Whale",
   "rulesSkExpWhiteWhaleDesc": "Neutralisiert alle Spezialkarten-Effekte. Nur Zahlenkarten werden verglichen, und die höchste Zahl gewinnt unabhängig von der Farbe. Ohne Zahlenkarten wird der Stich ungültig.",
   "rulesSkExpLoot": "💰 Loot",

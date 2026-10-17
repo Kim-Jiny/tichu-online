@@ -2391,6 +2391,10 @@ class L10nKo extends L10n {
       '크라켄이 포함된 트릭은 무효가 됩니다. 아무도 트릭을 얻지 못하고 보너스도 지급되지 않습니다. 크라켄이 없었다면 이겼을 플레이어가 다음 트릭을 리드합니다.';
 
   @override
+  String get rulesSkExpCreatureOrder =>
+      '둘이 한 트릭에 같이 나오면 나중에 낸 쪽의 효과만 적용되고, 먼저 낸 쪽은 도주 카드처럼 취급합니다. 크라켄 → 흰고래 순이면 흰고래가, 흰고래 → 크라켄 순이면 크라켄이 적용됩니다.';
+
+  @override
   String get rulesSkExpWhiteWhale => '🐋 흰고래';
 
   @override

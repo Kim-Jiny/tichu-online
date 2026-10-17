@@ -84,6 +84,10 @@ const {
   getMailbox, getUnreadMailCount, markMailRead, claimMail, deleteMailForUser, purgeOldMail, sweepExpiredCosmetics,
   insertPushHistory, startPushLog, finishPushLog, markPushOpened, purgePushLogs,
   getAttendancePushTargets, claimAttendancePush,
+  // 예약 마케팅 푸시 틱 — runCampaignScheduleTick.
+  getDueCampaigns, claimCampaignForSend, failCampaignSend, reviveStuckCampaigns,
+  getMarketingAudience, reserveCampaignRecipients, openCampaignForClaims,
+  recordCampaignSend, markFcmTokensInvalid, isKstNight,
   getPushHistory,
   loadTitleTranslations,
   adminClearProfilePhoto,
@@ -92,6 +96,7 @@ const {
   isPhotoKeyReported,
 } = require('./db/database');
 
+const { sendCampaign } = require('./push_campaign_send');
 const { verifyApple } = require('./iap/AppleVerify');
 const { verifyGoogle } = require('./iap/GoogleVerify');
 const { parseAppleNotification } = require('./iap/AppleNotifications');
@@ -186,6 +191,18 @@ async function sendPushNotification(fcmToken, title, body, meta = null) {
 // the app which campaign it is when the player taps it. FCM requires every
 // data value to be a string; numbers pass validation on some paths and are
 // dropped on others, so they are stringified here rather than at each caller.
+/// 여러 기기로 한 번에. [title] 과 [body] 는 문자열이거나, 행을 받아
+/// 문자열을 돌려주는 함수다.
+///
+/// 함수를 받으면 FCM 호출이 sendEachForMulticast 에서 sendEach 로 바뀐다.
+/// 전자는 토큰 목록 하나에 알림 하나를 붙이는 API 라서, 받는 사람마다 다른
+/// 문구를 실을 자리가 아예 없다. 후자는 메시지를 1건씩 싣는다 — 같은 500개
+/// 묶음, 같은 응답 모양이라 아래 집계 코드는 그대로 쓴다.
+///
+/// 한 토큰을 여러 계정이 공유하는 경우(기기 정리 가드가 생기기 전의 묵은
+/// 데이터, 로그인 경합), 치환에 쓰이는 값은 중복 제거에서 살아남은 행의
+/// 것이다. 그 기기에는 알림이 한 번만 떠야 하므로 어느 쪽이든 하나를 골라야
+/// 하고, 보상 수령과 집계는 계정 단위로 그룹 전체에 돌려주므로 영향이 없다.
 async function sendBroadcastPush(tokenRows, title, body, data = null) {
   // Two account rows can end up holding the same fcm_token (stale data from
   // before a device-clearing guard existed, or a login race) — send once per
@@ -228,18 +245,28 @@ async function sendBroadcastPush(tokenRows, title, body, data = null) {
     }
   };
 
+  const personalized = typeof title === 'function' || typeof body === 'function';
+  const textFor = (value, row) => (typeof value === 'function' ? value(row) : value);
+  const payload = data
+    ? { data: Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])) }
+    : {};
+
   for (let i = 0; i < tokenRows.length; i += BATCH_SIZE) {
     const batch = tokenRows.slice(i, i + BATCH_SIZE);
     const tokens = batch.map(r => r.fcm_token);
     try {
-      const result = await firebaseAdmin.messaging().sendEachForMulticast({
-        tokens,
-        notification: { title, body },
-        ...(data
-          ? { data: Object.fromEntries(
-              Object.entries(data).map(([k, v]) => [k, String(v)])) }
-          : {}),
-      });
+      const result = personalized
+        ? await firebaseAdmin.messaging().sendEach(batch.map((row) => ({
+          token: row.fcm_token,
+          notification: { title: textFor(title, row), body: textFor(body, row) },
+          ...payload,
+        })))
+        : await firebaseAdmin.messaging().sendEachForMulticast({
+          tokens,
+          notification: { title, body },
+          ...payload,
+        });
       result.responses.forEach((resp, idx) => {
         if (resp.success) {
           addResult(batch[idx], true, false);
@@ -370,6 +397,50 @@ async function runAttendancePushTick() {
   }
   console.log(`[attendance-push] ${sent}/${targets.length} sent`
     + (skipped ? ` (${skipped} claimed by another instance)` : ''));
+}
+
+/// 발송 시각이 지난 예약 캠페인을 보낸다. 1분마다 돈다.
+///
+/// 틱으로 도는 이유는 setTimeout 으로 예약할 수 없기 때문이다. 타이머는
+/// 프로세스 메모리에 있으므로 배포 한 번에 전부 사라지고, 그러면 "예약은
+/// 저장돼 있는데 아무도 안 보낸" 캠페인이 남는다. DB 를 1분마다 보는 쪽은
+/// 재시작을 몇 번 하든 다음 틱에 따라잡는다.
+///
+/// 중복 발송을 막는 건 claimCampaignForSend 한 문장이다 — 블루/그린 드레인
+/// 구간에서는 두 인스턴스가 같은 틱을 돌고, 푸시는 회수할 수 없다.
+async function runCampaignScheduleTick() {
+  try {
+    // 'sending' 에 갇힌 캠페인부터 내려놓는다. 발송 도중 프로세스가 죽으면
+    // 그 상태로 남고, 그러면 보상 수령도 막혀 있다. 자동 재발송은 하지
+    // 않는다 — 죽은 시점이 FCM 호출 전인지 후인지 알 수 없으므로.
+    const revived = await reviveStuckCampaigns(15);
+    if (revived.length) {
+      console.warn(`[campaign-schedule] stuck in 'sending', moved to draft: ${revived.join(', ')}`);
+    }
+    const due = await getDueCampaigns(20);
+    for (const camp of due) {
+      const result = await sendCampaign(camp, {
+        getMarketingAudience, reserveCampaignRecipients, sendBroadcastPush,
+        markFcmTokensInvalid, openCampaignForClaims, recordCampaignSend, isKstNight,
+        claimCampaignForSend, failCampaignSend,
+      });
+      // 결과를 반드시 남긴다. 예약 발송은 보는 사람이 없는 시간에 돌기
+      // 때문에, 로그와 캠페인의 last_send_error 가 유일한 기록이다.
+      if (result.sent) {
+        console.log(`[campaign-schedule] #${camp.id} sent to ${result.successCount}`
+          + `/${result.audienceSize}`
+          + (result.failCount ? ` (failed ${result.failCount})` : '')
+          + (result.personalized ? ' [personalized]' : '')
+          + (result.problem ? ` ${result.problem}` : ''));
+      } else {
+        console.warn(`[campaign-schedule] #${camp.id} not sent (${result.refused}): ${result.message}`);
+      }
+    }
+  } catch (err) {
+    // 틱이 던지면 setInterval 은 다음 틱을 계속 돌리지만, 미처리 거부는
+    // 프로세스를 내릴 수 있다. 예약 하나 때문에 서버가 죽을 일은 아니다.
+    console.error('[campaign-schedule] tick failed:', err.message);
+  }
 }
 
 // Translate a handler result's message.
@@ -2283,6 +2354,11 @@ function localizeTitleName(titleKey, fallbackName, locale) {
   // 시간 안에 따라잡는다. 인도(+5:30)처럼 30분 단위 시간대 때문에 한 시간에
   // 한 번으로는 부족하다.
   setInterval(runAttendancePushTick, 10 * 60 * 1000).unref();
+
+  // 예약 푸시는 1분. 출석 알림(10분)보다 촘촘한 이유는 관리자가 특정 시각을
+  // 골라 적어두기 때문이다 — "14시 이벤트 시작" 안내가 14시 9분에 나가면
+  // 예약한 의미가 없다.
+  setInterval(runCampaignScheduleTick, 60 * 1000).unref();
 
   // Say it out loud at boot. Screening silently not running is the one state
   // that contradicts what the privacy policy and the store review notes claim,

@@ -117,6 +117,7 @@ const NAV_GROUPS = [
       { key: 'push', href: '/tc-backstage/push', label: '푸시알림', icon: 'bell' },
       { key: 'push-history', href: '/tc-backstage/push-history', label: '푸시 히스토리', icon: 'clock' },
       { key: 'campaigns', href: '/tc-backstage/campaigns', label: '마케팅 푸시', icon: 'star' },
+      { key: 'campaign-templates', href: '/tc-backstage/campaigns/templates', label: '푸시 템플릿', icon: 'book' },
       { key: 'mail', href: '/tc-backstage/mail', label: '운영자 우편함', icon: 'mail' },
     ],
   },

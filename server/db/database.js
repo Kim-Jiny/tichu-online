@@ -1791,6 +1791,40 @@ async function runMigrations() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_campaign_recipients_nickname
       ON tc_push_campaign_recipients(nickname)`);
 
+    // 예약 발송. 비어 있으면 손으로 누르는 캠페인이고, 채워져 있으면
+    // status='scheduled' 로 틱이 집어간다. 저장은 UTC — 입력은 KST
+    // 벽시계이고 변환은 admin 쪽에서 한다.
+    await client.query(
+      `ALTER TABLE tc_push_campaigns ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP`);
+    // 예약 발송이 실패한 이유를 남길 곳.
+    //
+    // 손으로 누른 발송은 실패하면 그 자리에서 빨간 줄로 보인다. 예약은
+    // 보는 사람이 없는 시간에 돌므로, 남겨두지 않으면 "왜 안 나갔지"의
+    // 답이 서버 로그 어딘가에만 있다.
+    await client.query(
+      `ALTER TABLE tc_push_campaigns ADD COLUMN IF NOT EXISTS last_send_error TEXT`);
+    await client.query(
+      `ALTER TABLE tc_push_campaigns ADD COLUMN IF NOT EXISTS last_send_attempt_at TIMESTAMP`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_push_campaigns_due
+      ON tc_push_campaigns(scheduled_at) WHERE status = 'scheduled'`);
+
+    // 되쓰는 푸시 문구.
+    //
+    // 제목·본문만 담는다. 보상과 대상은 캠페인마다 다르고, 템플릿에 넣어
+    // 두면 "문구만 가져오려다 골드 500 도 같이 따라온" 사고가 난다. 문구는
+    // 원문 그대로 저장한다 — {nickname} 은 발송 순간에 치환된다.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_push_templates (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(80) NOT NULL UNIQUE,
+        title VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     // 예전에는 로그만 찍고 계속 떴다. 그러면 실패한 문장 뒤의 마이그레이션이
@@ -4187,8 +4221,8 @@ async function createPushCampaign(data, actor = 'admin') {
   const r = await pool.query(
     `INSERT INTO tc_push_campaigns
        (title, body, reward_gold, reward_item_key, reward_days,
-        claim_deadline, target_filter, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        claim_deadline, target_filter, created_by, scheduled_at, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
     [
       String(data.title || '').slice(0, 200),
       String(data.body || ''),
@@ -4198,6 +4232,11 @@ async function createPushCampaign(data, actor = 'admin') {
       data.claimDeadline ? toUtcTimestampText(data.claimDeadline) : null,
       data.targetFilter || 'all',
       actor,
+      data.scheduledAt ? toUtcTimestampText(data.scheduledAt) : null,
+      // 예약 시각이 있으면 바로 예약 상태로 들어간다. 저장 후 따로 한 번 더
+      // 눌러 예약하게 만들면, 그 한 번을 잊은 캠페인이 발송 시각을 들고
+      // 가만히 앉아 있는다.
+      data.scheduledAt ? 'scheduled' : 'draft',
     ],
   );
   return { success: true, id: r.rows[0].id };
@@ -4226,6 +4265,184 @@ async function getPushCampaign(id) {
 
 async function deletePushCampaign(id) {
   await pool.query('DELETE FROM tc_push_campaigns WHERE id = $1', [id]);
+  return { success: true };
+}
+
+/// 이미 만들어 둔 캠페인에 발송 시각을 붙인다. 발송된 건은 건드리지 않는다.
+async function scheduleCampaign(id, whenIso) {
+  const r = await pool.query(
+    `UPDATE tc_push_campaigns
+     SET scheduled_at = $2, status = 'scheduled', last_send_error = NULL
+     WHERE id = $1 AND status IN ('draft', 'scheduled')
+     RETURNING id`,
+    [id, toUtcTimestampText(whenIso)],
+  );
+  return { success: r.rows.length > 0 };
+}
+
+/// 예약 취소 — 초안으로 되돌린다. 캠페인 자체는 남으므로 손으로 보낼 수 있다.
+async function cancelCampaignSchedule(id) {
+  const r = await pool.query(
+    `UPDATE tc_push_campaigns
+     SET scheduled_at = NULL, status = 'draft'
+     WHERE id = $1 AND status = 'scheduled'
+     RETURNING id`,
+    [id],
+  );
+  return { success: r.rows.length > 0 };
+}
+
+/// 발송 시각이 지난 예약 건.
+///
+/// 시각 비교를 DB 에서 하는 이유는 프로세스의 타임존·시계를 믿지 않기
+/// 위해서다. 두 슬롯이 같이 도는 블루/그린 배포에서 한쪽 컨테이너의 시계가
+/// 밀려 있으면, 같은 캠페인을 한쪽은 "아직"이라 보고 다른 쪽은 "지났다"고
+/// 본다. 기준 시계는 하나여야 한다.
+async function getDueCampaigns(limit = 20) {
+  const r = await pool.query(
+    `SELECT * FROM tc_push_campaigns
+     WHERE status = 'scheduled'
+       AND scheduled_at IS NOT NULL
+       AND scheduled_at <= (NOW() AT TIME ZONE 'UTC')
+     ORDER BY scheduled_at ASC LIMIT $1`,
+    [limit],
+  );
+  return r.rows;
+}
+
+/// 보낼 권리를 집는다. 집은 쪽만 발송한다.
+///
+/// attendance push 의 claim 과 같은 이유다 — 블루/그린 드레인 구간에서는 두
+/// 인스턴스가 같은 틱을 돈다. 상태를 'sending' 으로 한 문장에 뒤집으므로
+/// 둘 중 하나만 행을 돌려받고, 나머지는 null 을 받아 조용히 넘어간다.
+/// 푸시는 회수할 수 없으니 이 한 줄이 "전원에게 두 번 발송"을 막는
+/// 유일한 장치다.
+///
+/// 손으로 누르는 발송도 이 문을 지난다. 'draft' 와 'scheduled' 를 함께
+/// 받는 이유가 그것이다 — 예약 건을 기다리지 않고 지금 보내는 경우, 같은
+/// 순간 틱도 그 캠페인을 집으려 한다. 어느 한쪽만 claim 을 쓰면 둘 다
+/// 통과해 전원이 알림을 두 번 받는다.
+async function claimCampaignForSend(id) {
+  const r = await pool.query(
+    `UPDATE tc_push_campaigns
+     SET status = 'sending',
+         last_send_attempt_at = (NOW() AT TIME ZONE 'UTC'),
+         -- 새 시도는 지난 실패 사유를 지운다. 안 지우면 성공한 발송 옆에
+         -- 옛 경고가 그대로 붙어 있다.
+         last_send_error = NULL
+     WHERE id = $1 AND status IN ('draft', 'scheduled')
+     RETURNING *`,
+    [id],
+  );
+  return r.rows[0] || null;
+}
+
+/// 발송하지 못한 이유를 캠페인에 적어두고 초안으로 돌린다.
+///
+/// 'scheduled' 로 되돌리지 않는 게 핵심이다. 되돌리면 같은 이유로 매 틱마다
+/// 다시 시도하고, 야간 같은 영구적 사유라면 아침까지 로그만 쌓인다. 초안이
+/// 되면 목록에 빨간 줄로 남고 사람이 보고 결정한다.
+/// 'sent' 만 빼고 받는다. recordCampaignSend 는 한 명에게도 닿지 못한 발송을
+/// 이미 'draft' 로 내려놓으므로, 그 뒤에 사유를 적으려면 'draft' 도 받아야
+/// 한다. 발송된 캠페인에는 쓰지 않는다 — 성공한 건에 실패 사유가 붙는다.
+async function failCampaignSend(id, reason) {
+  await pool.query(
+    `UPDATE tc_push_campaigns
+     SET status = 'draft', last_send_error = $2
+     WHERE id = $1 AND status <> 'sent'`,
+    [id, String(reason || '').slice(0, 500)],
+  );
+  return { success: true };
+}
+
+/// 'sending' 에서 멈춘 캠페인을 되살린다. 틱이 시작할 때 한 번 돈다.
+///
+/// 발송 도중에 프로세스가 죽으면 상태가 'sending' 에 남는다. 그 상태로는
+/// 보상 수령도 막혀 있고(수령은 'sent' 만 통과) 틱도 다시 집지 않는다.
+///
+/// 'scheduled' 로 자동 복구하지 않는 이유: 죽은 시점이 FCM 호출 전인지
+/// 후인지 알 수 없다. 후였다면 이미 받은 사람들에게 한 번 더 나간다. 푸시는
+/// 회수할 수 없으므로, 애매할 때는 사람에게 넘긴다.
+async function reviveStuckCampaigns(staleMinutes = 15) {
+  const r = await pool.query(
+    `UPDATE tc_push_campaigns
+     SET status = 'draft',
+         last_send_error = '발송 도중 서버가 내려갔습니다. 이미 일부에게 나갔을 수 있으니'
+           || ' 수신자 목록을 확인한 뒤 다시 보내세요.'
+     WHERE status = 'sending'
+       AND last_send_attempt_at < (NOW() AT TIME ZONE 'UTC')
+                                  - ($1 || ' minutes')::interval
+     RETURNING id`,
+    [String(parseInt(staleMinutes, 10) || 15)],
+  );
+  return r.rows.map((row) => row.id);
+}
+
+// ── 푸시 문구 템플릿 ─────────────────────────────────────────────────
+
+async function listPushTemplates() {
+  const r = await pool.query(
+    `SELECT * FROM tc_push_templates ORDER BY name ASC`);
+  return r.rows;
+}
+
+async function getPushTemplate(id) {
+  const r = await pool.query(
+    'SELECT * FROM tc_push_templates WHERE id = $1', [id]);
+  return r.rows[0] || null;
+}
+
+/// 이름이 겹치면 거부한다. 덮어쓰지 않는 이유는, 겹친 이름으로 저장하는
+/// 사람은 보통 새로 만들려던 것이고 기존 문구가 사라졌다는 사실은 그걸
+/// 쓰려는 다음 발송 때야 알게 되기 때문이다.
+async function createPushTemplate(data, actor = 'admin') {
+  try {
+    const r = await pool.query(
+      `INSERT INTO tc_push_templates (name, title, body, created_by)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [
+        String(data.name || '').trim().slice(0, 80),
+        String(data.title || '').slice(0, 200),
+        String(data.body || ''),
+        actor,
+      ],
+    );
+    return { success: true, id: r.rows[0].id };
+  } catch (err) {
+    // 23505 = unique_violation. 이름에 UNIQUE 가 걸려 있다.
+    if (err.code === '23505') {
+      return { success: false, message: '같은 이름의 템플릿이 이미 있습니다.' };
+    }
+    throw err;
+  }
+}
+
+async function updatePushTemplate(id, data) {
+  try {
+    const r = await pool.query(
+      `UPDATE tc_push_templates
+       SET name = $2, title = $3, body = $4,
+           updated_at = (NOW() AT TIME ZONE 'UTC')
+       WHERE id = $1 RETURNING id`,
+      [
+        id,
+        String(data.name || '').trim().slice(0, 80),
+        String(data.title || '').slice(0, 200),
+        String(data.body || ''),
+      ],
+    );
+    return { success: r.rows.length > 0 };
+  } catch (err) {
+    // 이름을 다른 템플릿과 같게 바꾸려 한 경우. 저장과 같은 사유로 거부한다.
+    if (err.code === '23505') {
+      return { success: false, message: '같은 이름의 템플릿이 이미 있습니다.' };
+    }
+    throw err;
+  }
+}
+
+async function deletePushTemplate(id) {
+  await pool.query('DELETE FROM tc_push_templates WHERE id = $1', [id]);
   return { success: true };
 }
 
@@ -12725,6 +12942,17 @@ module.exports = {
   listPushCampaigns,
   getPushCampaign,
   deletePushCampaign,
+  scheduleCampaign,
+  cancelCampaignSchedule,
+  getDueCampaigns,
+  claimCampaignForSend,
+  failCampaignSend,
+  reviveStuckCampaigns,
+  listPushTemplates,
+  getPushTemplate,
+  createPushTemplate,
+  updatePushTemplate,
+  deletePushTemplate,
   reserveCampaignRecipients,
   openCampaignForClaims,
   recordCampaignSend,

@@ -10,7 +10,10 @@ const {
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, deletePhotoRejection, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
-  reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients, deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
+  reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients,
+  scheduleCampaign, cancelCampaignSchedule, claimCampaignForSend, failCampaignSend,
+  listPushTemplates, getPushTemplate, createPushTemplate, updatePushTemplate, deletePushTemplate,
+  deleteUser, getDashboardStats, getDashboardActivityTopPlayers, getAdminRecentMatches, setChatBan, setAdminMemo, adminClearProfilePhoto, getRecentMatches, MATCH_HISTORY_MAX_DEPTH, adminAdjustGold, adminAdjustExp, setUserAdmin,
   getBankDeposits, countPendingBankDepositsAll, approveBankDeposit, rejectBankDeposit,
   getAttendanceDashboardStats, listAttendanceLog, getAttendanceBreakdown, getAttendanceForNickname,
   getDetailedAdminStats, getAdminNavBadges,
@@ -34,6 +37,14 @@ const {
   withMarketingOptOut,
   adTitleLooksLabelled,
 } = require('./marketing_rules');
+// 발송 절차는 예약 틱과 공유한다 — push_campaign_send.js 의 머리말 참고.
+const { sendCampaign } = require('./push_campaign_send');
+const {
+  PUSH_TEMPLATE_VARS,
+  previewPushTemplate,
+  templateTextError,
+  templateVarsUsed,
+} = require('./push_template');
 const minioClient = require('./storage/minioClient');
 const {
   TITLE_COLORS: CUSTOM_TITLE_HEX,
@@ -5118,10 +5129,25 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const notice = url.searchParams.get('msg');
     const failed = url.searchParams.get('r') === 'fail';
     const items = await getAllShopItemsAdmin();
+    const templates = await listPushTemplates();
 
-    const statusBadge = (c) => c.status === 'sent'
-      ? '<span class="badge" style="background:#e8f5e9;color:#2e7d32">발송됨</span>'
-      : '<span class="badge" style="background:#f5f5f5;color:#777">작성 중</span>';
+    const statusBadge = (c) => {
+      if (c.status === 'sent') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32">발송됨</span>';
+      // 'sending' 은 지금 나가는 중이라는 뜻이다. 몇 초면 지나가지만, 그
+      // 사이에 발송 버튼이 다시 보이면 전원에게 두 번 나간다.
+      if (c.status === 'sending') return '<span class="badge" style="background:#e3f2fd;color:#1565c0">발송 중…</span>';
+      if (c.status === 'scheduled') {
+        return '<span class="badge" style="background:#fff3e0;color:#ef6c00">예약</span>'
+          + `<div style="font-size:11px;color:#ef6c00;margin-top:3px;white-space:nowrap">${formatDate(c.scheduled_at)}</div>`;
+      }
+      // 초안인데 예약 시각이 남아 있다 — 예약이 실패해 내려왔거나, 손으로
+      // 먼저 보내려다 거부된 경우다. 그 시각은 이제 아무 일도 하지 않으므로
+      // (틱은 'scheduled' 만 집는다) 지나갔다고 분명히 적어둔다. 안 적으면
+      // 가만히 두면 알아서 나가는 줄 알고 기다리게 된다.
+      return '<span class="badge" style="background:#f5f5f5;color:#777">작성 중</span>'
+        + (c.scheduled_at ? `<div style="font-size:11px;color:#999;margin-top:3px;white-space:nowrap">
+            ${formatDate(c.scheduled_at)} 예약이었음<br>(지금은 예약 아님)</div>` : '');
+    };
 
     const rows = campaigns.map((c) => {
       const reward = c.reward_gold > 0
@@ -5138,6 +5164,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <td>
           <div style="font-weight:700">${escapeHtml(c.title)}</div>
           <div style="font-size:12px;color:#777">${escapeHtml((c.body || '').slice(0, 60))}</div>
+          ${templateVarsUsed(`${c.title} ${c.body}`).length
+            ? '<div style="font-size:11px;color:#6a5acd;margin-top:3px">받는 사람마다 다르게 나갑니다</div>' : ''}
+          ${c.last_send_error ? `<div style="font-size:11.5px;color:#c62828;margin-top:4px;line-height:1.5">
+            ⚠ ${escapeHtml(c.last_send_error)}</div>` : ''}
         </td>
         <td>${reward}</td>
         <td>${statusBadge(c)}</td>
@@ -5146,9 +5176,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <td style="text-align:right;font-weight:700;color:#2e7d32">${formatNumber(c.claimed)}<div style="font-size:11px;color:#999;font-weight:400">${rate(c.claimed)}</div></td>
         <td style="white-space:nowrap">
           <a class="btn btn-secondary" style="font-size:12px;padding:5px 10px" href="/tc-backstage/campaigns/${c.id}">수신자</a>
-          ${c.status !== 'sent' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/send" style="display:inline"
-                onsubmit="return confirm('${escapeHtml(c.title)}\n\n지금 ${formatNumber(audience.length)}명에게 발송합니다. 되돌릴 수 없습니다.')">
-            <button class="btn btn-primary" style="font-size:12px;padding:5px 10px">발송</button>
+          ${c.status === 'scheduled' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/unschedule" style="display:inline"
+                onsubmit="return confirm('${jsEscape(c.title)}\n\n예약을 취소합니다. 캠페인은 작성 중으로 남으니 나중에 손으로 보낼 수 있습니다.')">
+            <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px">예약 취소</button>
+          </form>` : ''}
+          ${c.status === 'draft' || c.status === 'scheduled' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/send" style="display:inline"
+                onsubmit="return confirm('${jsEscape(c.title)}\n\n${c.status === 'scheduled'
+                  ? `예약(${jsEscape(formatDate(c.scheduled_at))})을 기다리지 않고 지금 `
+                  : '지금 '}${formatNumber(audience.length)}명에게 발송합니다. 되돌릴 수 없습니다.')">
+            <button class="btn btn-primary" style="font-size:12px;padding:5px 10px">${c.status === 'scheduled' ? '지금 보내기' : '발송'}</button>
           </form>` : ''}
         </td>
       </tr>`;
@@ -5199,8 +5235,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <h3>새 캠페인</h3>
         <form method="POST" action="/tc-backstage/campaigns" style="display:grid;gap:10px;max-width:620px">
           <div>
+            <label>템플릿에서 불러오기</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="tplPick" style="padding:9px 12px;border:1px solid var(--line);border-radius:9px;min-width:220px">
+                <option value="">직접 입력</option>
+                ${templates.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+              </select>
+              <a class="btn btn-secondary" href="/tc-backstage/campaigns/templates" style="font-size:13px">템플릿 관리</a>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              고르면 아래 제목·내용이 채워집니다. 템플릿은 문구만 담습니다 — 보상과 대상은 매번 직접 정하세요.
+            </div>
+          </div>
+          <div>
             <label>제목</label>
-            <input type="text" name="title" required maxlength="200" placeholder="(광고) 주말 이벤트 안내"
+            <input type="text" name="title" id="campTitle" required maxlength="200" placeholder="(광고) 주말 이벤트 안내"
               style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px">
             <div style="font-size:12px;color:var(--muted);margin-top:4px">
               <b>(광고)</b> 로 시작해야 저장됩니다 — 정보통신망법 §50 ④.
@@ -5208,11 +5257,30 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           </div>
           <div>
             <label>내용</label>
-            <textarea name="body" required rows="3" placeholder="지금 눌러서 들어오면 50골드!"
+            <textarea name="body" id="campBody" required rows="3" placeholder="{nickname}님, 지금 눌러서 들어오면 50골드!"
               style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px"></textarea>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">
               발송할 때 아래 한 줄이 본문 끝에 자동으로 붙습니다 — 직접 쓰지 마세요.<br>
               <span class="mono" style="color:#5A4038">${escapeHtml(MARKETING_OPT_OUT_LINE.trim())}</span>
+            </div>
+          </div>
+          <div>
+            <label>받는 사람 값 끼워 넣기</label>
+            <div style="font-size:12.5px;color:var(--muted);line-height:1.7">
+              ${PUSH_TEMPLATE_VARS.map((v) => `<span class="mono" style="color:#5A4038">{${v.name}}</span>
+                — ${escapeHtml(v.label)}(${escapeHtml(v.help)})`).join('<br>')}<br>
+              제목과 내용 양쪽에 쓸 수 있습니다. 적어둔 변수 이름이 틀리면 저장되지 않습니다 —
+              중괄호째로 발송되는 사고를 막기 위해서입니다.
+            </div>
+          </div>
+          <div>
+            <label>미리보기</label>
+            <div id="campPreview" style="border:1px dashed var(--line);border-radius:9px;padding:11px 13px;
+                 background:var(--surface-strong);font-size:13.5px;line-height:1.6;white-space:pre-wrap;color:var(--muted)">
+              제목과 내용을 입력하면 여기에 보입니다.
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              닉네임 자리에는 예시 <b>${escapeHtml(PUSH_TEMPLATE_VARS[0].sample)}</b> 이 들어갑니다. 수신거부 안내도 붙은 상태입니다.
             </div>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -5254,8 +5322,59 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
               <option value="ios">iOS</option>
             </select>
           </div>
+          <div>
+            <label>예약 발송 (KST)</label>
+            <input type="datetime-local" name="scheduled_at"
+              style="padding:9px 12px;border:1px solid var(--line);border-radius:9px">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">
+              비우면 저장만 하고, 아래 목록에서 손으로 눌러 보냅니다. 채우면 그 시각이 지난 뒤
+              <b>1분 안</b>에 자동으로 나갑니다.<br>
+              <b>21~08시(KST)는 입력할 수 없습니다</b> — 야간 광고성 푸시는 별도 동의가 필요해서
+              받지 않기로 했고, 저장을 막지 않으면 그 시각에 조용히 실패하는 예약이 생깁니다.
+            </div>
+          </div>
           <div><button class="btn btn-primary">저장</button></div>
         </form>
+        <script>
+        (function(){
+          // 템플릿 원문과 치환 규칙을 서버와 같은 값으로 들고 있는다. 미리보기가
+          // 실제 발송과 다르면 미리보기를 믿지 않게 되고, 그러면 없는 것과 같다.
+          var TPL = ${JSON.stringify(templates.map((t) => ({ id: String(t.id), title: t.title, body: t.body }))).replace(/</g, '\\u003c')};
+          var SAMPLE = ${JSON.stringify(PUSH_TEMPLATE_VARS[0].sample).replace(/</g, '\\u003c')};
+          var OPT_OUT = ${JSON.stringify(MARKETING_OPT_OUT_LINE).replace(/</g, '\\u003c')};
+          var pick = document.getElementById('tplPick');
+          var title = document.getElementById('campTitle');
+          var body = document.getElementById('campBody');
+          var out = document.getElementById('campPreview');
+          // push_template.js 의 PLACEHOLDER_RE 와 같은 모양 — {nickname} 과
+          // {{nickname}} 을 모두 받는다.
+          function render(s){ return String(s||'').replace(/\\{\\{?\\s*nickname\\s*\\}\\}?/g, SAMPLE); }
+          function draw(){
+            var t = render(title.value).trim();
+            var b = render(body.value);
+            if (!t && !b.trim()) {
+              out.textContent = '제목과 내용을 입력하면 여기에 보입니다.';
+              out.style.color = 'var(--muted)';
+              return;
+            }
+            // 수신거부 안내는 발송할 때 붙으므로 미리보기에도 붙인다. 이미
+            // 적어둔 사람에게 두 번 붙지 않게 하는 판정도 서버와 같다.
+            if (b.indexOf('수신거부') === -1) b = b.replace(/\\s+$/, '') + OPT_OUT;
+            out.textContent = (t ? t + '\\n' : '') + b;
+            out.style.color = 'var(--text)';
+          }
+          pick.addEventListener('change', function(){
+            if (!pick.value) return;
+            for (var i = 0; i < TPL.length; i++) {
+              if (TPL[i].id === pick.value) { title.value = TPL[i].title; body.value = TPL[i].body; break; }
+            }
+            draw();
+          });
+          title.addEventListener('input', draw);
+          body.addEventListener('input', draw);
+          draw();
+        })();
+        </script>
       </div>
       <div class="card">
         <h3>캠페인 <span style="font-size:13px;color:#888;font-weight:400">${campaigns.length}개</span></h3>
@@ -5294,6 +5413,34 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('광고성 정보라서 제목이 "(광고)" 로 시작해야 합니다. 정보통신망법 §50 ④.'));
     }
+    // 오타난 변수는 저장에서 막는다. 렌더는 모르는 변수를 그냥 통과시키므로,
+    // {nickanme} 는 중괄호째로 수천 명에게 나간 뒤에야 드러난다.
+    const varError = templateTextError(title) || templateTextError(text);
+    if (varError) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg=' + encodeURIComponent(varError));
+    }
+    // 예약 시각. 입력은 KST 벽시계이고, 변환은 이 프로세스의 타임존에
+    // 의존하지 않도록 여기서 한다.
+    const scheduledAt = parseKstDateTimeInput(body.scheduled_at);
+    if (body.scheduled_at && !scheduledAt) {
+      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('예약 시각을 읽을 수 없습니다. 날짜와 시간을 다시 골라 주세요.'));
+    }
+    if (scheduledAt) {
+      // 지난 시각으로 예약하면 다음 틱에서 바로 나간다. 그게 의도일 수도
+      // 있지만 보통은 날짜를 잘못 고른 것이고, 광고 푸시는 "어 왜 벌써
+      // 나갔지"를 되돌릴 방법이 없다.
+      if (new Date(scheduledAt).getTime() <= Date.now()) {
+        return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+          + encodeURIComponent('예약 시각이 이미 지났습니다. 지금 보내려면 예약을 비우고 저장한 뒤 발송을 누르세요.'));
+      }
+      // 야간 예약은 저장 자체를 막는다. 받아두면 그 시각에 조용히 실패하고,
+      // 실패를 알아차리는 건 아침에 목록을 볼 때다.
+      if (isKstNight(new Date(scheduledAt))) {
+        return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+          + encodeURIComponent('21~08시(KST)에는 광고성 푸시를 보내지 않습니다. 08~21시 사이로 예약해 주세요.'));
+      }
+    }
     await createPushCampaign({
       title,
       body: text,
@@ -5304,8 +5451,146 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       // depend on the timezone this process happens to run in.
       claimDeadline: parseKstDateTimeInput(body.claim_deadline),
       targetFilter: body.target_filter || 'all',
+      scheduledAt,
     }, sessionInfo.session.username || 'admin');
-    return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent('저장했습니다.'));
+    return redirect(res, '/tc-backstage/campaigns?msg=' + encodeURIComponent(
+      scheduledAt
+        ? `예약했습니다. ${formatDate(scheduledAt)} 에 자동으로 나갑니다.`
+        : '저장했습니다.'));
+  }
+
+  const campaignUnscheduleMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)\/unschedule$/);
+  if (campaignUnscheduleMatch && method === 'POST') {
+    const done = await cancelCampaignSchedule(parseInt(campaignUnscheduleMatch[1], 10));
+    return done.success
+      ? redirect(res, '/tc-backstage/campaigns?msg='
+        + encodeURIComponent('예약을 취소했습니다. 캠페인은 작성 중으로 남아 있습니다.'))
+      // 예약이 아니었다는 건 보통 그 사이에 발송 시각이 지나 이미 나갔다는
+      // 뜻이다. "취소했습니다"로 답하면 안 나간 줄로 알게 된다.
+      : redirect(res, '/tc-backstage/campaigns?r=fail&msg='
+        + encodeURIComponent('취소하지 못했습니다. 그 사이에 발송됐는지 목록에서 확인해 주세요.'));
+  }
+
+  // ── 푸시 문구 템플릿 ─────────────────────────────────────────────────
+  //
+  // 문구만 담는다. 보상·대상·마감을 같이 넣으면 "문구만 가져오려다 골드 500 도
+  // 따라온" 사고가 나는데, 그건 발송 뒤에야 드러난다. 저장되는 문구는 치환 전
+  // 원문이라 {nickname} 이 그대로 남아 있고, 치환은 발송 순간에 1인분씩 된다.
+  if (pathname === '/tc-backstage/campaigns/templates' && method === 'GET') {
+    const templates = await listPushTemplates();
+    const notice = url.searchParams.get('msg');
+    const failed = url.searchParams.get('r') === 'fail';
+    const editId = parseInt(url.searchParams.get('edit'), 10) || 0;
+    const editing = editId ? templates.find((t) => t.id === editId) : null;
+
+    const field = (label, inner, hint = '') => `<div>
+      <label>${label}</label>${inner}
+      ${hint ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">${hint}</div>` : ''}
+    </div>`;
+    const INPUT = 'width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px';
+
+    const rows = templates.map((t) => `<tr>
+      <td style="font-weight:700">${escapeHtml(t.name)}</td>
+      <td>
+        <div style="font-weight:700">${escapeHtml(t.title)}</div>
+        <div style="font-size:12px;color:#777;white-space:pre-wrap">${escapeHtml(t.body)}</div>
+      </td>
+      <td style="font-size:12px;color:#888;white-space:nowrap">
+        ${templateVarsUsed(`${t.title} ${t.body}`).map((v) => `<span class="mono">{${v}}</span>`).join(' ') || '<span style="color:#bbb">없음</span>'}
+      </td>
+      <td style="font-size:12px;color:#888;white-space:nowrap">${formatDate(t.updated_at)}</td>
+      <td style="white-space:nowrap">
+        <a class="btn btn-secondary" style="font-size:12px;padding:5px 10px"
+           href="/tc-backstage/campaigns/templates?edit=${t.id}">수정</a>
+        <form method="POST" action="/tc-backstage/campaigns/templates/${t.id}/delete" style="display:inline"
+              onsubmit="return confirm('${jsEscape(t.name)}\n\n템플릿을 지웁니다. 이미 만들어 둔 캠페인의 문구는 그대로 남습니다.')">
+          <button class="btn btn-danger" style="font-size:12px;padding:5px 10px">삭제</button>
+        </form>
+      </td>
+    </tr>`).join('');
+
+    const content = `
+      ${pageHeader('푸시 템플릿',
+        '마케팅 푸시에서 불러 쓰는 문구입니다. 자주 쓰는 안내를 한 번 적어두고 캠페인마다 불러옵니다.'
+        + '<br>문구만 담습니다 — 보상·대상·수령 마감은 캠페인을 만들 때마다 직접 정합니다.')}
+      ${notice ? `<div class="card" style="border-left:4px solid ${failed ? '#c62828' : '#2e7d32'};color:${failed ? '#c62828' : '#2e7d32'};font-weight:700">${escapeHtml(notice)}</div>` : ''}
+      <div class="card"><a class="btn btn-secondary" href="/tc-backstage/campaigns">← 마케팅 푸시로</a></div>
+      <div class="card">
+        <h3>${editing ? `템플릿 수정 · ${escapeHtml(editing.name)}` : '새 템플릿'}</h3>
+        <form method="POST" action="/tc-backstage/campaigns/templates${editing ? `/${editing.id}` : ''}"
+              style="display:grid;gap:10px;max-width:620px">
+          ${field('이름', `<input type="text" name="name" required maxlength="80"
+            value="${editing ? escapeHtml(editing.name) : ''}"
+            placeholder="주말 이벤트 안내" style="${INPUT}">`,
+            '목록과 캠페인 드롭다운에 보이는 이름입니다. 겹치면 저장되지 않습니다.')}
+          ${field('제목', `<input type="text" name="title" required maxlength="200"
+            value="${editing ? escapeHtml(editing.title) : ''}"
+            placeholder="(광고) {nickname}님, 주말 이벤트 열렸어요" style="${INPUT}">`,
+            '<b>(광고)</b> 로 시작해야 저장됩니다 — 정보통신망법 §50 ④. 캠페인에서도 같은 검사를 한 번 더 합니다.')}
+          ${field('내용', `<textarea name="body" required rows="3"
+            placeholder="지금 눌러서 들어오면 50골드!" style="${INPUT}">${editing ? escapeHtml(editing.body) : ''}</textarea>`,
+            '수신거부 안내는 발송할 때 자동으로 붙습니다 — 여기 쓰지 마세요.<br>'
+            + `<span class="mono" style="color:#5A4038">${escapeHtml(MARKETING_OPT_OUT_LINE.trim())}</span>`)}
+          ${field('쓸 수 있는 변수',
+            `<div style="font-size:12.5px;color:var(--muted);line-height:1.7">
+              ${PUSH_TEMPLATE_VARS.map((v) => `<span class="mono" style="color:#5A4038">{${v.name}}</span>
+                — ${escapeHtml(v.label)}(${escapeHtml(v.help)})`).join('<br>')}
+            </div>`,
+            '이름이 틀린 변수는 저장되지 않습니다. 렌더는 모르는 변수를 그냥 통과시키므로, 막지 않으면 중괄호째로 발송됩니다.')}
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary">${editing ? '수정' : '저장'}</button>
+            ${editing ? '<a class="btn btn-secondary" href="/tc-backstage/campaigns/templates">취소</a>' : ''}
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>템플릿 <span style="font-size:13px;color:#888;font-weight:400">${templates.length}개</span></h3>
+        ${templates.length ? `<div class="table-wrap"><table>
+          <tr><th>이름</th><th>문구</th><th>변수</th><th>수정</th><th></th></tr>${rows}
+        </table></div>` : '<div class="empty">아직 템플릿이 없습니다</div>'}
+      </div>
+    `;
+    return html(res, layout('푸시 템플릿', content, 'campaign-templates'));
+  }
+
+  const templateSaveMatch = pathname.match(/^\/tc-backstage\/campaigns\/templates(?:\/(\d+))?$/);
+  if (templateSaveMatch && method === 'POST') {
+    const id = templateSaveMatch[1] ? parseInt(templateSaveMatch[1], 10) : 0;
+    const body = await parseBody(req);
+    const name = (body.name || '').trim();
+    const title = (body.title || '').trim();
+    const text = (body.body || '').trim();
+    const back = (msg, ok = false) => redirect(res,
+      `/tc-backstage/campaigns/templates${id && !ok ? `?edit=${id}&` : '?'}`
+      + (ok ? '' : 'r=fail&') + 'msg=' + encodeURIComponent(msg));
+
+    if (!name || !title || !text) return back('이름·제목·내용을 모두 입력해 주세요.');
+    // 캠페인 쪽에서도 검사하지만 여기서도 막는다. 템플릿은 "그대로 불러
+    // 보내는" 용도라서, 통과시켜 두면 (광고) 없는 제목이 캠페인 폼을 거쳐
+    // 그대로 나가기를 기다리고 앉아 있는다.
+    if (!adTitleLooksLabelled(title)) {
+      return back('광고성 정보라서 제목이 "(광고)" 로 시작해야 합니다. 정보통신망법 §50 ④.');
+    }
+    const varError = templateTextError(title) || templateTextError(text);
+    if (varError) return back(varError);
+
+    const saved = id
+      ? await updatePushTemplate(id, { name, title, body: text })
+      : await createPushTemplate({ name, title, body: text },
+        sessionInfo.session.username || 'admin');
+    if (!saved.success) {
+      return back(saved.message || '저장하지 못했습니다. 템플릿이 그 사이에 지워졌는지 확인해 주세요.');
+    }
+    return back(id ? '수정했습니다.' : '저장했습니다.', true);
+  }
+
+  const templateDeleteMatch = pathname.match(/^\/tc-backstage\/campaigns\/templates\/(\d+)\/delete$/);
+  if (templateDeleteMatch && method === 'POST') {
+    await deletePushTemplate(parseInt(templateDeleteMatch[1], 10));
+    // 캠페인은 저장할 때 문구를 자기 행에 복사해 들고 간다. 그래서 템플릿을
+    // 지워도 이미 만들어 둔 캠페인이나 발송된 기록은 멀쩡하다.
+    return redirect(res, '/tc-backstage/campaigns/templates?msg='
+      + encodeURIComponent('템플릿을 지웠습니다. 이미 만들어 둔 캠페인의 문구는 그대로입니다.'));
   }
 
   if (pathname === '/tc-backstage/campaigns/probe-tokens' && method === 'POST') {
@@ -5332,66 +5617,22 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
         + encodeURIComponent('캠페인을 찾을 수 없습니다.'));
     }
-    if (camp.status === 'sent') {
-      // Sending twice would pay nobody twice (the recipient row is unique) but
-      // would notify everyone again and reset the counters, so it is refused.
+    // 절차는 push_campaign_send.js 에 있다 — 예약 발송 틱과 같은 코드여야
+    // 야간 금지나 수신자 선기록이 한쪽에만 적용되는 일이 없다.
+    const result = await sendCampaign(camp, {
+      getMarketingAudience, reserveCampaignRecipients, sendBroadcastPush,
+      markFcmTokensInvalid, openCampaignForClaims, recordCampaignSend, isKstNight,
+      claimCampaignForSend, failCampaignSend,
+    });
+    if (!result.sent) {
       return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
-        + encodeURIComponent('이미 발송한 캠페인입니다.'));
+        + encodeURIComponent(result.message));
     }
-    if (isKstNight()) {
-      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
-        + encodeURIComponent('야간(21~08시 KST)에는 광고성 푸시를 보내지 않습니다.'));
-    }
-    const audience = await getMarketingAudience(camp.target_filter || 'all');
-    if (audience.length === 0) {
-      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
-        + encodeURIComponent('수신동의한 대상이 없습니다.'));
-    }
-    // The audience goes on record BEFORE the push. A notification cannot be
-    // recalled; a database write can be retried. In the other order, a failed
-    // write leaves everyone holding a notification the server will refuse to
-    // pay out on.
-    const reserved = await reserveCampaignRecipients(
-      id, audience.map((u) => u.nickname),
-    );
-    if (!reserved.success) {
-      return redirect(res, '/tc-backstage/campaigns?r=fail&msg='
-        + encodeURIComponent(
-          '수신자 기록에 실패해 발송하지 않았습니다. 아무에게도 안 갔으니 다시 시도하세요.'));
-    }
-
-    const push = await sendBroadcastPush(
-      audience.map((u) => ({ id: u.id, fcm_token: u.fcm_token })),
-      camp.title,
-      withMarketingOptOut(camp.body),
-      { type: 'campaign', campaignId: id },
-    );
-    await markFcmTokensInvalid(push.invalidUserIds || []);
-    // Open it the moment anything was delivered, before the per-recipient
-    // tally. That tally walks the whole audience and is the part that can die
-    // halfway; the claim gate reads this one flag, so it must be set by the
-    // smallest, most reliable write available.
-    let opened = { success: true };
-    if (push.successCount > 0) {
-      opened = await openCampaignForClaims(id);
-    }
-    const byId = new Map(audience.map((u) => [u.id, u.nickname]));
-    const recorded = await recordCampaignSend(id, (push.results || []).map((r) => ({
-      nickname: byId.get(r.userId),
-      success: r.success,
-    })).filter((r) => r.nickname));
-    // Two different kinds of "partly wrong" to report honestly. Failing to
-    // open the campaign means nobody can claim; failing the tally only means
-    // the numbers on this page are off.
-    const problem = !opened.success
-      ? ' — 다만 캠페인을 여는 데 실패해서 지금은 보상 수령이 막혀 있습니다. 다시 시도하세요.'
-      : !recorded.success
-      ? ' — 다만 발송 결과 집계에 실패했습니다. 보상 수령에는 영향이 없고, 통계만 부정확할 수 있습니다.'
-      : '';
     return redirect(res, '/tc-backstage/campaigns?r='
-      + (problem ? 'fail' : 'ok') + '&msg=' + encodeURIComponent(
-      `${formatNumber(push.successCount)}명에게 보냈습니다.`
-      + (push.failCount ? ` (실패 ${formatNumber(push.failCount)})` : '') + problem));
+      + (result.problem ? 'fail' : 'ok') + '&msg=' + encodeURIComponent(
+      `${formatNumber(result.successCount)}명에게 보냈습니다.`
+      + (result.failCount ? ` (실패 ${formatNumber(result.failCount)})` : '')
+      + result.problem));
   }
 
   const campaignDetailMatch = pathname.match(/^\/tc-backstage\/campaigns\/(\d+)$/);

@@ -1996,7 +1996,10 @@ async function loginUser(username, password) {
     );
     // DAU·리텐션이 읽는 일별 기록. 로그인에서도 적는 이유는, 끊을 때만
     // 적으면 프로세스 재시작으로 닫히지 않은 세션이 통째로 빠지기 때문이다.
-    await recordDailyActive(user.nickname);
+    //
+    // 쥐고 있는 client 를 넘긴다 — pool 로 부르면 이 함수가 커넥션을 하나
+    // 더 요구하고, 그 대기에는 시간 제한이 없다.
+    await recordDailyActive(user.nickname, { db: client });
 
     return {
       success: true,
@@ -2512,7 +2515,10 @@ async function touchLastSeen(nickname) {
     );
     // 같은 자리에서 "그날 들어왔다"도 적는다. 통계가 읽는 건 이쪽이다 —
     // last_seen_at 은 덮어쓰는 칸이라 어제치가 남지 않는다.
-    await recordDailyActive(nickname);
+    //
+    // 세션은 세지 않는다. 로그인에서 이미 셌고, 여기서 또 올리면 한 번
+    // 들어온 사람이 2회로 남는다.
+    await recordDailyActive(nickname, { newSession: false });
   } catch (err) {
     // A missed stamp costs a slightly stale line in a friends list. Never
     // worth failing a disconnect over.
@@ -2522,19 +2528,28 @@ async function touchLastSeen(nickname) {
 
 /// 오늘 이 사람이 들어왔다고 적는다. 접속할 때와 끊을 때 모두 부른다.
 ///
-/// 같은 날 여러 번 불려도 한 줄이다(PK 가 nickname+날짜). sessions 는
-/// 올라가고, 그 시각의 KST 시간대 비트가 켜진다.
+/// 같은 날 여러 번 불려도 한 줄이다(PK 가 nickname+날짜). 그 시각의 KST
+/// 시간대 비트가 켜지고, 세션 수는 [newSession] 일 때만 올라간다.
 ///
 /// 접속과 종료 양쪽에서 부르는 이유: 접속만 보면 프로세스가 재시작되며
 /// 끊긴 세션이 빠지고, 종료만 보면 깔끔하게 닫히지 않은 세션이 빠진다.
-/// 어느 쪽이든 그날 들어온 사실은 남아야 한다.
+/// 어느 쪽이든 그날 들어온 사실은 남아야 한다. 대신 세션은 한 번만 센다 —
+/// 양쪽에서 올리면 한 번 들어온 사람이 2회로 집계되고, 통계 화면은 그
+/// 값을 그대로 더해 보여준다.
+///
+/// [db] 는 호출하는 쪽이 이미 쥐고 있는 client 를 넘기기 위한 것이다.
+/// pool 로 부르면 트랜잭션 안에서 커넥션을 하나 더 요구하게 된다.
+/// loginUser 는 client 를 쥔 채 bcrypt 까지 기다리므로, 동시 로그인이 풀
+/// 크기만큼 쌓이면 전원이 다음 커넥션을 영원히 기다린다(이 풀에는
+/// connectionTimeoutMillis 가 없다) — 프로세스가 DB 질의를 아예 못 하게
+/// 된다. 이 모듈의 다른 함수들이 client 를 받는 이유와 같다.
 ///
 /// 실패해도 조용히 넘어간다. 통계 한 줄 때문에 로그인이나 연결 종료를
 /// 실패시킬 이유가 없다.
-async function recordDailyActive(nickname) {
+async function recordDailyActive(nickname, { db = pool, newSession = true } = {}) {
   if (!nickname) return { success: false };
   try {
-    await pool.query(
+    await db.query(
       `INSERT INTO tc_daily_active (nickname, kst_day, sessions, hours_mask)
        VALUES (
          $1,
@@ -2545,12 +2560,14 @@ async function recordDailyActive(nickname) {
          (1 << EXTRACT(HOUR FROM timezone('Asia/Seoul', NOW()))::int)
        )
        ON CONFLICT (nickname, kst_day) DO UPDATE
-         SET sessions = tc_daily_active.sessions + 1,
+         SET sessions = tc_daily_active.sessions
+               + CASE WHEN $2 THEN 1 ELSE 0 END,
              -- OR 로 켠다. 같은 시간대에 두 번 들어와도 비트는 하나다.
+             -- 끊을 때도 켜므로, 시간을 넘긴 긴 세션은 양쪽 시간대가 남는다.
              hours_mask = tc_daily_active.hours_mask
                | (1 << EXTRACT(HOUR FROM timezone('Asia/Seoul', NOW()))::int),
              last_seen_at = (NOW() AT TIME ZONE 'UTC')`,
-      [nickname],
+      [nickname, newSession !== false],
     );
     return { success: true };
   } catch (err) {
@@ -8616,37 +8633,57 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
 ///
 /// 봇은 tc_users 조인에서 걸러진다. 봇 닉네임은 계정이 아니므로 조인에
 /// 실패하고, 탈퇴한 계정도 같은 자리에서 빠진다.
-const ACTIVITY_DAYS_SQL = `
+///
+/// [since] 는 하한선을 넣을 SQL 조각(예: `$1::date`). 하한선을 UNION
+/// 안쪽 각 가지에 박는 게 중요하다. 밖에서 걸러도 결과는 같지만, 그러면
+/// 매번 모든 역사를 읽어 합친 뒤에 버린다 — 비용이 "보고 있는 기간"이
+/// 아니라 "쌓인 전체 이력"에 비례하게 되고, 그건 시간이 지나면 저절로
+/// 느려진다는 뜻이다. 30일을 보는 화면이 1년 뒤에 두 배 느려질 이유는 없다.
+///
+/// 타임스탬프 쪽 가지는 하한선에서 하루를 뺀다. created_at 은 UTC 이고
+/// 자르는 기준은 KST 날짜라서, 경계선 그대로 자르면 KST 로 그 날에 속하는
+/// 이른 아침 기록(= UTC 로는 전날)이 떨어져 나간다. 그렇게 더 들어온
+/// 하루치는 쓰는 쪽의 kst_day 조건에서 다시 걸러진다.
+const activityDaysSql = (since) => `
   SELECT nickname, kst_day FROM tc_daily_active
+   WHERE kst_day >= ${since}
   UNION
   SELECT nickname, DATE(timezone('Asia/Seoul', created_at))
-    FROM tc_gold_history WHERE nickname IS NOT NULL
+    FROM tc_gold_history
+   WHERE nickname IS NOT NULL
+     AND created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
-  SELECT nickname, kst_day FROM tc_token_ledger WHERE nickname IS NOT NULL
+  SELECT nickname, kst_day FROM tc_token_ledger
+   WHERE nickname IS NOT NULL AND kst_day >= ${since}
   UNION
-  SELECT nickname, picked_day FROM tc_user_missions WHERE nickname IS NOT NULL
+  SELECT nickname, picked_day FROM tc_user_missions
+   WHERE nickname IS NOT NULL AND picked_day >= ${since}
   UNION
   SELECT v.p, DATE(timezone('Asia/Seoul', m.created_at))
     FROM tc_match_history m,
          LATERAL (VALUES (m.player_a1), (m.player_a2), (m.player_b1), (m.player_b2)) v(p)
    WHERE v.p IS NOT NULL
+     AND m.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
   SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
     FROM tc_sk_match_players p JOIN tc_sk_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+     AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
   SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
     FROM tc_ll_match_players p JOIN tc_ll_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+     AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
   SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
     FROM tc_mighty_match_players p JOIN tc_mighty_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+     AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
 `;
 
 /// 실계정만 남긴 활동 집합. 모든 쿼리가 이 CTE 로 시작한다.
-const ACTS_CTE = `
-  WITH raw_acts AS (${ACTIVITY_DAYS_SQL}),
+const actsCte = (since) => `
+  WITH raw_acts AS (${activityDaysSql(since)}),
   acts AS (
     SELECT r.nickname, r.kst_day
       FROM raw_acts r
@@ -8654,6 +8691,9 @@ const ACTS_CTE = `
      WHERE r.kst_day IS NOT NULL
   )
 `;
+
+/// 조회 기간의 시작일을 KST 날짜로. 활동 집합의 하한선으로 쓴다.
+const RANGE_START_DAY = "DATE(timezone('Asia/Seoul', $1::timestamptz))";
 
 /// 정확한 기록이 시작된 날. 이 날 이전은 어림값이다.
 ///
@@ -8677,7 +8717,7 @@ async function getDailyActiveSince() {
 async function getActiveUsersSeries(fromIso, toIso) {
   try {
     const r = await pool.query(
-      `${ACTS_CTE}
+      `${actsCte(RANGE_START_DAY)}
        SELECT a.kst_day,
               COUNT(DISTINCT a.nickname)::int AS dau,
               COUNT(DISTINCT a.nickname) FILTER (
@@ -8716,7 +8756,8 @@ async function getActiveUsersSeries(fromIso, toIso) {
 async function getActiveUserSummary(fromIso, toIso) {
   try {
     const r = await pool.query(
-      `${ACTS_CTE},
+      `${actsCte(`LEAST(${RANGE_START_DAY},
+            DATE(timezone('Asia/Seoul', $2::timestamptz)) - 30)`)},
        ref AS (SELECT DATE(timezone('Asia/Seoul', $2::timestamptz)) AS d)
        SELECT
          (SELECT COUNT(DISTINCT nickname)::int FROM acts, ref
@@ -8760,7 +8801,7 @@ async function getActiveUserSummary(fromIso, toIso) {
 async function getRetentionCohorts(fromIso, toIso) {
   try {
     const r = await pool.query(
-      `${ACTS_CTE},
+      `${actsCte(RANGE_START_DAY)},
        today AS (SELECT DATE(timezone('Asia/Seoul', NOW())) AS d),
        cohort AS (
          SELECT u.nickname, DATE(timezone('Asia/Seoul', u.created_at)) AS join_day
@@ -8801,8 +8842,15 @@ async function getRetentionCohorts(fromIso, toIso) {
       d1: row.d1_ready ? Number(row.d1 || 0) : null,
       d7: row.d7_ready ? Number(row.d7 || 0) : null,
       d30: row.d30_ready ? Number(row.d30 || 0) : null,
-      w1: row.d1_ready ? Number(row.w1 || 0) : null,
-      w2: row.d7_ready ? Number(row.w2 || 0) : null,
+      // 창(window) 칸은 창이 닫혀야 센다. w1 은 (가입, +7] 이므로 +7일이,
+      // w2 는 (+7, +30] 이므로 +30일이 지나야 완성된다.
+      //
+      // 여기에 d1_ready / d7_ready 를 쓰면 2일 된 코호트가 아직 5일 남은
+      // 창으로 "1주 안 재방문 20%" 를 표시한다. D+30 칸에서 막아둔 것과
+      // 똑같은 과소집계이고, 이쪽이 더 나쁘다 — 빈 칸이 아니라 그럴듯한
+      // 숫자가 나오므로 틀렸다는 것이 보이지 않는다.
+      w1: row.d7_ready ? Number(row.w1 || 0) : null,
+      w2: row.d30_ready ? Number(row.w2 || 0) : null,
     }));
   } catch (err) {
     console.error('getRetentionCohorts error:', err.message);
@@ -8818,7 +8866,7 @@ async function getRetentionCohorts(fromIso, toIso) {
 async function getVisitFrequency(fromIso, toIso) {
   try {
     const r = await pool.query(
-      `${ACTS_CTE},
+      `${actsCte(RANGE_START_DAY)},
        per_user AS (
          SELECT nickname, COUNT(DISTINCT kst_day)::int AS days
            FROM acts
@@ -8883,7 +8931,7 @@ async function getHourlyActivity(fromIso, toIso) {
 async function getStickyUsers(fromIso, toIso, limit = 20) {
   try {
     const r = await pool.query(
-      `${ACTS_CTE},
+      `${actsCte(RANGE_START_DAY)},
        per_user AS (
          SELECT nickname, COUNT(DISTINCT kst_day)::int AS days
            FROM acts
@@ -9906,8 +9954,9 @@ async function loginSocial(provider, providerUid) {
       [user.id]
     );
     // 소셜 로그인도 같은 기록을 남겨야 한다. 한쪽만 적으면 그 경로로
-    // 들어온 사람들이 DAU 에서 통째로 빠진다.
-    await recordDailyActive(user.nickname);
+    // 들어온 사람들이 DAU 에서 통째로 빠진다. client 를 넘기는 이유는
+    // loginUser 와 같다.
+    await recordDailyActive(user.nickname, { db: client });
     return {
       found: true,
       userId: user.id,

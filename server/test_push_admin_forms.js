@@ -134,6 +134,29 @@ async function main() {
       { name: '주말이벤트', title: `${AD} 다른제목`, body: '다른본문' }, cookie);
     check('같은 이름은 거부', refused(dup), said(dup));
 
+    console.log('\n[확인창이 실제로 설치되는가 — 되돌릴 수 없는 버튼들]');
+    // 템플릿 리터럴 안의 \n 은 출력에 생개행을 넣는다. 단일 인용 JS 문자열에
+    // 생개행이 들어가면 SyntaxError 라 onsubmit 이 설치되지 않고, 폼은 확인
+    // 없이 제출된다 — 발송 버튼 한 번에 전원에게 광고가 나간다. 렌더된 속성을
+    // 실제로 파싱해 봐야 잡히는 결함이라 여기서 본다.
+    for (const [name, path] of [['마케팅 푸시', CAM], ['푸시 템플릿', TPL]]) {
+      const page = await req('GET', path, null, cookie);
+      const attrs = [...page.body.matchAll(/onsubmit="([^"]*)"/g)].map((m) => m[1]);
+      check(`${name}: onsubmit 이 있다`, attrs.length > 0, String(attrs.length));
+      check(`${name}: 속성에 생개행이 없다`, !attrs.some((a) => /[\r\n]/.test(a)));
+      let broken = 0;
+      for (const raw of attrs) {
+        // 브라우저는 속성을 HTML 디코드한 뒤 JS 로 파싱한다.
+        const js = raw.replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+        try { new Function(js); } catch (e) {
+          broken++;
+          console.log(`      깨짐: ${JSON.stringify(js.slice(0, 80))} → ${e.message}`);
+        }
+      }
+      check(`${name}: ${attrs.length}개 모두 유효한 JS`, broken === 0, `${broken}개 깨짐`);
+    }
+
     console.log('\n[템플릿이 캠페인 폼에 실려 있다]');
     const campPage = await req('GET', CAM, null, cookie);
     check('드롭다운에 이름이 보인다', campPage.body.includes('주말이벤트'));

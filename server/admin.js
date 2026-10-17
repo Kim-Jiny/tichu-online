@@ -43,6 +43,7 @@ const {
 const { sendCampaign } = require('./push_campaign_send');
 const {
   PUSH_TEMPLATE_VARS,
+  NICKNAME_PREVIEW_RE_SOURCE,
   previewPushTemplate,
   templateTextError,
   templateVarsUsed,
@@ -2463,12 +2464,21 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     // 미션 차트는 미션 발행일과 토큰 거래일이 서로 다른 집합이라, 두 series 를
     // 날짜로 맞춰 한 축에 올린다. 안 맞추면 막대와 선이 서로 다른 날짜를
     // 가리키면서 "완료가 늘었는데 토큰은 줄었다"는 없는 사실이 보인다.
+    // 날짜를 키로 쓸 때는 YYYY-MM-DD 로 만든다.
+    //
+    // String(Date) 는 "Sat Oct 17 2026 …" 이고, 그걸 기본 비교자로 정렬하면
+    // 요일 약어순(Fri → Mon → Sat → Sun …)이 된다. 날짜가 뒤섞인 x축은
+    // "완료가 늘었는데 토큰은 줄었다"는 없는 사실을 보여준다.
+    //
+    // pg 는 DATE(oid 1082)에 파서 지정이 없어 Date 객체를 돌려준다 — 이
+    // 모듈이 바꿔 둔 파서는 TIMESTAMP(1114) 뿐이다.
+    const dayKey = (raw) => formatDateInput(new Date(raw));
     const msDays = [...new Set([
-      ...ms.daily.map((r) => String(r.kst_day)),
-      ...ms.tokenDaily.map((r) => String(r.kst_day)),
-    ])].sort();
-    const msDailyBy = new Map(ms.daily.map((r) => [String(r.kst_day), r]));
-    const msTokenBy = new Map(ms.tokenDaily.map((r) => [String(r.kst_day), r]));
+      ...ms.daily.map((r) => dayKey(r.kst_day)),
+      ...ms.tokenDaily.map((r) => dayKey(r.kst_day)),
+    ])].filter(Boolean).sort();
+    const msDailyBy = new Map(ms.daily.map((r) => [dayKey(r.kst_day), r]));
+    const msTokenBy = new Map(ms.tokenDaily.map((r) => [dayKey(r.kst_day), r]));
     const missionChartLabels = msDays.map((d) => kstDayLabel(d));
     const missionChartPicked = msDays.map((d) => parseInt((msDailyBy.get(d) || {}).picked, 10) || 0);
     const missionChartDone = msDays.map((d) => parseInt((msDailyBy.get(d) || {}).done, 10) || 0);
@@ -2776,16 +2786,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const GAME_LABELS = {
       tichu: '티츄', mighty: '마이티', skull_king: '스컬킹', love_letter: '러브레터',
     };
-    const missionName = (key) => {
-      // 라벨 모듈이 아는 이름을 먼저 쓴다. 모르면 키를 그대로 보여준다 —
-      // 빈 칸보다 키가 낫다. 어느 미션인지 찾아갈 수 있다.
-      try {
-        const label = missionLabels.missionTitle
-          ? missionLabels.missionTitle('ko', key) : null;
-        if (label) return label;
-      } catch (_) { /* 라벨이 없으면 키로 */ }
-      return key;
-    };
+    // 미션 관리·장부 화면과 같은 표를 쓴다. 다른 이름표를 쓰면 같은 미션이
+    // 화면마다 다르게 보이고, 어느 쪽이 맞는지 확인하러 가게 된다.
+    //
+    // 전에 있던 missionLabels.missionTitle 은 존재하지 않는 함수였다.
+    // try/catch 가 그 사실을 가려서, 이 표만 조용히 raw 키를 보여주고 있었다.
+    // 모르는 키는 키를 그대로 보여준다 — 빈 칸보다 낫고, 정의에는 있는데
+    // 라벨이 빠진 미션을 눈에 띄게 하는 역할도 한다.
+    const missionName = (key) => missionLabels.MISSION_LABEL_KO[key] || key;
 
     // 발행된 미션만 난이도 판정에 쓴다. 한 번도 안 뽑힌 미션은 완료율이
     // 없으므로 섞으면 표가 빈 줄로 가득해진다 — 대신 아래에 따로 세운다.
@@ -5873,11 +5881,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <td style="white-space:nowrap">
           <a class="btn btn-secondary" style="font-size:12px;padding:5px 10px" href="/tc-backstage/campaigns/${c.id}">수신자</a>
           ${c.status === 'scheduled' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/unschedule" style="display:inline"
-                onsubmit="return confirm('${jsEscape(c.title)}\n\n예약을 취소합니다. 캠페인은 작성 중으로 남으니 나중에 손으로 보낼 수 있습니다.')">
+                onsubmit="return confirm('${jsEscape(c.title)}\\n\\n예약을 취소합니다. 캠페인은 작성 중으로 남으니 나중에 손으로 보낼 수 있습니다.')">
             <button class="btn btn-secondary" style="font-size:12px;padding:5px 10px">예약 취소</button>
           </form>` : ''}
           ${c.status === 'draft' || c.status === 'scheduled' ? `<form method="POST" action="/tc-backstage/campaigns/${c.id}/send" style="display:inline"
-                onsubmit="return confirm('${jsEscape(c.title)}\n\n${c.status === 'scheduled'
+                onsubmit="return confirm('${jsEscape(c.title)}\\n\\n${c.status === 'scheduled'
                   ? `예약(${jsEscape(formatDate(c.scheduled_at))})을 기다리지 않고 지금 `
                   : '지금 '}${formatNumber(audience.length)}명에게 발송합니다. 되돌릴 수 없습니다.')">
             <button class="btn btn-primary" style="font-size:12px;padding:5px 10px">${c.status === 'scheduled' ? '지금 보내기' : '발송'}</button>
@@ -6042,9 +6050,11 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           var title = document.getElementById('campTitle');
           var body = document.getElementById('campBody');
           var out = document.getElementById('campPreview');
-          // push_template.js 의 PLACEHOLDER_RE 와 같은 모양 — {nickname} 과
-          // {{nickname}} 을 모두 받는다.
-          function render(s){ return String(s||'').replace(/\\{\\{?\\s*nickname\\s*\\}\\}?/g, SAMPLE); }
+          // 닉네임 자리를 집는 정규식. 서버(push_template.js)가 만들어 준
+          // 소스를 그대로 쓴다 — 미리보기가 실제 발송과 다르면 미리보기를
+          // 믿지 않게 되고, 그러면 없는 것과 같다.
+          var NICK_RE = new RegExp(${JSON.stringify(NICKNAME_PREVIEW_RE_SOURCE)}, 'g');
+          function render(s){ return String(s||'').replace(NICK_RE, SAMPLE); }
           function draw(){
             var t = render(title.value).trim();
             var b = render(body.value);
@@ -6199,7 +6209,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <a class="btn btn-secondary" style="font-size:12px;padding:5px 10px"
            href="/tc-backstage/campaigns/templates?edit=${t.id}">수정</a>
         <form method="POST" action="/tc-backstage/campaigns/templates/${t.id}/delete" style="display:inline"
-              onsubmit="return confirm('${jsEscape(t.name)}\n\n템플릿을 지웁니다. 이미 만들어 둔 캠페인의 문구는 그대로 남습니다.')">
+              onsubmit="return confirm('${jsEscape(t.name)}\\n\\n템플릿을 지웁니다. 이미 만들어 둔 캠페인의 문구는 그대로 남습니다.')">
           <button class="btn btn-danger" style="font-size:12px;padding:5px 10px">삭제</button>
         </form>
       </td>

@@ -58,6 +58,32 @@ eq('변수가 없어도 통과', templateTextError('주말 이벤트'), null);
 eq('렌더는 모르는 변수를 지우지 않는다',
   renderPushTemplate('{gold}원 보유', { nickname: '지니' }), '{gold}원 보유');
 
+console.log('\n[다른 표기 — 같은 변수를 가리키는 경우는 받는다]');
+// 화면은 "{nickname} — 받는 사람 닉네임" 으로 안내한다. 한글 설명만 보고
+// {닉네임} 이라 적는 건 틀린 이름이 아니라 같은 것의 다른 표기다. 막아도
+// 결국 맞는 표기를 찾아 다시 저장할 뿐이고, 그 사이 오타 발송 기회만 늘어난다.
+eq('{닉네임} 도 치환된다', renderPushTemplate('{닉네임}님', { nickname: '지니' }), '지니님');
+eq('{닉네임} 은 저장을 막지 않는다', templateTextError('{닉네임}님'), null);
+eq('{nickName} 대소문자 표기도 받는다', renderPushTemplate('{nickName}님', { nickname: '지니' }), '지니님');
+// 발송 경로가 "치환할 것이 있나"를 이 함수로 묻는다. 별칭을 못 보면
+// {닉네임} 만 쓴 캠페인이 치환 없이 multicast 로 나간다.
+eq('별칭도 사용된 변수로 집계된다', templateVarsUsed('{닉네임}님').join(','), 'nickname');
+
+console.log('\n[중괄호 안의 모든 것을 검사한다 — 여기가 실제로 뚫렸던 자리]');
+// 이름을 영문 식별자로만 찾으면 {닉네임2} 나 {nick-name} 같은 것이 "변수가
+// 아닌 그냥 글자"로 취급되어 검사를 통과하고, 중괄호째로 전원에게 나간다.
+// 화면이 약속하는 "틀린 변수 이름은 저장되지 않습니다" 가 거기서 깨진다.
+for (const bad of ['{nick-name}', '{닉네임2}', '{유저이름}', '{gold}', '{nickanme}', '{nick name}']) {
+  check(`${bad} 는 저장에서 막힌다`, templateTextError(`${bad}님 안녕`) !== null, bad);
+}
+check('막힌 이유에 그 표기가 적힌다',
+  (templateTextError('{유저이름}님') || '').includes('유저이름'));
+// 중괄호를 장식으로 쓴 경우까지 걸리지만 그쪽이 맞다 — 푸시 본문의 중괄호는
+// 거의 언제나 변수를 쓰려던 자리이고, 잘못 보낸 푸시는 되돌릴 수 없다.
+check('장식용 중괄호도 막는다(의도된 보수적 판정)',
+  templateTextError('오늘의 {이벤트} 안내') !== null);
+eq('중괄호가 없으면 통과', templateTextError('오늘의 이벤트 안내'), null);
+
 console.log('\n[목록 — UI 도움말과 미리보기가 읽는 값]');
 check('변수는 닉네임 하나뿐', PUSH_TEMPLATE_VARS.length === 1 && PUSH_TEMPLATE_VARS[0].name === 'nickname');
 check('샘플 값이 있다', !!PUSH_TEMPLATE_VARS[0].sample);

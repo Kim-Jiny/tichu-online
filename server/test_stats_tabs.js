@@ -234,6 +234,25 @@ async function main() {
     // 켜져 있는데 한 번도 안 뽑힌 미션은 알아야 할 사실이다.
     check('발행 안 된 미션을 알려준다', mtab.body.includes('한 번도 발행되지 않은 미션'));
     check('심은 미션이 표에 보인다', mtab.body.includes('tichu_play'));
+    // 이름표가 다른 미션 화면과 같아야 한다. 존재하지 않는 라벨 함수를
+    // try/catch 로 감싸 두면 이 표만 조용히 raw 키를 보여준다.
+    const L = require('./missions/labels.js');
+    check('미션 이름이 한글 라벨로 나온다',
+      mtab.body.includes(L.MISSION_LABEL_KO.tichu_play.split(' (')[0]),
+      '라벨 대신 키만 보이는 중일 수 있음');
+    // 차트 x축 날짜 라벨이 날짜순이어야 한다. String(Date) 를 정렬하면
+    // 요일 약어순(Fri → Mon → Sat …)이 되어 추세가 거짓으로 보인다.
+    const labelsJson = (mtab.body.match(/labels:\s*(\[[^\]]*\])/g) || [])
+      .map((m) => m.replace(/^labels:\s*/, ''));
+    let orderOk = true;
+    for (const raw of labelsJson) {
+      let arr; try { arr = JSON.parse(raw); } catch (_) { continue; }
+      if (!arr.every((x) => typeof x === 'string' && /^\d{2}\/\d{2}$/.test(x))) continue;
+      const sorted = [...arr].sort();
+      if (arr.join() !== sorted.join()) orderOk = false;
+    }
+    check('차트 x축 날짜가 날짜순으로 정렬된다', orderOk,
+      JSON.stringify(labelsJson).slice(0, 160));
 
     console.log('\n[정리 — 같은 말을 두 번 하지 않는다]');
     for (const tab of TABS) {

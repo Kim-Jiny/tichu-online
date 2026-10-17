@@ -8153,6 +8153,23 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
           ? 'p.ll_games'
           : 'p.mighty_games';
 
+  // 탈주로 끝난 판은 플레이량에서 뺀다.
+  //
+  // 끝까지 간 판의 순위를 보는 표다. 탈주로 중단된 판은 누구에게도 한
+  // 판이 아니다 — 나간 사람에게도, 남아서 끝을 못 본 사람에게도. 그걸
+  // 섞어 세면 중간에 자주 나가는 사람이 위로 올라오고, 이 표가 보려던
+  // 것(누가 실제로 많이 플레이하는가)과 반대가 된다.
+  //
+  // end_reason 은 끝난 이유이고 'normal' 만 완주다('leave' = 탈주,
+  // 'timeout' = 시간초과 중단). 중간에 나가고 봇이 자리를 이어받아 끝난
+  // 판은 'normal' 로 남지만, 그때의 명단에는 나간 사람이 없으므로 이
+  // 조건과 무관하게 그 사람 몫으로 세지 않는다.
+  //
+  // COALESCE 는 컬럼이 없던 시절의 행을 위한 것이다. ALTER 가 기본값으로
+  // 채웠으니 비어 있을 일은 없지만, 비어 있다면 완주로 보는 쪽이 맞다 —
+  // 탈주라는 기록이 없는 판이다.
+  const completedOnly = (alias = 'h') => `COALESCE(${alias}.end_reason, 'normal') = 'normal'`;
+
   return client.query(`
     WITH activity AS (
       SELECT nickname, game_type, COUNT(*)::int AS games
@@ -8161,6 +8178,7 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         FROM tc_match_history h
         CROSS JOIN LATERAL (VALUES (h.player_a1), (h.player_a2), (h.player_b1), (h.player_b2)) AS p(nickname)
         WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND ${completedOnly()}
           AND p.nickname IS NOT NULL
           AND p.nickname <> ''
         UNION ALL
@@ -8168,6 +8186,7 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         FROM tc_sk_match_history h
         JOIN tc_sk_match_players p ON p.match_id = h.id
         WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND ${completedOnly()}
           AND p.nickname IS NOT NULL
           AND p.nickname <> ''
           AND p.is_bot IS NOT TRUE
@@ -8176,6 +8195,7 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         FROM tc_ll_match_history h
         JOIN tc_ll_match_players p ON p.match_id = h.id
         WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND ${completedOnly()}
           AND p.nickname IS NOT NULL
           AND p.nickname <> ''
           AND p.is_bot IS NOT TRUE
@@ -8184,6 +8204,7 @@ async function queryDashboardActivityTopPlayers(client, activityPeriod = 'week',
         FROM tc_mighty_match_history h
         JOIN tc_mighty_match_players p ON p.match_id = h.id
         WHERE ${kstCreatedDate('h.created_at')} >= ${activityStartExpr}
+          AND ${completedOnly()}
           AND p.nickname IS NOT NULL
           AND p.nickname <> ''
           AND p.is_bot IS NOT TRUE

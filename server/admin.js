@@ -976,7 +976,7 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
 
   const table = topPlayers && topPlayers.length > 0
     ? `<div class="table-wrap"><table>
-        <tr><th>#</th><th>닉네임</th><th>${meta.gameLabel.title}</th><th>게임별</th><th>누적 게임</th><th>레이팅</th><th>Lv</th></tr>
+        <tr><th>#</th><th>닉네임</th><th>${meta.gameLabel.title}</th><th>게임별</th><th title="탈주 판을 포함한 가입 이후 전체 누적입니다 — 왼쪽 완주 집계와 기준이 다릅니다">누적 게임 ⓘ</th><th>레이팅</th><th>Lv</th></tr>
         ${topPlayers.map((p, i) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
           const tichuGames = parseInt(p.tichu_games) || 0;
@@ -1014,7 +1014,7 @@ function renderDashboardActivityTopContent(topPlayers, period = 'week', game = '
   return `
     <div class="dash-head">
       <h2>플레이량 Top 10</h2>
-      <span class="hint">${meta.periodLabel.range} · ${meta.gameLabel.label}</span>
+      <span class="hint">${meta.periodLabel.range} · ${meta.gameLabel.label} · 완주한 판만</span>
     </div>
     <div class="preset-bar" style="margin-top:0;margin-bottom:6px">${activityFilter}</div>
     <div class="preset-bar" style="margin-top:0;margin-bottom:12px">${gameActivityFilter}</div>

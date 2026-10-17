@@ -63,8 +63,25 @@ function createDeck(expansions = []) {
     deck.push({ id: `sk_escape_${i}`, suit: 'special', rank: 'escape', value: 0, type: CARD_TYPE.ESCAPE });
   }
 
-  // 5 Pirate cards (Rascal / Rosie / Bendt / Harry / Juanita)
-  for (let i = 1; i <= 5; i++) {
+  // Pirate cards (Rascal / Rosie / Bendt / Harry / Juanita)
+  //
+  // 기본 4장, 해적 능력 모드에서 5장(후아니타 추가).
+  //
+  // 원래는 모드와 상관없이 5장이었다. 그런데 5번째 해적의 그림
+  // (sk_pirate5.webp)은 3.3.0 번들에서 처음 들어갔고, 버전 게이트
+  // (clientCanAccessRoom → roomHasSKPirateAbilities)는 능력 모드를 켠 방만
+  // 막는다. 그래서 3.2.0 앱이 일반 스컬킹 방에 들어와 이 카드를 받으면
+  // 없는 에셋을 찾다 errorBuilder 로 떨어져, 카드 자리에 색칠된 사각형이
+  // 뜬다 — 기존 유저 전체에게.
+  //
+  // 5번째 해적을 모드에 묶으면 그 게이트가 그대로 보호막이 된다. 능력이
+  // 있을 때만 다섯 번째 해적이 있다는 건 이름표(PIRATE_NAMES)의 구성과도
+  // 맞는다.
+  //
+  // min_version 을 3.3.0 이상으로 올려 3.2.0 이 접속하지 못하게 되면,
+  // 이 조건을 지우고 항상 5장으로 되돌려도 된다(공식 룰은 해적 5장이다).
+  const pirateCount = expansionSet.has('pirate_abilities') ? 5 : 4;
+  for (let i = 1; i <= pirateCount; i++) {
     deck.push({ id: `sk_pirate_${i}`, suit: 'special', rank: 'pirate', value: 0, type: CARD_TYPE.PIRATE });
   }
 

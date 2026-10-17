@@ -3705,13 +3705,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               final s = g.mightyGameState;
               if (s == null || s.phase != 'kitty_exchange' || !s.isMyTurn) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
+                  // 한 프레임 뒤에 실행되므로 그 사이 이 팝업이 이미 닫혔을
+                  // 수 있다. 그때 dialogCtx 로 Navigator 를 찾으면 사라진
+                  // 위젯을 뒤지게 된다.
+                  if (!dialogCtx.mounted) return;
                   if (Navigator.of(dialogCtx).canPop()) {
                     Navigator.of(dialogCtx).pop();
                   }
                 });
                 return const SizedBox.shrink();
               }
+              // 이 팝업을 닫는다. 이미 닫혀 있으면 아무 것도 하지 않는다.
+              //
+              // mounted 검사가 중요하다. 위의 콜백은 차례가 끝나면(타임아웃
+              // 포함) 이 팝업을 스스로 닫는데, 그 시점에 확인 시트가 열려
+              // 있었다면 사용자가 "확인"을 누르는 순간 이 함수가 불린다.
+              // 그때 dialogCtx 의 위젯은 이미 비활성이라, 디버그에서는
+              // "Looking up a deactivated widget's ancestor is unsafe" 로
+              // 죽고, 릴리즈에서는 루트 Navigator 의 canPop() 이 여전히
+              // true 라서 엉뚱한 라우트가 닫힌다 — 진행 중인 게임 화면에서
+              // 튕겨 나간다.
               void closeDialog() {
+                if (!dialogCtx.mounted) return;
                 if (Navigator.of(dialogCtx).canPop()) {
                   Navigator.of(dialogCtx).pop();
                 }
@@ -3889,6 +3904,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 title: l10n.mtRaiseBidConfirmTitle,
                 body: Text(l10n.mtRaiseBidConfirmBody(nextBid.toString())),
               );
+              // 확인 시트가 열려 있는 동안 차례가 끝날 수 있다(타임아웃).
+              // 그러면 보내 봐야 서버가 거절하고, 그 사이 팝업은 스스로
+              // 닫혀 있어 onApplied 가 사라진 위젯을 건드린다.
+              if (!mounted) return;
               if (ok) {
                 game.mightyRaiseBid();
                 onApplied?.call();
@@ -4052,6 +4071,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 ),
                               );
                         if (!ok) return;
+                        // 확인 시트가 열려 있는 동안 차례가 끝날 수 있다 —
+                        // 위 raise 버튼과 같은 이유로 막는다.
+                        if (!mounted) return;
                         if (isSameTrump) {
                           game.mightyRaiseBid();
                         } else {

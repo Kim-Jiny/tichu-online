@@ -223,24 +223,41 @@ async function main() {
     check('예약 행에 지금 보내기 버튼', schedPage.body.includes('지금 보내기'));
     check('같은 행에 예약 취소도 있다', schedPage.body.includes(`/campaigns/${row.id}/unschedule`));
     // 발송은 claim 을 지나므로 예약 틱과 동시에 들어와도 한쪽만 나간다.
-    // 여기서는 FCM 이 없어 전원 실패하고 초안으로 내려온다 — 확인할 것은
-    // "예약이라는 이유로 거부되지는 않는다"는 것이다.
     const sendNow = await req('POST', `${CAM}/${row.id}/send`, {}, cookie);
-    check('예약이라는 이유로 거부되지 않는다',
-      !said(sendNow).includes('예약'), said(sendNow));
     const afterNow = (await pool.query(
       'SELECT status, last_send_error FROM tc_push_campaigns WHERE id = $1', [row.id])).rows[0];
     check('발송 중에 갇혀 있지 않다', afterNow.status !== 'sending', afterNow.status);
-    // FCM 없이 돌리므로 전원 실패가 정상이다. 그때 사유가 남아야 한다 —
-    // 예약 발송은 보는 사람이 없으니 이게 유일한 기록이다.
-    check('전원 실패하면 사유가 남는다',
-      afterNow.status === 'sent' || !!afterNow.last_send_error, JSON.stringify(afterNow));
-    // 실패해서 초안으로 내려오면 예약 시각은 아무 일도 하지 않는다. 화면이
-    // 그걸 말해 주지 않으면 가만히 두면 나가는 줄 알고 기다리게 된다.
-    if (afterNow.status === 'draft') {
-      const draftPage = await req('GET', CAM, null, cookie);
-      check('초안에 남은 예약 시각은 지났다고 적는다', draftPage.body.includes('지금은 예약 아님'));
-      check('실패 사유가 목록에 보인다', draftPage.body.includes('⚠'));
+
+    // 결과는 테스트를 돌리는 시각에 따라 갈린다. 야간(21~08 KST)이면 광고성
+    // 푸시 자체가 막히므로 claim 전에 거부되고, 그게 맞는 동작이다.
+    //
+    // 시각을 흉내내지 않고 양쪽을 다 확인하는 이유: 실제로 중요한 건
+    // "지금 이 서버에서 이 버튼을 누르면 무엇이 일어나는가" 이고, 야간
+    // 분기는 그중 하나다. 한쪽만 보면 밤에 돌릴 때마다 빨간 줄이 뜬다.
+    if (said(sendNow).includes('21~08')) {
+      console.log('        (야간이라 발송이 막힌 경로를 확인합니다)');
+      // 예약이 살아 있어야 한다. claim 을 먼저 했다면 초안으로 떨어져
+      // "야간이라 못 보냈다"가 "예약이 사라졌다"로 바뀐다.
+      check('야간이면 예약은 그대로 남는다', afterNow.status === 'scheduled',
+        JSON.stringify(afterNow));
+      check('야간 거부는 실패 사유를 남기지 않는다 — 고칠 것이 없다',
+        afterNow.last_send_error === null, String(afterNow.last_send_error));
+    } else {
+      // 주간. FCM 이 없으므로 전원 전송 실패가 정상이고, 그때 사유가
+      // 남아야 한다 — 예약 발송은 보는 사람이 없으니 유일한 기록이다.
+      check('예약이라는 이유로 거부되지 않는다',
+        !said(sendNow).includes('예약'), said(sendNow));
+      check('전원 실패하면 사유가 남는다',
+        afterNow.status === 'sent' || !!afterNow.last_send_error,
+        JSON.stringify(afterNow));
+      // 초안으로 내려온 예약 시각은 아무 일도 하지 않는다. 화면이 그걸
+      // 말해 주지 않으면 가만히 두면 나가는 줄 알고 기다리게 된다.
+      if (afterNow.status === 'draft') {
+        const draftPage = await req('GET', CAM, null, cookie);
+        check('초안에 남은 예약 시각은 지났다고 적는다',
+          draftPage.body.includes('지금은 예약 아님'));
+        check('실패 사유가 목록에 보인다', draftPage.body.includes('⚠'));
+      }
     }
     // 다시 예약해 두고 취소 검사로 넘어간다.
     await pool.query(

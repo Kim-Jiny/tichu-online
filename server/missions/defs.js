@@ -32,10 +32,17 @@ const STREAK_BONUS_TOKENS = 5;
 /**
  * 미션으로 인정하려면 방에 사람이 이 수 이상이어야 한다(봇 방 파밍 방지).
  *
- * TODO(배포 전에 반드시): 지금은 혼자 봇과 하며 테스트하느라 1 로 풀어 두었다.
- * 정식 값은 2 — 환경변수 MISSION_MIN_HUMANS 로도 바꿀 수 있다.
+ * 2 여야 한다. 1 이면 혼자 방을 만들어 빈 자리를 봇으로 채우고 모든 미션을
+ * 혼자 깰 수 있다 — 봇은 원할 때 져 주므로 "N판 연속 승리" 같은 것까지
+ * 포함해서다. 그렇게 찍어낸 토큰이 토큰 상점의 치장 아이템을 산다.
+ *
+ * 앱도 이 값을 2 로 기본 처리하고(missions.dart) 미션 도움말에 그대로
+ * 표시한다. 서버가 1 이면 앱은 "2명 이상"이라 안내하면서 실제로는 1명도
+ * 인정하는 상태가 된다.
+ *
+ * 혼자 봇과 돌려 보며 개발할 때는 MISSION_MIN_HUMANS=1 로 띄운다.
  */
-const MIN_HUMANS = Math.max(1, parseInt(process.env.MISSION_MIN_HUMANS, 10) || 1);
+const MIN_HUMANS = Math.max(1, parseInt(process.env.MISSION_MIN_HUMANS, 10) || 2);
 
 const GAMES = ['tichu', 'mighty', 'skull_king', 'love_letter'];
 

@@ -29,7 +29,21 @@ function aWins(g, pirateId) {
 }
 
 console.log('덱');
-chk('해적 5장이 모드와 상관없이 덱에 있다', createDeck([]).filter(c => c.type === 'pirate').length === 5);
+// 5번째 해적(후아니타)의 그림은 3.3.0 번들에서 처음 들어갔다. 일반 방에도
+// 넣으면 버전 게이트가 능력 모드만 막으므로, 3.2.0 앱이 일반 스컬킹 방에서
+// 없는 에셋을 찾다 카드 자리에 색칠된 사각형을 띄운다 — 기존 유저 전체에게.
+// 그래서 5번째는 능력 모드에만 있고, 그 모드는 게이트가 이미 막는다.
+chk('기본 덱은 해적 4장',
+  createDeck([]).filter((c) => c.type === 'pirate').length === 4);
+chk('능력 모드는 해적 5장',
+  createDeck(['pirate_abilities']).filter((c) => c.type === 'pirate').length === 5);
+chk('5번째 해적은 능력 모드에만 있다',
+  !createDeck([]).some((c) => c.id === 'sk_pirate_5')
+  && createDeck(['pirate_abilities']).some((c) => c.id === 'sk_pirate_5'));
+// 다른 확장팩을 켜도 5번째가 따라 들어오면 안 된다.
+chk('다른 확장팩은 해적 수를 바꾸지 않는다',
+  createDeck(['kraken', 'white_whale', 'loot'])
+    .filter((c) => c.type === 'pirate').length === 4);
 
 console.log('모드 꺼짐/능력 없는 승리');
 let g = mk([]); aWins(g, 'sk_pirate_2');

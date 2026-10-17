@@ -2125,14 +2125,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   }) {
     final isTigressChoice =
         play.tigressChoice == 'pirate' || play.tigressChoice == 'escape';
-    // 티그리스는 고른 모양과 상관없이 티그리스 그림으로 보이고, 이름표에 고른 쪽을 적는다
-    // (해적 그림으로 바꾸면 이름 있는 해적을 낸 것으로 오해한다).
+    // 낸 티그리스는 고른 모양의 그림으로 그린다(_buildCard 의 playedAs).
+    // 티그리스였다는 사실은 이름표와 아래 모서리 표식이 말해 준다.
     final l10n = L10n.of(context);
     final card = _buildCard(
       play.cardId,
       size: size,
       highlighted: highlighted,
       showName: true,
+      playedAs: play.tigressChoice,
       nameOverride: play.tigressChoice == 'pirate'
           ? '${l10n.skCardTigress}·${l10n.skCardPirate}'
           : play.tigressChoice == 'escape'
@@ -4124,7 +4125,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
   // Special card asset mapping
   static const _specialAssets = {
     'skull_king': 'assets/cards/sk_skull_king.webp',
-    'pirate': 'assets/cards/sk_pirate1.webp',
+    // 번호 없는 해적 = 이름 없는 일반 해적. 티그리스를 해적으로 냈을 때
+    // 이 그림이 쓰인다(이름 있는 다섯 장과 섞이면 안 된다).
+    'pirate': 'assets/cards/sk_pirate.webp',
     'mermaid': 'assets/cards/sk_mermaid.webp',
     'escape': 'assets/cards/sk_escape.webp',
     'tigress': 'assets/cards/sk_tigress.webp',
@@ -4220,14 +4223,31 @@ class _SKGameScreenState extends State<SKGameScreen> {
     );
   }
 
+  /// [playedAs] 는 이미 낸 티그리스가 고른 모양('pirate' / 'escape').
+  /// 손패의 티그리스는 null 이다 — 아직 고르지 않았으므로.
   Widget _buildCard(
     String cardId, {
     double size = 60,
     bool highlighted = false,
     bool showName = false,
     String? nameOverride,
+    String? playedAs,
   }) {
-    final info = _parseCardId(cardId);
+    var info = _parseCardId(cardId);
+    // 낸 티그리스는 고른 모양의 그림으로 보여 준다. 손패에서만 티그리스
+    // 그림(칼+백기)이고, 테이블에 놓이는 순간부터는 해적이거나 탈출이다 —
+    // 그게 그 카드가 그 트릭에서 하는 일이다.
+    //
+    // 예전에는 낸 뒤에도 티그리스 그림을 유지했다. 해적 그림으로 바꾸면
+    // 이름 있는 해적을 낸 것으로 오해한다는 이유였는데, 그때는 해적 그림이
+    // 이름 있는 다섯 장뿐이었다. 지금은 아무 이름도 없는 일반 해적
+    // 그림(sk_pirate)이 따로 있어서 그 오해가 생기지 않는다.
+    //
+    // 티그리스였다는 사실은 그대로 보인다 — 호출하는 쪽이 이름표를
+    // '티그리스·해적' 으로 덮고, 모서리에 표식을 얹는다.
+    if (info.type == 'tigress' && playedAs != null) {
+      info = _CardInfo(type: playedAs == 'pirate' ? 'pirate' : 'escape');
+    }
     final w = size * 0.7;
     final h = size;
     final radius = BorderRadius.circular((size * 0.09).clamp(5.0, 9.0));

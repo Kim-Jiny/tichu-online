@@ -9,6 +9,8 @@ const {
   getUsers, getAppVersionsInUse, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, deletePhotoRejection, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
+  getActiveUserSummary, getActiveUsersSeries, getRetentionCohorts, getVisitFrequency,
+  getHourlyActivity, getStickyUsers, getAcquisitionBreakdown, getDailyActiveSince,
   isKstNight, getMarketingConfirmStats, getAllFcmTokenRows, markFcmTokensInvalid, getFcmTokenStats, getMarketingAudience, createPushCampaign, listPushCampaigns, getPushCampaign,
   reserveCampaignRecipients, openCampaignForClaims, recordCampaignSend, getCampaignRecipients,
   scheduleCampaign, cancelCampaignSchedule, claimCampaignForSend, failCampaignSend,
@@ -2053,9 +2055,15 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const fromParam = url.searchParams.get('from');
     const toParam = url.searchParams.get('to');
     const bucket = url.searchParams.get('bucket') === 'hour' ? 'hour' : 'day';
-    const statTab = ['games', 'acquisition', 'economy', 'shop', 'payment', 'attendance'].includes(url.searchParams.get('tab'))
-      ? url.searchParams.get('tab')
-      : 'games';
+    // 'acquisition' 은 '유저' 탭에 흡수됐다. 지워버리면 그 주소를 북마크해
+    // 둔 사람이 엉뚱한 탭을 보게 되므로 이름만 옮겨 받는다. 유입과 재방문은
+    // 따로 볼 수 있는 숫자가 아니다 — 가입이 늘어도 다음 날 아무도 안 오면
+    // 늘어난 게 아니다.
+    const TAB_ALIASES = { acquisition: 'users' };
+    const rawTab = url.searchParams.get('tab') || '';
+    const askedTab = TAB_ALIASES[rawTab] || rawTab;
+    const statTab = ['users', 'games', 'missions', 'economy', 'shop', 'payment', 'attendance']
+      .includes(askedTab) ? askedTab : 'users';
     const platform = ['ios', 'android'].includes((url.searchParams.get('platform') || '').toLowerCase())
       ? (url.searchParams.get('platform') || '').toLowerCase()
       : '';
@@ -2088,6 +2096,36 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       getDetailedAdminStats(prevFrom.toISOString(), prevTo.toISOString(), bucket, { platform }),
       getAttendanceBreakdown(from.toISOString(), to.toISOString()),
     ]);
+
+    // 유저 탭과 미션 탭의 집계는 보고 있을 때만 돌린다.
+    //
+    // 리텐션 쪽은 활동 기록 전체를 UNION 으로 훑으므로 이 화면에서 가장
+    // 무거운 질의다. 다른 탭을 볼 때도 같이 돌리면 게임 탭 한 번 여는 데
+    // 그 비용을 내게 된다.
+    const isUsersTab = statTab === 'users';
+    const isMissionsTab = statTab === 'missions';
+    const [userSum, prevUserSum, activeSeries, cohorts, visitFreq, hourly, stickyUsers,
+      acqBreakdown, exactSince] = isUsersTab
+      ? await Promise.all([
+        getActiveUserSummary(from.toISOString(), to.toISOString()),
+        getActiveUserSummary(prevFrom.toISOString(), prevTo.toISOString()),
+        getActiveUsersSeries(from.toISOString(), to.toISOString()),
+        getRetentionCohorts(from.toISOString(), to.toISOString()),
+        getVisitFrequency(from.toISOString(), to.toISOString()),
+        getHourlyActivity(from.toISOString(), to.toISOString()),
+        getStickyUsers(from.toISOString(), to.toISOString(), 20),
+        getAcquisitionBreakdown(from.toISOString(), to.toISOString()),
+        getDailyActiveSince(),
+      ])
+      : [{}, {}, [], [], {}, [], [], [], {}];
+    // 이전 같은 길이의 기간도 함께. 미션은 "완료율이 나아지고 있나"가
+    // 절대 개수보다 중요한데, 비교 대상이 없으면 그 질문에 답할 수 없다.
+    const [missionStats, prevMissionStats] = isMissionsTab
+      ? await Promise.all([
+        missions.adminStats(from.toISOString(), to.toISOString()),
+        missions.adminStats(prevFrom.toISOString(), prevTo.toISOString()),
+      ])
+      : [null, null];
     const summary = stats.summary || {};
     const prevSummary = prevStats.summary || {};
     const gameSeries = stats.gameSeries || [];
@@ -2164,12 +2202,13 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       return `/tc-backstage/stats?${params.toString()}`;
     };
     const statTabs = [
-      { key: 'games', label: '게임 분석', desc: '볼륨, 비중, 피크 시간대' },
-      { key: 'acquisition', label: '유입 분석', desc: '가입, 플랫폼 분포, 전환' },
-      { key: 'economy', label: '경제 분석', desc: '획득/소모/순변동' },
-      { key: 'shop', label: '상점 분석', desc: '판매, 구매자, 베스트셀러' },
-      { key: 'payment', label: '결제 분석', desc: 'IAP 매출·환불·정산추정' },
-      { key: 'attendance', label: '출석 분석', desc: '일자별 출석·7일차 완주·지급골드' },
+      { key: 'users', label: '유저', desc: '유입·재방문·접속 시간대' },
+      { key: 'games', label: '게임', desc: '볼륨·비중·피크' },
+      { key: 'missions', label: '미션·토큰', desc: '난이도·토큰경제·참여' },
+      { key: 'economy', label: '골드', desc: '획득·소모·순변동' },
+      { key: 'shop', label: '상점', desc: '판매·구매자·베스트셀러' },
+      { key: 'payment', label: '결제', desc: 'IAP 매출·환불·정산추정' },
+      { key: 'attendance', label: '출석', desc: '출석·7일차 완주·지급골드' },
     ];
     const presetLinks = [
       { key: 'today', label: '오늘' },
@@ -2200,7 +2239,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       if (d <= -20) warningCards.push({
         tone: 'warning',
         title: `신규 가입 ${Math.abs(Math.round(d))}% 감소`,
-        desc: `${movedBy(summary.totalSignups, prevSummary.totalSignups, '명')} · 유입 분석 탭에서 플랫폼별로 확인`,
+        desc: `${movedBy(summary.totalSignups, prevSummary.totalSignups, '명')} · 유저 탭에서 유입 경로와 재방문을 함께 확인`,
       });
     }
     if (Number(prevSummary.goldSpent || 0) > 0) {
@@ -2208,7 +2247,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       if (d >= 25) warningCards.push({
         tone: 'warning',
         title: `골드 소모 ${Math.round(d)}% 증가`,
-        desc: `${movedBy(summary.goldSpent, prevSummary.goldSpent, 'G')} · 상점 분석 탭에서 무엇이 팔렸는지 확인`,
+        desc: `${movedBy(summary.goldSpent, prevSummary.goldSpent, 'G')} · 상점 탭에서 무엇이 팔렸는지 확인`,
       });
     }
     // (Per-tab KPIs now render via heroKpis/heroRail; the legacy stickyFavorites
@@ -2218,9 +2257,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '최근 매치 보기', href: '/tc-backstage/matches' },
         { label: '실시간 방 보기', href: '/tc-backstage/' },
       ],
-      acquisition: [
+      users: [
         { label: '신규 유저 보기', href: '/tc-backstage/users?sort=joined_desc' },
+        { label: '지금 접속자', href: '/tc-backstage/online' },
         { label: '전체 유저 보기', href: '/tc-backstage/users' },
+      ],
+      missions: [
+        { label: '미션 현황', href: '/tc-backstage/missions' },
+        { label: '미션 관리', href: '/tc-backstage/missions/manage' },
+        { label: '토큰 상점', href: '/tc-backstage/missions/shop' },
+        { label: '토큰 장부', href: '/tc-backstage/missions/ledger' },
       ],
       economy: [
         { label: '골드 많은 유저', href: '/tc-backstage/users?sort=gold_desc' },
@@ -2390,6 +2436,45 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const attChartGold = attSeries.map((r) => parseInt(r.gold, 10) || 0);
     const attBucketTimes = attSeries.map((r) => r.bucket_time);
 
+    // 미션 집계를 빈 모양으로 정규화해 둔다. 미션 탭이 아닐 때는 질의를
+    // 돌리지 않으므로 null 이고, 차트 데이터가 이걸 먼저 읽는다.
+    const ms = missionStats || {
+      missions: [], daily: [], tokenDaily: [], tokenByReason: [],
+      tokenHolders: {}, streaks: {}, rerolls: [], engagement: {},
+    };
+    const msEng = ms.engagement || {};
+    const msHold = ms.tokenHolders || {};
+    const msStreak = ms.streaks || {};
+
+    // 유저 탭과 미션 탭의 차트 데이터.
+    //
+    // 날짜 라벨을 formatBucketLabel 로 만들지 않는 이유: 이쪽 series 는
+    // bucket_time(타임스탬프)이 아니라 이미 KST 로 끊긴 DATE 다. 타임스탬프로
+    // 가정해 다시 변환하면 하루씩 밀린다.
+    const kstDayLabel = (raw) => {
+      const v = formatDateInput(new Date(raw));
+      return v ? v.slice(5).replace('-', '/') : '';
+    };
+    const activeChartLabels = activeSeries.map((r) => kstDayLabel(r.kst_day));
+    const activeChartDau = activeSeries.map((r) => parseInt(r.dau, 10) || 0);
+    const activeChartNew = activeSeries.map((r) => parseInt(r.new_users, 10) || 0);
+    const activeChartReturning = activeSeries.map((r) => parseInt(r.returning_users, 10) || 0);
+
+    // 미션 차트는 미션 발행일과 토큰 거래일이 서로 다른 집합이라, 두 series 를
+    // 날짜로 맞춰 한 축에 올린다. 안 맞추면 막대와 선이 서로 다른 날짜를
+    // 가리키면서 "완료가 늘었는데 토큰은 줄었다"는 없는 사실이 보인다.
+    const msDays = [...new Set([
+      ...ms.daily.map((r) => String(r.kst_day)),
+      ...ms.tokenDaily.map((r) => String(r.kst_day)),
+    ])].sort();
+    const msDailyBy = new Map(ms.daily.map((r) => [String(r.kst_day), r]));
+    const msTokenBy = new Map(ms.tokenDaily.map((r) => [String(r.kst_day), r]));
+    const missionChartLabels = msDays.map((d) => kstDayLabel(d));
+    const missionChartPicked = msDays.map((d) => parseInt((msDailyBy.get(d) || {}).picked, 10) || 0);
+    const missionChartDone = msDays.map((d) => parseInt((msDailyBy.get(d) || {}).done, 10) || 0);
+    const missionChartTokensIssued = msDays.map((d) => parseInt((msTokenBy.get(d) || {}).issued, 10) || 0);
+    const missionChartTokensSpent = msDays.map((d) => parseInt((msTokenBy.get(d) || {}).spent, 10) || 0);
+
     const shopChartLabels = shopSalesSeries.map((r) => formatBucketLabel(r.bucket_time));
     const shopChartPurchases = shopSalesSeries.map(r => parseInt(r.purchase_count) || 0);
     const shopChartBuyers = shopSalesSeries.map(r => parseInt(r.buyer_count) || 0);
@@ -2417,24 +2502,488 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       </div>
     `;
 
-    const acquisitionTabContent = `
+    // ── 유저 탭 ───────────────────────────────────────────────────────
+    //
+    // 가입(유입)과 재방문을 한 화면에 둔다. 가입이 늘어도 다음 날 아무도
+    // 돌아오지 않으면 늘어난 게 아니고, 그 두 숫자는 나란히 놓고서야
+    // 그 사실이 보인다.
+    const pctOf = (n, d) => (Number(d || 0) > 0 ? (Number(n || 0) / Number(d)) * 100 : null);
+    const pctText = (n, d, digits = 1) => {
+      const v = pctOf(n, d);
+      return v === null ? '-' : formatPercent(v, digits);
+    };
+
+    // 정확한 기록이 시작된 경계선.
+    //
+    // 이걸 적지 않으면 tc_daily_active 가 생긴 날 DAU 가 껑충 뛴 것을 유입이
+    // 늘어난 것으로 읽는다. 늘어난 건 집계 범위다.
+    const exactFrom = exactSince && exactSince.since ? new Date(exactSince.since) : null;
+    const isApprox = (day) => !exactFrom || new Date(day) < exactFrom;
+    const approxNote = exactFrom
+      ? `${formatDateInput(exactFrom)} 부터는 접속 기록을 직접 남기므로 정확합니다.
+         그 이전 날짜는 <b>게임·골드·미션 기록으로 어림한 값</b>이라 실제보다 낮습니다 —
+         들어와서 아무 것도 하지 않은 사람은 어느 로그에도 남지 않기 때문입니다.`
+      : `아직 접속 기록이 쌓이지 않았습니다. 지금 보이는 숫자는 모두
+         <b>게임·골드·미션 기록으로 어림한 값</b>이라 실제보다 낮습니다.`;
+
+    const activeTable = activeSeries.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>날짜</th><th>활동 유저</th><th>신규</th><th>재방문</th><th>재방문 비중</th><th>접속 횟수</th></tr>
+          ${activeSeries.map((row) => `<tr>
+            <td style="white-space:nowrap">${escapeHtml(formatDateInput(new Date(row.kst_day)))}
+              ${isApprox(row.kst_day) ? '<span class="badge" style="background:#f5f5f5;color:#999;margin-left:4px">어림</span>' : ''}</td>
+            ${barCell(row.dau, maxOf(activeSeries, 'dau'), '#2f6fd0')}
+            <td style="color:#2e8b57;font-weight:700">${formatNumber(row.new_users)}</td>
+            <td>${formatNumber(row.returning_users)}</td>
+            <td>${pctText(row.returning_users, row.dau)}</td>
+            <td style="color:#888">${Number(row.sessions) > 0 ? formatNumber(row.sessions) : '-'}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">활동 기록이 없습니다</div>';
+
+    // 리텐션 표. 가로가 경과일(D1/D7/D30), 세로가 가입일이다.
+    //
+    // 아직 그 날짜가 오지 않은 칸은 비워 둔다. 0% 로 채우면 최근 코호트가
+    // 전부 실패한 것처럼 보이고, 그게 리텐션 표를 못 믿게 만드는 가장 흔한
+    // 이유다.
+    const retCell = (n, size) => {
+      if (n === null) return '<td style="color:#ccc">아직</td>';
+      const v = pctOf(n, size);
+      const color = v === null ? '#999' : v >= 40 ? '#2e8b57' : v >= 20 ? '#b35b19' : '#c0563f';
+      return `<td><span style="font-weight:700;color:${color}">${v === null ? '-' : formatPercent(v, 0)}</span>
+        <span style="font-size:11px;color:#aaa"> ${formatNumber(n)}명</span></td>`;
+    };
+    const cohortTable = cohorts.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>가입일</th><th>가입</th><th>D+1</th><th>D+7</th><th>D+30</th>
+              <th>1주 안</th><th>1~4주</th></tr>
+          ${cohorts.map((c) => `<tr>
+            <td style="white-space:nowrap">${escapeHtml(formatDateInput(new Date(c.joinDay)))}</td>
+            <td style="font-weight:700">${formatNumber(c.cohortSize)}</td>
+            ${retCell(c.d1, c.cohortSize)}
+            ${retCell(c.d7, c.cohortSize)}
+            ${retCell(c.d30, c.cohortSize)}
+            ${retCell(c.w1, c.cohortSize)}
+            ${retCell(c.w2, c.cohortSize)}
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">이 기간에 가입한 유저가 없습니다</div>';
+
+    // 코호트 전체를 합친 값. 코호트가 작으면 하루치는 요동이 심해서
+    // 한 줄씩 보면 아무 말도 할 수 없다.
+    const cohortTotals = cohorts.reduce((a, c) => ({
+      size: a.size + c.cohortSize,
+      d1size: a.d1size + (c.d1 === null ? 0 : c.cohortSize),
+      d1: a.d1 + (c.d1 || 0),
+      d7size: a.d7size + (c.d7 === null ? 0 : c.cohortSize),
+      d7: a.d7 + (c.d7 || 0),
+      w1size: a.w1size + (c.w1 === null ? 0 : c.cohortSize),
+      w1: a.w1 + (c.w1 || 0),
+    }), { size: 0, d1size: 0, d1: 0, d7size: 0, d7: 0, w1size: 0, w1: 0 });
+
+    // 접속 빈도 분포. 평균이 아니라 분포로 보는 이유는, 매일 오는 소수와
+    // 한 번 보고 사라진 다수가 섞이면 가운데 값에 해당하는 사람이 아무도
+    // 없기 때문이다.
+    const freqRows = [
+      { label: '1일만', n: Number(visitFreq.d1 || 0), color: '#c0563f' },
+      { label: '2~3일', n: Number(visitFreq.d2_3 || 0), color: '#d88c38' },
+      { label: '4~7일', n: Number(visitFreq.d4_7 || 0), color: '#b3a429' },
+      { label: '8~14일', n: Number(visitFreq.d8_14 || 0), color: '#4f9a53' },
+      { label: '15일 이상', n: Number(visitFreq.d15 || 0), color: '#2e8b57' },
+    ];
+    const freqUsers = Number(visitFreq.users || 0);
+    const freqTable = freqUsers > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>기간 내 접속일수</th><th>유저</th><th>비중</th></tr>
+          ${freqRows.map((f) => `<tr>
+            <td>${f.label}</td>
+            ${barCell(f.n, maxOf(freqRows, 'n'), f.color)}
+            <td>${pctText(f.n, freqUsers)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">활동 기록이 없습니다</div>';
+
+    // 시간대 × 요일 히트맵.
+    //
+    // 비트마스크가 있는 새 기록에서만 나온다. 매치 시각과 섞으면 "게임이
+    // 있던 시간"과 "접속한 시간"이 한 칸에 더해져 둘 다 못 믿게 된다.
+    const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+    const hourMap = new Map(hourly.map((r) => [`${r.dow}:${r.hour}`, Number(r.users || 0)]));
+    const hourMax = hourly.reduce((m, r) => Math.max(m, Number(r.users || 0)), 0);
+    const hourTotals = Array.from({ length: 24 }, (_, h) =>
+      hourly.filter((r) => Number(r.hour) === h).reduce((a, r) => a + Number(r.users || 0), 0));
+    const peakHour = hourTotals.indexOf(Math.max(...hourTotals, 0));
+    const heatCell = (n) => {
+      if (hourMax <= 0) return 'background:#f6f4f0';
+      const t = n / hourMax;
+      if (n === 0) return 'background:#f6f4f0';
+      // 한 색의 농도로만 표현한다. 색을 여러 개 쓰면 "짙은 빨강"과 "짙은
+      // 파랑" 중 어느 쪽이 큰지 범례를 봐야 알 수 있다.
+      return `background:rgba(47,111,208,${(0.12 + t * 0.78).toFixed(2)});color:${t > 0.55 ? '#fff' : '#1f2328'}`;
+    };
+    const heatmap = hourMax > 0
+      ? `<div class="table-wrap"><table style="font-size:11.5px">
+          <tr><th style="text-align:left">요일</th>
+            ${Array.from({ length: 24 }, (_, h) => `<th style="text-align:center;padding:4px 2px">${h}</th>`).join('')}</tr>
+          ${DOW_LABELS.map((label, dow) => `<tr>
+            <td style="font-weight:700;white-space:nowrap">${label}</td>
+            ${Array.from({ length: 24 }, (_, h) => {
+              const n = hourMap.get(`${dow}:${h}`) || 0;
+              return `<td style="text-align:center;padding:5px 2px;${heatCell(n)}"
+                title="${label}요일 ${h}시 · ${formatNumber(n)}명">${n || ''}</td>`;
+            }).join('')}
+          </tr>`).join('')}
+        </table></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6">
+          칸의 숫자는 그 시간대에 접속한 유저 수(유저·날짜 기준)입니다. 한 사람이 같은
+          시간대에 여러 번 들어와도 1 로 셉니다 — 궁금한 것은 몇 명이 있었나이지,
+          누가 새로고침을 몇 번 했나가 아니기 때문입니다.<br>
+          <b>푸시·점검·이벤트 시각을 고를 때 이 표를 봅니다.</b> 가장 붐비는 시간에 점검을 걸면
+          그만큼 많은 사람이 끊깁니다.
+        </div>`
+      : `<div class="empty">접속 시간대 기록이 아직 없습니다.
+          ${exactFrom ? '' : '접속 기록을 남기기 시작한 뒤부터 쌓입니다.'}</div>`;
+
+    const stickyTable = stickyUsers.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>유저</th><th>접속일</th><th>접속 횟수</th><th>레벨</th><th>게임</th>
+              <th>가입일</th><th>마지막 접속</th></tr>
+          ${stickyUsers.map((u) => `<tr>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="font-weight:700">${escapeHtml(u.nickname)}</a>
+              ${u.device_platform ? `<span style="font-size:11px;color:#aaa"> ${escapeHtml(u.device_platform)}</span>` : ''}</td>
+            ${barCell(u.days, maxOf(stickyUsers, 'days'), '#2f6fd0')}
+            <td>${Number(u.sessions) > 0 ? formatNumber(u.sessions) : '-'}</td>
+            <td>${formatNumber(u.level || 0)}</td>
+            <td>${formatNumber(u.total_games || 0)}</td>
+            <td style="font-size:12px;color:#888;white-space:nowrap">${u.join_day ? escapeHtml(formatDateInput(new Date(u.join_day))) : '-'}</td>
+            <td style="font-size:12px;color:#888;white-space:nowrap">${formatDate(u.last_seen_at)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">활동 기록이 없습니다</div>';
+
+    // 유입 경로. auth_provider 가 사실상 유일한 단서다 — 광고 파라미터
+    // 같은 건 받지 않으므로 "어디서 왔나"는 모르고 "무엇으로 가입했나"
+    // 까지만 말할 수 있다.
+    const PROVIDER_LABELS = {
+      local: '아이디·비밀번호', kakao: '카카오', google: '구글', apple: '애플',
+    };
+    const acqTotal = acqBreakdown.reduce((a, r) => a + Number(r.signups || 0), 0);
+    const acqTable = acqBreakdown.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>가입 수단</th><th>플랫폼</th><th>가입</th><th>비중</th></tr>
+          ${acqBreakdown.map((r) => `<tr>
+            <td style="font-weight:700">${escapeHtml(PROVIDER_LABELS[r.provider] || r.provider)}</td>
+            <td>${r.platform === 'ios' ? 'iOS' : r.platform === 'android' ? 'AOS' : '<span style="color:#bbb">미확인</span>'}</td>
+            ${barCell(r.signups, maxOf(acqBreakdown, 'signups'), '#5f62d6')}
+            <td>${pctText(r.signups, acqTotal)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">이 기간에 가입한 유저가 없습니다</div>';
+
+    const usersTabContent = `
       ${summaryStrip([
-        { label: 'iOS 비중', value: formatPercent(iosShare, 1), meta: `${formatNumber(summary.iosSignups || 0)}명` },
-        { label: 'AOS 비중', value: formatPercent(aosShare, 1), meta: `${formatNumber(summary.androidSignups || 0)}명` },
-        { label: '평균 가입량', value: avgSignupsPerBucket.toFixed(1), meta: bucket === 'hour' ? '시간대당 평균' : '일자당 평균' },
-        { label: '게임 대비 가입', value: formatPercent(signupPerGame * 100, 1), meta: `게임 100판당 ${signupPerGame.toFixed(2)}명` },
-        { label: '피크 구간', value: peakSignupRow ? formatBucket(peakSignupRow.bucket_time, bucket) : '-', meta: peakSignupRow ? `${formatNumber(peakSignupRow.total_cnt)}명` : '데이터 없음' },
+        { label: '고착도 (DAU÷MAU)',
+          value: userSum.stickiness === null || userSum.stickiness === undefined
+            ? '-' : formatPercent(userSum.stickiness * 100, 1),
+          meta: userSum.stickiness
+            ? `한 달에 온 사람이 평균 ${(userSum.stickiness * 30).toFixed(1)}일 접속`
+            : '비교할 기록이 없습니다' },
+        { label: 'D+1 재방문', value: pctText(cohortTotals.d1, cohortTotals.d1size, 0),
+          meta: cohortTotals.d1size > 0
+            ? `가입 ${formatNumber(cohortTotals.d1size)}명 중 ${formatNumber(cohortTotals.d1)}명이 다음 날 복귀`
+            : '판정할 코호트가 없습니다' },
+        { label: '1주 안 재방문', value: pctText(cohortTotals.w1, cohortTotals.w1size, 0),
+          meta: '가입 후 7일 안에 한 번이라도 복귀' },
+        { label: '한 번만 온 사람', value: pctText(visitFreq.d1, freqUsers, 0),
+          valueColor: pctOf(visitFreq.d1, freqUsers) > 60 ? '#c0563f' : undefined,
+          meta: `활동 ${formatNumber(freqUsers)}명 중 ${formatNumber(visitFreq.d1 || 0)}명` },
+        { label: '붐비는 시간', value: hourMax > 0 ? `${peakHour}시` : '-',
+          meta: hourMax > 0 ? `그 시간대 누적 ${formatNumber(hourTotals[peakHour])}명` : '기록 없음' },
       ])}
+      <div class="card" style="border-left:4px solid #b3a429">
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7">
+          <b>이 탭의 숫자는 무엇을 세는가</b><br>
+          활동 = 접속 기록이 있거나, 그날 게임·골드·미션 기록이 남은 사람.
+          봇과 탈퇴 계정은 빠집니다.<br>
+          ${approxNote}
+        </div>
+      </div>
       <div class="card-actions">
-        ${(statActions.acquisition || []).map((action) => `<a href="${action.href}" class="btn btn-secondary">${escapeHtml(action.label)}</a>`).join('')}
+        ${(statActions.users || []).map((a) => `<a href="${a.href}" class="btn btn-secondary">${escapeHtml(a.label)}</a>`).join('')}
       </div>
       <details class="chart-foldout" open>
-        <summary>가입 추이</summary>
+        <summary>활동 유저 · 신규 · 가입 추이</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="activeChart"></canvas></div></div>
+      </details>
+      <div class="card">
+        <h3>재방문 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 가입일별 코호트</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          가입한 날을 기준으로 며칠 뒤에 다시 왔는지입니다. <b>D+1 이 첫 경험이 괜찮았는지를
+          가장 빨리 말해줍니다.</b> 아직 그 날짜가 오지 않은 칸은 비워 둡니다 —
+          0% 로 채우면 최근에 가입한 사람들이 전부 떠난 것처럼 보입니다.
+        </div>
+        ${cohortTable}
+      </div>
+      <div class="card">
+        <h3>접속 빈도 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 기간 내 며칠 왔는지</span></h3>
+        ${freqTable}
+        <div style="height:12px"></div>
+        <div class="soft-panel">
+          ${metricLine('활동 유저', `${formatNumber(freqUsers)}명`)}
+          ${metricLine('평균 접속일', `${Number(visitFreq.avg_days || 0).toFixed(2)}일`)}
+          ${metricLine('최다 접속일', `${formatNumber(visitFreq.max_days || 0)}일`)}
+          ${metricLine('전체 가입자 중 활동', pctText(freqUsers, userSum.totalUsers))}
+        </div>
+      </div>
+      <div class="card">
+        <h3>접속 시간대 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 요일 × 시(KST)</span></h3>
+        ${heatmap}
+      </div>
+      <div class="card">
+        <h3>자주 오는 유저 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 접속일 많은 순 상위 ${stickyUsers.length}명</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          랭킹이 아니라 명단입니다. 이 사람들이 어디서 막히는지가 다음에 고칠 것을 알려주고,
+          <b>갑자기 사라지면 그게 가장 빠른 경고</b>입니다.
+        </div>
+        ${stickyTable}
+      </div>
+      <details class="chart-foldout">
+        <summary>가입 추이 상세</summary>
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="signupChart"></canvas></div></div>
       </details>
       <div class="card">
-        <h3>가입 상세</h3>
+        <h3>유입 경로 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 가입 수단과 플랫폼</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          알 수 있는 것은 <b>무엇으로 가입했나</b>까지입니다. 광고·링크 출처는 받지 않으므로
+          "어디서 왔나"는 이 화면으로 답할 수 없습니다.
+        </div>
+        ${acqTable}
+      </div>
+      <div class="card">
+        <h3>일자별 활동</h3>
+        ${activeTable}
+      </div>
+      <div class="card">
+        <h3>일자별 가입</h3>
         ${signupTable}
+      </div>
+    `;
+
+    // ── 미션·토큰 탭 ──────────────────────────────────────────────────
+    //
+    // 세 가지 질문에 답한다: 어떤 미션이 안 깨지는가(난이도), 토큰이
+    // 쌓이고만 있는가(경제), 미션을 하는 사람이 몇 %인가(참여).
+    const GAME_LABELS = {
+      tichu: '티츄', mighty: '마이티', skull_king: '스컬킹', love_letter: '러브레터',
+    };
+    const missionName = (key) => {
+      // 라벨 모듈이 아는 이름을 먼저 쓴다. 모르면 키를 그대로 보여준다 —
+      // 빈 칸보다 키가 낫다. 어느 미션인지 찾아갈 수 있다.
+      try {
+        const label = missionLabels.missionTitle
+          ? missionLabels.missionTitle('ko', key) : null;
+        if (label) return label;
+      } catch (_) { /* 라벨이 없으면 키로 */ }
+      return key;
+    };
+
+    // 발행된 미션만 난이도 판정에 쓴다. 한 번도 안 뽑힌 미션은 완료율이
+    // 없으므로 섞으면 표가 빈 줄로 가득해진다 — 대신 아래에 따로 세운다.
+    const msPicked = ms.missions.filter((m) => m.picked > 0);
+    const msNeverPicked = ms.missions.filter((m) => m.picked === 0 && m.enabled);
+    const msSorted = [...msPicked].sort((a, b) => {
+      // 완료율이 낮은 것부터. 조정이 필요한 미션이 위로 온다.
+      const ar = a.doneRate === null ? 2 : a.doneRate;
+      const br = b.doneRate === null ? 2 : b.doneRate;
+      if (ar !== br) return ar - br;
+      return b.picked - a.picked;
+    });
+    const rateCell = (rate) => {
+      if (rate === null) return '<td style="color:#ccc">진행 중</td>';
+      const v = rate * 100;
+      // 너무 낮으면 아무도 못 깨는 미션이고, 너무 높으면 조건이 없는
+      // 미션이다. 양쪽 다 조정 대상이라 양쪽을 다 빨갛게 둔다.
+      const color = v < 25 ? '#c0563f' : v > 95 ? '#b35b19' : '#2e8b57';
+      return `<td><span style="font-weight:700;color:${color}">${formatPercent(v, 0)}</span></td>`;
+    };
+    const missionTable = msSorted.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>미션</th><th>게임</th><th>발행</th><th>받은 사람</th><th>완료</th>
+              <th>완료율</th><th>만료</th><th>평균 소요</th><th>실패 진행도</th><th>토큰</th></tr>
+          ${msSorted.map((m) => `<tr>
+            <td>
+              <div style="font-weight:700">${escapeHtml(missionName(m.key))}</div>
+              <div class="muted mono" style="font-size:11px">${escapeHtml(m.key)}</div>
+              ${!m.enabled ? '<span class="badge" style="background:#f5f5f5;color:#999">꺼짐</span>' : ''}
+            </td>
+            <td style="white-space:nowrap">${escapeHtml(GAME_LABELS[m.game] || m.game || '-')}</td>
+            ${barCell(m.picked, maxOf(msSorted, 'picked'), '#7a6bd0')}
+            <td>${formatNumber(m.pickers)}</td>
+            <td style="color:#2e8b57;font-weight:700">${formatNumber(m.done)}</td>
+            ${rateCell(m.doneRate)}
+            <td style="color:#c0563f">${formatNumber(m.expired)}</td>
+            <td style="white-space:nowrap">${m.avgMinutes === null ? '-'
+              : m.avgMinutes >= 60 ? `${(m.avgMinutes / 60).toFixed(1)}시간` : `${m.avgMinutes}분`}</td>
+            <td>${m.avgFailProgress === null ? '-' : formatPercent(m.avgFailProgress * 100, 0)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(m.tokensAwarded)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">이 기간에 발행된 미션이 없습니다</div>';
+
+    const msDailyTable = ms.daily.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>날짜</th><th>발행</th><th>받은 사람</th><th>완료</th><th>완료율</th><th>지급 토큰</th></tr>
+          ${ms.daily.map((r) => `<tr>
+            <td style="white-space:nowrap">${escapeHtml(formatDateInput(new Date(r.kst_day)))}</td>
+            ${barCell(r.picked, maxOf(ms.daily, 'picked'), '#7a6bd0')}
+            <td>${formatNumber(r.pickers)}</td>
+            <td style="color:#2e8b57;font-weight:700">${formatNumber(r.done)}</td>
+            <td>${pctText(r.done, r.picked)}</td>
+            <td style="color:#b35b19;font-weight:700">${formatNumber(r.tokens)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">미션 기록이 없습니다</div>';
+
+    // 토큰 경제. 발행이 사용을 계속 앞지르면 상점에 살 것이 없다는 뜻이다.
+    const msIssued = ms.tokenDaily.reduce((a, r) => a + Number(r.issued || 0), 0);
+    const msSpent = ms.tokenDaily.reduce((a, r) => a + Number(r.spent || 0), 0);
+    const prevMs = prevMissionStats || { tokenDaily: [], engagement: {} };
+    const prevMsEng = prevMs.engagement || {};
+    const prevMsIssued = (prevMs.tokenDaily || []).reduce((a, r) => a + Number(r.issued || 0), 0);
+    const prevMsSpent = (prevMs.tokenDaily || []).reduce((a, r) => a + Number(r.spent || 0), 0);
+    const tokenTable = ms.tokenDaily.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>날짜</th><th>발행</th><th>사용</th><th>순증</th></tr>
+          ${ms.tokenDaily.map((r) => `<tr>
+            <td style="white-space:nowrap">${escapeHtml(formatDateInput(new Date(r.kst_day)))}</td>
+            ${barCell(r.issued, maxOf(ms.tokenDaily, 'issued'), '#2e8b57')}
+            ${barCell(r.spent, maxOf(ms.tokenDaily, 'spent'), '#c0563f')}
+            <td style="font-weight:700;color:${Number(r.net) >= 0 ? '#1f2328' : '#c0563f'}">${formatNumber(r.net)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">토큰 거래가 없습니다</div>';
+
+    const REASON_LABELS = {
+      mission: '미션 보상', shop: '토큰 상점', bubble: '말풍선',
+      room_highlight: '방 강조', admin: '운영자 지급',
+    };
+    const reasonTable = ms.tokenByReason.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>사유</th><th>건수</th><th>발행</th><th>사용</th></tr>
+          ${ms.tokenByReason.map((r) => `<tr>
+            <td style="font-weight:700">${escapeHtml(REASON_LABELS[r.reason] || r.reason)}</td>
+            <td>${formatNumber(r.events)}</td>
+            <td style="color:#2e8b57">${r.issued > 0 ? formatNumber(r.issued) : '-'}</td>
+            <td style="color:#c0563f">${r.spent > 0 ? formatNumber(r.spent) : '-'}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">토큰 거래가 없습니다</div>';
+
+    const streakRows = [
+      { label: '1일', n: Number(msStreak.s1 || 0), color: '#c0563f' },
+      { label: '2~3일', n: Number(msStreak.s2_3 || 0), color: '#d88c38' },
+      { label: '4~6일', n: Number(msStreak.s4_6 || 0), color: '#b3a429' },
+      { label: '7일 이상', n: Number(msStreak.s7 || 0), color: '#2e8b57' },
+    ];
+    const streakUsers = Number(msStreak.users || 0);
+    const streakTable = streakUsers > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>연속 달성일</th><th>유저</th><th>비중</th></tr>
+          ${streakRows.map((r) => `<tr>
+            <td>${r.label}</td>
+            ${barCell(r.n, maxOf(streakRows, 'n'), r.color)}
+            <td>${pctText(r.n, streakUsers)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">연속 달성 기록이 없습니다</div>';
+
+    const rerollTable = ms.rerolls.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>게임</th><th>새로고침</th><th>쓴 사람</th></tr>
+          ${ms.rerolls.map((r) => `<tr>
+            <td style="font-weight:700">${escapeHtml(GAME_LABELS[r.game] || r.game)}</td>
+            ${barCell(r.used, maxOf(ms.rerolls, 'used'), '#5f62d6')}
+            <td>${formatNumber(r.users)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">새로고침을 쓴 사람이 없습니다</div>';
+
+    const missionsTabContent = `
+      ${summaryStrip([
+        { label: '미션 완료율', value: pctText(msEng.dones, msEng.picks, 0),
+          meta: `발행 ${formatNumber(msEng.picks || 0)}개 중 ${formatNumber(msEng.dones || 0)}개 완료` },
+        { label: '하나라도 깬 사람',
+          value: msEng.completerRate == null ? '-' : formatPercent(msEng.completerRate * 100, 0),
+          meta: `미션 받은 ${formatNumber(msEng.pickers || 0)}명 중 ${formatNumber(msEng.completers || 0)}명` },
+        { label: '1인당 완료', value: msEng.perPicker == null ? '-' : msEng.perPicker.toFixed(2),
+          meta: `하루 최대 ${missions.defs.DAILY_PICKS}개까지 받습니다` },
+        { label: '토큰 발행 ÷ 사용',
+          value: msSpent > 0 ? `${(msIssued / msSpent).toFixed(2)}배` : msIssued > 0 ? '사용 없음' : '-',
+          valueColor: msSpent > 0 && msIssued / msSpent > 2 ? '#c0563f' : undefined,
+          meta: `발행 ${formatNumber(msIssued)} · 사용 ${formatNumber(msSpent)}` },
+        { label: '쌓여 있는 토큰', value: formatNumber(msHold.outstanding || 0),
+          meta: `보유자 ${formatNumber(msHold.holders || 0)}명 · 평균 ${Number(msHold.avg_balance || 0).toFixed(1)}개` },
+      ])}
+      <div class="card-actions">
+        ${(statActions.missions || []).map((a) => `<a href="${a.href}" class="btn btn-secondary">${escapeHtml(a.label)}</a>`).join('')}
+      </div>
+      <details class="chart-foldout" open>
+        <summary>미션 발행·완료와 토큰 흐름</summary>
+        <div class="card-body"><div style="position:relative;height:300px"><canvas id="missionChart"></canvas></div></div>
+      </details>
+      <div class="card">
+        <h3>미션별 난이도 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 완료율 낮은 순</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+          완료율은 <b>끝난 미션만</b>으로 냅니다(완료 + 만료). 진행 중인 건은 실패가 아니고,
+          넣으면 오늘 발행된 미션 때문에 모든 미션의 완료율이 내려갑니다.<br>
+          <b>25% 아래는 아무도 못 깨는 미션</b>, <b>95% 위는 조건이 사실상 없는 미션</b>이라
+          양쪽 다 빨갛게 둡니다. 실패 진행도가 높은데 완료율이 낮으면 "거의 다 갔는데
+          시간이 모자란" 미션이라 목표치만 낮추면 됩니다.
+        </div>
+        ${missionTable}
+        ${msNeverPicked.length > 0 ? `<div style="margin-top:14px;padding:11px 13px;border-radius:9px;
+          background:var(--surface-strong);font-size:12.5px;line-height:1.7">
+          <b>켜져 있는데 이 기간에 한 번도 발행되지 않은 미션 ${msNeverPicked.length}개</b> —
+          후보 가중치나 조건을 확인해 보세요.<br>
+          <span class="mono" style="color:#5A4038">${msNeverPicked.slice(0, 20).map((m) => escapeHtml(m.key)).join(', ')}${msNeverPicked.length > 20 ? ` … 외 ${msNeverPicked.length - 20}개` : ''}</span>
+        </div>` : ''}
+      </div>
+      <div class="card">
+        <h3>토큰 경제 <span style="font-size:13px;color:#8a8f98;font-weight:600">· 발행과 사용의 균형</span></h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+          발행이 사용을 계속 앞지르면 토큰이 쌓이기만 하고, 그건 <b>상점에 살 것이 없다는
+          뜻</b>입니다. 반대로 사용이 발행을 넘으면 모으는 데 너무 오래 걸립니다.
+        </div>
+        <div class="soft-panel">
+          ${metricLine('기간 발행', formatNumber(msIssued))}
+          ${metricLine('기간 사용', formatNumber(msSpent))}
+          ${metricLine('기간 순증', formatNumber(msIssued - msSpent))}
+          ${metricLine('누적 발행(전체 기간)', formatNumber(msHold.lifetime_earned || 0))}
+          ${metricLine('지금 쌓여 있는 양', formatNumber(msHold.outstanding || 0))}
+          ${metricLine('최다 보유자', `${formatNumber(msHold.top_balance || 0)}개`)}
+        </div>
+        <div style="height:14px"></div>
+        ${tokenTable}
+        <div style="height:14px"></div>
+        <h3 style="font-size:14px">사유별</h3>
+        ${reasonTable}
+      </div>
+      <div class="card">
+        <h3>참여와 잠김</h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+          연속 달성일이 ${missions.defs.STREAK_BONUS_DAYS}일에 닿으면 보너스
+          ${missions.defs.STREAK_BONUS_TOKENS}토큰이 나갑니다. <b>7일 이상 칸이 비어 있으면
+          그 보너스는 설계상 존재하지만 아무도 받지 못하는 것</b>입니다.<br>
+          새로고침이 많이 쓰이면 처음 보여 준 후보가 잘 맞지 않는다는 신호입니다.
+        </div>
+        ${streakTable}
+        <div style="height:14px"></div>
+        <h3 style="font-size:14px">미션 새로고침</h3>
+        ${rerollTable}
+      </div>
+      <div class="card">
+        <h3>일자별 미션</h3>
+        ${msDailyTable}
       </div>
     `;
 
@@ -2452,9 +3001,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         <div class="card-body"><div style="position:relative;height:300px"><canvas id="goldChart"></canvas></div></div>
       </details>
       <div class="card">
-        <h3>보조 지표</h3>
+        <h3>골드 흐름 상세</h3>
         <div class="soft-panel">
-          ${metricLine('최대 획득 구간', peakEarnRow ? `${escapeHtml(formatBucket(peakEarnRow.bucket_time, bucket))} · ${formatNumber(peakEarnRow.earned)}` : '-')}
           ${metricLine('최대 소모 구간', peakSpendRow ? `${escapeHtml(formatBucket(peakSpendRow.bucket_time, bucket))} · ${formatNumber(peakSpendRow.spent)}` : '-')}
           ${metricLine('구간당 평균 획득', (Number(summary.goldEarned || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
           ${metricLine('구간당 평균 소모', (Number(summary.goldSpent || 0) / Math.max(goldSeries.length, 1)).toFixed(1))}
@@ -2543,14 +3091,17 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           ${attendanceTable}
         </div>
         <div class="card">
-          <h3>보조 지표</h3>
+          <h3>출석 상세</h3>
           <div class="soft-panel">
             ${metricLine('총 출석 횟수', formatNumber(attSum.total_claims || 0))}
-            ${metricLine('순(고유) 출석 인원', formatNumber(attSum.unique_claims || 0))}
-            ${metricLine('7일차 완주', formatNumber(attSum.finales || 0))}
-            ${metricLine('지급 골드 합계', formatNumber(attSum.gold || 0))}
+            ${metricLine('1인당 평균 출석', (Number(attSum.unique_claims || 0) > 0
+              ? (Number(attSum.total_claims || 0) / Number(attSum.unique_claims)).toFixed(2) : '-'))}
             ${metricLine('최대 출석 시점', peakAttendanceRow ? `${escapeHtml(formatDate(peakAttendanceRow.bucket_time))} · ${formatNumber(peakAttendanceRow.unique_claims)}명` : '-')}
             ${metricLine('완주율(7일차/출석인원)', (attSum.unique_claims > 0 ? formatPercent((Number(attSum.finales || 0) * 100) / Number(attSum.unique_claims), 1) : '-'))}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6">
+            출석은 광고를 보고 누르는 버튼입니다. 그래서 이 숫자는 접속자 수가 아니라
+            <b>보상을 받아 간 사람</b>이고, 접속·재방문은 유저 탭에서 봅니다.
           </div>
         </div>
       </div>
@@ -2659,8 +3210,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     `;
 
     const tabContentMap = {
+      users: usersTabContent,
       games: gamesTabContent,
-      acquisition: acquisitionTabContent,
+      missions: missionsTabContent,
       economy: economyTabContent,
       shop: shopTabContent,
       payment: paymentTabContent,
@@ -2677,10 +3229,23 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '마이티', cur: summary.mightyGames, prev: prevSummary.mightyGames },
         { label: '랭크전', cur: summary.rankedGames, prev: prevSummary.rankedGames },
       ],
-      acquisition: [
-        { label: '전체 가입', cur: summary.totalSignups, prev: prevSummary.totalSignups },
+      users: [
+        // 활동이 맨 앞이다. 가입은 유입의 입구일 뿐이고, 그 사람들이 다시
+        // 오는지가 이 탭이 답해야 하는 질문이다.
+        { label: '활동 유저', cur: userSum.activeInRange, prev: prevUserSum.activeInRange, keep: true },
+        { label: 'DAU', cur: userSum.dau, prev: prevUserSum.dau, keep: true },
+        { label: 'WAU', cur: userSum.wau, prev: prevUserSum.wau },
+        { label: 'MAU', cur: userSum.mau, prev: prevUserSum.mau },
+        { label: '신규 가입', cur: summary.totalSignups, prev: prevSummary.totalSignups, keep: true },
         { label: 'iOS 가입', cur: summary.iosSignups, prev: prevSummary.iosSignups },
         { label: 'AOS 가입', cur: summary.androidSignups, prev: prevSummary.androidSignups },
+      ],
+      missions: [
+        { label: '미션 발행', cur: msEng.picks, prev: prevMsEng.picks, keep: true },
+        { label: '미션 완료', cur: msEng.dones, prev: prevMsEng.dones, keep: true, color: '#2e8b57' },
+        { label: '미션 받은 사람', cur: msEng.pickers, prev: prevMsEng.pickers, keep: true },
+        { label: '토큰 발행', cur: msIssued, prev: prevMsIssued, keep: true, color: '#2e8b57' },
+        { label: '토큰 사용', cur: msSpent, prev: prevMsSpent, keep: true, color: '#c0563f' },
       ],
       economy: [
         { label: '획득 골드', cur: summary.goldEarned, prev: prevSummary.goldEarned, color: '#2e8b57' },
@@ -2707,7 +3272,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
     const content = `
       <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-      ${pageHeader('통계', '기간별 게임량, 가입, 골드 흐름, 그리고 상점 판매 추이까지 함께 볼 수 있습니다. 플랫폼 필터로 iOS/AOS 기준도 바로 확인할 수 있습니다.')}
+      ${pageHeader('통계',
+        '유저가 들어와서 다시 오는지(유저), 무엇을 하는지(게임·미션), 돈이 어떻게 도는지(골드·상점·결제)를 탭으로 나눠 봅니다.'
+        + '<br>기간과 플랫폼은 아래에서 함께 바꿉니다 — 바꾼 조건은 탭을 옮겨도 유지됩니다.')}
       <div class="filter-card">
         <div class="filter-title">조회 조건</div>
         <form method="GET" action="/tc-backstage/stats" class="search-bar" style="align-items:end;flex-wrap:wrap">
@@ -2927,6 +3494,135 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           attachDrilldown(goldChart, ${JSON.stringify(goldBucketTimes)}, 'economy');
         }
 
+        // 활동 유저 — 신규/재방문 누적 막대에 전체 선을 겹친다.
+        //
+        // 신규와 재방문을 쌓아서 보여주는 이유: 전체만 보면 "늘었다"까지만
+        // 알 수 있고, 새로 들어와서 늘었는지 원래 있던 사람이 더 와서
+        // 늘었는지는 할 일이 완전히 다르다.
+        const activeChartEl = document.getElementById('activeChart');
+        if (activeChartEl) {
+          const activeChart = new Chart(activeChartEl, {
+          type: 'bar',
+          data: {
+            labels: ${JSON.stringify(activeChartLabels)},
+            datasets: [
+              {
+                label: '신규',
+                data: ${JSON.stringify(activeChartNew)},
+                backgroundColor: 'rgba(102,187,106,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '재방문',
+                data: ${JSON.stringify(activeChartReturning)},
+                backgroundColor: 'rgba(47,111,208,0.75)',
+                borderRadius: 4,
+                borderSkipped: false,
+              },
+              {
+                label: '활동 유저',
+                data: ${JSON.stringify(activeChartDau)},
+                type: 'line',
+                borderColor: '#6d4c41',
+                backgroundColor: 'rgba(109,76,65,0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: '#6d4c41',
+                tension: 0.3,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+              x: { stacked: true, grid: { display: false } },
+              y: { stacked: true, beginAtZero: true, ticks: { precision: 0 },
+                   grid: { color: 'rgba(0,0,0,0.05)' } },
+            },
+          }
+        });
+        }
+
+        // 미션 — 발행·완료 막대에 토큰 발행/사용 선을 오른쪽 축으로.
+        //
+        // 축을 둘로 나눈 이유는 자리수가 다르다는 것뿐이다. 토큰은 미션
+        // 하나당 한두 개라 같은 축에 두면 미션 막대에 눌려 바닥에 붙는다.
+        const missionChartEl = document.getElementById('missionChart');
+        if (missionChartEl) {
+          const missionChart = new Chart(missionChartEl, {
+          type: 'bar',
+          data: {
+            labels: ${JSON.stringify(missionChartLabels)},
+            datasets: [
+              {
+                label: '발행',
+                data: ${JSON.stringify(missionChartPicked)},
+                backgroundColor: 'rgba(122,107,208,0.75)',
+                borderRadius: 4,
+                borderSkipped: false,
+                yAxisID: 'y',
+              },
+              {
+                label: '완료',
+                data: ${JSON.stringify(missionChartDone)},
+                backgroundColor: 'rgba(46,139,87,0.8)',
+                borderRadius: 4,
+                borderSkipped: false,
+                yAxisID: 'y',
+              },
+              {
+                label: '토큰 발행',
+                data: ${JSON.stringify(missionChartTokensIssued)},
+                type: 'line',
+                borderColor: '#b35b19',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: '#b35b19',
+                tension: 0.3,
+                yAxisID: 'y1',
+              },
+              {
+                label: '토큰 사용',
+                data: ${JSON.stringify(missionChartTokensSpent)},
+                type: 'line',
+                borderColor: '#c0563f',
+                borderWidth: 2,
+                borderDash: [5, 4],
+                pointRadius: 3,
+                pointBackgroundColor: '#c0563f',
+                tension: 0.3,
+                yAxisID: 'y1',
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              tooltip: tooltipStyle,
+              legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true, ticks: { precision: 0 },
+                   grid: { color: 'rgba(0,0,0,0.05)' },
+                   title: { display: true, text: '미션' } },
+              y1: { beginAtZero: true, position: 'right', ticks: { precision: 0 },
+                    grid: { display: false },
+                    title: { display: true, text: '토큰' } },
+            },
+          }
+        });
+        }
+
         const signupChartEl = document.getElementById('signupChart');
         if (signupChartEl) {
           const signupChart = new Chart(signupChartEl, {
@@ -2981,7 +3677,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             },
           }
         });
-          attachDrilldown(signupChart, ${JSON.stringify(signupBucketTimes)}, 'acquisition');
+          attachDrilldown(signupChart, ${JSON.stringify(signupBucketTimes)}, 'users');
         }
 
         const shopSalesChartEl = document.getElementById('shopSalesChart');

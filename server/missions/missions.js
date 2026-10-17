@@ -892,6 +892,183 @@ async function adminUserSummary(nickname) {
   };
 }
 
+/**
+ * 통계 화면의 미션 탭 — 기간을 받아 집계한다.
+ *
+ * adminOverview() 와 나누어 둔 이유는 보는 목적이 다르다는 것이다. 저쪽은
+ * "지금 상태"(누적 발행량, 오늘 몇 개)를 보는 운영 화면이고, 여기는 기간을
+ * 잘라 추세와 분포를 본다. 한 함수에 섞으면 둘 다 어정쩡해진다.
+ *
+ * 세 가지를 답한다:
+ *   1. 난이도 — 어떤 미션이 안 깨지고, 어떤 게 너무 쉬운가
+ *   2. 토큰 경제 — 발행이 사용을 앞지르고 있는가(인플레)
+ *   3. 참여 — 미션을 하는 사람이 전체의 몇 %이고, 얼마나 이어 하는가
+ */
+async function adminStats(fromIso, toIso) {
+  await loadOverrides();
+  const range = [fromIso, toIso];
+  const [perMission, daily, tokens, byReason, holders, engagement, streaks, rerolls] =
+    await Promise.all([
+      // 미션별 난이도. 완료율과 평균 소요 시간이 핵심이다.
+      //
+      // 'active' 는 완료율 계산에서 뺀다 — 아직 진행 중인 건 실패가 아니고,
+      // 섞으면 오늘 발행된 미션 때문에 모든 미션의 완료율이 내려간다.
+      pool.query(
+        `SELECT mission_key,
+                COUNT(*)::int AS picked,
+                COUNT(DISTINCT nickname)::int AS pickers,
+                COUNT(*) FILTER (WHERE status = 'done')::int AS done,
+                COUNT(*) FILTER (WHERE status = 'active')::int AS active,
+                COUNT(*) FILTER (WHERE status = 'expired')::int AS expired,
+                COUNT(*) FILTER (WHERE status = 'dropped')::int AS dropped,
+                COALESCE(SUM(tokens_awarded), 0)::int AS tokens,
+                -- 깬 사람들이 평균 몇 분 걸렸나. 고른 날 자정부터 센다
+                -- (고른 시각은 남기지 않으므로 하루 단위가 한계다).
+                ROUND(AVG(
+                  EXTRACT(EPOCH FROM (done_at - picked_day::timestamp)) / 60.0
+                ) FILTER (WHERE status = 'done' AND done_at IS NOT NULL))::int AS avg_minutes,
+                -- 진행도의 중앙값. 못 깬 미션이 "거의 다 갔는데 못 깬" 것인지
+                -- "손도 못 댄" 것인지는 완료율만으로는 알 수 없다.
+                ROUND(AVG(
+                  CASE WHEN target > 0 THEN progress::numeric / target ELSE NULL END
+                ) FILTER (WHERE status IN ('expired', 'dropped')), 3) AS avg_fail_progress
+           FROM tc_user_missions
+          WHERE picked_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND picked_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY mission_key`,
+        range,
+      ),
+      // 날짜별 추이.
+      pool.query(
+        `SELECT picked_day AS kst_day,
+                COUNT(*)::int AS picked,
+                COUNT(DISTINCT nickname)::int AS pickers,
+                COUNT(*) FILTER (WHERE status = 'done')::int AS done,
+                COALESCE(SUM(tokens_awarded), 0)::int AS tokens
+           FROM tc_user_missions
+          WHERE picked_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND picked_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY picked_day ORDER BY picked_day`,
+        range,
+      ),
+      // 토큰 발행·사용. 잔액은 기간과 무관한 현재 값이므로 따로 읽는다.
+      pool.query(
+        `SELECT kst_day,
+                COALESCE(SUM(delta) FILTER (WHERE delta > 0), 0)::int AS issued,
+                COALESCE(-SUM(delta) FILTER (WHERE delta < 0), 0)::int AS spent,
+                COALESCE(SUM(delta), 0)::int AS net
+           FROM tc_token_ledger
+          WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY kst_day ORDER BY kst_day`,
+        range,
+      ),
+      // 무슨 이유로 오갔나. 'mission' 발행 대 'shop' 사용의 균형이 경제다.
+      pool.query(
+        `SELECT reason,
+                COUNT(*)::int AS events,
+                COALESCE(SUM(delta) FILTER (WHERE delta > 0), 0)::int AS issued,
+                COALESCE(-SUM(delta) FILTER (WHERE delta < 0), 0)::int AS spent
+           FROM tc_token_ledger
+          WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY reason ORDER BY events DESC`,
+        range,
+      ),
+      // 쌓여 있는 토큰. 이 값이 계속 커지면 상점에 살 것이 없다는 뜻이다.
+      pool.query(
+        `SELECT COUNT(*) FILTER (WHERE balance > 0)::int AS holders,
+                COALESCE(SUM(balance), 0)::int AS outstanding,
+                COALESCE(SUM(total_earned), 0)::int AS lifetime_earned,
+                COALESCE(MAX(balance), 0)::int AS top_balance,
+                ROUND(AVG(balance) FILTER (WHERE balance > 0), 1) AS avg_balance
+           FROM tc_token_balance`,
+      ),
+      // 참여 — 미션을 고른 사람 수와, 하나라도 깬 사람 수.
+      pool.query(
+        `SELECT COUNT(DISTINCT nickname)::int AS pickers,
+                COUNT(DISTINCT nickname) FILTER (WHERE status = 'done')::int AS completers,
+                COUNT(*)::int AS picks,
+                COUNT(*) FILTER (WHERE status = 'done')::int AS dones
+           FROM tc_user_missions
+          WHERE picked_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND picked_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))`,
+        range,
+      ),
+      // 연속일 분포. 보너스(7일)에 닿는 사람이 있는지가 설계 검증이다.
+      pool.query(
+        `SELECT COUNT(*) FILTER (WHERE streak = 1)::int AS s1,
+                COUNT(*) FILTER (WHERE streak BETWEEN 2 AND 3)::int AS s2_3,
+                COUNT(*) FILTER (WHERE streak BETWEEN 4 AND 6)::int AS s4_6,
+                COUNT(*) FILTER (WHERE streak >= 7)::int AS s7,
+                COALESCE(MAX(streak), 0)::int AS max_streak,
+                COUNT(*)::int AS users
+           FROM tc_mission_streak`,
+      ),
+      // 리롤 사용. 많이 쓰이면 처음 보여 준 후보가 안 맞는다는 신호다.
+      pool.query(
+        `SELECT game, COALESCE(SUM(used), 0)::int AS used,
+                COUNT(DISTINCT nickname)::int AS users
+           FROM tc_mission_rerolls
+          WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY game ORDER BY used DESC`,
+        range,
+      ),
+    ]);
+
+  const by = new Map(perMission.rows.map((r) => [r.mission_key, r]));
+  // 정의에 있는 미션을 모두 돌려준다. 기간 안에 한 번도 안 뽑힌 미션은
+  // 집계에서 빠지는데, 그게 바로 알아야 할 사실이다 — 켜져 있는데도
+  // 아무도 받지 못한 미션은 후보 가중치나 조건을 봐야 한다.
+  const missions = defs.MISSIONS.map((m) => {
+    const row = by.get(m.key) || {};
+    const e = effectiveMission(m.key);
+    const picked = Number(row.picked || 0);
+    const done = Number(row.done || 0);
+    const settled = done + Number(row.expired || 0) + Number(row.dropped || 0);
+    return {
+      key: m.key,
+      game: m.game || null,
+      enabled: e ? e.enabled !== false : true,
+      tokens: e ? e.tokens : m.tokens,
+      picked,
+      pickers: Number(row.pickers || 0),
+      done,
+      active: Number(row.active || 0),
+      expired: Number(row.expired || 0),
+      dropped: Number(row.dropped || 0),
+      tokensAwarded: Number(row.tokens || 0),
+      avgMinutes: row.avg_minutes == null ? null : Number(row.avg_minutes),
+      avgFailProgress: row.avg_fail_progress == null ? null : Number(row.avg_fail_progress),
+      // 끝난 것들 중 깬 비율. 진행 중인 건 분모에 넣지 않는다.
+      doneRate: settled > 0 ? done / settled : null,
+    };
+  });
+
+  const eng = engagement.rows[0] || {};
+  return {
+    missions,
+    daily: daily.rows,
+    tokenDaily: tokens.rows,
+    tokenByReason: byReason.rows,
+    tokenHolders: holders.rows[0] || {},
+    streaks: streaks.rows[0] || {},
+    rerolls: rerolls.rows,
+    engagement: {
+      pickers: Number(eng.pickers || 0),
+      completers: Number(eng.completers || 0),
+      picks: Number(eng.picks || 0),
+      dones: Number(eng.dones || 0),
+      // 고른 사람 중 하나라도 깬 비율. 낮으면 미션이 어렵거나 안 보인다.
+      completerRate: Number(eng.pickers || 0) > 0
+        ? Number(eng.completers || 0) / Number(eng.pickers || 0) : null,
+      perPicker: Number(eng.pickers || 0) > 0
+        ? Number(eng.dones || 0) / Number(eng.pickers || 0) : null,
+    },
+  };
+}
+
 module.exports = {
   init,
   loadOverrides,
@@ -901,6 +1078,7 @@ module.exports = {
   adminSetMission,
   adminSetProduct,
   adminOverview,
+  adminStats,
   adminLedger,
   adminUserSummary,
   ensureSchema,

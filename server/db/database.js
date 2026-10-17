@@ -1825,6 +1825,55 @@ async function runMigrations() {
       )
     `);
 
+    // 하루에 한 줄. 누가 그날 앱에 들어왔는지.
+    //
+    // 이게 없으면 DAU 도 리텐션도 계산할 수 없다. tc_users.last_login 과
+    // last_seen_at 은 덮어쓰는 칸이라 "지금 기준 며칠 전"만 알려주고, 어제
+    // 몇 명이 들어왔는지는 어제가 지나면 사라진다. 출석(tc_gold_history
+    // source='attendance')은 광고를 보고 누르는 버튼이라 접속이 아니라
+    // "광고를 본 사람"이고, 매치 기록은 들어와서 게임을 안 한 사람을 놓친다.
+    //
+    // 과거는 채울 수 없다. 이 테이블이 생긴 날부터 정확해지고, 그 이전
+    // 날짜는 기존 로그로 어림한다(getRetroActiveDaily).
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tc_daily_active (
+        nickname VARCHAR(50) NOT NULL,
+        kst_day DATE NOT NULL,
+        -- 그날 접속 횟수. "하루에 몇 번 들어오나"는 세션을 세야 알 수 있고,
+        -- 한 줄로 합쳐두면 그 질문에 답할 수 없다.
+        sessions INTEGER NOT NULL DEFAULT 1,
+        -- 활동한 KST 시간대를 24비트 마스크로. 0시=1<<0 … 23시=1<<23.
+        --
+        -- 시간대별 접속자를 세려면 "그 유저가 그 시간에 있었나"가 필요한데,
+        -- 유저-시간마다 행을 만들면 하루에 최대 24배가 된다. 비트로 두면
+        -- 한 줄에 다 들어가고, 집계는 (hours_mask >> h) & 1 로 센다.
+        hours_mask INTEGER NOT NULL DEFAULT 0,
+        first_seen_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC'),
+        last_seen_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'UTC'),
+        PRIMARY KEY (nickname, kst_day)
+      )
+    `);
+    // 통계는 거의 항상 "기간 안의 날짜들"로 훑는다.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_daily_active_day
+      ON tc_daily_active(kst_day)`);
+
+    // 활동 집계가 읽는 테이블들의 날짜 인덱스.
+    //
+    // tc_gold_history 는 PK 밖에 없었다. 리텐션 질의가 이 테이블을 날짜로
+    // 자르는데, 인덱스가 없으면 매번 전체를 읽는다 — 골드 기록은 유저가
+    // 늘수록 가장 빠르게 커지는 표다. 유저 상세 화면의 골드 내역과 출석
+    // 로그도 같은 인덱스를 쓴다.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_gold_history_created
+      ON tc_gold_history(created_at)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_gold_history_nick_created
+      ON tc_gold_history(nickname, created_at DESC)`);
+    // 가입일 코호트와 유입 경로가 가입 시각으로 자른다.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_created
+      ON tc_users(created_at)`);
+    // 미션 통계는 발행일로 자른다(기존 인덱스는 닉네임 기준뿐이었다).
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_user_missions_picked_day
+      ON tc_user_missions(picked_day)`);
+
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
     // 예전에는 로그만 찍고 계속 떴다. 그러면 실패한 문장 뒤의 마이그레이션이
@@ -1945,6 +1994,9 @@ async function loginUser(username, password) {
        WHERE id = $1`,
       [user.id]
     );
+    // DAU·리텐션이 읽는 일별 기록. 로그인에서도 적는 이유는, 끊을 때만
+    // 적으면 프로세스 재시작으로 닫히지 않은 세션이 통째로 빠지기 때문이다.
+    await recordDailyActive(user.nickname);
 
     return {
       success: true,
@@ -2458,10 +2510,52 @@ async function touchLastSeen(nickname) {
        WHERE nickname = $1`,
       [nickname],
     );
+    // 같은 자리에서 "그날 들어왔다"도 적는다. 통계가 읽는 건 이쪽이다 —
+    // last_seen_at 은 덮어쓰는 칸이라 어제치가 남지 않는다.
+    await recordDailyActive(nickname);
   } catch (err) {
     // A missed stamp costs a slightly stale line in a friends list. Never
     // worth failing a disconnect over.
     console.error('touchLastSeen error:', err.message);
+  }
+}
+
+/// 오늘 이 사람이 들어왔다고 적는다. 접속할 때와 끊을 때 모두 부른다.
+///
+/// 같은 날 여러 번 불려도 한 줄이다(PK 가 nickname+날짜). sessions 는
+/// 올라가고, 그 시각의 KST 시간대 비트가 켜진다.
+///
+/// 접속과 종료 양쪽에서 부르는 이유: 접속만 보면 프로세스가 재시작되며
+/// 끊긴 세션이 빠지고, 종료만 보면 깔끔하게 닫히지 않은 세션이 빠진다.
+/// 어느 쪽이든 그날 들어온 사실은 남아야 한다.
+///
+/// 실패해도 조용히 넘어간다. 통계 한 줄 때문에 로그인이나 연결 종료를
+/// 실패시킬 이유가 없다.
+async function recordDailyActive(nickname) {
+  if (!nickname) return { success: false };
+  try {
+    await pool.query(
+      `INSERT INTO tc_daily_active (nickname, kst_day, sessions, hours_mask)
+       VALUES (
+         $1,
+         DATE(timezone('Asia/Seoul', NOW())),
+         1,
+         -- 1 << (지금의 KST 시각). EXTRACT 는 numeric 을 주므로 int 로 캐스팅
+         -- 해야 비트 연산자가 받는다.
+         (1 << EXTRACT(HOUR FROM timezone('Asia/Seoul', NOW()))::int)
+       )
+       ON CONFLICT (nickname, kst_day) DO UPDATE
+         SET sessions = tc_daily_active.sessions + 1,
+             -- OR 로 켠다. 같은 시간대에 두 번 들어와도 비트는 하나다.
+             hours_mask = tc_daily_active.hours_mask
+               | (1 << EXTRACT(HOUR FROM timezone('Asia/Seoul', NOW()))::int),
+             last_seen_at = (NOW() AT TIME ZONE 'UTC')`,
+      [nickname],
+    );
+    return { success: true };
+  } catch (err) {
+    console.error('recordDailyActive error:', err.message);
+    return { success: false };
   }
 }
 
@@ -8505,6 +8599,345 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
   }
 }
 
+// ── 유저 활동 · 재방문 · 리텐션 ──────────────────────────────────────
+//
+// 여기 있는 것들은 모두 "(닉네임, KST 날짜) 한 쌍 = 그 사람이 그날 활동했다"
+// 위에 올라간다. 그 집합을 만드는 게 ACTIVITY_DAYS_SQL 이다.
+
+/// 활동한 날의 집합.
+///
+/// tc_daily_active 가 정확한 기록이지만, 그 테이블이 생긴 날부터만 있다.
+/// 그 이전을 비워두면 리텐션 선이 과거 쪽에서 0 으로 떨어져 "다 이탈한
+/// 것처럼" 보이므로, 남아 있는 다른 로그로 메운다.
+///
+/// 메운 값은 실제보다 낮다 — 들어와서 게임도 미션도 안 하고 구경만 한
+/// 사람은 어느 로그에도 남지 않는다. 그래서 화면은 어디까지가 어림인지
+/// 밝혀야 하고, 그 경계선을 돌려주는 게 getDailyActiveSince 다.
+///
+/// 봇은 tc_users 조인에서 걸러진다. 봇 닉네임은 계정이 아니므로 조인에
+/// 실패하고, 탈퇴한 계정도 같은 자리에서 빠진다.
+const ACTIVITY_DAYS_SQL = `
+  SELECT nickname, kst_day FROM tc_daily_active
+  UNION
+  SELECT nickname, DATE(timezone('Asia/Seoul', created_at))
+    FROM tc_gold_history WHERE nickname IS NOT NULL
+  UNION
+  SELECT nickname, kst_day FROM tc_token_ledger WHERE nickname IS NOT NULL
+  UNION
+  SELECT nickname, picked_day FROM tc_user_missions WHERE nickname IS NOT NULL
+  UNION
+  SELECT v.p, DATE(timezone('Asia/Seoul', m.created_at))
+    FROM tc_match_history m,
+         LATERAL (VALUES (m.player_a1), (m.player_a2), (m.player_b1), (m.player_b2)) v(p)
+   WHERE v.p IS NOT NULL
+  UNION
+  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+    FROM tc_sk_match_players p JOIN tc_sk_match_history h ON h.id = p.match_id
+   WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+  UNION
+  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+    FROM tc_ll_match_players p JOIN tc_ll_match_history h ON h.id = p.match_id
+   WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+  UNION
+  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+    FROM tc_mighty_match_players p JOIN tc_mighty_match_history h ON h.id = p.match_id
+   WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
+`;
+
+/// 실계정만 남긴 활동 집합. 모든 쿼리가 이 CTE 로 시작한다.
+const ACTS_CTE = `
+  WITH raw_acts AS (${ACTIVITY_DAYS_SQL}),
+  acts AS (
+    SELECT r.nickname, r.kst_day
+      FROM raw_acts r
+      JOIN tc_users u ON u.nickname = r.nickname AND u.is_deleted IS NOT TRUE
+     WHERE r.kst_day IS NOT NULL
+  )
+`;
+
+/// 정확한 기록이 시작된 날. 이 날 이전은 어림값이다.
+///
+/// 화면에 이 경계선을 적지 않으면, 테이블이 생긴 날에 DAU 가 껑충 뛴 것을
+/// 유입이 늘어난 것으로 읽는다. 늘어난 건 집계 범위다.
+async function getDailyActiveSince() {
+  try {
+    const r = await pool.query(
+      `SELECT MIN(kst_day) AS since, COUNT(*)::int AS rows FROM tc_daily_active`);
+    return { since: r.rows[0]?.since || null, rows: r.rows[0]?.rows || 0 };
+  } catch (err) {
+    console.error('getDailyActiveSince error:', err.message);
+    return { since: null, rows: 0 };
+  }
+}
+
+/// 날짜별 활동 유저 수(DAU)와, 그중 그날 가입한 사람 수.
+///
+/// 신규를 따로 세는 이유: DAU 가 늘었을 때 "새로 들어온 사람이 늘어서"와
+/// "원래 있던 사람이 더 자주 와서"는 완전히 다른 상황이고, 할 일도 다르다.
+async function getActiveUsersSeries(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `${ACTS_CTE}
+       SELECT a.kst_day,
+              COUNT(DISTINCT a.nickname)::int AS dau,
+              COUNT(DISTINCT a.nickname) FILTER (
+                WHERE DATE(timezone('Asia/Seoul', u.created_at)) = a.kst_day
+              )::int AS new_users,
+              COUNT(DISTINCT a.nickname) FILTER (
+                WHERE DATE(timezone('Asia/Seoul', u.created_at)) < a.kst_day
+              )::int AS returning_users,
+              COALESCE(SUM(d.sessions), 0)::int AS sessions
+         FROM acts a
+         JOIN tc_users u ON u.nickname = a.nickname
+         LEFT JOIN tc_daily_active d
+                ON d.nickname = a.nickname AND d.kst_day = a.kst_day
+        WHERE a.kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+          AND a.kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+        GROUP BY a.kst_day
+        ORDER BY a.kst_day`,
+      [fromIso, toIso],
+    );
+    return r.rows;
+  } catch (err) {
+    console.error('getActiveUsersSeries error:', err.message);
+    return [];
+  }
+}
+
+/// DAU / WAU / MAU 와 고착도.
+///
+/// 고착도(DAU÷MAU)는 "한 달에 한 번이라도 온 사람 중 몇 %가 하루에 보이나"
+/// 다. 20% 면 한 달에 6일 정도 온다는 뜻이다. 절대 인원보다 이 비율이
+/// 먼저 움직이므로, 유입을 늘리기 전에 볼 숫자다.
+///
+/// 기준 날짜는 [toIso] 다. 조회 기간의 마지막 날을 "오늘"로 보고 거기서
+/// 7일·30일을 거꾸로 센다 — 과거 기간을 조회할 때도 그 시점의 WAU 를
+/// 봐야 의미가 있다.
+async function getActiveUserSummary(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `${ACTS_CTE},
+       ref AS (SELECT DATE(timezone('Asia/Seoul', $2::timestamptz)) AS d)
+       SELECT
+         (SELECT COUNT(DISTINCT nickname)::int FROM acts, ref
+           WHERE kst_day = ref.d) AS dau,
+         (SELECT COUNT(DISTINCT nickname)::int FROM acts, ref
+           WHERE kst_day > ref.d - 7 AND kst_day <= ref.d) AS wau,
+         (SELECT COUNT(DISTINCT nickname)::int FROM acts, ref
+           WHERE kst_day > ref.d - 30 AND kst_day <= ref.d) AS mau,
+         (SELECT COUNT(DISTINCT nickname)::int FROM acts
+           WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+             AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))) AS active_in_range,
+         (SELECT COUNT(*)::int FROM tc_users
+           WHERE is_deleted IS NOT TRUE) AS total_users`,
+      [fromIso, toIso],
+    );
+    const row = r.rows[0] || {};
+    const mau = Number(row.mau || 0);
+    return {
+      dau: Number(row.dau || 0),
+      wau: Number(row.wau || 0),
+      mau,
+      activeInRange: Number(row.active_in_range || 0),
+      totalUsers: Number(row.total_users || 0),
+      // 0 으로 나누지 않는다. MAU 가 0 이면 고착도는 "모르는 값"이지 0 이 아니다.
+      stickiness: mau > 0 ? Number(row.dau || 0) / mau : null,
+    };
+  } catch (err) {
+    console.error('getActiveUserSummary error:', err.message);
+    return { dau: 0, wau: 0, mau: 0, activeInRange: 0, totalUsers: 0, stickiness: null };
+  }
+}
+
+/// 가입일 코호트별 재방문율 — D1 / D7 / D30.
+///
+/// "가입 다음 날 몇 %가 다시 왔나"가 D1 이다. 이 숫자 하나가 첫 경험이
+/// 괜찮았는지를 가장 빨리 말해준다.
+///
+/// 아직 D7 이 되지 않은 코호트(가입 3일차)는 d7 을 null 로 둔다. 0 으로
+/// 채우면 최근 코호트가 전부 실패한 것처럼 보이고, 그게 리텐션 표를
+/// 못 믿게 만드는 가장 흔한 이유다.
+async function getRetentionCohorts(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `${ACTS_CTE},
+       today AS (SELECT DATE(timezone('Asia/Seoul', NOW())) AS d),
+       cohort AS (
+         SELECT u.nickname, DATE(timezone('Asia/Seoul', u.created_at)) AS join_day
+           FROM tc_users u
+          WHERE u.is_deleted IS NOT TRUE
+            AND DATE(timezone('Asia/Seoul', u.created_at))
+                >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND DATE(timezone('Asia/Seoul', u.created_at))
+                <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+       )
+       SELECT c.join_day,
+              COUNT(DISTINCT c.nickname)::int AS cohort_size,
+              COUNT(DISTINCT c.nickname) FILTER (
+                WHERE a.kst_day = c.join_day + 1)::int AS d1,
+              COUNT(DISTINCT c.nickname) FILTER (
+                WHERE a.kst_day = c.join_day + 7)::int AS d7,
+              COUNT(DISTINCT c.nickname) FILTER (
+                WHERE a.kst_day = c.join_day + 30)::int AS d30,
+              -- 창(window) 기준도 같이 준다. "정확히 7일째"는 하루라도
+              -- 어긋나면 0 이 되어 작은 코호트에서 요동이 심하다.
+              COUNT(DISTINCT c.nickname) FILTER (
+                WHERE a.kst_day > c.join_day AND a.kst_day <= c.join_day + 7)::int AS w1,
+              COUNT(DISTINCT c.nickname) FILTER (
+                WHERE a.kst_day > c.join_day + 7 AND a.kst_day <= c.join_day + 30)::int AS w2,
+              -- 그 날짜가 아직 오지 않았으면 비율을 내지 않는다.
+              (c.join_day + 1 <= (SELECT d FROM today)) AS d1_ready,
+              (c.join_day + 7 <= (SELECT d FROM today)) AS d7_ready,
+              (c.join_day + 30 <= (SELECT d FROM today)) AS d30_ready
+         FROM cohort c
+         LEFT JOIN acts a ON a.nickname = c.nickname
+        GROUP BY c.join_day
+        ORDER BY c.join_day DESC`,
+      [fromIso, toIso],
+    );
+    return r.rows.map((row) => ({
+      joinDay: row.join_day,
+      cohortSize: Number(row.cohort_size || 0),
+      d1: row.d1_ready ? Number(row.d1 || 0) : null,
+      d7: row.d7_ready ? Number(row.d7 || 0) : null,
+      d30: row.d30_ready ? Number(row.d30 || 0) : null,
+      w1: row.d1_ready ? Number(row.w1 || 0) : null,
+      w2: row.d7_ready ? Number(row.w2 || 0) : null,
+    }));
+  } catch (err) {
+    console.error('getRetentionCohorts error:', err.message);
+    return [];
+  }
+}
+
+/// 기간 안에 며칠 왔는지의 분포.
+///
+/// 평균 접속일수는 쓸모가 적다 — 매일 오는 소수와 한 번 보고 사라진 다수가
+/// 섞여 가운데 값이 나오고, 그 값에 해당하는 사람은 아무도 없다. 분포로
+/// 보면 "1일만 온 사람이 70%" 처럼 할 일이 보이는 모양이 된다.
+async function getVisitFrequency(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `${ACTS_CTE},
+       per_user AS (
+         SELECT nickname, COUNT(DISTINCT kst_day)::int AS days
+           FROM acts
+          WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY nickname
+       )
+       SELECT
+         COUNT(*) FILTER (WHERE days = 1)::int AS d1,
+         COUNT(*) FILTER (WHERE days BETWEEN 2 AND 3)::int AS d2_3,
+         COUNT(*) FILTER (WHERE days BETWEEN 4 AND 7)::int AS d4_7,
+         COUNT(*) FILTER (WHERE days BETWEEN 8 AND 14)::int AS d8_14,
+         COUNT(*) FILTER (WHERE days >= 15)::int AS d15,
+         COUNT(*)::int AS users,
+         COALESCE(ROUND(AVG(days)::numeric, 2), 0) AS avg_days,
+         COALESCE(MAX(days), 0)::int AS max_days
+         FROM per_user`,
+      [fromIso, toIso],
+    );
+    return r.rows[0] || {};
+  } catch (err) {
+    console.error('getVisitFrequency error:', err.message);
+    return {};
+  }
+}
+
+/// 시간대 × 요일 활동 분포. tc_daily_active 의 비트마스크에서 나온다.
+///
+/// 어림값 구간이 없다 — 비트마스크는 새 테이블에만 있으므로, 이 표는
+/// 기록이 시작된 날 이후만 센다. 섞으면 "매치가 있었던 시간"과 "접속한
+/// 시간"이 한 칸에 더해져 둘 다 못 믿게 된다.
+///
+/// 세는 단위는 유저-날짜다. 한 사람이 같은 시간대에 세 번 들어와도 1 로
+/// 센다(비트는 하나). "그 시간에 몇 명이 있었나"가 궁금한 것이고, 한
+/// 사람이 새로고침을 몇 번 했는지는 아니다.
+async function getHourlyActivity(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `SELECT h AS hour,
+              EXTRACT(DOW FROM d.kst_day)::int AS dow,
+              COUNT(*)::int AS users
+         FROM tc_daily_active d
+        CROSS JOIN generate_series(0, 23) AS h
+        WHERE d.kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+          AND d.kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          AND ((d.hours_mask >> h) & 1) = 1
+        GROUP BY 1, 2
+        ORDER BY 2, 1`,
+      [fromIso, toIso],
+    );
+    return r.rows;
+  } catch (err) {
+    console.error('getHourlyActivity error:', err.message);
+    return [];
+  }
+}
+
+/// 자주 오는 사람들. 기간 안의 접속일수 순.
+///
+/// 랭킹이 아니라 명단이다. 이 사람들이 무엇을 하다 막히는지가 다음에
+/// 고칠 것을 알려주고, 갑자기 사라지면 그게 가장 빠른 경고다.
+async function getStickyUsers(fromIso, toIso, limit = 20) {
+  try {
+    const r = await pool.query(
+      `${ACTS_CTE},
+       per_user AS (
+         SELECT nickname, COUNT(DISTINCT kst_day)::int AS days
+           FROM acts
+          WHERE kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+            AND kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+          GROUP BY nickname
+       )
+       SELECT p.nickname, p.days,
+              u.level, u.gold, u.total_games, u.device_platform,
+              COALESCE(u.last_seen_at, u.last_login) AS last_seen_at,
+              DATE(timezone('Asia/Seoul', u.created_at)) AS join_day,
+              COALESCE((SELECT SUM(sessions) FROM tc_daily_active d
+                         WHERE d.nickname = p.nickname
+                           AND d.kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
+                           AND d.kst_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
+                       ), 0)::int AS sessions
+         FROM per_user p
+         JOIN tc_users u ON u.nickname = p.nickname
+        ORDER BY p.days DESC, sessions DESC, u.total_games DESC
+        LIMIT $3`,
+      [fromIso, toIso, Math.max(1, Math.min(parseInt(limit, 10) || 20, 100))],
+    );
+    return r.rows;
+  } catch (err) {
+    console.error('getStickyUsers error:', err.message);
+    return [];
+  }
+}
+
+/// 유입 경로 — 가입 기간 안의 로그인 수단과 플랫폼.
+///
+/// auth_provider 가 사실상 유일한 유입 단서다. 광고 캠페인 파라미터 같은
+/// 건 받지 않으므로 "어디서 왔나"는 알 수 없고, "무엇으로 가입했나"까지만
+/// 말할 수 있다. 그 이상을 적으면 없는 것을 아는 척하는 화면이 된다.
+async function getAcquisitionBreakdown(fromIso, toIso) {
+  try {
+    const r = await pool.query(
+      `SELECT COALESCE(auth_provider, 'local') AS provider,
+              COALESCE(device_platform, 'unknown') AS platform,
+              COUNT(*)::int AS signups
+         FROM tc_users
+        WHERE is_deleted IS NOT TRUE
+          AND created_at >= $1::timestamptz AND created_at <= $2::timestamptz
+        GROUP BY 1, 2
+        ORDER BY signups DESC`,
+      [fromIso, toIso],
+    );
+    return r.rows;
+  } catch (err) {
+    console.error('getAcquisitionBreakdown error:', err.message);
+    return [];
+  }
+}
+
 async function getDetailedAdminStats(dateFrom, dateTo, bucket = 'day', options = {}) {
   const client = await pool.connect();
   const groupUnit = bucket === 'hour' ? 'hour' : 'day';
@@ -9472,6 +9905,9 @@ async function loginSocial(provider, providerUid) {
       'UPDATE tc_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
       [user.id]
     );
+    // 소셜 로그인도 같은 기록을 남겨야 한다. 한쪽만 적으면 그 경로로
+    // 들어온 사람들이 DAU 에서 통째로 빠진다.
+    await recordDailyActive(user.nickname);
     return {
       found: true,
       userId: user.id,
@@ -13029,6 +13465,16 @@ module.exports = {
   getDashboardActivityTopPlayers,
   getAdminRecentMatches,
   getDetailedAdminStats,
+  // 유저 활동·재방문·리텐션 (통계 화면 유저 탭)
+  recordDailyActive,
+  getDailyActiveSince,
+  getActiveUsersSeries,
+  getActiveUserSummary,
+  getRetentionCohorts,
+  getVisitFrequency,
+  getHourlyActivity,
+  getStickyUsers,
+  getAcquisitionBreakdown,
   getRankings,
   verifyAdmin,
   isUserAdmin,

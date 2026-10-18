@@ -1873,6 +1873,14 @@ async function runMigrations() {
     // 미션 통계는 발행일로 자른다(기존 인덱스는 닉네임 기준뿐이었다).
     await client.query(`CREATE INDEX IF NOT EXISTS idx_user_missions_picked_day
       ON tc_user_missions(picked_day)`);
+    // "이 사람이 몇 번 신고받았나" 로 읽는 인덱스.
+    //
+    // 기존 인덱스(idx_report_unique)는 선두 컬럼이 reporter_nickname 이라
+    // 중복 신고를 막는 데만 쓰인다. 피신고자로 세거나 묶는 질의는 매번
+    // 전체를 읽었다 — 유저 목록을 신고순으로 정렬하면 전 유저 × 전 신고가
+    // 된다.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_reports_reported
+      ON tc_reports(reported_nickname, created_at DESC)`);
 
     console.log('Database initialized (tc_ tables)');
   } catch (err) {
@@ -7908,6 +7916,121 @@ async function getReportGroup(reportedNickname, roomId) {
   }
 }
 
+/// 이 사람이 받은 신고 내역.
+///
+/// 기존 신고 목록은 (대상, 방) 단위로 묶여 있어서, 같은 사람이 여러 방에서
+/// 신고받으면 행이 흩어진다. 그래서 "이 사람이 모두 몇 번, 무엇 때문에
+/// 신고받았나" 를 한 화면에서 볼 방법이 없었다.
+async function getUserReportsReceived(nickname, limit = 20) {
+  const client = await pool.connect();
+  try {
+    const n = Math.max(1, Math.min(parseInt(limit, 10) || 20, 200));
+    const result = await client.query(
+      `SELECT id, reporter_nickname, reason, room_id, status, created_at
+         FROM tc_reports
+        WHERE reported_nickname = $1
+        ORDER BY created_at DESC
+        LIMIT ${n}`,
+      [nickname]
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get user reports received error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+/// 받은 신고 / 한 신고 요약.
+///
+/// 둘을 같이 돌려주는 이유: 받은 수만 보면 시비에 휘말린 사람과 상습
+/// 신고자를 구분할 수 없다. 한쪽만 큰 계정은 읽는 방향이 다르다.
+///
+/// reasons 는 사유별 횟수다. 같은 사유로 여러 사람에게 신고받은 것과
+/// 여러 사유가 섞인 것은 다른 이야기다.
+async function getUserReportSummary(nickname) {
+  const client = await pool.connect();
+  try {
+    const [recv, made, byStatus, byReason] = await Promise.all([
+      client.query(
+        `SELECT COUNT(*)::int AS n, COUNT(DISTINCT reporter_nickname)::int AS reporters,
+                MAX(created_at) AS latest
+           FROM tc_reports WHERE reported_nickname = $1`,
+        [nickname]
+      ),
+      client.query(
+        `SELECT COUNT(*)::int AS n FROM tc_reports WHERE reporter_nickname = $1`,
+        [nickname]
+      ),
+      client.query(
+        `SELECT COALESCE(status, 'pending') AS status, COUNT(*)::int AS n
+           FROM tc_reports WHERE reported_nickname = $1
+          GROUP BY 1`,
+        [nickname]
+      ),
+      client.query(
+        `SELECT COALESCE(NULLIF(TRIM(reason), ''), '(사유 없음)') AS reason,
+                COUNT(*)::int AS n
+           FROM tc_reports WHERE reported_nickname = $1
+          GROUP BY 1 ORDER BY n DESC, reason ASC LIMIT 8`,
+        [nickname]
+      ),
+    ]);
+    const status = {};
+    for (const r of byStatus.rows) status[r.status] = r.n;
+    return {
+      received: recv.rows[0].n,
+      reporters: recv.rows[0].reporters,
+      latest: recv.rows[0].latest,
+      made: made.rows[0].n,
+      status,
+      reasons: byReason.rows,
+    };
+  } catch (err) {
+    console.error('Get user report summary error:', err);
+    return { received: 0, reporters: 0, latest: null, made: 0, status: {}, reasons: [] };
+  } finally {
+    client.release();
+  }
+}
+
+/// 신고를 많이 받은 사람들. 방이 아니라 사람 기준으로 누적해서 센다.
+///
+/// [sinceDays] 를 주면 그 기간만. 전체 누적은 오래된 계정이 위로 올라오니,
+/// "요즘 문제가 되는 사람" 은 기간을 좁혀 봐야 한다.
+async function getTopReportedUsers(limit = 20, sinceDays = null) {
+  const client = await pool.connect();
+  try {
+    const n = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
+    const days = sinceDays == null ? null : Math.max(1, parseInt(sinceDays, 10) || 1);
+    const where = days
+      ? `WHERE r.created_at >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '${days} days'`
+      : '';
+    const result = await client.query(
+      `SELECT r.reported_nickname AS nickname,
+              COUNT(*)::int AS reports,
+              COUNT(DISTINCT r.reporter_nickname)::int AS reporters,
+              COUNT(DISTINCT COALESCE(r.room_id, ''))::int AS rooms,
+              COUNT(*) FILTER (WHERE COALESCE(r.status, 'pending') = 'pending')::int AS pending,
+              MAX(r.created_at) AS latest,
+              u.is_deleted
+         FROM tc_reports r
+         LEFT JOIN tc_users u ON u.nickname = r.reported_nickname
+        ${where}
+        GROUP BY r.reported_nickname, u.is_deleted
+        ORDER BY reports DESC, latest DESC
+        LIMIT ${n}`
+    );
+    return result.rows;
+  } catch (err) {
+    console.error('Get top reported users error:', err);
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 // Update report status for all reports in a group
 async function updateReportGroupStatus(reportedNickname, roomId, status) {
   const client = await pool.connect();
@@ -8025,6 +8148,9 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
       'level_asc': 'level ASC',
       'leaves_desc': 'leave_count DESC',
       'leaves_asc': 'leave_count ASC',
+      // 받은 신고 수. 아래 dataQuery 가 계산하는 report_count 를 쓴다.
+      'reports_desc': 'report_count DESC',
+      'reports_asc': 'report_count ASC',
       'login_desc': 'last_login DESC NULLS LAST',
       'login_asc': 'last_login ASC NULLS LAST',
       'joined_desc': 'created_at DESC',
@@ -8055,7 +8181,11 @@ async function getUsers(search = '', page = 1, limit = 20, options = {}) {
     // sort can use it too.
     const dataQuery = `SELECT id, username, nickname, total_games, wins, losses, rating, gold, level, leave_count, season_rating, created_at, last_login, device_platform, app_version, last_ip, is_admin, is_deleted,
                           (COALESCE(total_games,0) + COALESCE(sk_total_games,0)
-                           + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) AS games_all
+                           + COALESCE(ll_total_games,0) + COALESCE(mighty_total_games,0)) AS games_all,
+                          -- 받은 신고 수. 목록에 보여 주고 정렬에도 쓴다.
+                          -- idx_reports_reported 가 받아 준다.
+                          (SELECT COUNT(*)::int FROM tc_reports r
+                            WHERE r.reported_nickname = tc_users.nickname) AS report_count
                    FROM tc_users ${whereClause}
                    ORDER BY ${orderBy} LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const result = await client.query(dataQuery, dataParams);
@@ -13540,6 +13670,9 @@ module.exports = {
   resolveInquiry,
   getReports,
   getReportGroup,
+  getUserReportsReceived,
+  getUserReportSummary,
+  getTopReportedUsers,
   updateReportGroupStatus,
   getUsers,
   getAppVersionsInUse,

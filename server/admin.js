@@ -6,6 +6,7 @@ const logBuffer = require('./logBuffer');
 const {
   verifyAdmin, getInquiries, getInquiryById, resolveInquiry,
   getReports, getReportGroup, updateReportGroupStatus,
+  getUserReportsReceived, getUserReportSummary, getTopReportedUsers,
   getUsers, getAppVersionsInUse, getUserDetail, clearCustomTitle, setCustomTitleByAdmin,
   getSeasons, getSeasonRewardConfig, saveSeasonRewardConfig,
   clearSeasonRewardConfig, getSeasonRewardsGranted, getSeasonRewardAudit, SEASON_GAME_TYPES, listActiveProfilePhotos, getPhotoRejections, deletePhotoRejection, getAdminGoldHistory, getAdminPurchaseHistory, getAdminUserInventory, adminExtendUserItem, adminRevokeUserItem, getAdminDmPartners, getAdminDmThread, getShopItemHolderCounts, getShopPurchaseLog, getShopPurchaseLogSummary,
@@ -2272,6 +2273,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       economy: [
         { label: '골드 많은 유저', href: '/tc-backstage/users?sort=gold_desc' },
         { label: '이탈 많은 유저', href: '/tc-backstage/users?sort=leaves_desc' },
+        { label: '신고 많은 유저', href: '/tc-backstage/users?sort=reports_desc' },
       ],
       shop: [
         { label: '상점 관리', href: '/tc-backstage/shop' },
@@ -4303,6 +4305,18 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 
   if (pathname === '/tc-backstage/reports' && method === 'GET') {
     const page = parseInt(url.searchParams.get('page') || '1');
+    // 전체 누적만 보면 오래 쓴 계정이 위로 올라온다. "요즘 문제가 되는
+    // 사람" 은 기간을 좁혀야 보인다.
+    const REPORTED_RANGES = [
+      ['7', '최근 7일'], ['30', '최근 30일'], ['all', '전체'],
+    ];
+    const rawRange = url.searchParams.get('range');
+    const range = REPORTED_RANGES.some(([k]) => k === rawRange) ? rawRange : '30';
+    const reportedDays = range === 'all' ? null : parseInt(range, 10);
+    const reportedRangeLinks = REPORTED_RANGES.map(([k, label]) => {
+      const href = `/tc-backstage/reports?range=${k}${page > 1 ? `&page=${page}` : ''}`;
+      return `<a class="preset${k === range ? ' active' : ''}" href="${href}">${label}</a>`;
+    }).join('');
     const data = await getReports(page, 20);
     const pendingGroups = data.rows.filter(r => r.group_status === 'pending').length;
     const reviewedGroups = data.rows.filter(r => r.group_status === 'reviewed').length;
@@ -4336,6 +4350,27 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
       tableContent = '<div class="empty">신고 없음</div>';
     }
 
+    // 사람 기준 누적.
+    //
+    // 위 목록은 (대상, 방) 단위라서, 같은 사람이 여러 방에서 신고받으면
+    // 행이 흩어진다. 한 방에서 세 번 신고받은 사람과 열 방에서 한 번씩
+    // 신고받은 사람은 전혀 다른데, 그 목록만 보면 후자가 더 얌전해 보인다.
+    const topReported = await getTopReportedUsers(10, reportedDays);
+    const topReportedTable = topReported.length > 0
+      ? `<div class="table-wrap"><table>
+          <tr><th>#</th><th>닉네임</th><th>받은 신고</th><th>신고한 사람</th><th>방</th><th>미처리</th><th>최근</th></tr>
+          ${topReported.map((r, i) => `<tr>
+            <td style="text-align:center;color:#888">${i + 1}</td>
+            <td><a href="/tc-backstage/users/${encodeURIComponent(r.nickname)}">${escapeHtml(r.nickname)}</a>${r.is_deleted ? ' <span class="badge" style="background:#ffebee;color:#c62828">탈퇴</span>' : ''}</td>
+            <td style="font-weight:800;color:${r.reports >= 5 ? '#c62828' : '#333'}">${formatNumber(r.reports)}</td>
+            <td>${formatNumber(r.reporters)}명</td>
+            <td>${formatNumber(r.rooms)}곳</td>
+            <td style="color:${r.pending > 0 ? '#c0563f' : '#999'}">${formatNumber(r.pending)}</td>
+            <td>${formatDate(r.latest)}</td>
+          </tr>`).join('')}
+        </table></div>`
+      : '<div class="empty">신고 없음</div>';
+
     const content = `
       ${pageHeader('신고', '신고는 대상 유저와 방 기준으로 묶어서 보여주며, 반복 신고와 대기 상태를 먼저 파악할 수 있게 구성했습니다.')}
       ${summaryStrip([
@@ -4344,6 +4379,14 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         { label: '검토 중', value: formatNumber(reviewedGroups), valueColor: '#2878b8' },
         { label: '중복 신고 대상', value: formatNumber(repeatedTargets), meta: `현재 페이지 신고 합계 ${formatNumber(totalReportsInPage)}건` }
       ])}
+      <div class="card">
+        <div class="dash-head">
+          <h2>신고 많이 받은 유저</h2>
+          <span class="hint">사람 기준 누적 · 아래 목록은 방 기준입니다</span>
+        </div>
+        <div class="preset-bar" style="margin-top:0;margin-bottom:12px">${reportedRangeLinks}</div>
+        ${topReportedTable}
+      </div>
       <div class="card">${tableContent}</div>
     `;
     return html(res, layout('신고', content, 'reports'));
@@ -4592,11 +4635,16 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <th class="col-hide-sm">기기</th><th class="col-hide-sm">IP</th>
           ${sortHeader('앱 버전', 'version')}${sortHeader('Lv', 'level')}${sortHeader('골드', 'gold')}<th>토큰</th>
           ${sortHeader('레이팅', 'rating')}${sortHeader('게임', 'games')}${sortHeader('이탈', 'leaves')}
+          ${sortHeader('신고', 'reports')}
           ${sortHeader('최근 접속', 'login')}
           ${sortHeader('가입', 'joined', { hideSm: true })}<th></th>
         </tr>
         ${data.rows.map(u => {
           const leaveStyle = (u.leave_count || 0) >= 3 ? 'color:#e53935;font-weight:600' : '';
+          const rc = parseInt(u.report_count) || 0;
+          const reportStyle = rc >= 5
+            ? 'color:#c62828;font-weight:700'
+            : rc > 0 ? 'color:#c0563f' : 'color:#bbb';
           return `<tr>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" style="color:var(--orange-deep);text-decoration:none;font-weight:600">${escapeHtml(u.nickname)}</a></td>
           <td>
@@ -4627,6 +4675,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
                this list a single Tichu-only ratio was misleading. -->
           <td>${(u.games_all ?? u.total_games ?? 0).toLocaleString()}</td>
           <td style="${leaveStyle}">${u.leave_count || 0}</td>
+          <!-- 받은 신고. 한 건이라도 있으면 색을 주되, 1~2건은 흔하므로
+               5건 이상만 붉게 — 전부 붉으면 눈에 걸리는 뜻이 사라진다. -->
+          <td style="${reportStyle}">${formatNumber(u.report_count || 0)}</td>
           <td style="font-size:12px;color:#888">${u.last_login ? formatDate(u.last_login) : '-'}</td>
           <td class="col-hide-sm" style="font-size:12px;color:#888">${u.created_at ? formatDate(u.created_at) : '-'}</td>
           <td><a href="/tc-backstage/users/${encodeURIComponent(u.nickname)}" class="btn btn-secondary" style="font-size:12px;padding:4px 10px">보기</a></td>
@@ -4670,7 +4721,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const nickname = decodeURIComponent(userDetailMatch[1]);
     const [
       user, recentMatchPage, goldHistory, purchaseHistory, attendance,
-      inventory, dmPartners,
+      inventory, dmPartners, reportSummary, reportsReceived,
     ] =
       await Promise.all([
         getUserDetail(nickname),
@@ -4689,6 +4740,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
         getAttendanceForNickname(nickname),
         getAdminUserInventory(nickname),
         getAdminDmPartners(nickname),
+        getUserReportSummary(nickname),
+        // 20건까지. 더 많으면 '신고' 페이지의 방별 묶음에서 본다.
+        getUserReportsReceived(nickname, 20),
       ]);
     if (!user) return html(res, layout('찾을 수 없음', '<div class="empty">유저를 찾을 수 없습니다</div>', 'users'), 404);
 
@@ -4816,7 +4870,12 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
 	          <div class="label">마이티 레이팅</div><div class="value" style="font-weight:600">${user.mighty_rating || 1000}</div>
 	          <div class="label">마이티 전적</div><div class="value">${user.mighty_total_games || 0}판 · ${user.mighty_wins || 0}승 / ${user.mighty_losses || 0}패 (${user.mighty_total_games > 0 ? Math.round((user.mighty_wins || 0) / user.mighty_total_games * 100) : 0}%)</div>
 	          <div class="label">이탈 수</div><div class="value" style="color:${(user.leave_count || 0) >= 3 ? '#e53935' : '#333'}">${user.leave_count || 0}</div>
-          <div class="label">신고</div><div class="value">${user.report_count}</div>
+          <div class="label">받은 신고</div><div class="value">
+            <span style="font-weight:700;color:${reportSummary.received >= 5 ? '#c62828' : reportSummary.received > 0 ? '#c0563f' : '#333'}">${formatNumber(reportSummary.received)}</span>
+            ${reportSummary.received > 0 ? `<span style="color:#888;font-size:12px"> · ${formatNumber(reportSummary.reporters)}명이 신고${reportSummary.status.pending ? ` · 미처리 ${formatNumber(reportSummary.status.pending)}` : ''}</span>
+            <a href="#reports-received" style="font-size:12px;margin-left:6px">내역</a>` : ''}
+          </div>
+          <div class="label" title="이 사람이 다른 사람을 신고한 횟수입니다. 받은 신고만 보면 시비에 휘말린 사람과 상습 신고자를 구분할 수 없습니다.">한 신고 ⓘ</div><div class="value">${formatNumber(reportSummary.made)}</div>
           <div class="label">문의</div><div class="value">${user.inquiry_count}</div>
           <div class="label">광고 보상</div><div class="value"><span style="color:#43a047;font-weight:600">${user.ad_reward_today || 0}/5 오늘</span> <span style="color:#888;font-size:12px">(총 ${user.ad_reward_total || 0}회 / ${((user.ad_reward_total || 0) * 50).toLocaleString()}골드)</span></div>
           <div class="label">가입일</div><div class="value">${formatDate(user.created_at)}</div>
@@ -4912,6 +4971,32 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             }).join('')}
           </table></div>
         ` : `<div class="empty">보유 중인 아이템이 없습니다</div>`}
+      </div>
+
+      <div class="card" id="reports-received">
+        <h3>받은 신고
+          <span style="font-size:13px;color:#888;font-weight:400">${formatNumber(reportSummary.received)}건${reportSummary.received > reportsReceived.length ? ` 중 최근 ${reportsReceived.length}건` : ''}</span>
+        </h3>
+        ${reportSummary.reasons.length ? `
+          <div style="font-size:12.5px;color:var(--muted);line-height:1.9;margin-bottom:12px">
+            사유별 —
+            ${reportSummary.reasons.map((r) => `<span style="display:inline-block;background:#f4f1ea;border-radius:10px;padding:2px 9px;margin-right:4px">${escapeHtml(r.reason)} <b>${formatNumber(r.n)}</b></span>`).join('')}
+          </div>
+        ` : ''}
+        ${reportsReceived.length ? `
+          <div class="table-wrap"><table>
+            <tr><th>날짜</th><th>신고자</th><th>사유</th><th>방</th><th>상태</th><th></th></tr>
+            ${reportsReceived.map((r) => `<tr>
+              <td style="white-space:nowrap;font-size:12px;color:#888">${formatDate(r.created_at)}</td>
+              <td><a href="/tc-backstage/users/${encodeURIComponent(r.reporter_nickname)}">${escapeHtml(r.reporter_nickname)}</a></td>
+              <td class="cell-ellipsis" style="max-width:260px">${escapeHtml(r.reason || '') || '-'}</td>
+              <td style="font-size:12px;color:#888">${escapeHtml(r.room_id || '') || '-'}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td><a class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+                     href="/tc-backstage/reports/group?target=${encodeURIComponent(user.nickname)}&room=${encodeURIComponent(r.room_id || '')}">그 방 보기</a></td>
+            </tr>`).join('')}
+          </table></div>
+        ` : '<div class="empty">받은 신고가 없습니다</div>'}
       </div>
 
       <div class="card">

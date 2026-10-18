@@ -896,6 +896,18 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFEAF1F9), Color(0xFFEBE8F7), Color(0xFFF4EEF5)];
       case 'theme_pio_sage':
         return const [Color(0xFFF4F1E9), Color(0xFFE6EDE1), Color(0xFFF0F3EC)];
+      // 심야 테마 — 어두운 테마가 이 앱에서 되는지 보려는 시험용.
+      //
+      // 다른 29종이 전부 밝은 데는 이유가 있다(위 주석). 테마는 앱 전체
+      // 배경이고 글자·패널 색은 코드에 고정으로 박혀 있어서, 배경만
+      // 어둡게 하면 패널 밖에 직접 놓인 글자부터 죽는다.
+      //
+      // 그래서 '아주 어둡게' 가 아니라 "밝은 패널이 얹혔을 때 대비가
+      // 남는" 선에서 잡았다. 기기에서 켜 보고 어디가 죽는지 눈으로
+      // 확인하는 것이 목적이다. 상점에는 어드민이 켜기 전까지 뜨지
+      // 않는다(is_purchasable = FALSE).
+      case 'theme_dark_midnight':
+        return const [Color(0xFF1B2340), Color(0xFF223052), Color(0xFF1D2A46)];
       case 'theme_pio_dawn':
         return const [Color(0xFFFCEDE4), Color(0xFFFDF4E8), Color(0xFFEDF3F7)];
       // 시즌 이벤트 테마 6종. 짝을 이루는 배너(banner_seollal 등)는 진하지만
@@ -974,6 +986,10 @@ class GameService extends ChangeNotifier {
         return const [Color(0xFFDDE8F5), Color(0xFFDCD7F0), Color(0xFFEBDFEC)];
       case 'theme_pio_sage':
         return const [Color(0xFFEDE8DA), Color(0xFFD5E2CB), Color(0xFFE2E9D9)];
+      // 심야 테마의 카드 뒷면. 배경보다 한 단계 더 어둡게 둬서 카드가
+      // 배경 위에 떠 보인다 — 밝은 테마들도 같은 관계다.
+      case 'theme_dark_midnight':
+        return const [Color(0xFF131A33), Color(0xFF1B2748), Color(0xFF16203C)];
       case 'theme_pio_dawn':
         return const [Color(0xFFF8E0D0), Color(0xFFF7E9CF), Color(0xFFDDE9F1)];
       case 'theme_seollal':

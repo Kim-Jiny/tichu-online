@@ -4272,6 +4272,7 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
             const SizedBox(height: 12),
             TextField(
+              style: Cartoon.userText(size: 15),
               controller: controller,
               maxLength: 10,
               decoration: InputDecoration(

@@ -185,6 +185,25 @@ class Cartoon {
   /// 어두운 한 벌에서는 surface() 가 색조를 지킨 채 밝기를 낮추므로,
   /// '노란 기가 도는 어두운 면' 이 된다. 내 차례라는 신호는 남고 글자는
   /// 읽힌다.
+  /// 못 누르는 버튼의 바탕. 한 벌마다 따로 정한다.
+  ///
+  /// 고정값을 쓰면 어두운 한 벌에서 이 베이지가 주변보다 가장 밝아져,
+  /// 못 누르는 버튼이 화면에서 제일 눈에 띈다 — 비활성이라는 신호가
+  /// 뒤집힌다. 그렇다고 [surface] 를 태우면 너무 어두워져서, 흰 글자에
+  /// 두른 진한 테두리가 글자를 다 먹는다. 양쪽 다 틀렸다.
+  ///
+  /// 그래서 '주변보다 가라앉되 흰 글자는 버티는' 중간 톤을 한 벌마다
+  /// 직접 둔다. 채도가 낮아 enabled 쪽의 주황·초록과 섞이지 않는다.
+  static Color get disabledFill =>
+      _palette.dark ? const Color(0xFF5A6072) : const Color(0xFFBDB5AE);
+
+  /// 거절·패스처럼 '누를 수는 있지만 주인공이 아닌' 버튼의 바탕.
+  ///
+  /// [disabledFill] 과 같은 이유로 한 벌마다 따로 둔다. 밝은 한 벌의
+  /// 값은 원래 쓰던 베이지 그대로다.
+  static Color get neutralFill =>
+      _palette.dark ? const Color(0xFF646A7C) : const Color(0xFFB9B1A8);
+
   static Color get myTurn => surface(const Color(0xFFFFF1B8));
 
   /// 시간이 얼마 안 남았을 때의 바탕.
@@ -464,7 +483,7 @@ class _CartoonButtonState extends State<CartoonButton> {
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onPressed != null;
-    final color = enabled ? widget.color : const Color(0xFFBDB5AE);
+    final color = enabled ? widget.color : Cartoon.disabledFill;
     final depth = _down ? 1.0 : Cartoon.shadow;
     final button = GestureDetector(
       behavior: HitTestBehavior.opaque,

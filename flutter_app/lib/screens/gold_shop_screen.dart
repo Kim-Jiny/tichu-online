@@ -623,6 +623,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             ),
             const SizedBox(height: 14),
             TextField(
+              style: Cartoon.userText(size: 15),
               controller: controller,
               autofocus: true,
               maxLength: 40,

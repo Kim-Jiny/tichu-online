@@ -544,6 +544,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               ? Column(
                   children: [
                     TextField(
+                      style: Cartoon.userText(size: 14),
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: l.adminSearchHint,
@@ -582,6 +583,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                   children: [
                     Expanded(
                       child: TextField(
+                        style: Cartoon.userText(size: 14),
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: l.adminSearchHint,
@@ -1376,6 +1378,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 Text(item['content']?.toString() ?? '-'),
                 const SizedBox(height: 12),
                 TextField(
+                  style: Cartoon.userText(size: 14),
                   controller: noteController,
                   maxLines: 3,
                   decoration: InputDecoration(

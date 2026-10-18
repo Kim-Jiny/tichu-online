@@ -1382,6 +1382,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 children: [
                                   Expanded(
                                     child: TextField(
+                                      style: Cartoon.userText(size: 15),
                                       controller: controller,
                                       decoration: fieldDecoration(randomName),
                                     ),
@@ -1511,6 +1512,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       if (isPrivate) ...[
                                         const SizedBox(height: 10),
                                         TextField(
+                                          style: Cartoon.userText(size: 15),
                                           controller: passwordController,
                                           obscureText: true,
                                           decoration: fieldDecoration(
@@ -1607,6 +1609,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 ),
                                                 const SizedBox(height: 6),
                                                 TextField(
+                                                  style: Cartoon.text(size: 15),
                                                   controller:
                                                       timeLimitController,
                                                   keyboardType:
@@ -1647,6 +1650,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                   ),
                                                   const SizedBox(height: 6),
                                                   TextField(
+                                                    style: Cartoon.text(
+                                                      size: 15,
+                                                    ),
                                                     controller:
                                                         targetScoreController,
                                                     enabled: !isRanked,
@@ -5043,8 +5049,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     : isBlockedPlayer
                     ? Cartoon.surface(const Color(0xFFFAEDED))
                     : isEmpty
-                    ? Colors.white.withValues(alpha: 0.35)
-                    : Colors.white.withValues(alpha: 0.7);
+                    // 흰색을 그대로 덮으면 어두운 한 벌에서 어두운 방
+                    // 바탕 위의 밝은 판이 된다 — 빈 자리가 화면에서 제일
+                    // 눈에 띈다. 팔레트를 거치면 밝은 한 벌에서는 흰색
+                    // 그대로이고(변환이 통과한다), 어두운 한 벌에서만
+                    // 어두운 판이 된다.
+                    ? Cartoon.surface(Colors.white).withValues(alpha: 0.35)
+                    : Cartoon.surface(Colors.white).withValues(alpha: 0.7);
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 320),
                   curve: Curves.easeOut,

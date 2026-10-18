@@ -310,7 +310,7 @@ class _GameScreenState extends State<GameScreen> {
                     );
                     setState(() => _selectedCards.clear());
                   },
-                  color: const Color(0xFFB9B1A8),
+                  color: Cartoon.neutralFill,
                   height: 46,
                   size: 17,
                 ),
@@ -2368,7 +2368,7 @@ class _GameScreenState extends State<GameScreen> {
           gameButton(
             L10n.of(context).gamePass,
             () => game.passLargeTichu(),
-            color: const Color(0xFFB9B1A8),
+            color: Cartoon.neutralFill,
             height: 42,
             size: 17,
             hPad: 14,
@@ -2903,7 +2903,7 @@ class _GameScreenState extends State<GameScreen> {
           gameButton(
             L10n.of(context).gameNoCall,
             () => game.callRank('none'),
-            color: const Color(0xFFB9B1A8),
+            color: Cartoon.neutralFill,
             height: 44,
             size: 17,
           ),

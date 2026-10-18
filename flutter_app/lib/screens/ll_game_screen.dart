@@ -677,9 +677,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFFFD9D6)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,

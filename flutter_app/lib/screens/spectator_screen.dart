@@ -1442,7 +1442,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: gamePillDecoration(
           radius: 99,
-          color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFD9D6))),
+          color: Cartoon.surface(const Color(0xFFFFD9D6)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

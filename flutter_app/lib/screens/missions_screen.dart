@@ -412,7 +412,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
   Widget _tokenReward(int tokens, {double size = 14}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFE9A8))),
+      color: Cartoon.surface(const Color(0xFFFFE9A8)),
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: Cartoon.ink, width: 1.4),
     ),
@@ -456,7 +456,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
         radius: 18,
         shadowOffset: 2.5,
         color: m.done
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFE6F8EA)))
+            ? Cartoon.surface(const Color(0xFFE6F8EA))
             : Cartoon.paper,
       ),
       child: Column(
@@ -790,7 +790,7 @@ class MissionsHelpDialog extends StatelessWidget {
                                         size: 12.5,
                                         weight: FontWeight.w600,
                                         color: Cartoon.ink.withValues(
-                                          alpha: 0.75,
+                                          alpha: 0.78,
                                         ),
                                         height: 1.3,
                                       ),

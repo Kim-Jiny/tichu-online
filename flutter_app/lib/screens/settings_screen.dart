@@ -307,9 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Cartoon.surface(
-                        Cartoon.surface(const Color(0xFFFFE3E3)),
-                      ),
+                      color: Cartoon.surface(const Color(0xFFFFE3E3)),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
@@ -1422,9 +1420,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             size: 12,
                                             weight: FontWeight.w500,
                                             color: Cartoon.onSurface(
-                                              Cartoon.onSurface(
-                                                const Color(0xFF7E57C2),
-                                              ),
+                                              const Color(0xFF7E57C2),
                                             ),
                                           ),
                                         ),

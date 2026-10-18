@@ -624,7 +624,7 @@ class _RulesScreenState extends State<RulesScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: Cartoon.onSurface(
-                                  Cartoon.onSurface(const Color(0xFF212121)),
+                                  const Color(0xFF212121),
                                 ),
                               ),
                             ),
@@ -1123,7 +1123,10 @@ class _SpecialRule extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(emoji, style: TextStyle(fontSize: 16, color: Cartoon.ink)),
+                    Text(
+                      emoji,
+                      style: TextStyle(fontSize: 16, color: Cartoon.ink),
+                    ),
                     const SizedBox(width: 6),
                     Flexible(child: Text(title, style: Cartoon.text(size: 15))),
                   ],
@@ -1267,9 +1270,7 @@ class _TigressChoiceCard extends StatelessWidget {
                 errorBuilder: (_, _, _) => Container(
                   width: 36,
                   height: 50,
-                  color: Cartoon.surface(
-                    Cartoon.surface(const Color(0xFFEDE7F6)),
-                  ),
+                  color: Cartoon.surface(const Color(0xFFEDE7F6)),
                 ),
               ),
             ),
@@ -1538,9 +1539,7 @@ class _RuleText extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 1, right: 10),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Cartoon.surface(
-                      Cartoon.surface(const Color(0xFFEDE7F6)),
-                    ),
+                    color: Cartoon.surface(const Color(0xFFEDE7F6)),
                     shape: BoxShape.circle,
                   ),
                   child: Text(num.group(1)!, style: Cartoon.text(size: 13)),
@@ -2077,9 +2076,7 @@ class _CardGuide extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Cartoon.surface(
-                        Cartoon.surface(const Color(0xFFFFE0B2)),
-                      ),
+                      color: Cartoon.surface(const Color(0xFFFFE0B2)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

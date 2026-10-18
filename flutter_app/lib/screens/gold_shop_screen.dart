@@ -708,7 +708,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: Cartoon.panelDecoration(
         color: isBest
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFF4D6)))
+            ? Cartoon.surface(const Color(0xFFFFF4D6))
             : Cartoon.paper,
         radius: 20,
         shadowOffset: 2.5,
@@ -757,9 +757,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Cartoon.surface(
-                            Cartoon.surface(const Color(0xFFE8F5E9)),
-                          ),
+                          color: Cartoon.surface(const Color(0xFFE8F5E9)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -793,9 +791,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFFFF3E0)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFFFF3E0)),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

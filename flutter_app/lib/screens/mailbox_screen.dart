@@ -549,7 +549,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     label: Text(l10n.mailboxDelete),
                     style: TextButton.styleFrom(
                       foregroundColor: Cartoon.onSurface(
-                        Cartoon.onSurface(const Color(0xFFA1887F)),
+                        const Color(0xFFA1887F),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: const Size(0, 32),

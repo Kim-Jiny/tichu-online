@@ -65,7 +65,11 @@ void main() {
 Map<double, List<String>> _textAlphasInSource() {
   const bodyFloor = 0.5; // 아래는 안내문·비활성이라 흐린 것이 뜻이다
   const textOwners = {'userText', 'text', 'TextStyle'};
-  final pattern = RegExp(r'Cartoon\.ink\.withValues\(alpha: (0\.\d+)\)');
+  // alpha 가 다음 줄로 넘어간 형태도 본다 — 한 줄만 보다 7곳을 놓쳤다.
+  final pattern = RegExp(
+    r'Cartoon\.ink\.withValues\(\s*alpha:\s*(0\.\d+),?\s*\)',
+    dotAll: true,
+  );
   final found = <double, List<String>>{};
 
   for (final file in Directory('lib').listSync(recursive: true)) {

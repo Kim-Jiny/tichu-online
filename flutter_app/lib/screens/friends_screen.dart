@@ -593,9 +593,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Cartoon.surface(
-                                  Cartoon.surface(const Color(0xFFFFE9B8)),
-                                ),
+                                color: Cartoon.surface(const Color(0xFFFFE9B8)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
@@ -607,7 +605,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFFB45309)),
+                                    const Color(0xFFB45309),
                                   ),
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -727,9 +725,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                   Icon(
                                     Icons.person_remove_rounded,
                                     color: Cartoon.onSurface(
-                                      Cartoon.onSurface(
-                                        const Color(0xFFE5484D),
-                                      ),
+                                      const Color(0xFFE5484D),
                                     ),
                                     size: 20,
                                   ),
@@ -739,9 +735,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                     style: Cartoon.text(
                                       size: 15,
                                       color: Cartoon.onSurface(
-                                        Cartoon.onSurface(
-                                          const Color(0xFFE5484D),
-                                        ),
+                                        const Color(0xFFE5484D),
                                       ),
                                     ),
                                   ),

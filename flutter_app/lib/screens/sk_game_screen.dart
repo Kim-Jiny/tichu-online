@@ -1985,7 +1985,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   Icons.wifi_off,
                                   size: offlineIconSize,
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFFE53935)),
+                                    const Color(0xFFE53935),
                                   ),
                                 ),
                               ),
@@ -2435,9 +2435,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFFFD9D6)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -3702,9 +3700,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Cartoon.surface(
-                            Cartoon.surface(const Color(0xFFFFE3E0)),
-                          ),
+                          color: Cartoon.surface(const Color(0xFFFFE3E0)),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Cartoon.ink, width: 2),
                         ),
@@ -4108,7 +4104,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Cartoon.surface(Cartoon.surface(const Color(0xFFD6EAFF))),
+              color: Cartoon.surface(const Color(0xFFD6EAFF)),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(

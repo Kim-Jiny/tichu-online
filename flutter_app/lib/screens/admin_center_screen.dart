@@ -685,9 +685,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                                 style: Cartoon.text(
                                                   size: 12,
                                                   color: Cartoon.onSurface(
-                                                    Cartoon.onSurface(
-                                                      const Color(0xFF1565C0),
-                                                    ),
+                                                    const Color(0xFF1565C0),
                                                   ),
                                                 ),
                                               ),
@@ -707,9 +705,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                                 child: Icon(
                                                   Icons.verified,
                                                   color: Cartoon.onSurface(
-                                                    Cartoon.onSurface(
-                                                      const Color(0xFF7E57C2),
-                                                    ),
+                                                    const Color(0xFF7E57C2),
                                                   ),
                                                   size: 18,
                                                 ),

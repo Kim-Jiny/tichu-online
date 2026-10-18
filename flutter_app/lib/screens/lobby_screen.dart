@@ -723,7 +723,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     style: Cartoon.text(
                                       size: 12.5,
                                       color: Cartoon.ink.withValues(
-                                        alpha: 0.65,
+                                        alpha: 0.78,
                                       ),
                                       height: 1.35,
                                     ),
@@ -1415,9 +1415,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           Icons.casino,
                                           size: 20,
                                           color: Cartoon.onSurface(
-                                            Cartoon.onSurface(
-                                              const Color(0xFF6A5A52),
-                                            ),
+                                            const Color(0xFF6A5A52),
                                           ),
                                         ),
                                       ),
@@ -1467,7 +1465,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           style: Cartoon.text(
                                             size: 13,
                                             color: Cartoon.ink.withValues(
-                                              alpha: 0.6,
+                                              alpha: 0.78,
                                             ),
                                           ),
                                         ),
@@ -1700,7 +1698,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: Cartoon.surface(
-                                      Cartoon.surface(const Color(0xFFFFECEC)),
+                                      const Color(0xFFFFECEC),
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
@@ -1712,9 +1710,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Cartoon.onSurface(
-                                        Cartoon.onSurface(
-                                          const Color(0xFFB54A4A),
-                                        ),
+                                        const Color(0xFFB54A4A),
                                       ),
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -2593,7 +2589,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFDEDBFA))),
+        color: Cartoon.surface(const Color(0xFFDEDBFA)),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF9A8FE8)),
       ),
@@ -3212,9 +3208,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 ),
                                           style: Cartoon.text(
                                             size: 13,
-                                            color: Cartoon.ink.withValues(
-                                              alpha: 0.62,
-                                            ),
+                                            // 강조 아이템을 쓴 방은 바탕이 그
+                                            // 상품 색이다. 팔레트 잉크를 쓰면
+                                            // 어두운 한 벌에서 밝은 바탕 위에
+                                            // 밝은 글자가 된다.
+                                            color:
+                                                (highlight?.inkOn ??
+                                                        Cartoon.ink)
+                                                    .withValues(alpha: 0.78),
                                           ),
                                         ),
                                       ),
@@ -3316,13 +3317,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w700,
-                                                      color: Cartoon.onSurface(
-                                                        Cartoon.onSurface(
-                                                          const Color(
-                                                            0xFF7A6A62,
+                                                      // 관전자 수도 같은 바탕
+                                                      // 위에 있다.
+                                                      color:
+                                                          highlight?.inkOn
+                                                              .withValues(
+                                                                alpha: 0.75,
+                                                              ) ??
+                                                          Cartoon.onSurface(
+                                                            const Color(
+                                                              0xFF7A6A62,
+                                                            ),
                                                           ),
-                                                        ),
-                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -4170,9 +4176,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Cartoon.surface(
-                  Cartoon.surface(const Color(0xFFFFE9B8)),
-                ),
+                color: Cartoon.surface(const Color(0xFFFFE9B8)),
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
@@ -4708,7 +4712,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: Cartoon.panelDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFE9EEFF))),
+        color: Cartoon.surface(const Color(0xFFE9EEFF)),
         radius: 18,
         shadowOffset: 2,
       ),
@@ -4803,7 +4807,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFE8E0F8))),
+        color: Cartoon.surface(const Color(0xFFE8E0F8)),
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
@@ -5072,9 +5076,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             margin: const EdgeInsets.only(right: 8),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(
-                                Cartoon.surface(const Color(0xFFFFE0E0)),
-                              ),
+                              color: Cartoon.surface(const Color(0xFFFFE0E0)),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -5216,7 +5218,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFF6A1B9A)),
+                                    const Color(0xFF6A1B9A),
                                   ),
                                 ),
                               ),
@@ -5405,9 +5407,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.fast_forward,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        Cartoon.onSurface(
-                                          const Color(0xFFE65100),
-                                        ),
+                                        const Color(0xFFE65100),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5429,9 +5429,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.play_arrow,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        Cartoon.onSurface(
-                                          const Color(0xFF3949AB),
-                                        ),
+                                        const Color(0xFF3949AB),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5453,9 +5451,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.slow_motion_video,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        Cartoon.onSurface(
-                                          const Color(0xFF558B2F),
-                                        ),
+                                        const Color(0xFF558B2F),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5479,9 +5475,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(
-                                Cartoon.surface(const Color(0xFFE9EEFF)),
-                              ),
+                              color: Cartoon.surface(const Color(0xFFE9EEFF)),
                               borderRadius: BorderRadius.circular(11),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5495,7 +5489,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   Icons.smart_toy_rounded,
                                   size: 16,
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFF3949AB)),
+                                    const Color(0xFF3949AB),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -5505,9 +5499,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     size: 12.5,
                                     weight: FontWeight.w900,
                                     color: Cartoon.onSurface(
-                                      Cartoon.onSurface(
-                                        const Color(0xFF3949AB),
-                                      ),
+                                      const Color(0xFF3949AB),
                                     ),
                                   ),
                                 ),
@@ -5529,9 +5521,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(
-                                Cartoon.surface(const Color(0xFFFFE9B8)),
-                              ),
+                              color: Cartoon.surface(const Color(0xFFFFE9B8)),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5543,7 +5533,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               style: Cartoon.text(
                                 size: 14,
                                 color: Cartoon.onSurface(
-                                  Cartoon.onSurface(const Color(0xFFB45309)),
+                                  const Color(0xFFB45309),
                                 ),
                               ),
                             ),
@@ -5568,9 +5558,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Cartoon.surface(
-                                  Cartoon.surface(const Color(0xFFFFE3E3)),
-                                ),
+                                color: Cartoon.surface(const Color(0xFFFFE3E3)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
@@ -5581,7 +5569,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 Icons.close_rounded,
                                 size: 18,
                                 color: Cartoon.onSurface(
-                                  Cartoon.onSurface(const Color(0xFFC62828)),
+                                  const Color(0xFFC62828),
                                 ),
                               ),
                             ),

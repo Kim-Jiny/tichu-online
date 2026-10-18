@@ -132,7 +132,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                                 ),
                                 style: TextStyle(
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFFCC6666)),
+                                    const Color(0xFFCC6666),
                                   ),
                                 ),
                                 textAlign: TextAlign.center,
@@ -265,9 +265,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
       // 상자 없이 한 줄 — 안 읽은 글만 연한 노란 바탕. 아래 구분선은 바깥에서.
       padding: EdgeInsets.fromLTRB(14, isPinned ? 18 : 12, 10, 12),
       decoration: BoxDecoration(
-        color: isNew
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFF3D0)))
-            : null,
+        color: isNew ? Cartoon.surface(const Color(0xFFFFF3D0)) : null,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(

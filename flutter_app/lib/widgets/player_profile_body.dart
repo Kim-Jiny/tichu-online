@@ -655,7 +655,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
         _buildProfileSectionCard(
           title: l10n.gameOverallRecord,
           accent: Cartoon.onSurface(const Color(0xFF4A3A32)),
-          background: Cartoon.surface(Cartoon.surface(const Color(0xFFF7F2EF))),
+          background: Cartoon.surface(const Color(0xFFF7F2EF)),
           icon: Icons.leaderboard_rounded,
           iconColor: Cartoon.onSurface(const Color(0xFF8D6E63)),
           // The rate is the headline, so it is not repeated as a chip beside
@@ -1269,7 +1269,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFF6F3FA))),
+        color: Cartoon.surface(const Color(0xFFF6F3FA)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Cartoon.surface(const Color(0xFFE4DCEF))),
       ),

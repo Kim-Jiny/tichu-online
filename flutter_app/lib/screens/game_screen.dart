@@ -1164,9 +1164,7 @@ class _GameScreenState extends State<GameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFFFD9D6)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -1583,7 +1581,7 @@ class _GameScreenState extends State<GameScreen> {
                                 Icons.check_circle,
                                 size: 12,
                                 color: Cartoon.onSurface(
-                                  Cartoon.onSurface(const Color(0xFF3A8F52)),
+                                  const Color(0xFF3A8F52),
                                 ),
                               ),
                             ),
@@ -1688,9 +1686,7 @@ class _GameScreenState extends State<GameScreen> {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: Cartoon.surface(
-                    Cartoon.surface(const Color(0xFFFFD9D6)),
-                  ),
+                  color: Cartoon.surface(const Color(0xFFFFD9D6)),
                   borderRadius: BorderRadius.circular(99),
                   border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
@@ -1745,7 +1741,7 @@ class _GameScreenState extends State<GameScreen> {
       decoration: gamePillDecoration(
         radius: 14,
         color: urgent
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFD9D6)))
+            ? Cartoon.surface(const Color(0xFFFFD9D6))
             : Cartoon.cream,
       ),
       child: Row(
@@ -2840,7 +2836,7 @@ class _GameScreenState extends State<GameScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFD9F3E0))),
+        color: Cartoon.surface(const Color(0xFFD9F3E0)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 1.8),
       ),

@@ -867,9 +867,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFFFD9D6)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -3639,7 +3637,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return gamePillDecoration(
       radius: radius,
       color: selected
-          ? Cartoon.surface(Cartoon.surface(const Color(0xFFDDEEFF)))
+          ? Cartoon.surface(const Color(0xFFDDEEFF))
           : Cartoon.cream,
     ).copyWith(
       border: Border.all(
@@ -3936,9 +3934,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: gamePillDecoration(
                   radius: 8,
-                  color: Cartoon.surface(
-                    Cartoon.surface(const Color(0xFFFFD9D6)),
-                  ),
+                  color: Cartoon.surface(const Color(0xFFFFD9D6)),
                 ),
                 child: Text(
                   l10n.mtTrumpPenalty(2),
@@ -5977,7 +5973,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: gamePillDecoration(
             radius: 8,
-            color: Cartoon.surface(Cartoon.surface(const Color(0xFFF3E5F5))),
+            color: Cartoon.surface(const Color(0xFFF3E5F5)),
           ),
           child: Text(
             'NT',

@@ -48,4 +48,29 @@ void main() {
       );
     }
   });
+
+  test('팔레트 변환이 겹쳐 있지 않다', () {
+    // surface / onSurface 는 한 번만 거쳐야 한다. 두 번 통과하면 어두운
+    // 한 벌에서 값이 밀린다 — onSurface 는 0.78 → 0.62 로 대비가 깎이고,
+    // surface 는 0.20 → 0.30 으로 바탕이 들뜬다. 밝은 한 벌은 변환이
+    // 그냥 통과하므로 겹쳐도 드러나지 않는다. 그래서 눈으로는 못 잡는다.
+    final nested = <String>[];
+    final pattern = RegExp(
+      r'Cartoon\.(?:onSurface|surface)\(\s*Cartoon\.(?:onSurface|surface)\(',
+    );
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      final src = file.readAsStringSync();
+      for (final m in pattern.allMatches(src)) {
+        nested.add(
+          '${file.path}:${src.substring(0, m.start).split('\n').length}',
+        );
+      }
+    }
+    expect(
+      nested,
+      isEmpty,
+      reason: '팔레트 변환은 한 번만 거칠 것. 안쪽 호출만 남겨라:\n${nested.join('\n')}',
+    );
+  });
 }

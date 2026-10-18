@@ -1147,7 +1147,7 @@ class _ShopScreenState extends State<ShopScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: onSale
-              ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3)))
+              ? Cartoon.surface(const Color(0xFFFFE3E3))
               : Cartoon.cream,
           borderRadius: BorderRadius.circular(14),
         ),
@@ -1257,7 +1257,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3))),
+        color: Cartoon.surface(const Color(0xFFFFE3E3)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 2),
       ),
@@ -1547,7 +1547,7 @@ class _ShopScreenState extends State<ShopScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: onSale
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3)))
+            ? Cartoon.surface(const Color(0xFFFFE3E3))
             : Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Cartoon.ink, width: 1.6),
@@ -1878,9 +1878,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       decoration: BoxDecoration(
-        color: equipped
-            ? Cartoon.surface(Cartoon.surface(const Color(0xFFE6F2FF)))
-            : null,
+        color: equipped ? Cartoon.surface(const Color(0xFFE6F2FF)) : null,
         borderRadius: BorderRadius.circular(14),
         border: Border(
           bottom: BorderSide(
@@ -3109,7 +3107,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 Icons.schedule_rounded,
                                 size: 15,
                                 color: Cartoon.onSurface(
-                                  Cartoon.onSurface(const Color(0xFF7E57C2)),
+                                  const Color(0xFF7E57C2),
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -3118,7 +3116,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 style: Cartoon.userText(
                                   size: 13,
                                   color: Cartoon.onSurface(
-                                    Cartoon.onSurface(const Color(0xFF7E57C2)),
+                                    const Color(0xFF7E57C2),
                                   ),
                                 ),
                               ),
@@ -3407,7 +3405,7 @@ class _ShopScreenState extends State<ShopScreen> {
         height: 46,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Cartoon.surface(Cartoon.surface(const Color(0xFFEDE7F6))),
+          color: Cartoon.surface(const Color(0xFFEDE7F6)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -3604,7 +3602,7 @@ class _ShopScreenState extends State<ShopScreen> {
       height: 64,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFF4EFEA))),
+        color: Cartoon.surface(const Color(0xFFF4EFEA)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.surface(const Color(0xFFE6DDD8))),
       ),
@@ -3618,7 +3616,7 @@ class _ShopScreenState extends State<ShopScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Cartoon.surface(Cartoon.surface(const Color(0xFFF8F4F0))),
+              color: Cartoon.surface(const Color(0xFFF8F4F0)),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: Cartoon.surface(const Color(0xFFE6DCE8)),
@@ -4009,9 +4007,7 @@ class _ShopScreenState extends State<ShopScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            backgroundColor: Cartoon.surface(
-              Cartoon.surface(const Color(0xFFFDFBFA)),
-            ),
+            backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
             title: Text(
               l10n.customTitleEditTitle,
               style: TextStyle(
@@ -4102,9 +4098,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Cartoon.onSurface(
-                                      Cartoon.onSurface(
-                                        const Color(0xFF5A4038),
-                                      ),
+                                      const Color(0xFF5A4038),
                                     ),
                                   ),
                                 ),
@@ -4178,9 +4172,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         game.setCustomTitle(text, colorId);
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Cartoon.surface(
-                    Cartoon.surface(const Color(0xFFC7E6D0)),
-                  ),
+                  backgroundColor: Cartoon.surface(const Color(0xFFC7E6D0)),
                   foregroundColor: Cartoon.onSurface(const Color(0xFF2E5A3A)),
                   elevation: 0,
                 ),
@@ -4208,9 +4200,7 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Cartoon.surface(
-          Cartoon.surface(const Color(0xFFFDFBFA)),
-        ),
+        backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
         titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
         contentPadding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
         title: Text(
@@ -4739,9 +4729,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: Cartoon.surface(
-                              Cartoon.surface(const Color(0xFFD8F5DF)),
-                            ),
+                            color: Cartoon.surface(const Color(0xFFD8F5DF)),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Cartoon.ink, width: 2),
                           ),

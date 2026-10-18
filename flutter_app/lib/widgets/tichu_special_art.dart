@@ -83,7 +83,7 @@ class _CornerBadge extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFF4DC))),
+        color: Cartoon.surface(const Color(0xFFFFF4DC)),
         shape: BoxShape.circle,
         border: Border.all(color: _brown, width: (size * 0.09).clamp(1.2, 3.0)),
       ),

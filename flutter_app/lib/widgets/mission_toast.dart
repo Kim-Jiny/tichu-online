@@ -151,9 +151,7 @@ class _ToastView extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
                   decoration: Cartoon.panelDecoration(
                     radius: 18,
-                    color: Cartoon.surface(
-                      Cartoon.surface(const Color(0xFFFFF6D8)),
-                    ),
+                    color: Cartoon.surface(const Color(0xFFFFF6D8)),
                     shadowOffset: 3,
                   ),
                   child: Row(

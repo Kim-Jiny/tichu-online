@@ -29,7 +29,10 @@ class NoticeBody extends StatelessWidget {
   /// 본문 글자색. 안 주면 공지 화면의 기본 갈색.
   final Color? color;
 
-  static Color get _text => Cartoon.onSurface(const Color(0xFF5A4038));
+  // 본문은 본 잉크로 쓴다. 한 단계 연한 갈색(0xFF5A4038)을 쓰던 때는
+  // 대비가 9.14 로 기준은 넘었지만, 화면의 주인공인 글이 보조 글자처럼
+  // 읽혔다 — 공지·문의 답변·약관이 모두 이 위젯을 쓴다.
+  static Color get _text => Cartoon.ink;
   static Color get _accent => Cartoon.onSurface(const Color(0xFFE0812A));
 
   @override

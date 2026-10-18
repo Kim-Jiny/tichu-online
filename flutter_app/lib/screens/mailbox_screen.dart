@@ -7,6 +7,7 @@ import '../theme/cartoon.dart';
 import '../utils/gold_format.dart';
 import '../utils/mail_status.dart';
 import '../utils/server_time.dart';
+import '../widgets/notice_body.dart';
 
 /// 운영자 우편함 — letters the staff sent to this player.
 ///
@@ -524,16 +525,12 @@ class _MailboxScreenState extends State<MailboxScreen> {
                   )
                 : null,
             children: [
+              // 공지·문의 답변·약관과 같은 위젯을 쓴다. 우편은 운영자가
+              // 쓰는 글이고, 그 사람은 다른 화면에서 쓰던 문법을 여기서도
+              // 쓴다 — 읽는 쪽만 모르면 별표가 그대로 나온다.
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  (mail['body'] ?? '').toString(),
-                  style: Cartoon.userText(
-                    size: 14.5,
-                    weight: FontWeight.w500,
-                    height: 1.65,
-                  ),
-                ),
+                child: NoticeBody(content: (mail['body'] ?? '').toString()),
               ),
               // Deleting is for letters you are done with: read, and with
               // nothing left inside. A letter still holding a reward keeps the

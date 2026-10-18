@@ -156,24 +156,37 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
         child: Row(
           children: [
             if (resizable) ...[
-              const Icon(Icons.drag_handle, color: Colors.white70, size: 18),
+              Icon(
+                Icons.drag_handle,
+                color: Cartoon.inkOn(
+                  widget.accentColor,
+                ).withValues(alpha: 0.72),
+                size: 18,
+              ),
               const SizedBox(width: 6),
             ],
             Expanded(
               child: Text(
                 widget.title,
                 overflow: TextOverflow.ellipsis,
-                style: Cartoon.text(size: 16, color: Colors.white),
+                style: Cartoon.text(
+                  size: 16,
+                  color: Cartoon.inkOn(widget.accentColor),
+                ),
               ),
             ),
             GestureDetector(
               onTap: widget.onUndock,
               behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 36,
                 height: 32,
                 child: Center(
-                  child: Icon(Icons.open_in_new, color: Colors.white, size: 18),
+                  child: Icon(
+                    Icons.open_in_new,
+                    color: Cartoon.inkOn(widget.accentColor),
+                    size: 18,
+                  ),
                 ),
               ),
             ),

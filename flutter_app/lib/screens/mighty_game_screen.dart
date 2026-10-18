@@ -1160,7 +1160,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   ),
                   decoration: gamePillDecoration(
                     radius: 10,
-                    color: _bidAccentColor(bidSuit?.toString()),
+                    color: _bidFillColor(bidSuit?.toString()),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1169,14 +1169,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       SuitIcon(
                         suit: bidSuit?.toString() ?? '',
                         size: 14,
-                        color: Colors.white,
+                        color: Cartoon.inkOn(
+                          _bidFillColor(bidSuit?.toString()),
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         L10n.of(
                           context,
                         ).mtContractWithPoints(bidPoints.toInt()),
-                        style: Cartoon.text(size: 16, color: Colors.white),
+                        style: Cartoon.text(
+                          size: 16,
+                          color: Cartoon.inkOn(
+                            _bidFillColor(bidSuit?.toString()),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -3346,8 +3353,19 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // brown so the call sites don't have to repeat the ternary.
   Color _bidAccentColor(String? suit) {
     if (suit == 'no_trump') return Cartoon.onSurface(const Color(0xFF7B1FA2));
-    return PlayingCard.suitColors[suit] ??
-        Cartoon.onSurface(const Color(0xFF5A4038));
+    // 판 위에 올리는 색이므로 팔레트를 거친다. 카드 얼굴색을 그대로
+    // 쓰면 스페이드(#2B2B2B)가 어두운 판에서 사라진다 — 비딩과
+    // 프렌드 표시의 문양이 안 보인다는 말이 이것이었다.
+    return Cartoon.onSurface(
+      PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038),
+    );
+  }
+
+  /// 알약을 그 문양 색으로 채울 때. 바탕이므로 팔레트를 거치지 않는다 —
+  /// 카드 얼굴과 같은 색이어야 어느 문양인지 읽힌다.
+  Color _bidFillColor(String? suit) {
+    if (suit == 'no_trump') return const Color(0xFF7B1FA2);
+    return PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
   }
 
   Widget _buildSuitChip(
@@ -5015,7 +5033,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             color: _killSuitTab == suit
                                 ? Color.lerp(
                                     PlayingCard.suitColors[suit] ?? Cartoon.ink,
-                                    Colors.white,
+                                    Cartoon.paper,
                                     0.78,
                                   )
                                 : Cartoon.cream,

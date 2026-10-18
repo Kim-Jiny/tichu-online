@@ -28,8 +28,8 @@ class _SymbolPainter extends CustomPainter {
 
   static const _red = Color(0xFFE53935);
   static const _yellow = Color(0xFFFFD84D);
-  static const _paper = Color(0xFFFFFBF2);
-  static const _bone = Color(0xFFFFF4DC);
+  static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
+  static final _bone = Cartoon.surface(const Color(0xFFFFF4DC));
 
   @override
   void paint(Canvas canvas, Size size) {

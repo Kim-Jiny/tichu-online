@@ -75,11 +75,20 @@ void main() {
       });
     }
 
-    test('티츄의 창 색을 직접 적은 곳이 남아 있지 않다', () {
-      for (final hex in ['0xFFFFF1B8', '0xFFFFC9C4']) {
-        final n = RegExp(hex).allMatches(src['티츄']!).length;
-        expect(n, 1, reason: '$hex 가 $n 곳에 있다 — 한 곳(_bottomAreaColor)이어야 한다');
+    test('내 차례 색을 화면마다 따로 적지 않는다', () {
+      // 전에는 네 게임이 각자 #FFF1B8 을 적어 두고 있었다. 한 곳만
+      // 팔레트를 안 거치면 그 화면에서만 노란 바탕에 밝은 글자가 된다 —
+      // 실제로 여섯 곳 중 세 곳이 그랬다. 지금은 공용 토큰 하나다.
+      for (final name in ['티츄', '스컬킹', '마이티', '러브레터']) {
+        for (final hex in ['0xFFFFF1B8', '0xFFFFC9C4']) {
+          expect(
+            src[name]!.contains(hex),
+            isFalse,
+            reason: '$name 이 $hex 를 직접 적는다 — Cartoon.myTurn 을 쓸 것',
+          );
+        }
       }
+      expect(src['티츄']!.contains('Cartoon.myTurn'), isTrue);
     });
   });
 }

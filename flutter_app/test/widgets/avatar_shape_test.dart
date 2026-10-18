@@ -16,7 +16,9 @@ import 'package:tichu_online/widgets/profile_avatar.dart';
 
 void main() {
   Future<void> pump(WidgetTester tester, Widget child) => tester.pumpWidget(
-    MaterialApp(home: Scaffold(body: Center(child: child))),
+    MaterialApp(
+      home: Scaffold(body: Center(child: child)),
+    ),
   );
 
   /// The radius actually used to clip/paint, whichever way the widget does it.
@@ -25,7 +27,9 @@ void main() {
       final r = clip.borderRadius;
       if (r is BorderRadius) return r.topLeft.x;
     }
-    for (final d in tester.widgetList<DecoratedBox>(find.byType(DecoratedBox))) {
+    for (final d in tester.widgetList<DecoratedBox>(
+      find.byType(DecoratedBox),
+    )) {
       final deco = d.decoration;
       if (deco is BoxDecoration && deco.borderRadius is BorderRadius) {
         return (deco.borderRadius! as BorderRadius).topLeft.x;
@@ -45,55 +49,78 @@ void main() {
     // 사진 모서리와 테두리 사이에 틈이 보여서, 사진 쪽 곡률을 테두리에
     // 맞췄다(698373d).
     expect(avatarCornerRadius(60), closeTo(17, 0.001));
-    expect(avatarCornerRadius(30) / 30, closeTo(avatarCornerRadius(90) / 90, 0.0001));
+    expect(
+      avatarCornerRadius(30) / 30,
+      closeTo(avatarCornerRadius(90) / 90, 0.0001),
+    );
     expect(avatarCornerRadius(24), greaterThan(0));
   });
 
-  testWidgets('the default silhouette is a rounded square, not a circle', (t) async {
+  testWidgets('the default silhouette is a rounded square, not a circle', (
+    t,
+  ) async {
     await pump(t, const DefaultAvatar(size: 60));
     for (final c in t.widgetList<Container>(find.byType(Container))) {
       final deco = c.decoration;
       if (deco is BoxDecoration) {
-        expect(deco.shape, BoxShape.rectangle,
-            reason: 'a circle here makes photo-less seats a different shape');
+        expect(
+          deco.shape,
+          BoxShape.rectangle,
+          reason: 'a circle here makes photo-less seats a different shape',
+        );
       }
     }
     expect(radiusOf(t), closeTo(avatarCornerRadius(60), 0.001));
   });
 
   testWidgets('a photo is clipped to the same rounded square', (t) async {
-    await pump(t, ProfileAvatar(
-      photoUrl: 'https://example.invalid/a.webp',
-      size: 60,
-      fallback: const DefaultAvatar(size: 60),
-    ));
+    await pump(
+      t,
+      ProfileAvatar(
+        photoUrl: 'https://example.invalid/a.webp',
+        size: 60,
+        fallback: const DefaultAvatar(size: 60),
+      ),
+    );
     expect(find.byType(ClipOval), findsNothing);
     expect(radiusOf(t), closeTo(avatarCornerRadius(60), 0.001));
   });
 
-  testWidgets('an explicit radius still wins — some surfaces have their own', (t) async {
-    await pump(t, ProfileAvatar(
-      photoUrl: 'https://example.invalid/a.webp',
-      size: 60,
-      borderRadius: 4,
-      fallback: const DefaultAvatar(size: 60),
-    ));
+  testWidgets('an explicit radius still wins — some surfaces have their own', (
+    t,
+  ) async {
+    await pump(
+      t,
+      ProfileAvatar(
+        photoUrl: 'https://example.invalid/a.webp',
+        size: 60,
+        borderRadius: 4,
+        fallback: const DefaultAvatar(size: 60),
+      ),
+    );
     expect(radiusOf(t), closeTo(4, 0.001));
   });
 
-  testWidgets('a bordered avatar is rounded too, not a circle in a ring', (t) async {
-    await pump(t, ProfileAvatar(
-      photoUrl: 'https://example.invalid/a.webp',
-      size: 60,
-      border: Border.all(color: const Color(0xFF000000)),
-      fallback: const DefaultAvatar(size: 60),
-    ));
+  testWidgets('a bordered avatar is rounded too, not a circle in a ring', (
+    t,
+  ) async {
+    await pump(
+      t,
+      ProfileAvatar(
+        photoUrl: 'https://example.invalid/a.webp',
+        size: 60,
+        border: Border.all(color: const Color(0xFF000000)),
+        fallback: const DefaultAvatar(size: 60),
+      ),
+    );
     for (final c in t.widgetList<Container>(find.byType(Container))) {
       final deco = c.decoration;
       if (deco is BoxDecoration && deco.border != null) {
         expect(deco.shape, BoxShape.rectangle);
-        expect((deco.borderRadius! as BorderRadius).topLeft.x,
-            closeTo(avatarCornerRadius(60), 0.001));
+        expect(
+          (deco.borderRadius! as BorderRadius).topLeft.x,
+          closeTo(avatarCornerRadius(60), 0.001),
+        );
       }
     }
   });
@@ -111,11 +138,14 @@ void main() {
     final silhouette = radiusOf(t);
     await pump(t, const BotAvatar(size: 42, name: '봇 2'));
     final bot = radiusOf(t);
-    await pump(t, ProfileAvatar(
-      photoUrl: 'https://example.invalid/a.webp',
-      size: 42,
-      fallback: const DefaultAvatar(size: 42),
-    ));
+    await pump(
+      t,
+      ProfileAvatar(
+        photoUrl: 'https://example.invalid/a.webp',
+        size: 42,
+        fallback: const DefaultAvatar(size: 42),
+      ),
+    );
     final photo = radiusOf(t);
     expect(silhouette, closeTo(bot!, 0.001));
     expect(silhouette, closeTo(photo!, 0.001));

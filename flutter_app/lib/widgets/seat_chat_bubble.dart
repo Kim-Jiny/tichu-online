@@ -121,7 +121,7 @@ class SeatChatBubble extends StatelessWidget {
   final bool tail;
 
   static final _fill = Color(0xE6FFFBF2); // 크림 종이, 90%
-  static final _fillOpaque = Color(0xFFFFFBF2);
+  static final _fillOpaque = Cartoon.surface(const Color(0xFFFFFBF2));
   // 팔레트가 바뀌면 같이 바뀌어야 하므로 getter 다. final 로 두면 앱을
   // 켤 때의 색이 그대로 굳는다.
   static Color get _border => Cartoon.ink;

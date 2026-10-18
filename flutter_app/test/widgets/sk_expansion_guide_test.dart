@@ -133,11 +133,7 @@ void main() {
 
     // 화면을 꽉 채우면 끌어내릴 손잡이도 바깥을 누를 여백도 안 보인다.
     final h = t.getSize(sheet).height;
-    expect(
-      h,
-      lessThan(760 * 0.85),
-      reason: '시트가 화면을 거의 다 덮었다 (높이 $h)',
-    );
+    expect(h, lessThan(760 * 0.85), reason: '시트가 화면을 거의 다 덮었다 (높이 $h)');
 
     // 닫기 버튼이 보이고, 실제로 닫혀야 한다.
     final close = find.byIcon(Icons.close_rounded);

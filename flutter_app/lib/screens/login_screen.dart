@@ -547,7 +547,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Cartoon.surface(const Color(0xFFFFF3E0)),
+                    color: Cartoon.surface(
+                      Cartoon.surface(const Color(0xFFFFF3E0)),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFFFB74D)),
                   ),
@@ -693,7 +695,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // throw that away.
       onPressed: () => launchUrl(Uri.parse(url), webOnlyWindowName: '_blank'),
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF8A7A72),
+        foregroundColor: Cartoon.onSurface(const Color(0xFF8A7A72)),
         side: const BorderSide(color: Color(0xFFE0D8D4)),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -760,7 +762,7 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFFFF7ED)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFF7ED))),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF2C185)),
       ),

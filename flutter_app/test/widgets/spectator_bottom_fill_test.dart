@@ -24,7 +24,9 @@ void main() {
                 body: Stack(
                   children: [
                     SpectatorBottomFill(when: (_) => false),
-                    const Positioned.fill(child: ColoredBox(color: Colors.red, key: Key('content'))),
+                    const Positioned.fill(
+                      child: ColoredBox(color: Colors.red, key: Key('content')),
+                    ),
                   ],
                 ),
               ),
@@ -49,10 +51,7 @@ void main() {
             child: Scaffold(
               body: Stack(
                 children: [
-                  SpectatorBottomFill(
-                    when: (_) => true,
-                    color: (_) => myTurn,
-                  ),
+                  SpectatorBottomFill(when: (_) => true, color: (_) => myTurn),
                 ],
               ),
             ),

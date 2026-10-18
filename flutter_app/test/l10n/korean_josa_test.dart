@@ -71,26 +71,33 @@ void main() {
         missing.add(key);
       }
     }
-    expect(missing, isEmpty,
-        reason: 'korean_josa.dart 의 L10nKoJosa 에 오버라이드 추가 필요');
+    expect(
+      missing,
+      isEmpty,
+      reason: 'korean_josa.dart 의 L10nKoJosa 에 오버라이드 추가 필요',
+    );
   });
 
   testWidgets('앱에 연결되면 L10n.of 가 받침에 맞는 조사를 돌려준다', (tester) async {
     late L10n ko;
     late L10n en;
     Future<void> pump(Locale locale, void Function(L10n) grab) async {
-      await tester.pumpWidget(MaterialApp(
-        locale: locale,
-        localizationsDelegates: const [
-          L10nJosaDelegate(),
-          ...L10n.localizationsDelegates,
-        ],
-        supportedLocales: L10n.supportedLocales,
-        home: Builder(builder: (context) {
-          grab(L10n.of(context));
-          return const SizedBox();
-        }),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          localizationsDelegates: const [
+            L10nJosaDelegate(),
+            ...L10n.localizationsDelegates,
+          ],
+          supportedLocales: L10n.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              grab(L10n.of(context));
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
     }
 

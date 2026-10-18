@@ -37,15 +37,12 @@ void main() {
             expect(
               l.overlappingPairs(gap: 6),
               isEmpty,
-              reason: '자리가 겹친다 (scale ${l.scale.toStringAsFixed(2)}, '
+              reason:
+                  '자리가 겹친다 (scale ${l.scale.toStringAsFixed(2)}, '
                   '좌석 ${l.seatWidth.toStringAsFixed(0)}×'
                   '${l.seatHeight.toStringAsFixed(0)})',
             );
-            expect(
-              l.outOfBoundsSeats(),
-              isEmpty,
-              reason: '자리가 보드 밖으로 나갔다',
-            );
+            expect(l.outOfBoundsSeats(), isEmpty, reason: '자리가 보드 밖으로 나갔다');
             // 줄이다 바닥을 치면 각도 표를 손봐야 한다는 뜻이다.
             expect(
               l.scale,

@@ -1015,8 +1015,8 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             height: 40,
             decoration: BoxDecoration(
               color: refunded
-                  ? const Color(0xFFFFF3E0)
-                  : const Color(0xFFE8F5E9),
+                  ? Cartoon.surface(const Color(0xFFFFF3E0))
+                  : Cartoon.surface(const Color(0xFFE8F5E9)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

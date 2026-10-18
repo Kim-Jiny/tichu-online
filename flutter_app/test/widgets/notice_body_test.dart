@@ -81,7 +81,10 @@ void main() {
     test('링크는 보이는 글만 남기고 주소를 붙든다', () {
       final p = parseInline('자세히는 [공식 카페](https://cafe.naver.com/x) 에서');
       expect(p.map((x) => x.text).join(), '자세히는 공식 카페 에서');
-      expect(p.firstWhere((x) => x.href != null).href, 'https://cafe.naver.com/x');
+      expect(
+        p.firstWhere((x) => x.href != null).href,
+        'https://cafe.naver.com/x',
+      );
     });
 
     test('문법이 없으면 그대로 한 조각', () {
@@ -100,14 +103,17 @@ void main() {
   });
 
   testWidgets('실제 공지가 별표 없이 그려진다', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(
-        body: NoticeBody(
-          content: '기능 개선 의견은 앱 내 **문의하기**로 알려주세요.\n\n'
-              '- 봇 플레이 제보\n- 불편한 점',
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: NoticeBody(
+            content:
+                '기능 개선 의견은 앱 내 **문의하기**로 알려주세요.\n\n'
+                '- 봇 플레이 제보\n- 불편한 점',
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('**'), findsNothing, reason: '별표가 그대로 보이면 안 된다');

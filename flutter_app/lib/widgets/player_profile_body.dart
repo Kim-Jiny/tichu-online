@@ -507,7 +507,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       margin: const EdgeInsets.only(bottom: 3),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
       decoration: Cartoon.panelDecoration(
-        color: Colors.white,
+        color: Cartoon.paper,
         radius: 20,
         shadowOffset: 2,
       ),
@@ -650,8 +650,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       children: [
         _buildProfileSectionCard(
           title: l10n.gameOverallRecord,
-          accent: const Color(0xFF4A3A32),
-          background: const Color(0xFFF7F2EF),
+          accent: Cartoon.onSurface(const Color(0xFF4A3A32)),
+          background: Cartoon.surface(Cartoon.surface(const Color(0xFFF7F2EF))),
           icon: Icons.leaderboard_rounded,
           iconColor: const Color(0xFF8D6E63),
           // The rate is the headline, so it is not repeated as a chip beside
@@ -1168,8 +1168,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                         ),
                         decoration: BoxDecoration(
                           color: isRanked
-                              ? const Color(0xFFFFF3E0)
-                              : const Color(0xFFF5F5F5),
+                              ? Cartoon.surface(const Color(0xFFFFF3E0))
+                              : Cartoon.surface(const Color(0xFFF5F5F5)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1263,9 +1263,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFF6F3FA)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFF6F3FA))),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE4DCEF)),
+        border: Border.all(color: Cartoon.surface(const Color(0xFFE4DCEF))),
       ),
       child: Row(
         children: [

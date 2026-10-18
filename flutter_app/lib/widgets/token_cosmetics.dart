@@ -35,7 +35,7 @@ class BubbleStyle {
     final bg = fillEnd == null ? fill : Color.lerp(fill, fillEnd, 0.5)!;
     return bg.computeLuminance() > 0.5
         ? const Color(0xFF3B2A20)
-        : const Color(0xFFF7F2E6);
+        : Cartoon.surface(const Color(0xFFF7F2E6));
   }
 
   /// 꼬리(말풍선 아래 삼각형)가 맞춰 칠할 색.
@@ -59,7 +59,7 @@ class BubbleStyle {
   );
 }
 
-const Map<String, BubbleStyle> _bubbleStyles = {
+Map<String, BubbleStyle> _bubbleStyles = {
   // 기본 3종
   // 하트: 선명한 빨강 계열(벚꽃의 은은한 분홍과 확실히 다르게).
   'bubble_basic_1': BubbleStyle(
@@ -67,11 +67,11 @@ const Map<String, BubbleStyle> _bubbleStyles = {
     border: Color(0xFFD32F2F),
   ),
   'bubble_basic_2': BubbleStyle(
-    fill: Color(0xFFDDF7EE),
+    fill: Cartoon.surface(Color(0xFFDDF7EE)),
     border: Color(0xFF2BA37F),
   ),
   'bubble_basic_3': BubbleStyle(
-    fill: Color(0xFFFFF3B0),
+    fill: Cartoon.surface(const Color(0xFFFFF3B0)),
     border: Color(0xFFD99A00),
   ),
   // 상위 3종 — 바탕이 번지고 글자색도 바뀐다.
@@ -83,7 +83,7 @@ const Map<String, BubbleStyle> _bubbleStyles = {
   ),
   // 벚꽃: 흰색에서 연분홍으로 번지는 바탕 + 보랏빛 도는 테두리.
   'bubble_premium_2': BubbleStyle(
-    fill: Color(0xFFFFFFFF),
+    fill: Cartoon.surface(const Color(0xFFFFFFFF)),
     fillEnd: Color(0xFFF8C8DC),
     border: Color(0xFF9C5FA8),
   ),
@@ -114,32 +114,32 @@ class RoomHighlightStyle {
   /// 밝아지면 안 보인다.
   Color get inkOn => fill.computeLuminance() > 0.5
       ? const Color(0xFF3B2A20)
-      : const Color(0xFFF7F2E6);
+      : Cartoon.surface(const Color(0xFFF7F2E6));
 }
 
-const Map<String, RoomHighlightStyle> _roomHighlights = {
+Map<String, RoomHighlightStyle> _roomHighlights = {
   'room_highlight_1': RoomHighlightStyle(
-    fill: Color(0xFFFFF4C9),
+    fill: Cartoon.surface(Color(0xFFFFF4C9)),
     border: Color(0xFFE0A800),
   ),
   'room_highlight_2': RoomHighlightStyle(
-    fill: Color(0xFFFFF9E3),
+    fill: Cartoon.surface(Color(0xFFFFF9E3)),
     border: Color(0xFFFFB300),
   ),
   'room_highlight_3': RoomHighlightStyle(
-    fill: Color(0xFFFFE9F2),
+    fill: Cartoon.surface(Color(0xFFFFE9F2)),
     border: Color(0xFFE8689A),
   ),
   'room_highlight_4': RoomHighlightStyle(
-    fill: Color(0xFFE6F4FF),
+    fill: Cartoon.surface(Color(0xFFE6F4FF)),
     border: Color(0xFF4FA3E0),
   ),
   'room_highlight_5': RoomHighlightStyle(
-    fill: Color(0xFFE5F8EC),
+    fill: Cartoon.surface(Color(0xFFE5F8EC)),
     border: Color(0xFF3FB27A),
   ),
   'room_highlight_6': RoomHighlightStyle(
-    fill: Color(0xFFF0E9FF),
+    fill: Cartoon.surface(const Color(0xFFF0E9FF)),
     border: Color(0xFF8B66D9),
   ),
 };

@@ -56,16 +56,19 @@ void main() {
     expect(completed, isTrue);
   });
 
-  test('RestoreSyncTracker returns false when explicit completion is missing', () async {
-    final tracker = RestoreSyncTracker();
+  test(
+    'RestoreSyncTracker returns false when explicit completion is missing',
+    () async {
+      final tracker = RestoreSyncTracker();
 
-    final result = await tracker.begin(
-      timeout: const Duration(milliseconds: 20),
-      request: () {},
-    );
+      final result = await tracker.begin(
+        timeout: const Duration(milliseconds: 20),
+        request: () {},
+      );
 
-    expect(result, isFalse);
-  });
+      expect(result, isFalse);
+    },
+  );
 
   test('SessionService can suppress one auto restore attempt after reset', () {
     final network = FakeNetworkService();

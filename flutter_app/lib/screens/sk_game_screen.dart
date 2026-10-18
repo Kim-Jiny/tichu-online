@@ -204,7 +204,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   ].contains(g.skGameState?.phase),
                   color: (g) =>
                       !g.isSpectator && g.skGameState?.isMyTurn == true
-                      ? const Color(0xFFFFF1B8)
+                      ? Cartoon.myTurn
                       : Cartoon.paper,
                 ),
                 Positioned.fill(
@@ -1055,7 +1055,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
 
     final boxDecoration = gamePillDecoration(
       radius: 16,
-      color: urgent ? const Color(0xFFFFD9D6) : Cartoon.cream,
+      color: urgent ? Cartoon.surface(const Color(0xFFFFD9D6)) : Cartoon.cream,
     );
 
     // Bidding badge lays out label / name / timer vertically so long
@@ -1830,9 +1830,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                     ? _skBidChip(
                                         '${p.tricks}/${p.bid}',
                                         p.tricks == p.bid
-                                            ? const Color(0xFFCDEFD6)
+                                            ? Cartoon.surface(
+                                                const Color(0xFFCDEFD6),
+                                              )
                                             : p.tricks > p.bid!
-                                            ? const Color(0xFFFFE0B8)
+                                            ? Cartoon.surface(
+                                                const Color(0xFFFFE0B8),
+                                              )
                                             : Cartoon.cream,
                                         bidFontSize + 1.5,
                                         bidHorizontalPadding,
@@ -2016,9 +2020,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                               ? _skBidChip(
                                   '${p.tricks}/${p.bid}',
                                   p.tricks == p.bid
-                                      ? const Color(0xFFCDEFD6)
+                                      ? Cartoon.surface(const Color(0xFFCDEFD6))
                                       : p.tricks > p.bid!
-                                      ? const Color(0xFFFFE0B8)
+                                      ? Cartoon.surface(const Color(0xFFFFE0B8))
                                       : Cartoon.cream,
                                   bidFontSize + 1.5,
                                   bidHorizontalPadding,
@@ -2427,7 +2431,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
+                            color: Cartoon.surface(
+                              Cartoon.surface(const Color(0xFFFFD9D6)),
+                            ),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -2847,7 +2853,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
       return _skEffectPanel(
         cardId: isKraken ? 'sk_kraken' : 'sk_white_whale',
         cardSize: 62,
-        color: isKraken ? const Color(0xFFE2D4F7) : const Color(0xFFD3ECFF),
+        color: isKraken
+            ? const Color(0xFFE2D4F7)
+            : Cartoon.surface(const Color(0xFFD3ECFF)),
         title: L10n.of(context).skGameTrickVoided,
         footer: L10n.of(context).skGameLeadPlayer(winnerName),
         timer: _buildCenterTimerBadge(state),
@@ -2858,7 +2866,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       return _skEffectPanel(
         cardId: 'sk_white_whale',
         cardSize: 62,
-        color: const Color(0xFFD3ECFF),
+        color: Cartoon.surface(const Color(0xFFD3ECFF)),
         title: L10n.of(context).skGameTrickWinner(winnerName),
         bonusText: _skBonusText(context, bonus, lootBonusPoints),
         timer: _buildCenterTimerBadge(state),
@@ -2920,13 +2928,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ],
           if (whaleNullifyLabel != null && ended) ...[
             const SizedBox(height: 6),
-            _skInfoChip(whaleNullifyLabel, const Color(0xFFD3ECFF)),
+            _skInfoChip(
+              whaleNullifyLabel,
+              Cartoon.surface(const Color(0xFFD3ECFF)),
+            ),
           ],
           if (ended && bonus > 0) ...[
             const SizedBox(height: 6),
             _skInfoChip(
               L10n.of(context).skGameBonus(bonus),
-              const Color(0xFFCDEFD6),
+              Cartoon.surface(const Color(0xFFCDEFD6)),
             ),
           ],
           // 루트는 라운드 끝에 동맹 양쪽이 공약을 맞혀야 들어온다. 받은
@@ -2936,7 +2947,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             const SizedBox(height: 6),
             _skInfoChip(
               L10n.of(context).skGameLootPending(lootBonusPoints),
-              const Color(0xFFFFE9C7),
+              Cartoon.surface(const Color(0xFFFFE9C7)),
             ),
           ],
           _buildCenterTimerBadge(state),
@@ -3096,7 +3107,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           ),
           if (bonusText != null) ...[
             const SizedBox(height: 6),
-            _skInfoChip(bonusText, const Color(0xFFCDEFD6)),
+            _skInfoChip(bonusText, Cartoon.surface(const Color(0xFFCDEFD6))),
           ],
           if (footer != null) ...[
             const SizedBox(height: 6),
@@ -3163,9 +3174,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, isLandscape ? 12 : 16),
       decoration: BoxDecoration(
-        color: isMyBidTurn
-            ? Cartoon.surface(const Color(0xFFFFF1B8))
-            : Cartoon.paper,
+        color: isMyBidTurn ? Cartoon.myTurn : Cartoon.paper,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyBidTurn ? 3.2 : 2.2),
@@ -3348,10 +3357,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final exceeds = hasBid && tricks > bid;
 
     final trickBidBg = matches
-        ? const Color(0xFFCDEFD6)
+        ? Cartoon.surface(const Color(0xFFCDEFD6))
         : exceeds
-        ? const Color(0xFFFFE0B8)
-        : const Color(0xFFD6EAFF);
+        ? Cartoon.surface(const Color(0xFFFFE0B8))
+        : Cartoon.surface(const Color(0xFFD6EAFF));
     final trickBidFg = Cartoon.ink;
 
     Widget chip({
@@ -3665,7 +3674,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Cartoon.surface(const Color(0xFFFFE3E0)),
+                          color: Cartoon.surface(
+                            Cartoon.surface(const Color(0xFFFFE3E0)),
+                          ),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Cartoon.ink, width: 2),
                         ),
@@ -4012,9 +4023,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: isWinner
-                    ? Cartoon.surface(const Color(0xFFFFF1B8))
-                    : Cartoon.cream,
+                color: isWinner ? Cartoon.myTurn : Cartoon.cream,
                 borderRadius: BorderRadius.circular(14),
                 border: isWinner
                     ? Border.all(color: Cartoon.ink, width: 1.8)
@@ -4060,7 +4069,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Cartoon.surface(const Color(0xFFD6EAFF)),
+              color: Cartoon.surface(Cartoon.surface(const Color(0xFFD6EAFF))),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
@@ -4127,7 +4136,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   /// 한다 — 두 곳에 숫자를 적어 두면 한쪽만 고쳐져 이음새가 생긴다.
   // 팔레트가 바뀌면 같이 바뀌어야 하므로 getter 다.
   static Color get _handPaper => Cartoon.paper;
-  static const _handMyTurn = Color(0xFFFFF1B8);
+  static Color get _handMyTurn => Cartoon.myTurn;
 
   static const _specialBgColors = {
     'skull_king': Color(0xFF1A1A1A),

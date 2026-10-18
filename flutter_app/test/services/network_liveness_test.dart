@@ -76,15 +76,18 @@ void main() {
       );
     });
 
-    test('the tick after that does condemn it, if the ping went unanswered', () {
-      expect(
-        NetworkService.heartbeatSaysDead(
-          sinceLastTick: const Duration(seconds: 5),
-          sinceLastPong: const Duration(seconds: 65),
-        ),
-        isTrue,
-      );
-    });
+    test(
+      'the tick after that does condemn it, if the ping went unanswered',
+      () {
+        expect(
+          NetworkService.heartbeatSaysDead(
+            sinceLastTick: const Duration(seconds: 5),
+            sinceLastPong: const Duration(seconds: 65),
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('never having seen a pong is not proof of death', () {
       expect(

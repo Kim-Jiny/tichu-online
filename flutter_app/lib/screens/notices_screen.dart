@@ -265,7 +265,9 @@ class _NoticesScreenState extends State<NoticesScreen> {
       // 상자 없이 한 줄 — 안 읽은 글만 연한 노란 바탕. 아래 구분선은 바깥에서.
       padding: EdgeInsets.fromLTRB(14, isPinned ? 18 : 12, 10, 12),
       decoration: BoxDecoration(
-        color: isNew ? Cartoon.surface(const Color(0xFFFFF3D0)) : null,
+        color: isNew
+            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFF3D0)))
+            : null,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -453,13 +455,13 @@ class _NoticesScreenState extends State<NoticesScreen> {
   Color _categoryBgColor(String value) {
     switch (value) {
       case 'release':
-        return const Color(0xFFE3F2FD);
+        return Cartoon.surface(const Color(0xFFE3F2FD));
       case 'update':
-        return const Color(0xFFE8F5E9);
+        return Cartoon.surface(const Color(0xFFE8F5E9));
       case 'preview':
-        return const Color(0xFFFFF3E0);
+        return Cartoon.surface(const Color(0xFFFFF3E0));
       default:
-        return const Color(0xFFECEFF1);
+        return Cartoon.surface(const Color(0xFFECEFF1));
     }
   }
 
@@ -507,19 +509,19 @@ class _NoticeDetailPage extends StatelessWidget {
     switch (category) {
       case 'release':
         categoryLabel = l10n.noticeCategoryRelease;
-        categoryBg = const Color(0xFFE3F2FD);
+        categoryBg = Cartoon.surface(const Color(0xFFE3F2FD));
         categoryText = const Color(0xFF1565C0);
       case 'update':
         categoryLabel = l10n.noticeCategoryUpdate;
-        categoryBg = const Color(0xFFE8F5E9);
+        categoryBg = Cartoon.surface(const Color(0xFFE8F5E9));
         categoryText = const Color(0xFF2E7D32);
       case 'preview':
         categoryLabel = l10n.noticeCategoryPreview;
-        categoryBg = const Color(0xFFFFF3E0);
+        categoryBg = Cartoon.surface(const Color(0xFFFFF3E0));
         categoryText = const Color(0xFFE65100);
       default:
         categoryLabel = l10n.noticeCategoryGeneral;
-        categoryBg = const Color(0xFFECEFF1);
+        categoryBg = Cartoon.surface(const Color(0xFFECEFF1));
         categoryText = const Color(0xFF546E7A);
     }
 

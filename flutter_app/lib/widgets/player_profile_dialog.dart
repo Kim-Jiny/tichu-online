@@ -37,7 +37,7 @@ void showPlayerProfileDialog(
   bool isBot = false,
   double? maxHeight,
   bool Function(GameService game)? dismissWhen,
-  Color placeholderBackground = const Color(0xFFE8F0F7),
+  Color? placeholderBackground,
   Color placeholderForeground = const Color(0xFF4F6B7A),
 }) {
   // A bot has no account, so the fetch would only ever come back empty and the

@@ -43,7 +43,7 @@ class DefaultAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFF0E7E3)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFF0E7E3))),
         borderRadius: BorderRadius.circular(avatarCornerRadius(size)),
       ),
       alignment: Alignment.center,

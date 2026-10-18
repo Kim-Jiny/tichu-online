@@ -18,12 +18,7 @@ class _R {
 }
 
 void main() {
-  const rooms = [
-    _R('tichu'),
-    _R('mighty'),
-    _R('tichu'),
-    _R('love_letter'),
-  ];
+  const rooms = [_R('tichu'), _R('mighty'), _R('tichu'), _R('love_letter')];
 
   test('no filter shows every room', () {
     expect(filterRoomsByGame(rooms, null, (r) => r.gameType), hasLength(4));
@@ -32,8 +27,11 @@ void main() {
   test('picking a game shows that game, not everything except it', () {
     final out = filterRoomsByGame(rooms, 'tichu', (r) => r.gameType);
     expect(out, hasLength(2));
-    expect(out.every((r) => r.gameType == 'tichu'), isTrue,
-        reason: 'the old behaviour returned exactly the other two');
+    expect(
+      out.every((r) => r.gameType == 'tichu'),
+      isTrue,
+      reason: 'the old behaviour returned exactly the other two',
+    );
   });
 
   test('a game nobody is playing shows nothing, not everything', () {

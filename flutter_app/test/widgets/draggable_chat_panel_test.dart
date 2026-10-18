@@ -11,7 +11,10 @@ import 'package:tichu_online/widgets/draggable_chat_panel.dart';
 /// 자리에 있었다 — 손잡이엔 onTap 이 없으니 탭은 그냥 사라지고, 손가락이
 /// 조금이라도 움직이면 onPanStart 가 물려 키보드만 내려갔다.
 
-Widget harness({required VoidCallback onSend, Size size = const Size(420, 800)}) {
+Widget harness({
+  required VoidCallback onSend,
+  Size size = const Size(420, 800),
+}) {
   return MediaQuery(
     data: MediaQueryData(size: size),
     child: MaterialApp(
@@ -41,8 +44,7 @@ Widget harness({required VoidCallback onSend, Size size = const Size(420, 800)})
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('전송 버튼을 누르면 눌린다 — 리사이즈 손잡이에 가리지 않는다',
-      (tester) async {
+  testWidgets('전송 버튼을 누르면 눌린다 — 리사이즈 손잡이에 가리지 않는다', (tester) async {
     var sent = 0;
     await tester.pumpWidget(harness(onSend: () => sent++));
     await tester.pumpAndSettle();
@@ -73,7 +75,6 @@ void main() {
 
     final send = tester.getRect(find.byIcon(Icons.send_rounded));
     final grip = tester.getRect(find.byIcon(Icons.open_in_full));
-    expect(send.overlaps(grip), isFalse,
-        reason: '전송 $send / 손잡이 $grip');
+    expect(send.overlaps(grip), isFalse, reason: '전송 $send / 손잡이 $grip');
   });
 }

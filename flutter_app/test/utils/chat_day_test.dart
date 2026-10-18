@@ -28,8 +28,11 @@ void main() {
 
     test('between two minutes that fall either side of midnight', () {
       final msgs = [at('2026-08-13T23:59:00'), at('2026-08-14T00:01:00')];
-      expect(needsDayDivider(msgs, 1, (m) => m), isTrue,
-          reason: 'two minutes apart, and still a different day');
+      expect(
+        needsDayDivider(msgs, 1, (m) => m),
+        isTrue,
+        reason: 'two minutes apart, and still a different day',
+      );
     });
 
     test('across a month and a year boundary', () {
@@ -60,26 +63,21 @@ void main() {
     test('an undated message in the middle does not split a day in two', () {
       // The scan looks past it to the last message that actually has a time,
       // rather than treating the immediate neighbour as authoritative.
-      final msgs = [
-        at('2026-08-13T10:00:00'),
-        null,
-        at('2026-08-13T11:00:00'),
-      ];
+      final msgs = [at('2026-08-13T10:00:00'), null, at('2026-08-13T11:00:00')];
       expect(needsDayDivider(msgs, 2, (m) => m), isFalse);
     });
 
     test('but a real day change is still caught across one', () {
-      final msgs = [
-        at('2026-08-13T10:00:00'),
-        null,
-        at('2026-08-14T11:00:00'),
-      ];
+      final msgs = [at('2026-08-13T10:00:00'), null, at('2026-08-14T11:00:00')];
       expect(needsDayDivider(msgs, 2, (m) => m), isTrue);
     });
 
     test('an out-of-range index asks for nothing', () {
       expect(needsDayDivider(<DateTime?>[], 0, (m) => m), isFalse);
-      expect(needsDayDivider([at('2026-08-13T10:00:00')], 5, (m) => m), isFalse);
+      expect(
+        needsDayDivider([at('2026-08-13T10:00:00')], 5, (m) => m),
+        isFalse,
+      );
     });
   });
 
@@ -87,7 +85,10 @@ void main() {
     final now = DateTime(2026, 8, 13, 15, 30);
 
     test('today, at any hour of it', () {
-      expect(chatDayLabel(DateTime(2026, 8, 13, 0, 1), now), ChatDayLabel.today);
+      expect(
+        chatDayLabel(DateTime(2026, 8, 13, 0, 1), now),
+        ChatDayLabel.today,
+      );
       expect(
         chatDayLabel(DateTime(2026, 8, 13, 23, 59), now),
         ChatDayLabel.today,
@@ -110,8 +111,11 @@ void main() {
 
     test('anything older gets a date', () {
       expect(chatDayLabel(DateTime(2026, 8, 11), now), ChatDayLabel.date);
-      expect(chatDayLabel(DateTime(2025, 8, 13), now), ChatDayLabel.date,
-          reason: 'same day and month, different year');
+      expect(
+        chatDayLabel(DateTime(2025, 8, 13), now),
+        ChatDayLabel.date,
+        reason: 'same day and month, different year',
+      );
     });
   });
 }

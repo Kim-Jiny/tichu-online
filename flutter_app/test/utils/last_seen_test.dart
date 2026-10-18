@@ -19,21 +19,39 @@ void main() {
   });
 
   test('minutes, up to the hour', () {
-    expect(ago(const Duration(minutes: 1)), const LastSeen(LastSeenUnit.minutes, 1));
-    expect(ago(const Duration(minutes: 59)), const LastSeen(LastSeenUnit.minutes, 59));
+    expect(
+      ago(const Duration(minutes: 1)),
+      const LastSeen(LastSeenUnit.minutes, 1),
+    );
+    expect(
+      ago(const Duration(minutes: 59)),
+      const LastSeen(LastSeenUnit.minutes, 59),
+    );
   });
 
   test('exactly an hour rolls over, rather than reading "60분 전"', () {
-    expect(ago(const Duration(minutes: 60)), const LastSeen(LastSeenUnit.hours, 1));
+    expect(
+      ago(const Duration(minutes: 60)),
+      const LastSeen(LastSeenUnit.hours, 1),
+    );
   });
 
   test('hours, up to the day', () {
-    expect(ago(const Duration(hours: 23)), const LastSeen(LastSeenUnit.hours, 23));
-    expect(ago(const Duration(hours: 24)), const LastSeen(LastSeenUnit.days, 1));
+    expect(
+      ago(const Duration(hours: 23)),
+      const LastSeen(LastSeenUnit.hours, 23),
+    );
+    expect(
+      ago(const Duration(hours: 24)),
+      const LastSeen(LastSeenUnit.days, 1),
+    );
   });
 
   test('days, until a count stops being informative', () {
-    expect(ago(const Duration(days: 30)), const LastSeen(LastSeenUnit.days, 30));
+    expect(
+      ago(const Duration(days: 30)),
+      const LastSeen(LastSeenUnit.days, 30),
+    );
     // "182일 전" says less than "over a month".
     expect(ago(const Duration(days: 31)).unit, LastSeenUnit.longAgo);
   });

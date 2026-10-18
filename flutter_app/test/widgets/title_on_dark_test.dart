@@ -74,11 +74,26 @@ void main() {
     // The specific keys matter less than the guarantee: no title may come out
     // of this too dark to read on a near-black banner.
     const keys = [
-      'title_sweet', 'title_steady', 'title_flash_30d', 'title_dragon',
-      'title_phoenix', 'title_pirate', 'title_tactician', 'title_lucky',
-      'title_bluffer', 'title_ace', 'title_king', 'title_rookie',
-      'title_veteran', 'title_sensitive', 'title_shadow', 'title_flame',
-      'title_ice', 'title_crown', 'title_diamond', 'title_ghost',
+      'title_sweet',
+      'title_steady',
+      'title_flash_30d',
+      'title_dragon',
+      'title_phoenix',
+      'title_pirate',
+      'title_tactician',
+      'title_lucky',
+      'title_bluffer',
+      'title_ace',
+      'title_king',
+      'title_rookie',
+      'title_veteran',
+      'title_sensitive',
+      'title_shadow',
+      'title_flame',
+      'title_ice',
+      'title_crown',
+      'title_diamond',
+      'title_ghost',
     ];
     for (final key in keys) {
       final c = titleColorFor(key, onInk: onDark);

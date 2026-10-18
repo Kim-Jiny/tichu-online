@@ -6,7 +6,7 @@ void main() {
     final store = ProfileStore();
     final data = {
       'nickname': 'alice',
-      'profile': {'wins': 10}
+      'profile': {'wins': 10},
     };
 
     store.store(data);
@@ -20,7 +20,7 @@ void main() {
     final store = ProfileStore();
     store.store({
       'nickname': 'bob',
-      'profile': {'wins': 3}
+      'profile': {'wins': 3},
     });
 
     store.beginRequest('bob');
@@ -33,7 +33,7 @@ void main() {
     final store = ProfileStore();
     store.store({
       'nickname': 'carol',
-      'profile': {'wins': 1}
+      'profile': {'wins': 1},
     });
 
     store.clear();

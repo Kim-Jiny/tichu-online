@@ -79,25 +79,27 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(MediaQuery(
-      data: const MediaQueryData(size: screen),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Overlay(
-          initialEntries: [
-            OverlayEntry(
-              builder: (_) => Align(
-                alignment: Alignment.centerLeft,
-                child: SeatBubbleAnchor(
-                  text: '한 줄이 길면 어떻게 보이는지도 봐야 하니까 길게 씁니다',
-                  child: const SizedBox(width: 100, height: 120),
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(size: screen),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (_) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: SeatBubbleAnchor(
+                    text: '한 줄이 길면 어떻게 보이는지도 봐야 하니까 길게 씁니다',
+                    child: const SizedBox(width: 100, height: 120),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     final rect = tester.getRect(find.byType(SeatChatBubble));

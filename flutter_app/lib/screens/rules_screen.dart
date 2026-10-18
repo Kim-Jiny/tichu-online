@@ -321,7 +321,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 when: L10n.of(context).rulesTichuLargeTichuWhen,
                 success: '+200',
                 fail: '-200',
-                accent: const Color(0xFFD32F2F),
+                accent: Cartoon.onSurface(const Color(0xFFD32F2F)),
               ),
               const SizedBox(height: 8),
               _TichuDeclarationRow(
@@ -398,7 +398,7 @@ class _RulesScreenState extends State<RulesScreen> {
               _ComboRow(
                 label: L10n.of(context).rulesTichuComboBombFour,
                 cards: const ['spade_10', 'heart_10', 'diamond_10', 'club_10'],
-                accent: const Color(0xFFE53935),
+                accent: Cartoon.onSurface(const Color(0xFFE53935)),
               ),
               _ComboRow(
                 label: L10n.of(context).rulesTichuComboBombStraightFlush,
@@ -409,7 +409,7 @@ class _RulesScreenState extends State<RulesScreen> {
                   'spade_8',
                   'spade_9',
                 ],
-                accent: const Color(0xFFE53935),
+                accent: Cartoon.onSurface(const Color(0xFFE53935)),
               ),
               const SizedBox(height: 4),
               _RuleText(L10n.of(context).rulesTichuBombBody),
@@ -1259,7 +1259,9 @@ class _TigressChoiceCard extends StatelessWidget {
                 errorBuilder: (_, _, _) => Container(
                   width: 36,
                   height: 50,
-                  color: Cartoon.surface(const Color(0xFFEDE7F6)),
+                  color: Cartoon.surface(
+                    Cartoon.surface(const Color(0xFFEDE7F6)),
+                  ),
                 ),
               ),
             ),
@@ -1512,7 +1514,9 @@ class _RuleText extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 1, right: 10),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Cartoon.surface(const Color(0xFFEDE7F6)),
+                    color: Cartoon.surface(
+                      Cartoon.surface(const Color(0xFFEDE7F6)),
+                    ),
                     shape: BoxShape.circle,
                   ),
                   child: Text(num.group(1)!, style: Cartoon.text(size: 13)),
@@ -2048,7 +2052,9 @@ class _CardGuide extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Cartoon.surface(const Color(0xFFFFE0B2)),
+                      color: Cartoon.surface(
+                        Cartoon.surface(const Color(0xFFFFE0B2)),
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

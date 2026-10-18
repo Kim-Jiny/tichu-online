@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 /// Compact circular level badge rendered next to a nickname in the waiting
 /// rooms. Background varies by tier:
@@ -99,11 +100,15 @@ _LevelTier _tierFor(int level) {
   if (level <= 20) {
     // Silver — cooler highlight, near-white shine, charcoal edge for
     // medallion contrast.
-    return const _LevelTier(
+    return _LevelTier(
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [Color(0xFFFFFFFF), Color(0xFFC2C7CC), Color(0xFF5E646A)],
+        colors: [
+          Cartoon.surface(const Color(0xFFFFFFFF)),
+          Color(0xFFC2C7CC),
+          Color(0xFF5E646A),
+        ],
         stops: [0.0, 0.55, 1.0],
       ),
       borderColor: Color(0xFF2F3338),
@@ -116,11 +121,15 @@ _LevelTier _tierFor(int level) {
   }
   if (level <= 30) {
     // Gold — warm cream highlight grading into rich amber, deep brown edge.
-    return const _LevelTier(
+    return _LevelTier(
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [Color(0xFFFFF6C2), Color(0xFFE8B948), Color(0xFF8A5E00)],
+        colors: [
+          Cartoon.surface(const Color(0xFFFFF6C2)),
+          Color(0xFFE8B948),
+          Color(0xFF8A5E00),
+        ],
         stops: [0.0, 0.55, 1.0],
       ),
       borderColor: Color(0xFF4A3000),
@@ -148,12 +157,12 @@ _LevelTier _tierFor(int level) {
     );
   }
   // Rainbow (41+)
-  return const _LevelTier(
+  return _LevelTier(
     gradient: SweepGradient(
       colors: [
         Color(0xFFFF4D4D),
         Color(0xFFFFAA33),
-        Color(0xFFFFE93D),
+        Cartoon.surface(const Color(0xFFFFE93D)),
         Color(0xFF59D85B),
         Color(0xFF3DB8FF),
         Color(0xFF7A5CFF),

@@ -34,7 +34,10 @@ Future<ui.Image> _banded(int width, int height, List<Color> bands) async {
 /// Explicit rather than evenly divided so a test can place a band exactly where
 /// the crop is expected to land.
 Future<ui.Image> _stripedAt(
-    int width, int height, List<(double, double, Color)> stripes) async {
+  int width,
+  int height,
+  List<(double, double, Color)> stripes,
+) async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   for (final (top, bottom, color) in stripes) {
@@ -72,9 +75,10 @@ void expectColor((int, int, int) actual, int expectedArgb, String where) {
     expectedArgb & 0xFF,
   );
   const tolerance = 32;
-  final ok = (actual.$1 - want.$1).abs() <= tolerance
-      && (actual.$2 - want.$2).abs() <= tolerance
-      && (actual.$3 - want.$3).abs() <= tolerance;
+  final ok =
+      (actual.$1 - want.$1).abs() <= tolerance &&
+      (actual.$2 - want.$2).abs() <= tolerance &&
+      (actual.$3 - want.$3).abs() <= tolerance;
   expect(ok, isTrue, reason: '$where: got $actual, wanted ~$want');
 }
 
@@ -82,9 +86,9 @@ void expectColor((int, int, int) actual, int expectedArgb, String where) {
 bool isNotColor((int, int, int) actual, int argb) {
   final want = ((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
   const tolerance = 32;
-  return (actual.$1 - want.$1).abs() > tolerance
-      || (actual.$2 - want.$2).abs() > tolerance
-      || (actual.$3 - want.$3).abs() > tolerance;
+  return (actual.$1 - want.$1).abs() > tolerance ||
+      (actual.$2 - want.$2).abs() > tolerance ||
+      (actual.$3 - want.$3).abs() > tolerance;
 }
 
 /// The initial, untouched state the screen puts an image in: cover-scaled and
@@ -150,14 +154,19 @@ void main() {
     expect(out, isNotNull);
     expectColor(await _pixelAt(out!, 0.20, 0.5), _green, 'left of the middle');
     expectColor(await _pixelAt(out, 0.80, 0.5), _blue, 'right of the middle');
-    expect(isNotColor(await _pixelAt(out, 0.02, 0.5), _red), isTrue,
-        reason: 'band 1 must not be in the export');
-    expect(isNotColor(await _pixelAt(out, 0.98, 0.5), _yellow), isTrue,
-        reason: 'band 4 must not be in the export');
+    expect(
+      isNotColor(await _pixelAt(out, 0.02, 0.5), _red),
+      isTrue,
+      reason: 'band 1 must not be in the export',
+    );
+    expect(
+      isNotColor(await _pixelAt(out, 0.98, 0.5), _yellow),
+      isTrue,
+      reason: 'band 4 must not be in the export',
+    );
   });
 
-  test('a tall source keeps the middle band, dropping top and bottom',
-      () async {
+  test('a tall source keeps the middle band, dropping top and bottom', () async {
     // 400x800: the crop is 400 tall and centred, so exactly y 200..600. Paint
     // that span green and the margins red/blue — anything but pure green in the
     // export means the vertical centring is off.
@@ -201,23 +210,31 @@ void main() {
     const size = Size(400, 400);
     final cover = coverScaleFor(size, viewport);
     final base = centredCoverTransform(
-        Size(size.width * cover, size.height * cover), viewport);
+      Size(size.width * cover, size.height * cover),
+      viewport,
+    );
     final zoomed = base.clone()
       ..translateByDouble(size.width * cover / 2, size.height * cover / 2, 0, 1)
       ..scaleByDouble(2, 2, 1, 1)
       ..translateByDouble(
-          -size.width * cover / 2, -size.height * cover / 2, 0, 1);
+        -size.width * cover / 2,
+        -size.height * cover / 2,
+        0,
+        1,
+      );
 
     final full = visibleSourceRect(
-        transform: base,
-        viewport: viewport,
-        coverScale: cover,
-        imageSize: size);
+      transform: base,
+      viewport: viewport,
+      coverScale: cover,
+      imageSize: size,
+    );
     final half = visibleSourceRect(
-        transform: zoomed,
-        viewport: viewport,
-        coverScale: cover,
-        imageSize: size);
+      transform: zoomed,
+      viewport: viewport,
+      coverScale: cover,
+      imageSize: size,
+    );
 
     expect(full.width, closeTo(400, 0.01));
     expect(half.width, closeTo(200, 0.01));
@@ -226,24 +243,28 @@ void main() {
     expect(half.center.dy, closeTo(full.center.dy, 0.01));
   });
 
-  test('a rect outside the image is clamped, never sampled out of bounds',
-      () async {
-    const viewport = 300.0;
-    const size = Size(400, 400);
-    final cover = coverScaleFor(size, viewport);
-    // Deliberately push the child far off; InteractiveViewer would not allow
-    // this, but the clamp is the thing keeping drawImageRect honest if it did.
-    final shoved = centredCoverTransform(
-        Size(size.width * cover, size.height * cover), viewport)
-      ..translateByDouble(-10000, -10000, 0, 1);
-    final src = visibleSourceRect(
+  test(
+    'a rect outside the image is clamped, never sampled out of bounds',
+    () async {
+      const viewport = 300.0;
+      const size = Size(400, 400);
+      final cover = coverScaleFor(size, viewport);
+      // Deliberately push the child far off; InteractiveViewer would not allow
+      // this, but the clamp is the thing keeping drawImageRect honest if it did.
+      final shoved = centredCoverTransform(
+        Size(size.width * cover, size.height * cover),
+        viewport,
+      )..translateByDouble(-10000, -10000, 0, 1);
+      final src = visibleSourceRect(
         transform: shoved,
         viewport: viewport,
         coverScale: cover,
-        imageSize: size);
-    expect(src.left, greaterThanOrEqualTo(0));
-    expect(src.top, greaterThanOrEqualTo(0));
-    expect(src.right, lessThanOrEqualTo(size.width));
-    expect(src.bottom, lessThanOrEqualTo(size.height));
-  });
+        imageSize: size,
+      );
+      expect(src.left, greaterThanOrEqualTo(0));
+      expect(src.top, greaterThanOrEqualTo(0));
+      expect(src.right, lessThanOrEqualTo(size.width));
+      expect(src.bottom, lessThanOrEqualTo(size.height));
+    },
+  );
 }

@@ -57,7 +57,7 @@ class PlayerProfileHeader extends StatelessWidget {
 
   /// Placeholder colours behind the person icon when there is no photo.
   /// Mighty's popup is green where the others are blue.
-  final Color placeholderBackground;
+  final Color? placeholderBackground;
   final Color placeholderForeground;
 
   /// Text colour when this header is sitting on someone's equipped banner.
@@ -77,7 +77,7 @@ class PlayerProfileHeader extends StatelessWidget {
     required this.onCloseDialog,
     this.subtitleBuilder,
     this.isBot = false,
-    this.placeholderBackground = const Color(0xFFE8F0F7),
+    this.placeholderBackground,
     this.placeholderForeground = const Color(0xFF4F6B7A),
     this.ink,
   });
@@ -293,7 +293,9 @@ class PlayerProfileHeader extends StatelessWidget {
         height: _avatarSize,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: placeholderBackground,
+            color:
+                placeholderBackground ??
+                Cartoon.surface(const Color(0xFFE8F0F7)),
             borderRadius: const BorderRadius.all(Radius.circular(14)),
           ),
           child: Icon(

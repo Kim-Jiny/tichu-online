@@ -331,7 +331,7 @@ class _RulebookPainter extends CustomPainter {
       y(0.90),
       Radius.circular(s * 0.07),
     );
-    canvas.drawRRect(pages, _fill(const Color(0xFFFFFBF2)));
+    canvas.drawRRect(pages, _fill(Cartoon.surface(const Color(0xFFFFFBF2))));
     canvas.drawRRect(pages, line);
     // 책장 결
     final pageLine = _line(sw * 0.6)
@@ -425,7 +425,7 @@ class _RuleGlyphPainter extends CustomPainter {
   static const _yellow = Color(0xFFFFD84D);
   static const _blue = Color(0xFF4A90D9);
   static const _green = Color(0xFF4CAF50);
-  static const _paper = Color(0xFFFFFBF2);
+  static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
   static const _orange = Color(0xFFFF9F43);
 
   @override

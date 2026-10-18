@@ -10,6 +10,7 @@ import 'package:tichu_online/theme/cartoon.dart';
 /// 지금은 밝은 한 벌만 쓴다 — 그래서 이 단계에서 화면은 전과 똑같아야
 /// 한다. 그걸 확인하는 것이 이 파일의 첫 번째 일이다.
 void main() {
+  _lightIsUntouched();
   const other = CartoonPalette(
     dark: true,
     ink: Color(0xFFEEEEEE),
@@ -258,6 +259,68 @@ void main() {
       Cartoon.usePalette(other);
       expect(Cartoon.text(color: Cartoon.red).color, Cartoon.red);
       expect(Cartoon.panelDecoration(color: Cartoon.blue).color, Cartoon.blue);
+    });
+  });
+}
+
+/// 밝은 한 벌에서 모든 헬퍼가 '받은 값을 그대로' 돌려주는지.
+///
+/// 어두운 테마를 붙이면서 수백 곳의 색을 헬퍼로 감쌌다. 그 헬퍼가
+/// 밝은 한 벌에서 조금이라도 다른 값을 돌려주면, 다크 테마를 쓰지 않는
+/// 대부분의 사용자 화면이 바뀐다 — 그건 이 작업이 건드리면 안 되는
+/// 부분이다.
+void _lightIsUntouched() {
+  group('밝은 한 벌에서는 아무것도 바뀌지 않는다', () {
+    const probes = [
+      Color(0xFFFFFFFF),
+      Color(0xFFF7F2EF),
+      Color(0xFFE8F5E9),
+      Color(0xFFFFF1B8),
+      Color(0xFFFFC9C4),
+      Color(0xFF2E7D32),
+      Color(0xFF212121),
+      Color(0xFF4A3A32),
+      Color(0xFFB07A12),
+    ];
+
+    setUp(() => Cartoon.usePalette(cartoonLight));
+
+    test('surface 는 그대로', () {
+      for (final c in probes) {
+        expect(Cartoon.surface(c).toARGB32(), c.toARGB32(), reason: '$c');
+      }
+    });
+
+    test('onSurface 도 그대로', () {
+      for (final c in probes) {
+        expect(Cartoon.onSurface(c).toARGB32(), c.toARGB32(), reason: '$c');
+      }
+    });
+
+    test('내 차례 색이 예전 값 그대로', () {
+      expect(Cartoon.myTurn.toARGB32(), const Color(0xFFFFF1B8).toARGB32());
+      expect(
+        Cartoon.myTurnUrgent.toARGB32(),
+        const Color(0xFFFFC9C4).toARGB32(),
+      );
+    });
+
+    test('tint 는 흰색과 섞던 때와 거의 같다', () {
+      // paper(#FFFBF2)와 섞는다. 흰색과 섞던 예전 값과의 차이가 눈에
+      // 띄면 안 된다.
+      int diff(Color a, Color b) =>
+          ((a.r - b.r).abs() * 255).round() +
+          ((a.g - b.g).abs() * 255).round() +
+          ((a.b - b.b).abs() * 255).round();
+      for (final amount in [0.55, 0.7, 0.82]) {
+        final now = Cartoon.tint(const Color(0xFFFF8A65), amount);
+        final before = Color.lerp(
+          const Color(0xFFFF8A65),
+          Colors.white,
+          amount,
+        )!;
+        expect(diff(now, before), lessThan(20), reason: '섞음 $amount');
+      }
     });
   });
 }

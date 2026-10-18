@@ -176,6 +176,31 @@ class Cartoon {
         .toColor();
   }
 
+  /// 내 차례임을 알리는 바탕.
+  ///
+  /// 네 게임이 각자 같은 노랑(#FFF1B8)을 손으로 적어 두고 있었다. 한
+  /// 곳만 팔레트를 안 거치면 그 화면에서만 노란 바탕에 밝은 글자가
+  /// 된다 — 실제로 여섯 곳 중 세 곳이 그랬다.
+  ///
+  /// 어두운 한 벌에서는 surface() 가 색조를 지킨 채 밝기를 낮추므로,
+  /// '노란 기가 도는 어두운 면' 이 된다. 내 차례라는 신호는 남고 글자는
+  /// 읽힌다.
+  static Color get myTurn => surface(const Color(0xFFFFF1B8));
+
+  /// 시간이 얼마 안 남았을 때의 바탕.
+  static Color get myTurnUrgent => surface(const Color(0xFFFFC9C4));
+
+  /// 이 바탕 위에 올릴 글자색.
+  ///
+  /// 바탕이 '팔레트가 아닌 곳' 에서 올 때 쓴다 — 테마 그라데이션에서
+  /// 뽑은 강조색, 상품마다 고정인 말풍선 바탕 같은 것들. 그런 자리에
+  /// 진한 색을 박아 두면 어두운 테마에서 남색 바탕에 검정 글자가 된다.
+  ///
+  /// 팔레트를 보지 않고 바탕만 본다. 바탕이 밝으면 진한 잉크, 어두우면
+  /// 밝은 종이색이다.
+  static Color inkOn(Color background) =>
+      background.computeLuminance() > 0.5 ? _outlineDark : _outlineLight;
+
   /// 밝은 바탕을 전제로 고른 '진한 글자·아이콘' 색.
   ///
   /// [surface] 의 짝이다. 화면 곳곳에 "진한 초록 글씨", "진한 주황 숫자"

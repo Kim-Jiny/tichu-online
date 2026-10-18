@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 import 'profile_avatar.dart' show avatarCornerRadius;
 
 /// Avatar for a bot seat.
@@ -52,13 +53,13 @@ class BotAvatar extends StatelessWidget {
 
   /// Fallback colours, used only if an asset fails to load. Distinct hues so
   /// two bots at one table never look the same.
-  static const _palette = [
-    (Color(0xFFE3F2FD), Color(0xFF1565C0)),
-    (Color(0xFFE8F5E9), Color(0xFF2E7D32)),
-    (Color(0xFFFFF3E0), Color(0xFFE65100)),
-    (Color(0xFFF3E5F5), Color(0xFF6A1B9A)),
-    (Color(0xFFFFEBEE), Color(0xFFC62828)),
-    (Color(0xFFE0F7FA), Color(0xFF00838F)),
+  static final _palette = [
+    (Cartoon.surface(Color(0xFFE3F2FD)), Color(0xFF1565C0)),
+    (Cartoon.surface(Color(0xFFE8F5E9)), Color(0xFF2E7D32)),
+    (Cartoon.surface(Color(0xFFFFF3E0)), Color(0xFFE65100)),
+    (Cartoon.surface(Color(0xFFF3E5F5)), Color(0xFF6A1B9A)),
+    (Cartoon.surface(Color(0xFFFFEBEE)), Color(0xFFC62828)),
+    (Cartoon.surface(const Color(0xFFE0F7FA)), Color(0xFF00838F)),
   ];
 
   /// 1-based index from the name, or 0 when there are no digits to read.

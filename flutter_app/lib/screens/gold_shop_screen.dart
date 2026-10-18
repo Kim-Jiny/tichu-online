@@ -488,7 +488,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   style: const TextStyle(fontSize: 12),
                 ),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFB07A12),
+                  foregroundColor: Cartoon.onSurface(const Color(0xFFB07A12)),
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
@@ -552,7 +552,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   style: const TextStyle(fontSize: 12.5),
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF3C1E1E),
+                  foregroundColor: Cartoon.onSurface(const Color(0xFF3C1E1E)),
                   backgroundColor: const Color(0xFFFEE500),
                   side: BorderSide.none,
                   padding: const EdgeInsets.symmetric(vertical: 10),
@@ -708,7 +708,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: Cartoon.panelDecoration(
         color: isBest
-            ? Cartoon.surface(const Color(0xFFFFF4D6))
+            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFF4D6)))
             : Cartoon.paper,
         radius: 20,
         shadowOffset: 2.5,
@@ -757,7 +757,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Cartoon.surface(const Color(0xFFE8F5E9)),
+                          color: Cartoon.surface(
+                            Cartoon.surface(const Color(0xFFE8F5E9)),
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -791,7 +793,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: Cartoon.surface(const Color(0xFFFFF3E0)),
+                            color: Cartoon.surface(
+                              Cartoon.surface(const Color(0xFFFFF3E0)),
+                            ),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

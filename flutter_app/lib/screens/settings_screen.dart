@@ -307,7 +307,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Cartoon.surface(const Color(0xFFFFE3E3)),
+                      color: Cartoon.surface(
+                        Cartoon.surface(const Color(0xFFFFE3E3)),
+                      ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
@@ -613,8 +615,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: isResolved
-                                    ? const Color(0xFFD8F5DF)
-                                    : const Color(0xFFFFE9B8),
+                                    ? Cartoon.surface(const Color(0xFFD8F5DF))
+                                    : Cartoon.surface(const Color(0xFFFFE9B8)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
@@ -1378,9 +1380,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               // account section — it says who this account is,
                               // which is what a "닉네임" row was doing with less.
                               _buildProfileRow(context, game),
-                              const Divider(
+                              Divider(
                                 height: 1,
-                                color: Color(0xFFEAE2DE),
+                                color: Cartoon.surface(const Color(0xFFEAE2DE)),
                               ),
                               _buildRow(
                                 icon: Icons.link,
@@ -1464,9 +1466,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ],
                                 ),
                               ),
-                              const Divider(
+                              Divider(
                                 height: 1,
-                                color: Color(0xFFEAE2DE),
+                                color: Cartoon.surface(const Color(0xFFEAE2DE)),
                               ),
                               // 운영자 우편함. Sits with notices rather than with
                               // support: both are things the team sent that are
@@ -1535,9 +1537,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     onChanged: (v) => game.setPushEnabled(v),
                                   ),
                                 ),
-                                const Divider(
+                                Divider(
                                   height: 1,
-                                  color: Color(0xFFEAE2DE),
+                                  color: Cartoon.surface(
+                                    const Color(0xFFEAE2DE),
+                                  ),
                                 ),
                                 // Separate from the switch above on purpose. That
                                 // one is "notify me at all"; this one is consent to
@@ -1571,9 +1575,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         : null,
                                   ),
                                 ),
-                                const Divider(
+                                Divider(
                                   height: 1,
-                                  color: Color(0xFFEAE2DE),
+                                  color: Cartoon.surface(
+                                    const Color(0xFFEAE2DE),
+                                  ),
                                 ),
                                 // 이벤트·혜택 알림에 딸린 하위 스위치. 출석
                                 // 알림도 무료 재화를 받으라는 권유라 광고성으로
@@ -1603,9 +1609,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                                 if (game.isAdminUser) ...[
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: Color(0xFFEAE2DE),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFEAE2DE),
+                                    ),
                                   ),
                                   _buildRow(
                                     icon: Icons.support_agent,
@@ -1619,9 +1627,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           game.setAdminAlertPush(inquiry: v),
                                     ),
                                   ),
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: Color(0xFFEAE2DE),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFEAE2DE),
+                                    ),
                                   ),
                                   _buildRow(
                                     icon: Icons.report_gmailerrorred,
@@ -1635,9 +1645,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           game.setAdminAlertPush(report: v),
                                     ),
                                   ),
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: Color(0xFFEAE2DE),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFEAE2DE),
+                                    ),
                                   ),
                                   _buildRow(
                                     icon: Icons.payments_outlined,
@@ -1752,9 +1764,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     size: 26,
                                   ),
                                 ),
-                                const Divider(
+                                Divider(
                                   height: 1,
-                                  color: Color(0xFFEAE2DE),
+                                  color: Cartoon.surface(
+                                    const Color(0xFFEAE2DE),
+                                  ),
                                 ),
                               ],
                               _buildRow(
@@ -1768,9 +1782,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   size: 26,
                                 ),
                               ),
-                              const Divider(
+                              Divider(
                                 height: 1,
-                                color: Color(0xFFEAE2DE),
+                                color: Cartoon.surface(const Color(0xFFEAE2DE)),
                               ),
                               _buildRow(
                                 icon: Icons.mark_email_read,
@@ -1866,9 +1880,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       );
                                     },
                                   ),
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: Color(0xFFEAE2DE),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFEAE2DE),
+                                    ),
                                   ),
                                   _buildRow(
                                     icon: Icons.description_outlined,
@@ -1885,9 +1901,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       size: 26,
                                     ),
                                   ),
-                                  const Divider(
+                                  Divider(
                                     height: 1,
-                                    color: Color(0xFFEAE2DE),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFEAE2DE),
+                                    ),
                                   ),
                                   _buildRow(
                                     icon: Icons.privacy_tip_outlined,
@@ -1939,9 +1957,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   size: 26,
                                 ),
                               ),
-                              const Divider(
+                              Divider(
                                 height: 1,
-                                color: Color(0xFFEAE2DE),
+                                color: Cartoon.surface(const Color(0xFFEAE2DE)),
                               ),
                               _buildRow(
                                 icon: Icons.delete_forever,

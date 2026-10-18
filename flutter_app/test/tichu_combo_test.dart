@@ -4,7 +4,13 @@ import 'package:tichu_online/utils/tichu_combo.dart';
 void main() {
   bool lead(List<String> c) => tichuCanPlay(c, myTurn: true);
   bool onto(List<String> c, String t, int len, double v, {bool turn = true}) =>
-      tichuCanPlay(c, myTurn: turn, trickType: t, trickLength: len, trickValue: v);
+      tichuCanPlay(
+        c,
+        myTurn: turn,
+        trickType: t,
+        trickLength: len,
+        trickValue: v,
+      );
 
   test('선공 조합', () {
     expect(lead(['spade_5']), true);

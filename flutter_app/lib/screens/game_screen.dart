@@ -1164,7 +1164,9 @@ class _GameScreenState extends State<GameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
+                            color: Cartoon.surface(
+                              Cartoon.surface(const Color(0xFFFFD9D6)),
+                            ),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -1686,7 +1688,9 @@ class _GameScreenState extends State<GameScreen> {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: Cartoon.surface(const Color(0xFFFFD9D6)),
+                  color: Cartoon.surface(
+                    Cartoon.surface(const Color(0xFFFFD9D6)),
+                  ),
                   borderRadius: BorderRadius.circular(99),
                   border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
@@ -1741,7 +1745,7 @@ class _GameScreenState extends State<GameScreen> {
       decoration: gamePillDecoration(
         radius: 14,
         color: urgent
-            ? Cartoon.surface(const Color(0xFFFFD9D6))
+            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFD9D6)))
             : Cartoon.cream,
       ),
       child: Row(
@@ -2176,8 +2180,8 @@ class _GameScreenState extends State<GameScreen> {
     final isMyTurn = state?.isMyTurn == true;
     // 내 차례에 5초 이하로 남으면 바탕이 붉어져 시간이 없다는 걸 한눈에 보여 준다.
     final urgent = isMyTurn && _remainingSeconds > 0 && _remainingSeconds <= 5;
-    if (urgent) return const Color(0xFFFFC9C4);
-    if (isMyTurn) return const Color(0xFFFFF1B8);
+    if (urgent) return Cartoon.myTurnUrgent;
+    if (isMyTurn) return Cartoon.myTurn;
     return Cartoon.paper;
   }
 
@@ -2718,9 +2722,9 @@ class _GameScreenState extends State<GameScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isAssigned
-              ? const Color(0xFFCDEFD6)
+              ? Cartoon.surface(const Color(0xFFCDEFD6))
               : canAssign
-              ? const Color(0xFFD6EAFF)
+              ? Cartoon.surface(const Color(0xFFD6EAFF))
               : Cartoon.cream,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
@@ -2824,7 +2828,7 @@ class _GameScreenState extends State<GameScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFD9F3E0)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFD9F3E0))),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 1.8),
       ),
@@ -3416,7 +3420,7 @@ class _GameScreenState extends State<GameScreen> {
     if (rank >= 4) return const SizedBox.shrink();
     final (Color bg, Color border, Color fg) = switch (rank) {
       1 => (Cartoon.yellow, Cartoon.ink, Cartoon.ink),
-      2 => (const Color(0xFFE3E3E3), Cartoon.ink, Cartoon.ink),
+      2 => (Cartoon.surface(const Color(0xFFE3E3E3)), Cartoon.ink, Cartoon.ink),
       3 => (const Color(0xFFE0A877), Cartoon.ink, Cartoon.ink),
       _ => (const Color(0xFFBDBDBD), Cartoon.ink, Cartoon.ink),
     };

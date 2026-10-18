@@ -1144,7 +1144,7 @@ class _ShopScreenState extends State<ShopScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: onSale
-              ? Cartoon.surface(const Color(0xFFFFE3E3))
+              ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3)))
               : Cartoon.cream,
           borderRadius: BorderRadius.circular(14),
         ),
@@ -1254,7 +1254,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFFFE3E3)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3))),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 2),
       ),
@@ -1544,7 +1544,7 @@ class _ShopScreenState extends State<ShopScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: onSale
-            ? Cartoon.surface(const Color(0xFFFFE3E3))
+            ? Cartoon.surface(Cartoon.surface(const Color(0xFFFFE3E3)))
             : Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Cartoon.ink, width: 1.6),
@@ -1869,7 +1869,9 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       decoration: BoxDecoration(
-        color: equipped ? Cartoon.surface(const Color(0xFFE6F2FF)) : null,
+        color: equipped
+            ? Cartoon.surface(Cartoon.surface(const Color(0xFFE6F2FF)))
+            : null,
         borderRadius: BorderRadius.circular(14),
         border: Border(
           bottom: BorderSide(
@@ -1910,7 +1912,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             _badge(
                               l10n.shopStatusInUse,
                               const Color(0xFF1565C0),
-                              const Color(0xFFDDECF7),
+                              Cartoon.surface(const Color(0xFFDDECF7)),
                             )
                           // A pass that is switched off is not "활성화됨": the
                           // button beside it already says 사용 안 함, and two
@@ -1920,7 +1922,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             _badge(
                               l10n.shopStatusActivated,
                               const Color(0xFF1565C0),
-                              const Color(0xFFDDECF7),
+                              Cartoon.surface(const Color(0xFFDDECF7)),
                             ),
                         ],
                       ),
@@ -2196,49 +2198,70 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.auto_awesome,
           'iconColor': const Color(0xFFD4A0C0),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF3E5F5)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            Cartoon.surface(const Color(0xFFF3E5F5)),
+          ],
           'borderColor': const Color(0xFFF8BBD0),
         };
       case 'banner_blossom':
         return {
           'icon': Icons.local_florist,
           'iconColor': const Color(0xFFE91E63),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            const Color(0xFFF8BBD0),
+          ],
           'borderColor': const Color(0xFFF48FB1),
         };
       case 'banner_mint':
         return {
           'icon': Icons.spa,
           'iconColor': const Color(0xFF26A69A),
-          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F2F1)),
+            const Color(0xFFB2DFDB),
+          ],
           'borderColor': const Color(0xFF80CBC4),
         };
       case 'banner_sunset_7d':
         return {
           'icon': Icons.wb_twilight,
           'iconColor': const Color(0xFFFF6F00),
-          'gradient': [const Color(0xFFFFE0B2), const Color(0xFFFFCC80)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+            const Color(0xFFFFCC80),
+          ],
           'borderColor': const Color(0xFFFFB74D),
         };
       case 'banner_season_gold':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFFFF8F00),
-          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF8E1)),
+            Cartoon.surface(const Color(0xFFFFECB3)),
+          ],
           'borderColor': const Color(0xFFFFD54F),
         };
       case 'banner_season_silver':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF78909C),
-          'gradient': [const Color(0xFFECEFF1), const Color(0xFFCFD8DC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFECEFF1)),
+            const Color(0xFFCFD8DC),
+          ],
           'borderColor': const Color(0xFFB0BEC5),
         };
       case 'banner_season_bronze':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF8D6E63),
-          'gradient': [const Color(0xFFEFEBE9), const Color(0xFFD7CCC8)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFEFEBE9)),
+            const Color(0xFFD7CCC8),
+          ],
           'borderColor': const Color(0xFFBCAAA4),
         };
       // Titles
@@ -2246,168 +2269,240 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.cake,
           'iconColor': const Color(0xFFEC407A),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            const Color(0xFFF8BBD0),
+          ],
           'borderColor': const Color(0xFFF48FB1),
         };
       case 'title_steady':
         return {
           'icon': Icons.shield,
           'iconColor': const Color(0xFF5C6BC0),
-          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8EAF6)),
+            const Color(0xFFC5CAE9),
+          ],
           'borderColor': const Color(0xFF9FA8DA),
         };
       case 'title_flash_30d':
         return {
           'icon': Icons.flash_on,
           'iconColor': const Color(0xFFFFA000),
-          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF8E1)),
+            Cartoon.surface(const Color(0xFFFFECB3)),
+          ],
           'borderColor': const Color(0xFFFFD54F),
         };
       case 'title_dragon':
         return {
           'icon': Icons.local_fire_department,
           'iconColor': const Color(0xFFD32F2F),
-          'gradient': [const Color(0xFFFFEBEE), const Color(0xFFFFCDD2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFEBEE)),
+            const Color(0xFFFFCDD2),
+          ],
           'borderColor': const Color(0xFFEF9A9A),
         };
       case 'title_phoenix':
         return {
           'icon': Icons.local_fire_department,
           'iconColor': const Color(0xFFFF6F00),
-          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF3E0)),
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+          ],
           'borderColor': const Color(0xFFFFCC80),
         };
       case 'title_pirate':
         return {
           'icon': Icons.anchor,
           'iconColor': const Color(0xFF37474F),
-          'gradient': [const Color(0xFFECEFF1), const Color(0xFFCFD8DC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFECEFF1)),
+            const Color(0xFFCFD8DC),
+          ],
           'borderColor': const Color(0xFF90A4AE),
         };
       case 'title_tactician':
         return {
           'icon': Icons.psychology,
           'iconColor': const Color(0xFF00695C),
-          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F2F1)),
+            const Color(0xFFB2DFDB),
+          ],
           'borderColor': const Color(0xFF80CBC4),
         };
       case 'title_lucky':
         return {
           'icon': Icons.star,
           'iconColor': const Color(0xFFFFD600),
-          'gradient': [const Color(0xFFFFFDE7), const Color(0xFFFFF9C4)],
-          'borderColor': const Color(0xFFFFF176),
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFFDE7)),
+            Cartoon.surface(const Color(0xFFFFF9C4)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFFFF176)),
         };
       case 'title_bluffer':
         return {
           'icon': Icons.theater_comedy,
           'iconColor': const Color(0xFF6A1B9A),
-          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFE1BEE7)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF3E5F5)),
+            const Color(0xFFE1BEE7),
+          ],
           'borderColor': const Color(0xFFCE93D8),
         };
       case 'title_ace':
         return {
           'icon': Icons.military_tech,
           'iconColor': const Color(0xFFC62828),
-          'gradient': [const Color(0xFFFFEBEE), const Color(0xFFFFCDD2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFEBEE)),
+            const Color(0xFFFFCDD2),
+          ],
           'borderColor': const Color(0xFFEF9A9A),
         };
       case 'title_king':
         return {
           'icon': Icons.workspace_premium,
           'iconColor': const Color(0xFFFF8F00),
-          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFE082)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF8E1)),
+            Cartoon.surface(const Color(0xFFFFE082)),
+          ],
           'borderColor': const Color(0xFFFFD54F),
         };
       case 'title_rookie':
         return {
           'icon': Icons.emoji_nature,
           'iconColor': const Color(0xFF66BB6A),
-          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8F5E9)),
+            Cartoon.surface(const Color(0xFFC8E6C9)),
+          ],
           'borderColor': const Color(0xFFA5D6A7),
         };
       case 'title_veteran':
         return {
           'icon': Icons.security,
           'iconColor': const Color(0xFF1565C0),
-          'gradient': [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE3F2FD)),
+            const Color(0xFFBBDEFB),
+          ],
           'borderColor': const Color(0xFF90CAF9),
         };
       case 'title_sensitive':
         return {
           'icon': Icons.sentiment_very_dissatisfied,
           'iconColor': const Color(0xFFE91E63),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            const Color(0xFFF8BBD0),
+          ],
           'borderColor': const Color(0xFFF48FB1),
         };
       case 'title_shadow':
         return {
           'icon': Icons.visibility_off,
           'iconColor': const Color(0xFF424242),
-          'gradient': [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF5F5F5)),
+            Cartoon.surface(const Color(0xFFE0E0E0)),
+          ],
           'borderColor': const Color(0xFFBDBDBD),
         };
       case 'title_flame':
         return {
           'icon': Icons.whatshot,
           'iconColor': const Color(0xFFFF5722),
-          'gradient': [const Color(0xFFFBE9E7), const Color(0xFFFFCCBC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFBE9E7)),
+            const Color(0xFFFFCCBC),
+          ],
           'borderColor': const Color(0xFFFF8A65),
         };
       case 'title_ice':
         return {
           'icon': Icons.ac_unit,
           'iconColor': const Color(0xFF0288D1),
-          'gradient': [const Color(0xFFE1F5FE), const Color(0xFFB3E5FC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE1F5FE)),
+            Cartoon.surface(const Color(0xFFB3E5FC)),
+          ],
           'borderColor': const Color(0xFF81D4FA),
         };
       case 'title_crown':
         return {
           'icon': Icons.diamond,
           'iconColor': const Color(0xFFE65100),
-          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF3E0)),
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+          ],
           'borderColor': const Color(0xFFFFB74D),
         };
       case 'title_diamond':
         return {
           'icon': Icons.diamond,
           'iconColor': const Color(0xFF00BCD4),
-          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFB2EBF2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F7FA)),
+            Cartoon.surface(const Color(0xFFB2EBF2)),
+          ],
           'borderColor': const Color(0xFF80DEEA),
         };
       case 'title_ghost':
         return {
           'icon': Icons.blur_on,
           'iconColor': const Color(0xFF78909C),
-          'gradient': [const Color(0xFFECEFF1), const Color(0xFFCFD8DC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFECEFF1)),
+            const Color(0xFFCFD8DC),
+          ],
           'borderColor': const Color(0xFFB0BEC5),
         };
       case 'title_thunder':
         return {
           'icon': Icons.bolt,
           'iconColor': const Color(0xFFFFAB00),
-          'gradient': [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF8E1)),
+            Cartoon.surface(const Color(0xFFFFECB3)),
+          ],
           'borderColor': const Color(0xFFFFD54F),
         };
       case 'title_topcard':
         return {
           'icon': Icons.style,
           'iconColor': const Color(0xFF00897B),
-          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F2F1)),
+            const Color(0xFFB2DFDB),
+          ],
           'borderColor': const Color(0xFF80CBC4),
         };
       case 'title_legend':
         return {
           'icon': Icons.auto_awesome,
           'iconColor': const Color(0xFFFF6D00),
-          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF3E0)),
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+          ],
           'borderColor': const Color(0xFFFFAB40),
         };
       case 'title_boomer':
         return {
           'icon': Icons.elderly,
           'iconColor': const Color(0xFF795548),
-          'gradient': [const Color(0xFFEFEBE9), const Color(0xFFD7CCC8)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFEFEBE9)),
+            const Color(0xFFD7CCC8),
+          ],
           'borderColor': const Color(0xFFBCAAA4),
         };
       // Themes
@@ -2415,91 +2510,130 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.cloud,
           'iconColor': const Color(0xFF90A4AE),
-          'gradient': [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF5F5F5)),
+            Cartoon.surface(const Color(0xFFE0E0E0)),
+          ],
           'borderColor': const Color(0xFFBDBDBD),
         };
       case 'theme_sky':
         return {
           'icon': Icons.wb_sunny,
           'iconColor': const Color(0xFF42A5F5),
-          'gradient': [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE3F2FD)),
+            const Color(0xFFBBDEFB),
+          ],
           'borderColor': const Color(0xFF90CAF9),
         };
       case 'theme_mocha_30d':
         return {
           'icon': Icons.coffee,
           'iconColor': const Color(0xFF6D4C41),
-          'gradient': [const Color(0xFFEFEBE9), const Color(0xFFD7CCC8)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFEFEBE9)),
+            const Color(0xFFD7CCC8),
+          ],
           'borderColor': const Color(0xFFBCAAA4),
         };
       case 'theme_lavender':
         return {
           'icon': Icons.local_florist,
           'iconColor': const Color(0xFF9C27B0),
-          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFE1BEE7)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF3E5F5)),
+            const Color(0xFFE1BEE7),
+          ],
           'borderColor': const Color(0xFFCE93D8),
         };
       case 'theme_cherry':
         return {
           'icon': Icons.filter_vintage,
           'iconColor': const Color(0xFFE91E63),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            const Color(0xFFF8BBD0),
+          ],
           'borderColor': const Color(0xFFF48FB1),
         };
       case 'theme_midnight':
         return {
           'icon': Icons.nights_stay,
           'iconColor': const Color(0xFF303F9F),
-          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8EAF6)),
+            const Color(0xFFC5CAE9),
+          ],
           'borderColor': const Color(0xFF9FA8DA),
         };
       case 'theme_sunset':
         return {
           'icon': Icons.wb_twilight,
           'iconColor': const Color(0xFFF57C00),
-          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFE0B2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF3E0)),
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+          ],
           'borderColor': const Color(0xFFFFCC80),
         };
       case 'theme_forest':
         return {
           'icon': Icons.park,
           'iconColor': const Color(0xFF2E7D32),
-          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8F5E9)),
+            Cartoon.surface(const Color(0xFFC8E6C9)),
+          ],
           'borderColor': const Color(0xFFA5D6A7),
         };
       case 'theme_rose':
         return {
           'icon': Icons.spa,
           'iconColor': const Color(0xFFD4A08A),
-          'gradient': [const Color(0xFFFBE9E7), const Color(0xFFFFCCBC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFBE9E7)),
+            const Color(0xFFFFCCBC),
+          ],
           'borderColor': const Color(0xFFFFAB91),
         };
       case 'theme_ocean':
         return {
           'icon': Icons.waves,
           'iconColor': const Color(0xFF0097A7),
-          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFB2EBF2)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F7FA)),
+            Cartoon.surface(const Color(0xFFB2EBF2)),
+          ],
           'borderColor': const Color(0xFF80DEEA),
         };
       case 'theme_aurora':
         return {
           'icon': Icons.auto_awesome,
           'iconColor': const Color(0xFF26A69A),
-          'gradient': [const Color(0xFFE0F7FA), const Color(0xFFE8F5E9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F7FA)),
+            Cartoon.surface(const Color(0xFFE8F5E9)),
+          ],
           'borderColor': const Color(0xFF80CBC4),
         };
       case 'theme_mintchoco_30d':
         return {
           'icon': Icons.icecream,
           'iconColor': const Color(0xFF00897B),
-          'gradient': [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0F2F1)),
+            const Color(0xFFB2DFDB),
+          ],
           'borderColor': const Color(0xFF80CBC4),
         };
       case 'theme_peach_30d':
         return {
           'icon': Icons.brightness_7,
           'iconColor': const Color(0xFFFF8A65),
-          'gradient': [const Color(0xFFFFF3E0), const Color(0xFFFFCCBC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFF3E0)),
+            const Color(0xFFFFCCBC),
+          ],
           'borderColor': const Color(0xFFFFAB91),
         };
       // Utility
@@ -2507,56 +2641,80 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.healing,
           'iconColor': const Color(0xFF66BB6A),
-          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8F5E9)),
+            Cartoon.surface(const Color(0xFFC8E6C9)),
+          ],
           'borderColor': const Color(0xFFA5D6A7),
         };
       case 'top_card_counter_7d':
         return {
           'icon': Icons.analytics,
           'iconColor': const Color(0xFF5C6BC0),
-          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8EAF6)),
+            const Color(0xFFC5CAE9),
+          ],
           'borderColor': const Color(0xFF9FA8DA),
         };
       case 'leave_reduce_3':
         return {
           'icon': Icons.local_hospital,
           'iconColor': const Color(0xFF43A047),
-          'gradient': [const Color(0xFFE8F5E9), const Color(0xFFA5D6A7)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8F5E9)),
+            const Color(0xFFA5D6A7),
+          ],
           'borderColor': const Color(0xFF81C784),
         };
       case 'stats_reset':
         return {
           'icon': Icons.restart_alt,
           'iconColor': const Color(0xFF757575),
-          'gradient': [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF5F5F5)),
+            Cartoon.surface(const Color(0xFFE0E0E0)),
+          ],
           'borderColor': const Color(0xFFBDBDBD),
         };
       case 'season_stats_reset':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF7B1FA2),
-          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFCE93D8)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF3E5F5)),
+            const Color(0xFFCE93D8),
+          ],
           'borderColor': const Color(0xFFBA68C8),
         };
       case 'tichu_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF355D89),
-          'gradient': [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE3F2FD)),
+            const Color(0xFFBBDEFB),
+          ],
           'borderColor': const Color(0xFF90CAF9),
         };
       case 'sk_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF424242),
-          'gradient': [const Color(0xFFECEFF1), const Color(0xFFB0BEC5)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFECEFF1)),
+            const Color(0xFFB0BEC5),
+          ],
           'borderColor': const Color(0xFF90A4AE),
         };
       case 'mighty_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
           'iconColor': const Color(0xFF1565C0),
-          'gradient': [const Color(0xFFE1F5FE), const Color(0xFFB3E5FC)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE1F5FE)),
+            Cartoon.surface(const Color(0xFFB3E5FC)),
+          ],
           'borderColor': const Color(0xFF81D4FA),
         };
       // Feature items: 'feature' has no category fallback of its own, so both
@@ -2567,14 +2725,20 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.account_circle,
           'iconColor': const Color(0xFF5C6BC0),
-          'gradient': [const Color(0xFFE8EAF6), const Color(0xFFC5CAE9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE8EAF6)),
+            const Color(0xFFC5CAE9),
+          ],
           'borderColor': const Color(0xFF9FA8DA),
         };
       case 'custom_title_7d':
         return {
           'icon': Icons.drive_file_rename_outline,
           'iconColor': const Color(0xFFC2185B),
-          'gradient': [const Color(0xFFFCE4EC), const Color(0xFFF8BBD0)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFCE4EC)),
+            const Color(0xFFF8BBD0),
+          ],
           'borderColor': const Color(0xFFF48FB1),
         };
       case 'profile_private_7d':
@@ -2582,7 +2746,10 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.lock_rounded,
           'iconColor': const Color(0xFF7E57C2),
-          'gradient': [const Color(0xFFF3E5F5), const Color(0xFFD1C4E9)],
+          'gradient': [
+            Cartoon.surface(const Color(0xFFF3E5F5)),
+            const Color(0xFFD1C4E9),
+          ],
           'borderColor': const Color(0xFFB39DDB),
         };
     }
@@ -2593,36 +2760,51 @@ class _ShopScreenState extends State<ShopScreen> {
         return {
           'icon': Icons.flag,
           'iconColor': const Color(0xFFB24B5A),
-          'gradient': [const Color(0xFFF6C1C9), const Color(0xFFF3E7EA)],
-          'borderColor': const Color(0xFFE6DDD8),
+          'gradient': [
+            const Color(0xFFF6C1C9),
+            Cartoon.surface(const Color(0xFFF3E7EA)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFE6DDD8)),
         };
       case 'title':
         return {
           'icon': Icons.badge,
           'iconColor': const Color(0xFF6B5CA5),
-          'gradient': [const Color(0xFFD9D0F2), const Color(0xFFF1ECFA)],
-          'borderColor': const Color(0xFFE6DDD8),
+          'gradient': [
+            const Color(0xFFD9D0F2),
+            Cartoon.surface(const Color(0xFFF1ECFA)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFE6DDD8)),
         };
       case 'theme':
         return {
           'icon': Icons.palette,
           'iconColor': const Color(0xFF3A7D5C),
-          'gradient': [const Color(0xFFCDEBD8), const Color(0xFFEFF8F2)],
-          'borderColor': const Color(0xFFE6DDD8),
+          'gradient': [
+            Cartoon.surface(const Color(0xFFCDEBD8)),
+            Cartoon.surface(const Color(0xFFEFF8F2)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFE6DDD8)),
         };
       case 'utility':
         return {
           'icon': Icons.handyman,
           'iconColor': const Color(0xFFB46B00),
-          'gradient': [const Color(0xFFFFD79E), const Color(0xFFFFF2DF)],
-          'borderColor': const Color(0xFFE6DDD8),
+          'gradient': [
+            Cartoon.surface(const Color(0xFFFFD79E)),
+            Cartoon.surface(const Color(0xFFFFF2DF)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFE6DDD8)),
         };
       default:
         return {
           'icon': Icons.category,
           'iconColor': const Color(0xFF7A7A7A),
-          'gradient': [const Color(0xFFE0E0E0), const Color(0xFFF5F5F5)],
-          'borderColor': const Color(0xFFE6DDD8),
+          'gradient': [
+            Cartoon.surface(const Color(0xFFE0E0E0)),
+            Cartoon.surface(const Color(0xFFF5F5F5)),
+          ],
+          'borderColor': Cartoon.surface(const Color(0xFFE6DDD8)),
         };
     }
   }
@@ -2831,19 +3013,25 @@ class _ShopScreenState extends State<ShopScreen> {
                                         _badge(
                                           l10n.shopTagSeason,
                                           const Color(0xFF1565C0),
-                                          const Color(0xFFE3F2FD),
+                                          Cartoon.surface(
+                                            const Color(0xFFE3F2FD),
+                                          ),
                                         )
                                       else if (owned)
                                         _badge(
                                           l10n.shopItemOwned,
                                           const Color(0xFF7E57C2),
-                                          const Color(0xFFEDE7F6),
+                                          Cartoon.surface(
+                                            const Color(0xFFEDE7F6),
+                                          ),
                                         )
                                       else if (onSale)
                                         _badge(
                                           l10n.shopTagLimited,
                                           const Color(0xFFD32F2F),
-                                          const Color(0xFFFFEBEE),
+                                          Cartoon.surface(
+                                            const Color(0xFFFFEBEE),
+                                          ),
                                         ),
                                       _chip(_categoryLabel(context, category)),
                                       _chip(
@@ -3198,7 +3386,7 @@ class _ShopScreenState extends State<ShopScreen> {
         height: 46,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Cartoon.surface(const Color(0xFFEDE7F6)),
+          color: Cartoon.surface(Cartoon.surface(const Color(0xFFEDE7F6))),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -3395,9 +3583,9 @@ class _ShopScreenState extends State<ShopScreen> {
       height: 64,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFF4EFEA)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFF4EFEA))),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6DDD8)),
+        border: Border.all(color: Cartoon.surface(const Color(0xFFE6DDD8))),
       ),
       alignment: Alignment.center,
       child: child,
@@ -3409,9 +3597,11 @@ class _ShopScreenState extends State<ShopScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Cartoon.surface(const Color(0xFFF8F4F0)),
+              color: Cartoon.surface(Cartoon.surface(const Color(0xFFF8F4F0))),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE6DCE8)),
+              border: Border.all(
+                color: Cartoon.surface(const Color(0xFFE6DCE8)),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -3660,7 +3850,7 @@ class _ShopScreenState extends State<ShopScreen> {
             : null,
         gradient: previewGradient,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6DDD8)),
+        border: Border.all(color: Cartoon.surface(const Color(0xFFE6DDD8))),
       ),
       child: Row(
         children: [
@@ -3795,7 +3985,9 @@ class _ShopScreenState extends State<ShopScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
+            backgroundColor: Cartoon.surface(
+              Cartoon.surface(const Color(0xFFFDFBFA)),
+            ),
             title: Text(
               l10n.customTitleEditTitle,
               style: TextStyle(
@@ -3851,7 +4043,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.72),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE6DDD8)),
+                        border: Border.all(
+                          color: Cartoon.surface(const Color(0xFFE6DDD8)),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -3953,8 +4147,10 @@ class _ShopScreenState extends State<ShopScreen> {
                         game.setCustomTitle(text, colorId);
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Cartoon.surface(const Color(0xFFC7E6D0)),
-                  foregroundColor: const Color(0xFF2E5A3A),
+                  backgroundColor: Cartoon.surface(
+                    Cartoon.surface(const Color(0xFFC7E6D0)),
+                  ),
+                  foregroundColor: Cartoon.onSurface(const Color(0xFF2E5A3A)),
                   elevation: 0,
                 ),
                 child: Text(l10n.customTitleSave),
@@ -3981,7 +4177,9 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
+        backgroundColor: Cartoon.surface(
+          Cartoon.surface(const Color(0xFFFDFBFA)),
+        ),
         titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
         contentPadding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
         title: Text(
@@ -4016,8 +4214,8 @@ class _ShopScreenState extends State<ShopScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: currentlyOn
-                  ? const Color(0xFFF0DEDE)
-                  : const Color(0xFFC7E6D0),
+                  ? Cartoon.surface(const Color(0xFFF0DEDE))
+                  : Cartoon.surface(const Color(0xFFC7E6D0)),
               foregroundColor: currentlyOn
                   ? const Color(0xFFA33F3F)
                   : const Color(0xFF2E5A3A),
@@ -4507,7 +4705,9 @@ class _ShopScreenState extends State<ShopScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: Cartoon.surface(const Color(0xFFD8F5DF)),
+                            color: Cartoon.surface(
+                              Cartoon.surface(const Color(0xFFD8F5DF)),
+                            ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Cartoon.ink, width: 2),
                           ),
@@ -4624,11 +4824,11 @@ class _ShopScreenState extends State<ShopScreen> {
     bool finale,
   ) {
     final bg = claimed
-        ? const Color(0xFFD8F5DF)
+        ? Cartoon.surface(const Color(0xFFD8F5DF))
         : today
         ? Cartoon.yellow
         : finale
-        ? const Color(0xFFFFE6B8)
+        ? Cartoon.surface(const Color(0xFFFFE6B8))
         : Colors.white;
     final cell = Container(
       decoration: BoxDecoration(

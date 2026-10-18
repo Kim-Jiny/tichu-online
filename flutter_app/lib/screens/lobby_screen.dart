@@ -698,7 +698,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
                         decoration: BoxDecoration(
                           color: gs.roomAllowMidGameJoin
-                              ? const Color(0xFFE3F4E8)
+                              ? Cartoon.surface(const Color(0xFFE3F4E8))
                               : Cartoon.cream,
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -1295,7 +1295,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 decoration: BoxDecoration(
                                                   color: selected
                                                       ? strong
-                                                      : const Color(0xFFE6E1DB),
+                                                      : Cartoon.surface(
+                                                          const Color(
+                                                            0xFFE6E1DB,
+                                                          ),
+                                                        ),
                                                   borderRadius:
                                                       BorderRadius.circular(14),
                                                   border: Border.all(
@@ -1678,7 +1682,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: Cartoon.surface(
-                                      const Color(0xFFFFECEC),
+                                      Cartoon.surface(const Color(0xFFFFECEC)),
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
@@ -1764,7 +1768,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
-                      foregroundColor: const Color(0xFF2A1E18),
+                      // 바탕이 테마 그라데이션에서 온다. 진한 색을 박아
+                      // 두면 어두운 테마에서 남색 위에 검정이 된다.
+                      foregroundColor: Cartoon.inkOn(accent),
                       textStyle: const TextStyle(
                         fontFamily: Cartoon.font,
                         fontSize: 16,
@@ -1998,7 +2004,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE9DED9)),
+        border: Border.all(color: Cartoon.surface(const Color(0xFFE9DED9))),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -2558,7 +2564,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFDEDBFA)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFDEDBFA))),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF9A8FE8)),
       ),
@@ -4107,7 +4113,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Cartoon.surface(const Color(0xFFFFE9B8)),
+                color: Cartoon.surface(
+                  Cartoon.surface(const Color(0xFFFFE9B8)),
+                ),
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
@@ -4643,7 +4651,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: Cartoon.panelDecoration(
-        color: Cartoon.surface(const Color(0xFFE9EEFF)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFE9EEFF))),
         radius: 18,
         shadowOffset: 2,
       ),
@@ -4738,7 +4746,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Cartoon.surface(const Color(0xFFE8E0F8)),
+        color: Cartoon.surface(Cartoon.surface(const Color(0xFFE8E0F8))),
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
@@ -4972,7 +4980,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 final fallbackColor = isSlotBlocked
                     ? const Color(0x14000000)
                     : isBlockedPlayer
-                    ? const Color(0xFFFAEDED)
+                    ? Cartoon.surface(const Color(0xFFFAEDED))
                     : isEmpty
                     ? Colors.white.withValues(alpha: 0.35)
                     : Colors.white.withValues(alpha: 0.7);
@@ -5007,7 +5015,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             margin: const EdgeInsets.only(right: 8),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(const Color(0xFFFFE0E0)),
+                              color: Cartoon.surface(
+                                Cartoon.surface(const Color(0xFFFFE0E0)),
+                              ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -5400,7 +5410,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(const Color(0xFFE9EEFF)),
+                              color: Cartoon.surface(
+                                Cartoon.surface(const Color(0xFFE9EEFF)),
+                              ),
                               borderRadius: BorderRadius.circular(11),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5446,7 +5458,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Cartoon.surface(const Color(0xFFFFE9B8)),
+                              color: Cartoon.surface(
+                                Cartoon.surface(const Color(0xFFFFE9B8)),
+                              ),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5483,7 +5497,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: Cartoon.surface(const Color(0xFFFFE3E3)),
+                                color: Cartoon.surface(
+                                  Cartoon.surface(const Color(0xFFFFE3E3)),
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,

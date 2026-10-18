@@ -123,7 +123,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFC62828),
+              foregroundColor: Cartoon.onSurface(const Color(0xFFC62828)),
             ),
             child: Text(l10n.mailboxDelete),
           ),
@@ -383,7 +383,9 @@ class _MailboxScreenState extends State<MailboxScreen> {
     // ancestor. A coloured box in between hides them — Flutter asserts about
     // exactly this — so the fill and the border live on the Material itself.
     // 상자 없이: 안 읽은 편지만 연한 노란 바탕, 아래에 구분선 한 줄.
-    final fill = unread ? const Color(0xFFFFF3D0) : Colors.transparent;
+    final fill = unread
+        ? Cartoon.surface(const Color(0xFFFFF3D0))
+        : Colors.transparent;
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -540,7 +542,9 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     icon: const Icon(Icons.delete_outline, size: 17),
                     label: Text(l10n.mailboxDelete),
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFA1887F),
+                      foregroundColor: Cartoon.onSurface(
+                        const Color(0xFFA1887F),
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: const Size(0, 32),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,

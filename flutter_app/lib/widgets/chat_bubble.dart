@@ -25,12 +25,12 @@ class ChatBubble extends StatelessWidget {
 
   final double bottomSpacing;
   final double avatarRadius;
-  final Color avatarBackground;
+  final Color? avatarBackground;
   final double senderFontSize;
   final double messageFontSize;
   final double bubbleRadius;
   final Color mineColor;
-  final Color theirsColor;
+  final Color? theirsColor;
 
   /// The lobby outlines other people's bubbles because they sit on a white
   /// panel and would otherwise have no edge.
@@ -47,12 +47,12 @@ class ChatBubble extends StatelessWidget {
     this.onTap,
     this.bottomSpacing = 8,
     this.avatarRadius = 14,
-    this.avatarBackground = const Color(0xFFE0E0E0),
+    this.avatarBackground,
     this.senderFontSize = 11,
     this.messageFontSize = 14,
     this.bubbleRadius = 16,
     this.mineColor = const Color(0xFF64B5F6),
-    this.theirsColor = const Color(0xFFF0F0F0),
+    this.theirsColor,
     this.theirsBorder,
     this.bubblePadding = const EdgeInsets.symmetric(
       horizontal: 12,
@@ -69,7 +69,11 @@ class ChatBubble extends StatelessWidget {
       decoration: style != null
           ? style.decoration(radius: bubbleRadius, borderWidth: 1.8)
           : BoxDecoration(
-              color: isMe ? mineColor : Colors.white,
+              // Cartoon.surface 는 밝은 한 벌에서 받은 값을 그대로
+              // 돌려준다 — 흰색 그대로이고, 어두울 때만 바뀐다.
+              color: isMe
+                  ? mineColor
+                  : (theirsColor ?? Cartoon.surface(Colors.white)),
               borderRadius: BorderRadius.circular(bubbleRadius),
               border: Border.all(
                 color: isMe ? Cartoon.ink : Cartoon.ink.withValues(alpha: 0.45),
@@ -112,7 +116,9 @@ class ChatBubble extends StatelessWidget {
               width: avatarRadius * 2,
               height: avatarRadius * 2,
               decoration: BoxDecoration(
-                color: avatarBackground,
+                color:
+                    avatarBackground ??
+                    Cartoon.surface(const Color(0xFFE0E0E0)),
                 borderRadius: BorderRadius.circular(
                   avatarCornerRadius(avatarRadius * 2),
                 ),

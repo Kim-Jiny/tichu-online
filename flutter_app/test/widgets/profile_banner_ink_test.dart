@@ -26,14 +26,20 @@ void main() {
 
   test('a dark banner gets white', () {
     expect(
-      profileBannerInk(g([const Color(0xFF0D1B3E), const Color(0xFF1A1035)]), null),
+      profileBannerInk(
+        g([const Color(0xFF0D1B3E), const Color(0xFF1A1035)]),
+        null,
+      ),
       Colors.white,
     );
   });
 
   test('a pastel banner keeps the popup brown', () {
     expect(
-      profileBannerInk(g([const Color(0xFFF6C1C9), const Color(0xFFF3E7EA)]), null),
+      profileBannerInk(
+        g([const Color(0xFFF6C1C9), const Color(0xFFF3E7EA)]),
+        null,
+      ),
       dark,
     );
   });

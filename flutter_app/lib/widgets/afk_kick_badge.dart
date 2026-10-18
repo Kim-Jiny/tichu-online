@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 
 /// 자리 사진 오른쪽 위에 붙는 잠수 교체 버튼.
 ///
@@ -124,7 +125,9 @@ Future<void> confirmAfkKick(
         ),
         TextButton(
           onPressed: () => Navigator.pop(c, true),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFFC1553F)),
+          style: TextButton.styleFrom(
+            foregroundColor: Cartoon.onSurface(const Color(0xFFC1553F)),
+          ),
           child: Text(l10n.kickAfkConfirmAction),
         ),
       ],

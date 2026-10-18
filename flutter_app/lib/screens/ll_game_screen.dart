@@ -677,7 +677,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
+                            color: Cartoon.surface(
+                              Cartoon.surface(const Color(0xFFFFD9D6)),
+                            ),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -1455,7 +1457,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                           decoration: gamePillDecoration(
                             radius: 99,
                             color: _remainingSeconds <= 5
-                                ? const Color(0xFFFFD9D6)
+                                ? Cartoon.surface(const Color(0xFFFFD9D6))
                                 : Cartoon.cream,
                           ),
                           child: Text(
@@ -1879,7 +1881,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     decoration: gamePillDecoration(
                       radius: 99,
                       color: _remainingSeconds <= 5
-                          ? const Color(0xFFFFD9D6)
+                          ? Cartoon.surface(const Color(0xFFFFD9D6))
                           : Cartoon.cream,
                     ),
                     child: Text(
@@ -2021,7 +2023,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     decoration: gamePillDecoration(
                       radius: 99,
                       color: _remainingSeconds <= 5
-                          ? const Color(0xFFFFD9D6)
+                          ? Cartoon.surface(const Color(0xFFFFD9D6))
                           : Cartoon.cream,
                     ),
                     child: Text(
@@ -2723,10 +2725,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       vertical: 6,
                     ),
                     decoration: i == 0
-                        ? gamePillDecoration(
-                            radius: 14,
-                            color: const Color(0xFFFFF1B8),
-                          )
+                        ? gamePillDecoration(radius: 14, color: Cartoon.myTurn)
                         : BoxDecoration(
                             color: Cartoon.cream,
                             borderRadius: BorderRadius.circular(14),
@@ -2983,7 +2982,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
   /// 관전 창은 차례와 무관하게 종이색이다.
   static Color _bottomAreaColor(GameService gs, LLGameStateData? state) {
     if (state == null || gs.isSpectator) return Cartoon.paper;
-    return state.isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper;
+    return state.isMyTurn ? Cartoon.myTurn : Cartoon.paper;
   }
 
   Widget _buildBottomArea(
@@ -3050,7 +3049,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     decoration: gamePillDecoration(
                       radius: 99,
                       color: _remainingSeconds <= 5
-                          ? const Color(0xFFFFD9D6)
+                          ? Cartoon.surface(const Color(0xFFFFD9D6))
                           : Cartoon.cream,
                     ),
                     child: Text(

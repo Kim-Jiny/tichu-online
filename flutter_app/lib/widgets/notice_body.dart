@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/cartoon.dart';
 
 /// 공지 본문을 읽기 좋게 그린다.
 ///
@@ -78,7 +79,10 @@ class NoticeBody extends StatelessWidget {
           style: base.copyWith(height: 1.5, fontWeight: FontWeight.w700),
         );
       case NoticeBlockKind.divider:
-        return const Divider(height: 1, color: Color(0xFFE8DFDA));
+        return Divider(
+          height: 1,
+          color: Cartoon.surface(const Color(0xFFE8DFDA)),
+        );
       case NoticeBlockKind.bullet:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

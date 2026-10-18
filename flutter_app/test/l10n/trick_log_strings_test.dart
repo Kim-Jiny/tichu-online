@@ -10,7 +10,11 @@ import 'package:tichu_online/l10n/app_localizations_ko.dart';
 /// placeholder that silently drops is the same bug in a new costume.
 
 void main() {
-  final locales = <String, L10n>{'ko': L10nKo(), 'en': L10nEn(), 'de': L10nDe()};
+  final locales = <String, L10n>{
+    'ko': L10nKo(),
+    'en': L10nEn(),
+    'de': L10nDe(),
+  };
 
   group('every locale fills the trick-log placeholders', () {
     locales.forEach((tag, l10n) {

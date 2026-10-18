@@ -207,7 +207,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                             ),
                             decoration: gamePillDecoration(
                               radius: 18,
-                              color: const Color(0xFFFFF1B8),
+                              color: Cartoon.myTurn,
                             ),
                             child: Text(
                               l10n.maintenanceCountdown(

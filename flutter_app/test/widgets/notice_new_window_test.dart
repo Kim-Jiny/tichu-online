@@ -18,21 +18,33 @@ Map<String, dynamic> notice(int id, Duration ago) => {
 
 void main() {
   test('사흘 안에 올라온 안 읽은 공지는 NEW', () {
-    expect(isNoticeNewFor(notice(1, const Duration(hours: 2)), {}, now: now),
-        isTrue);
     expect(
-      isNoticeNewFor(notice(2, const Duration(days: 2, hours: 23)), {}, now: now),
+      isNoticeNewFor(notice(1, const Duration(hours: 2)), {}, now: now),
+      isTrue,
+    );
+    expect(
+      isNoticeNewFor(
+        notice(2, const Duration(days: 2, hours: 23)),
+        {},
+        now: now,
+      ),
       isTrue,
     );
   });
 
   test('사흘이 지나면 안 읽었어도 NEW 가 아니다', () {
     expect(
-      isNoticeNewFor(notice(3, const Duration(days: 3, hours: 1)), {}, now: now),
+      isNoticeNewFor(
+        notice(3, const Duration(days: 3, hours: 1)),
+        {},
+        now: now,
+      ),
       isFalse,
     );
-    expect(isNoticeNewFor(notice(4, const Duration(days: 30)), {}, now: now),
-        isFalse);
+    expect(
+      isNoticeNewFor(notice(4, const Duration(days: 30)), {}, now: now),
+      isFalse,
+    );
   });
 
   test('읽었으면 최근 것이어도 NEW 가 아니다', () {
@@ -55,9 +67,14 @@ void main() {
 
   test('날짜를 못 읽으면 안 읽음으로 둔다', () {
     // 배지를 잘못 놓치는 것보다 남기는 쪽이 덜 나쁘다.
-    expect(isNoticeNewFor({'id': 20, 'published_at': null}, {}, now: now), isTrue);
-    expect(isNoticeNewFor({'id': 21, 'published_at': '이상한값'}, {}, now: now),
-        isTrue);
+    expect(
+      isNoticeNewFor({'id': 20, 'published_at': null}, {}, now: now),
+      isTrue,
+    );
+    expect(
+      isNoticeNewFor({'id': 21, 'published_at': '이상한값'}, {}, now: now),
+      isTrue,
+    );
   });
 
   test('서버 시각을 UTC 로 읽는다', () {

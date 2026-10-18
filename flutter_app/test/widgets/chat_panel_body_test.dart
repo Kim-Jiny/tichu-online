@@ -37,13 +37,15 @@ void main() {
   testWidgets('엔터로 보낸 뒤에도 입력창에 커서가 남는다', (tester) async {
     var sent = 0;
     final controller = TextEditingController();
-    await tester.pumpWidget(harness(
-      controller: controller,
-      onSend: () {
-        sent++;
-        controller.clear();
-      },
-    ));
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        onSend: () {
+          sent++;
+          controller.clear();
+        },
+      ),
+    );
 
     await tester.tap(find.byType(TextField));
     await tester.pump();
@@ -59,13 +61,15 @@ void main() {
   testWidgets('연달아 여러 줄을 보낼 수 있다', (tester) async {
     var sent = 0;
     final controller = TextEditingController();
-    await tester.pumpWidget(harness(
-      controller: controller,
-      onSend: () {
-        sent++;
-        controller.clear();
-      },
-    ));
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        onSend: () {
+          sent++;
+          controller.clear();
+        },
+      ),
+    );
 
     await tester.tap(find.byType(TextField));
     await tester.pump();
@@ -85,13 +89,15 @@ void main() {
     // 누르는 순간 키보드가 내려가고 그 사이 창이 움직여 탭이 취소됐다.
     var sent = 0;
     final controller = TextEditingController();
-    await tester.pumpWidget(harness(
-      controller: controller,
-      onSend: () {
-        sent++;
-        controller.clear();
-      },
-    ));
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        onSend: () {
+          sent++;
+          controller.clear();
+        },
+      ),
+    );
 
     await tester.tap(find.byType(TextField));
     await tester.pump();
@@ -102,8 +108,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sent, 1);
-    expect(inputHasFocus(tester), isTrue,
-        reason: '포커스가 빠지면 키보드가 내려가고 그 프레임에 탭이 씹힌다');
+    expect(
+      inputHasFocus(tester),
+      isTrue,
+      reason: '포커스가 빠지면 키보드가 내려가고 그 프레임에 탭이 씹힌다',
+    );
   });
 
   testWidgets('보내기 버튼으로 보낼 때는 포커스를 건드리지 않는다', (tester) async {
@@ -111,13 +120,15 @@ void main() {
     // 폰에서 키보드가 다시 올라온다.
     var sent = 0;
     final controller = TextEditingController();
-    await tester.pumpWidget(harness(
-      controller: controller,
-      onSend: () {
-        sent++;
-        controller.clear();
-      },
-    ));
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        onSend: () {
+          sent++;
+          controller.clear();
+        },
+      ),
+    );
 
     await tester.enterText(find.byType(TextField), '버튼으로');
     // 입력창에서 손을 뗀 상태를 만든다 — 폰에서 키보드를 내리고 버튼만
@@ -130,7 +141,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sent, 1);
-    expect(inputHasFocus(tester), isFalse,
-        reason: '버튼으로 보냈는데 포커스가 붙으면 폰에서 키보드가 다시 올라온다');
+    expect(
+      inputHasFocus(tester),
+      isFalse,
+      reason: '버튼으로 보냈는데 포커스가 붙으면 폰에서 키보드가 다시 올라온다',
+    );
   });
 }

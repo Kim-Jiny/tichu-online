@@ -31,7 +31,10 @@ void main() {
 
   test('unread always counts, reward or not', () {
     expect(mailNeedsAttention(letter(readAt: null), now: now), isTrue);
-    expect(mailNeedsAttention(letter(readAt: null, gold: 500), now: now), isTrue);
+    expect(
+      mailNeedsAttention(letter(readAt: null, gold: 500), now: now),
+      isTrue,
+    );
   });
 
   test('read with nothing in it is done', () {
@@ -47,7 +50,10 @@ void main() {
   });
 
   test('an item reward behaves the same as gold', () {
-    expect(mailNeedsAttention(letter(item: 'banner_pio_dawn'), now: now), isTrue);
+    expect(
+      mailNeedsAttention(letter(item: 'banner_pio_dawn'), now: now),
+      isTrue,
+    );
   });
 
   test('claimed is done', () {
@@ -62,7 +68,10 @@ void main() {
 
   test('a deadline still ahead keeps it counting', () {
     expect(
-      mailNeedsAttention(letter(gold: 500, expiresAt: '2026-08-20 00:00:00'), now: now),
+      mailNeedsAttention(
+        letter(gold: 500, expiresAt: '2026-08-20 00:00:00'),
+        now: now,
+      ),
       isTrue,
     );
   });
@@ -70,7 +79,10 @@ void main() {
   test('a deadline that has passed stops it — nothing left to collect', () {
     // Nagging about a reward that can no longer be taken is just noise.
     expect(
-      mailNeedsAttention(letter(gold: 500, expiresAt: '2026-08-10 00:00:00'), now: now),
+      mailNeedsAttention(
+        letter(gold: 500, expiresAt: '2026-08-10 00:00:00'),
+        now: now,
+      ),
       isFalse,
     );
   });

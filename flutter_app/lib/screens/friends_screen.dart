@@ -593,7 +593,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Cartoon.surface(const Color(0xFFFFE9B8)),
+                                color: Cartoon.surface(
+                                  Cartoon.surface(const Color(0xFFFFE9B8)),
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,
@@ -620,7 +622,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                   l10n.friendsInvited,
                                   Icons.schedule_rounded,
                                   const Color(0xFF8A8A8A),
-                                  const Color(0xFFF1F1F1),
+                                  Cartoon.surface(const Color(0xFFF1F1F1)),
                                   () {},
                                 )
                               : _buildActionChip(
@@ -1014,21 +1016,21 @@ class _FriendsScreenState extends State<FriendsScreen>
           Icons.check_rounded,
           l10n.friendsStatusFriend,
           const Color(0xFF2E8B57),
-          const Color(0xFFD8F5DF),
+          Cartoon.surface(const Color(0xFFD8F5DF)),
         );
       case 'pending_incoming':
         return chip(
           null,
           l10n.friendsStatusReceivedShort,
           const Color(0xFFB45309),
-          const Color(0xFFFFE9B8),
+          Cartoon.surface(const Color(0xFFFFE9B8)),
         );
       case 'pending_outgoing':
         return chip(
           Icons.close_rounded,
           l10n.friendsStatusPendingShort,
           const Color(0xFF1E6FD0),
-          const Color(0xFFDCEBFF),
+          Cartoon.surface(const Color(0xFFDCEBFF)),
           onTap: () {
             game.cancelFriendRequestAction(nickname);
             ScaffoldMessenger.of(context).showSnackBar(

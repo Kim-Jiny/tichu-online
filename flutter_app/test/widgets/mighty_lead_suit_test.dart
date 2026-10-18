@@ -32,10 +32,7 @@ void main() {
   });
 
   test('힘없는 조커는 두 번째 카드가 리드 무늬', () {
-    expect(
-      leadSuitOf(['mighty_joker', 'mighty_club_5'], null),
-      'club',
-    );
+    expect(leadSuitOf(['mighty_joker', 'mighty_club_5'], null), 'club');
   });
 
   test('두 번째 카드가 아직 없으면 정해진 무늬가 없다', () {
@@ -45,9 +42,6 @@ void main() {
 
   test('부른 무늬가 있어도 두 번째 카드가 이기지 않는다', () {
     // 중간 트릭: 부른 무늬가 그대로 남는다.
-    expect(
-      leadSuitOf(['mighty_joker', 'mighty_club_5'], 'spade'),
-      'spade',
-    );
+    expect(leadSuitOf(['mighty_joker', 'mighty_club_5'], 'spade'), 'spade');
   });
 }

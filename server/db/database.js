@@ -6537,6 +6537,28 @@ async function useItem(nickname, itemKey) {
 }
 
 // Change nickname using nickname_change item
+/// 닉네임이 키라서, 이름을 바꿀 때 같이 옮겨야 하는 표들.
+///
+/// tc_users 와 미션 쪽(missions.renameUser)은 따로 다루고, 여기에는 그
+/// 밖의 것만 적는다. 새 표에 nickname 컬럼을 만들면 여기에도 더해야
+/// 한다 — test_nickname_rename.js 가 스키마와 맞춰 보고 빠진 것을 알려
+/// 준다.
+const RENAME_NICKNAME_TABLES = [
+  'tc_attendance',
+  'tc_bank_deposits',
+  'tc_coupon_redemptions',
+  'tc_daily_active',
+  'tc_iap_attempts',
+  'tc_iap_consumption_requests',
+  'tc_iap_receipts',
+  'tc_mail_recipients',
+  'tc_midleave_log',
+  'tc_photo_rejections',
+  'tc_push_campaign_recipients',
+  'tc_push_log',
+  'tc_push_recipients',
+];
+
 async function changeNickname(oldNickname, newNickname) {
   if (!newNickname || typeof newNickname !== 'string') {
     return { success: false, messageKey: 'db_nickname_required' };
@@ -6595,6 +6617,32 @@ async function changeNickname(oldNickname, newNickname) {
     );
 
     await missions.renameUser(client, oldNickname, trimmed);
+
+    // 닉네임이 키인데 위에서 하나씩 옮기다 빠진 표들.
+    //
+    // 빠지면 그 기록이 옛 닉네임에 묶인 채 남는다. 단순히 통계가 비는
+    // 정도가 아니라, 몇 가지는 되돌아가거나 다시 쓸 수 있게 된다:
+    //
+    //   tc_coupon_redemptions — 쓴 쿠폰이 '안 쓴 것' 이 된다. 이름만
+    //     바꾸면 같은 쿠폰을 다시 받을 수 있다(실제로 재현된다).
+    //   tc_photo_rejections   — 반려된 사진을 다시 올릴 수 있다.
+    //   tc_midleave_log       — 중간 이탈 기록이 사라진다.
+    //   tc_mail_recipients    — 안 읽은 우편과 그 보상이 사라진다.
+    //   tc_attendance         — 출석과 연속 일수가 초기화된다.
+    //   tc_daily_active       — 활동 집계에서 그 사람의 과거가 사라진다.
+    //   영수증·입금(tc_iap_*, tc_bank_deposits) — 문의가 들어왔을 때
+    //     결제를 추적할 수 없다.
+    //   푸시 기록(tc_push_*)  — '이미 보냈다' 가 풀려 같은 캠페인을 두 번
+    //     받을 수 있다.
+    //
+    // 목록으로 둔다. 표가 늘 때 한 줄만 더하면 되고, 빠진 것이 있는지
+    // 테스트가 스키마와 맞춰 본다(test_nickname_rename.js).
+    for (const t of RENAME_NICKNAME_TABLES) {
+      await client.query(
+        `UPDATE ${t} SET nickname = $2 WHERE nickname = $1`,
+        [oldNickname, trimmed]
+      );
+    }
 
     // Update nickname in tc_user_feature_off. Left behind, a switched-off pass
     // would quietly switch itself back on the moment someone renames.
@@ -13669,6 +13717,7 @@ module.exports = {
   getInquiryById,
   resolveInquiry,
   getReports,
+  RENAME_NICKNAME_TABLES,
   getReportGroup,
   getUserReportsReceived,
   getUserReportSummary,

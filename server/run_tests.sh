@@ -74,10 +74,63 @@ trap stop_server EXIT
 
 # 자체기동 테스트가 남긴 고아 서버를 치운다. 안 치우면 다음 테스트가
 # 같은 포트를 못 잡고 EADDRINUSE 로 죽는다.
+# 테스트가 서버를 띄울 때 쓰는 포트들.
+TEST_PORTS="8090 8091 8092 8093 8094 8095 8096 8097 8098 8099 8123"
+
+# 이 실행이 띄운 것인지 가리는 표시.
+#
+# 전에는 위 포트를 쥔 프로세스를 그냥 다 죽였다. 그래서 러너를 두 개
+# 돌리면 서로의 테스트 서버를 죽였다 — self 그룹이 돌고 있는데 integration
+# 그룹을 띄우자 test_worker_live_smoke(8123)가 240초 타임아웃으로 떨어졌고,
+# 코드 문제처럼 보였다.
+#
+# 부모를 따라 올라가는 방법은 쓸 수 없다. 타임아웃으로 테스트를 죽이면
+# 그 테스트가 띄운 서버는 고아가 되어(PPID 1) 조상 관계가 끊기는데,
+# 그걸 치우는 게 애초에 이 함수의 일이다. 환경변수는 부모가 죽어도
+# 남으므로 고아가 된 뒤에도 주인을 알 수 있다.
+RT_RUN_ID="$$"
+export RT_RUN_ID
+
+is_mine() {
+  ps eww -p "$1" 2>/dev/null | grep -q "RT_RUN_ID=$RT_RUN_ID"
+}
+
+# 테스트 사이 정리 — 이 실행이 띄운 것만.
 reap_orphans() {
-  for port in 8090 8091 8092 8093 8094 8095 8096 8097 8098 8099 8123; do
-    pids=$(lsof -ti:$port 2>/dev/null) && [ -n "$pids" ] && kill -9 $pids 2>/dev/null
+  for port in $TEST_PORTS; do
+    for p in $(lsof -ti:$port 2>/dev/null); do
+      is_mine "$p" && kill -9 "$p" 2>/dev/null
+    done
   done
+}
+
+# 시작할 때 한 번 — 지난 실행이 남긴 것.
+#
+# 부모가 없는 것만 죽인다. 지금 돌고 있는 다른 러너의 서버는 그 러너가
+# 부모이므로 여기 걸리지 않는다.
+reap_stale_ports() {
+  local found=""
+  for port in $TEST_PORTS; do
+    for p in $(lsof -ti:$port 2>/dev/null); do
+      [ "$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" = "1" ] || continue
+      found="$found\n    :$port pid $p"
+      kill -9 "$p" 2>/dev/null
+    done
+  done
+  [ -n "$found" ] && { echo "→ 지난 실행이 남긴 테스트 서버를 정리합니다:"; printf "$found\n"; }
+}
+
+# 다른 러너가 돌고 있으면 알려 준다.
+#
+# 죽이지는 않는다 — 일부러 두 개를 돌릴 수도 있다. 다만 같은 DB 를 함께
+# 쓰면 결과가 서로 흔들릴 수 있으므로, 빨간 줄이 났을 때 이 줄을 기억하면
+# 원인을 한 번에 안다.
+warn_concurrent_runner() {
+  local others
+  others=$(pgrep -f 'run_tests\.sh' 2>/dev/null | grep -v "^$$\$" | tr '\n' ' ')
+  [ -z "$(echo "$others" | tr -d ' ')" ] && return
+  echo "⚠ 다른 run_tests.sh 가 돌고 있습니다 (pid $others)."
+  echo "  같은 DB 를 함께 쓰면 결과가 흔들릴 수 있습니다."
 }
 
 # 포트를 쥐지 않은 채 매달린 테스트 프로세스.
@@ -130,7 +183,9 @@ for f in test_*.js; do
   else SELF_LIST+=("$n"); fi
 done
 
+warn_concurrent_runner
 reap_stale_tests
+reap_stale_ports
 
 pass=0; fail=0; failed=""
 run_group() {

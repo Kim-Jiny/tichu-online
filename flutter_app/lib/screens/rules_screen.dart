@@ -1123,7 +1123,7 @@ class _SpecialRule extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(emoji, style: const TextStyle(fontSize: 16)),
+                    Text(emoji, style: TextStyle(fontSize: 16, color: Cartoon.ink)),
                     const SizedBox(width: 6),
                     Flexible(child: Text(title, style: Cartoon.text(size: 15))),
                   ],

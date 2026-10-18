@@ -1448,7 +1448,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         children: [
                           Text(
                             '${row['reporter_nickname'] ?? '-'} · ${row['status'] ?? '-'}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Cartoon.ink,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(row['reason']?.toString() ?? '-'),

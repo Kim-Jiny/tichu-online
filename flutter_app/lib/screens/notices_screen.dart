@@ -165,7 +165,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                                 l10n.noticeEmpty,
                                 style: Cartoon.userText(
                                   size: 16,
-                                  color: Cartoon.ink.withValues(alpha: 0.7),
+                                  color: Cartoon.ink.withValues(alpha: 0.78),
                                 ),
                               ),
                             ],
@@ -335,7 +335,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                 style: Cartoon.userText(
                   size: 11.5,
                   weight: FontWeight.w500,
-                  color: Cartoon.ink.withValues(alpha: 0.55),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -633,7 +633,7 @@ class _NoticeDetailPage extends StatelessWidget {
                           publishedAt,
                           style: Cartoon.text(
                             size: 14,
-                            color: Cartoon.ink.withValues(alpha: 0.6),
+                            color: Cartoon.ink.withValues(alpha: 0.78),
                           ),
                         ),
                         const SizedBox(height: 12),

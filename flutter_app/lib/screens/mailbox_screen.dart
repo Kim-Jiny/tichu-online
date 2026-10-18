@@ -262,7 +262,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                                 style: Cartoon.userText(
                                   size: 13.5,
                                   weight: FontWeight.w500,
-                                  color: Cartoon.ink.withValues(alpha: 0.6),
+                                  color: Cartoon.ink.withValues(alpha: 0.78),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -337,7 +337,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                                   style: Cartoon.userText(
                                     size: 12,
                                     weight: FontWeight.w500,
-                                    color: Cartoon.ink.withValues(alpha: 0.5),
+                                    color: Cartoon.ink.withValues(alpha: 0.78),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -462,7 +462,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     style: Cartoon.userText(
                       size: 12,
                       weight: FontWeight.w500,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                   // 보상이 든 편지는 펼치지 않아도 뭐가 들었는지 보인다.

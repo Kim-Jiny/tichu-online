@@ -1075,9 +1075,13 @@ class _EntryScreenState extends State<_EntryScreen> {
                 child: Image.asset('assets/icon.webp', width: 80, height: 80),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Tichu Online',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Cartoon.ink,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -1127,7 +1131,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                     const SizedBox(width: 8),
                     Text(
                       L10n.of(context).appEulaAgree,
-                      style: const TextStyle(fontSize: 15),
+                      style: TextStyle(fontSize: 15, color: Cartoon.ink),
                     ),
                   ],
                 ),

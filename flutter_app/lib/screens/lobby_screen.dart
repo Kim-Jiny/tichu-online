@@ -378,7 +378,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 l10n.serviceInquiryReply(
                   title.isEmpty ? l10n.serviceInquiryDefault : title,
                 ),
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16, color: Cartoon.ink),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 2,
               ),
@@ -1207,7 +1207,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 const SizedBox(height: 14),
                                 Text(
                                   l10n.lobbyExpansionOptional,
-                                  style: const TextStyle(
+                                  style: TextStyle(
+                                    color: Cartoon.ink,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -1600,7 +1601,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                               children: [
                                                 Text(
                                                   l10n.lobbyTimeLimit,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
+                                                    color: Cartoon.ink,
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 12,
                                                   ),
@@ -1638,7 +1640,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                 children: [
                                                   Text(
                                                     l10n.lobbyTargetScore,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
+                                                      color: Cartoon.ink,
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 12,

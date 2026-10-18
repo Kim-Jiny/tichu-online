@@ -4035,7 +4035,8 @@ class _ShopScreenState extends State<ShopScreen> {
                       autofocus: true,
                       maxLength: 4,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        color: Cartoon.ink,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),

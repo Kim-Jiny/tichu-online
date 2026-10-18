@@ -469,7 +469,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: _inquiryTitleController,
                     maxLength: 60,
-                    style: const TextStyle(fontSize: 14),
+                    style: TextStyle(fontSize: 14, color: Cartoon.ink),
                     decoration: formFieldDecoration(l10n.inquiryFieldTitleHint),
                   ),
                   const SizedBox(height: 16),
@@ -478,7 +478,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _inquiryContentController,
                     maxLines: 6,
                     maxLength: 1000,
-                    style: const TextStyle(fontSize: 14),
+                    style: TextStyle(fontSize: 14, color: Cartoon.ink),
                     decoration: formFieldDecoration(
                       l10n.inquiryFieldContentHint,
                     ),
@@ -658,7 +658,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: Cartoon.userText(
                                       size: 11.5,
                                       weight: FontWeight.w500,
-                                      color: Cartoon.ink.withValues(alpha: 0.6),
+                                      color: Cartoon.ink.withValues(
+                                        alpha: 0.78,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -715,7 +717,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: Cartoon.userText(
                   size: 12,
                   weight: FontWeight.w500,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
               const SizedBox(height: 12),
@@ -740,7 +742,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: Cartoon.userText(
                     size: 11,
                     weight: FontWeight.w500,
-                    color: Cartoon.ink.withValues(alpha: 0.6),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ] else if (status != 'resolved') ...[
@@ -749,7 +751,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: Cartoon.userText(
                     size: 12,
                     weight: FontWeight.w500,
-                    color: Cartoon.ink.withValues(alpha: 0.5),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -884,7 +886,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: Cartoon.userText(
                         size: 12.5,
                         weight: FontWeight.w500,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                         height: 1.4,
                       ),
                     ),

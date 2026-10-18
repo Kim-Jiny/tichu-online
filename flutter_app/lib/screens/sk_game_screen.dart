@@ -2898,7 +2898,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 decoration: gamePillDecoration(color: Cartoon.yellow),
                 child: Text(
                   L10n.of(context).skGameTrickWinner(winnerName),
-                  style: Cartoon.userText(size: 17),
+                  style: Cartoon.userText(
+                    size: 17,
+                    color: Cartoon.inkOn(Cartoon.yellow),
+                  ),
                 ),
               ),
             )
@@ -3109,7 +3112,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: gamePillDecoration(color: Cartoon.yellow),
-              child: Text(title, style: Cartoon.userText(size: 19)),
+              child: Text(
+                title,
+                style: Cartoon.userText(
+                  size: 19,
+                  color: Cartoon.inkOn(Cartoon.yellow),
+                ),
+              ),
             ),
           ),
           if (bonusText != null) ...[
@@ -3453,7 +3462,13 @@ class _SKGameScreenState extends State<SKGameScreen> {
               color: Cartoon.inkOn(Cartoon.yellow),
             ),
             const SizedBox(width: 5),
-            Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 14)),
+            Text(
+              '${game.myTimeoutCount}/3',
+              style: Cartoon.text(
+                size: 14,
+                color: Cartoon.inkOn(Cartoon.yellow),
+              ),
+            ),
             const SizedBox(width: 4),
             Text(L10n.of(context).skGameReset, style: Cartoon.text(size: 13)),
           ],

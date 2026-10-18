@@ -35,7 +35,14 @@ void main() {
         for (var k = i + 1; k < lines.length && k < i + 15; k++) {
           if (RegExp('BoxDecoration|ColoredBox').hasMatch(lines[k])) break;
           if (RegExp(r'color:\s*Cartoon\.ink\b').hasMatch(lines[k])) {
-            offenders.add('${f.path}:${k + 1}  (바탕 ${m.group(1)})');
+            offenders.add('${f.path}:${k + 1}  (바탕 ${m.group(1)}, ink 명시)');
+          }
+          // 색을 안 적으면 기본값이 ink 라 같은 문제가 된다. 명시된
+          // 것만 보던 때 스컬킹 트릭 승자 알약이 빠져나갔다.
+          if (RegExp(
+            r'Cartoon\.(text|userText)\(size: [0-9.]+\)',
+          ).hasMatch(lines[k])) {
+            offenders.add('${f.path}:${k + 1}  (바탕 ${m.group(1)}, 색 없음)');
           }
         }
       }

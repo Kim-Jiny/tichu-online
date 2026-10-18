@@ -5411,7 +5411,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               decoration: gamePillDecoration(radius: 16, color: Cartoon.yellow),
               child: Text(
                 L10n.of(context).mtRoundResult(state.round),
-                style: Cartoon.text(size: 18),
+                style: Cartoon.text(
+                  size: 18,
+                  color: Cartoon.inkOn(Cartoon.yellow),
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -5742,9 +5745,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
             const SizedBox(width: 5),
-            Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 13)),
+            Text(
+              '${game.myTimeoutCount}/3',
+              style: Cartoon.text(
+                size: 13,
+                color: Cartoon.inkOn(Cartoon.yellow),
+              ),
+            ),
             const SizedBox(width: 4),
-            Text(L10n.of(context).gameReset, style: Cartoon.text(size: 12)),
+            Text(
+              L10n.of(context).gameReset,
+              style: Cartoon.text(
+                size: 12,
+                color: Cartoon.inkOn(Cartoon.yellow),
+              ),
+            ),
           ],
         ),
       ),
@@ -6095,7 +6110,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             const Icon(Icons.history_rounded, size: 15, color: Cartoon.blue),
             const SizedBox(width: 5),
-            Text(L10n.of(context).mtPrevTrick, style: Cartoon.text(size: 12)),
+            Text(
+              L10n.of(context).mtPrevTrick,
+              style: Cartoon.text(size: 12, color: Cartoon.inkOn(Cartoon.blue)),
+            ),
           ],
         ),
       ),

@@ -580,7 +580,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 child: Text(
                                   nickname,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Cartoon.userText(size: 16),
+                                  style: Cartoon.userText(
+                                    size: 16,
+                                    color: Cartoon.inkOn(Cartoon.green),
+                                  ),
                                 ),
                               ),
                               CartoonButton(

@@ -2591,7 +2591,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     radius: 16,
                     color: Cartoon.yellow,
                   ),
-                  child: Text(l10n.llRoundEnd, style: Cartoon.text(size: 19)),
+                  child: Text(
+                    l10n.llRoundEnd,
+                    style: Cartoon.text(
+                      size: 19,
+                      color: Cartoon.inkOn(Cartoon.yellow),
+                    ),
+                  ),
                 ),
                 if (lastRound != null)
                   ..._buildRoundDetailsContent(context, state, lastRound, l10n),
@@ -2708,7 +2714,13 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         color: Cartoon.orangeDeep,
                       ),
                       const SizedBox(width: 6),
-                      Text(l10n.llGameEnd, style: Cartoon.text(size: 20)),
+                      Text(
+                        l10n.llGameEnd,
+                        style: Cartoon.text(
+                          size: 20,
+                          color: Cartoon.inkOn(Cartoon.yellow),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -3087,7 +3099,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       children: [
                         Text(
                           '${gs.myTimeoutCount}/3',
-                          style: Cartoon.text(size: 13),
+                          style: Cartoon.text(
+                            size: 13,
+                            color: Cartoon.inkOn(Cartoon.yellow),
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Text(

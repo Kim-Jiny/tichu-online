@@ -375,7 +375,15 @@ Widget _historyShell(
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: Text(title, style: Cartoon.text(size: 22))),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Cartoon.text(
+                      size: 22,
+                      color: Cartoon.inkOn(Cartoon.yellow),
+                    ),
+                  ),
+                ),
                 ?trailing,
               ],
             ),

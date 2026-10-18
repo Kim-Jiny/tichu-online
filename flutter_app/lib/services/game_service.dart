@@ -1051,6 +1051,13 @@ class GameService extends ChangeNotifier {
 
     switch (type) {
       case 'login_success':
+        // 상점 번호는 '연결마다' 새로 센다 — 서버가 소켓에 들고 있기
+        // 때문이다. 그런데 앱은 그 번호를 연결보다 오래 들고 있었다.
+        // 끊겼다 붙으면 서버는 1 부터 다시 세는데 앱은 10 을 기억하고
+        // 있어서, 새 연결의 1~10 번 응답을 전부 "이미 더 새 것을 봤다"
+        // 며 버렸다 — 상점이 멈춘 것처럼 보이고 다시 로그인하는 수밖에
+        // 없었다. 연결이 새로 서는 이 자리에서 같이 비운다.
+        _shopSeq = 0;
         // Logging in as someone else: everything this instance is holding was
         // fetched for the previous account. reset() clears it on logout, but
         // this does not depend on logout having run — a leftover profile or

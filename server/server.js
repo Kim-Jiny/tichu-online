@@ -3834,16 +3834,16 @@ async function handleMessage(ws, data) {
       await handleRerollMissions(ws, data);
       break;
     case 'get_token_shop':
-      await handleGetTokenShop(ws);
+      await queueShopOp(ws, () => handleGetTokenShop(ws));
       break;
     case 'get_token_history':
       await handleGetTokenHistory(ws, data);
       break;
     case 'buy_token_item':
-      await handleBuyTokenItem(ws, data);
+      await queueShopOp(ws, () => handleBuyTokenItem(ws, data));
       break;
     case 'equip_token_item':
-      await handleEquipTokenItem(ws, data);
+      await queueShopOp(ws, () => handleEquipTokenItem(ws, data));
       break;
     case 'get_attendance_state':
       await handleGetAttendanceState(ws);
@@ -9677,6 +9677,29 @@ async function handleGetTokenHistory(ws, data) {
 function withShopSeq(ws, payload) {
   ws._shopSeq = (ws._shopSeq || 0) + 1;
   return { ...payload, shopSeq: ws._shopSeq };
+}
+
+/**
+ * 이 소켓의 상점 작업을 한 줄로 세운다.
+ *
+ * 번호만으로는 모자랐다. 번호는 '보낸 순서' 를 찍는데, 상점을 읽는 질의가
+ * 겹치면 먼저 시작한 읽기가 나중에 끝날 수 있다. 그 응답은 구매 전 상태를
+ * 담고도 더 큰 번호를 받아, 앱에서 최신 표시를 덮는다 — 잔액이 380 에서
+ * 440 으로 되돌아간다. 번호를 요청 시각으로 바꿔도 같은 일이 남는다.
+ * 읽기의 '스냅샷 시각' 은 요청 시각도 응답 시각도 아니기 때문이다.
+ *
+ * 겹치지 않게 하면 그 일이 아예 생기지 않는다. 읽은 순서 = 보낸 순서 =
+ * 번호 순서가 되고, 번호는 그 순서를 앱에 알리는 일만 한다.
+ *
+ * 한 사람의 상점 조작은 원래 띄엄띄엄하므로 줄 세워도 느려질 것이 없다.
+ * 앞 작업이 실패해도 뒤는 돈다 — 한 번의 실패로 그 소켓의 상점이 영영
+ * 멈추면 안 된다.
+ */
+function queueShopOp(ws, run) {
+  const prev = ws._shopOp || Promise.resolve();
+  const next = prev.then(run, run);
+  ws._shopOp = next.catch(() => {});
+  return next;
 }
 
 async function handleGetTokenShop(ws) {

@@ -226,8 +226,26 @@ class Cartoon {
   ///
   /// 팔레트를 보지 않고 바탕만 본다. 바탕이 밝으면 진한 잉크, 어두우면
   /// 밝은 종이색이다.
-  static Color inkOn(Color background) =>
-      background.computeLuminance() > 0.5 ? _outlineDark : _outlineLight;
+  static Color inkOn(Color background) {
+    // 휘도 0.5 를 기준으로 가르던 때는 틀린 잉크를 골랐다. 두 잉크의
+    // 휘도가 0.027 과 0.842 로 한쪽에 치우쳐 있어서, 실제 교차점은
+    // 0.5 가 아니라 0.21 이다. 그 사이 구간 — 주황(0.445),
+    // 초록(0.389), 빨강(0.237) — 이 전부 반대 잉크를 받았다.
+    // 주황 위 아이콘이 6.43 대신 1.80 이 된 것이 그래서다.
+    //
+    // 기준값을 0.21 로 고쳐도 되지만, 두 잉크의 값이 바뀌면 다시
+    // 틀린다. 그냥 둘 다 재서 나은 쪽을 고른다.
+    final lum = background.computeLuminance();
+    return _contrastWith(_outlineDark, lum) >= _contrastWith(_outlineLight, lum)
+        ? _outlineDark
+        : _outlineLight;
+  }
+
+  static double _contrastWith(Color ink, double backgroundLuminance) {
+    final a = ink.computeLuminance();
+    final b = backgroundLuminance;
+    return a > b ? (a + 0.05) / (b + 0.05) : (b + 0.05) / (a + 0.05);
+  }
 
   /// 밝은 바탕을 전제로 고른 '진한 글자·아이콘' 색.
   ///

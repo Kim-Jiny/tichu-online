@@ -4,10 +4,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tichu_online/l10n/app_localizations.dart';
 import 'package:tichu_online/theme/cartoon.dart';
 import 'package:tichu_online/utils/banner_ink.dart';
+import 'package:tichu_online/widgets/level_badge.dart';
 import 'package:tichu_online/widgets/notice_body.dart';
 import 'package:tichu_online/widgets/seat_chat_bubble.dart';
+import 'package:tichu_online/widgets/spectator_controls.dart';
 import 'package:tichu_online/widgets/title_chip.dart';
 
 /// 위젯을 실제로 그려서 나온 픽셀로 대비를 잰다.
@@ -116,6 +119,93 @@ void main() {
     }
   });
 
+  testWidgets('켜진 게임·관전 버튼의 아이콘', (tester) async {
+    // 켜진 버튼은 주황(고정색)을 그대로 쓴다. 아이콘만 팔레트를 따라
+    // 밝아지면 주황 위에 밝은 아이콘이 된다.
+    await checkBothPalettes(
+      tester,
+      '켜진 버튼 아이콘',
+      () => const SpectatorActionSurface(icon: Icons.volume_up, active: true),
+    );
+    await checkBothPalettes(
+      tester,
+      '꺼진 버튼 아이콘',
+      () => const SpectatorActionSurface(icon: Icons.volume_up, active: false),
+    );
+  });
+
+  testWidgets('레벨 배지는 한 벌을 타지 않는다', (tester) async {
+    // 배지 색은 등급 그 자체다 — 청동·은·금·검정·무지개. 바탕이 팔레트를
+    // 따라가면 검정 등급이 밝은 회색이 되고, 그 위의 금색 숫자가
+    // 사라진다(1.13:1).
+    //
+    // 여기서는 대비가 아니라 '같은가' 를 본다. 무지개 등급은 바탕이 여러
+    // 색이라 '가장 넓은 색' 이 바탕이라는 전제가 깨지기 때문이다. 두 한
+    // 벌에서 그림이 한 픽셀도 다르지 않아야 한다.
+    for (final level in [5, 15, 25, 35, 45]) {
+      final shots = <Uint8List>[];
+      for (final palette in [cartoonLight, cartoonDark]) {
+        Cartoon.usePalette(palette);
+        shots.add(
+          await _render(
+            tester,
+            LevelBadge(level: level, size: 72),
+            // 페이지 바탕은 한 벌마다 다르다. 배지만 비교해야 하므로
+            // 팔레트를 안 타는 색 위에 그린다.
+            background: const Color(0xFF808080),
+          ),
+        );
+      }
+      expect(shots[0], equals(shots[1]), reason: '레벨 $level 배지가 한 벌에 따라 달라진다');
+    }
+  });
+
+  testWidgets('점수 기록 팝업 제목', (tester) async {
+    // 제목은 팝업 바탕(Cartoon.paper) 위에 있다. 옆 트로피 칩이 노랗다고
+    // 거기서 글자색을 끌어내면, 어두운 한 벌에서 어두운 팝업에 어두운
+    // 제목이 된다(1.08:1).
+    for (final palette in [cartoonLight, cartoonDark]) {
+      Cartoon.usePalette(palette);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showTichuScoreHistoryDialog(
+                    context,
+                    history: const [],
+                    totalA: 0,
+                    totalB: 0,
+                  ),
+                  child: const Text('열기'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('열기'));
+      await tester.pumpAndSettle();
+
+      final title = tester.widget<Text>(
+        find
+            .descendant(of: find.byType(Dialog), matching: find.byType(Text))
+            .first,
+      );
+      final ratio = _contrast(title.style!.color!, Cartoon.paper);
+      expect(
+        ratio,
+        greaterThanOrEqualTo(aa),
+        reason:
+            '점수 기록 팝업 제목 — ${palette.dark ? "어두운" : "밝은"} 한 벌에서 '
+            '${ratio.toStringAsFixed(2)}:1',
+      );
+    }
+  });
+
   testWidgets('글자 수 표시', (tester) async {
     // maxLength 가 붙이는 '0/N' 은 소스에 없는 글자다. 그려 봐야 보인다.
     await checkBothPalettes(
@@ -148,15 +238,26 @@ Future<double> _renderedContrast(
   Widget child,
   Color background,
 ) async {
+  final pixels = await _render(tester, child, background: background);
+  return _contrastOf(pixels, background);
+}
+
+/// [child] 를 그려 RGBA 픽셀을 돌려준다.
+Future<Uint8List> _render(
+  WidgetTester tester,
+  Widget child, {
+  Color? background,
+}) async {
   final key = GlobalKey();
+  final behind = background ?? Cartoon.paper;
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        backgroundColor: background,
+        backgroundColor: behind,
         body: Center(
           child: RepaintBoundary(
             key: key,
-            child: ColoredBox(color: background, child: child),
+            child: ColoredBox(color: behind, child: child),
           ),
         ),
       ),
@@ -167,24 +268,22 @@ Future<double> _renderedContrast(
   final boundary =
       key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
   ByteData? data;
-  var width = 0;
-  var height = 0;
   await tester.runAsync(() async {
     final image = await boundary.toImage();
-    width = image.width;
-    height = image.height;
     data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   });
+  return data!.buffer.asUint8List();
+}
 
-  final pixels = data!.buffer.asUint8List();
+/// 그려진 픽셀에서 '글자가 제 바탕 위에서 읽히는 정도' 를 낸다.
+double _contrastOf(Uint8List pixels, Color background) {
   final pageRgb =
       (background.r * 255).round() << 16 |
       (background.g * 255).round() << 8 |
       (background.b * 255).round();
 
   final counts = <int, int>{};
-  for (var i = 0; i < width * height; i++) {
-    final o = i * 4;
+  for (var o = 0; o + 3 < pixels.length; o += 4) {
     if (pixels[o + 3] < 250) continue; // 반투명 가장자리는 버린다
     final rgb = (pixels[o] << 16) | (pixels[o + 1] << 8) | pixels[o + 2];
     if (rgb == pageRgb) continue; // 위젯 둘레로 비치는 페이지 배경
@@ -192,12 +291,9 @@ Future<double> _renderedContrast(
   }
   if (counts.length < 2) return 21; // 글자가 안 그려졌으면 잴 것이 없다
 
-  // 넓이로 가린다. '바탕에서 가장 먼 색' 을 글자로 보면 안 된다 — 위젯
-  // 둘레로 비치는 페이지 배경이 글자보다 멀어서, 글자가 바탕에 묻혀
-  // 있어도 그쪽을 집어 통과시킨다. 실제로 그렇게 놓친 적이 있다.
-  //
-  // 넓이 순으로는 늘 '위젯 제 바탕 > 글자 획 속 > 반글림 중간색' 이다.
-  // 획 속은 한 색으로 넓게 차지만 중간색은 색마다 몇 픽셀씩만 나온다.
+  // 가장 넓은 색이 위젯 제 바탕이다. 페이지 배경을 먼저 걷어내야 한다 —
+  // 위젯 둘레로 비치는 그 색이 글자보다 멀어서, 글자가 바탕에 묻혀
+  // 있어도 그쪽을 집어 통과시킨 적이 있다(말풍선 1.04:1).
   final sorted = counts.entries.toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   final fill = Color(0xFF000000 | sorted.first.key);
@@ -210,13 +306,13 @@ Future<double> _renderedContrast(
   // 고정 하한으로 걸러진다. 바탕 넓이에 비례시키면 안 된다 — 바탕이
   // 넓을수록 문턱이 올라가 작은 글자가 통째로 걸러진다.
   const minStrokePixels = 12;
-  var worst = 1.0;
+  var best = 1.0;
   for (final e in sorted.skip(1)) {
     if (e.value < minStrokePixels) continue;
     final r = _contrast(Color(0xFF000000 | e.key), fill);
-    if (r > worst) worst = r;
+    if (r > best) best = r;
   }
-  return worst;
+  return best;
 }
 
 double _contrast(Color a, Color b) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/cartoon.dart';
 
 /// Compact circular level badge rendered next to a nickname in the waiting
 /// rooms. Background varies by tier:
@@ -86,14 +85,10 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.35, -0.45),
         radius: 1.05,
-        colors: [
-          Color(0xFFF2A86A),
-          Cartoon.onSurface(const Color(0xFFB05A22)),
-          Cartoon.onSurface(const Color(0xFF4C1F06)),
-        ],
+        colors: [Color(0xFFF2A86A), Color(0xFFB05A22), Color(0xFF4C1F06)],
         stops: [0.0, 0.5, 1.0],
       ),
-      borderColor: Cartoon.onSurface(const Color(0xFF2E1303)),
+      borderColor: Color(0xFF2E1303),
       textColor: Colors.white,
       shadowColor: Color(0x55000000),
       textShadows: [
@@ -108,15 +103,11 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [
-          Cartoon.surface(const Color(0xFFFFFFFF)),
-          Color(0xFFC2C7CC),
-          Cartoon.onSurface(const Color(0xFF5E646A)),
-        ],
+        colors: [Color(0xFFFFFFFF), Color(0xFFC2C7CC), Color(0xFF5E646A)],
         stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Cartoon.onSurface(const Color(0xFF2F3338)),
-      textColor: Cartoon.onSurface(const Color(0xFF1A1A1A)),
+      borderColor: Color(0xFF2F3338),
+      textColor: Color(0xFF1A1A1A),
       shadowColor: Color(0x55000000),
       textShadows: [
         Shadow(color: Color(0x55FFFFFF), offset: Offset(0, 1), blurRadius: 1),
@@ -129,15 +120,11 @@ _LevelTier _tierFor(int level) {
       gradient: RadialGradient(
         center: Alignment(-0.4, -0.5),
         radius: 1.1,
-        colors: [
-          Cartoon.surface(const Color(0xFFFFF6C2)),
-          Color(0xFFE8B948),
-          Cartoon.onSurface(const Color(0xFF8A5E00)),
-        ],
+        colors: [Color(0xFFFFF6C2), Color(0xFFE8B948), Color(0xFF8A5E00)],
         stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Cartoon.onSurface(const Color(0xFF4A3000)),
-      textColor: Cartoon.onSurface(const Color(0xFF2E1F00)),
+      borderColor: Color(0xFF4A3000),
+      textColor: Color(0xFF2E1F00),
       shadowColor: Color(0x55A47000),
       textShadows: [
         Shadow(color: Color(0x66FFFFFF), offset: Offset(0, 1), blurRadius: 1),
@@ -150,12 +137,9 @@ _LevelTier _tierFor(int level) {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          Cartoon.onSurface(const Color(0xFF3A3A3A)),
-          Cartoon.onSurface(const Color(0xFF0A0A0A)),
-        ],
+        colors: [Color(0xFF3A3A3A), Color(0xFF0A0A0A)],
       ),
-      borderColor: Cartoon.onSurface(const Color(0xFF000000)),
+      borderColor: Color(0xFF000000),
       textColor: Color(0xFFFFD700),
       shadowColor: Color(0x55000000),
       textShadows: [
@@ -167,17 +151,17 @@ _LevelTier _tierFor(int level) {
   return _LevelTier(
     gradient: SweepGradient(
       colors: [
-        Cartoon.onSurface(const Color(0xFFFF4D4D)),
+        Color(0xFFFF4D4D),
         Color(0xFFFFAA33),
-        Cartoon.surface(const Color(0xFFFFE93D)),
+        Color(0xFFFFE93D),
         Color(0xFF59D85B),
         Color(0xFF3DB8FF),
-        Cartoon.onSurface(const Color(0xFF7A5CFF)),
+        Color(0xFF7A5CFF),
         Color(0xFFEF6BFF),
-        Cartoon.onSurface(const Color(0xFFFF4D4D)),
+        Color(0xFFFF4D4D),
       ],
     ),
-    borderColor: Cartoon.onSurface(const Color(0xFF6A3F9E)),
+    borderColor: Color(0xFF6A3F9E),
     textColor: Colors.white,
     shadowColor: Color(0x55000000),
     textShadows: [

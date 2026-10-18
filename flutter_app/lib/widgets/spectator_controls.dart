@@ -82,7 +82,15 @@ class SpectatorActionSurface extends StatelessWidget {
             borderRadius: BorderRadius.circular(13),
             border: Border.all(color: Cartoon.ink, width: 1.8),
           ),
-          child: Icon(icon, size: 21, color: iconColor ?? Cartoon.ink),
+          child: Icon(
+            icon,
+            size: 21,
+            // 켜져 있으면 바탕이 주황(고정색)이다. 팔레트 잉크를 쓰면
+            // 어두운 한 벌에서 주황 위에 밝은 아이콘이 된다.
+            color:
+                iconColor ??
+                Cartoon.inkOn(active ? Cartoon.orange : Cartoon.paper),
+          ),
         ),
         if (badgeCount > 0)
           Positioned(
@@ -378,10 +386,10 @@ Widget _historyShell(
                 Expanded(
                   child: Text(
                     title,
-                    style: Cartoon.text(
-                      size: 22,
-                      color: Cartoon.inkOn(Cartoon.yellow),
-                    ),
+                    // 제목은 팝업 바탕(Cartoon.paper) 위에 있다. 옆
+                    // 트로피 칩이 노랗다고 거기서 끌어내면, 어두운 한
+                    // 벌에서 어두운 팝업에 어두운 제목이 된다.
+                    style: Cartoon.text(size: 22, color: Cartoon.ink),
                   ),
                 ),
                 ?trailing,

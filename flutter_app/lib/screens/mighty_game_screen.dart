@@ -2690,7 +2690,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           child: Text(
             '+$extra',
-            style: Cartoon.text(size: 9, color: Colors.white),
+            style: Cartoon.text(size: 9, color: Cartoon.surface(Colors.white)),
           ),
         ),
     ];
@@ -2797,7 +2797,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           child: Text(
             '+$extra',
-            style: Cartoon.text(size: 10, color: Colors.white),
+            style: Cartoon.text(size: 10, color: Cartoon.surface(Colors.white)),
           ),
         ),
     ];
@@ -3755,7 +3755,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 color: Cartoon.orange,
                                 borderRadius: BorderRadius.circular(11),
                                 border: Border.all(
-                                  color: Cartoon.ink,
+                                  color: Cartoon.inkOn(Cartoon.orange),
                                   width: 1.8,
                                 ),
                               ),
@@ -6607,12 +6607,15 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.yellow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Cartoon.ink, width: 2),
+                      border: Border.all(
+                        color: Cartoon.inkOn(Cartoon.yellow),
+                        width: 2,
+                      ),
                     ),
                     child: Icon(
                       Icons.emoji_events_rounded,
                       size: 23,
-                      color: Cartoon.ink,
+                      color: Cartoon.inkOn(Cartoon.yellow),
                     ),
                   ),
                   const SizedBox(width: 8),

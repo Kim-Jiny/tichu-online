@@ -452,7 +452,7 @@ class PlayerProfileHeader extends StatelessWidget {
             height: 40,
             margin: const EdgeInsets.only(bottom: 3),
             decoration: BoxDecoration(
-              color: onBanner ? Colors.white : Cartoon.paper,
+              color: onBanner ? Cartoon.surface(Colors.white) : Cartoon.paper,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
@@ -468,7 +468,7 @@ class PlayerProfileHeader extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 3),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: onBanner ? Colors.white : Cartoon.paper,
+          color: onBanner ? Cartoon.surface(Colors.white) : Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Cartoon.ink, width: 1.6),
         ),
@@ -964,7 +964,10 @@ void showProfileReportDialog(
                   decoration: BoxDecoration(
                     color: Cartoon.red,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Cartoon.ink, width: 1.6),
+                    border: Border.all(
+                      color: Cartoon.inkOn(Cartoon.red),
+                      width: 1.6,
+                    ),
                   ),
                   child: const Icon(
                     Icons.flag_rounded,
@@ -1233,11 +1236,11 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
         decoration: BoxDecoration(
           color: Cartoon.yellow,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Cartoon.ink, width: 1.5),
+          border: Border.all(color: Cartoon.inkOn(Cartoon.yellow), width: 1.5),
         ),
         child: Text(
           'Lv.$level',
-          style: Cartoon.text(size: 14, color: Cartoon.ink),
+          style: Cartoon.text(size: 14, color: Cartoon.inkOn(Cartoon.yellow)),
         ),
       ),
       const SizedBox(width: 8),

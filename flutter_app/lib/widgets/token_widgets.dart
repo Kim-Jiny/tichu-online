@@ -228,7 +228,7 @@ class _TokenHistorySheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(11),
               border: Border.all(color: Cartoon.ink, width: 1.8),
             ),
-            child: Icon(icon, size: 19, color: Colors.white),
+            child: Icon(icon, size: 19, color: Cartoon.surface(Colors.white)),
           ),
           const SizedBox(width: 10),
           Expanded(

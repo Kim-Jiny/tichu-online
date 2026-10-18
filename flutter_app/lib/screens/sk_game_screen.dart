@@ -2094,7 +2094,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
-            child: const Icon(Icons.check, size: 13, color: Colors.white),
+            child: Icon(
+              Icons.check,
+              size: 13,
+              color: Cartoon.surface(Colors.white),
+            ),
           ),
         ),
       ],
@@ -2582,12 +2586,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.yellow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Cartoon.ink, width: 2),
+                      border: Border.all(
+                        color: Cartoon.inkOn(Cartoon.yellow),
+                        width: 2,
+                      ),
                     ),
                     child: Icon(
                       Icons.emoji_events_rounded,
                       size: 23,
-                      color: Cartoon.ink,
+                      color: Cartoon.inkOn(Cartoon.yellow),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -2854,7 +2861,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         cardId: isKraken ? 'sk_kraken' : 'sk_white_whale',
         cardSize: 62,
         color: isKraken
-            ? const Color(0xFFE2D4F7)
+            ? Cartoon.surface(const Color(0xFFE2D4F7))
             : Cartoon.surface(const Color(0xFFD3ECFF)),
         title: L10n.of(context).skGameTrickVoided,
         footer: L10n.of(context).skGameLeadPlayer(winnerName),
@@ -3214,7 +3221,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   height: isLandscape ? 42 : 46,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: selected ? Cartoon.orange : Colors.white,
+                    color: selected
+                        ? Cartoon.orange
+                        : Cartoon.surface(Colors.white),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: Cartoon.ink,
@@ -3433,12 +3442,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
         decoration: BoxDecoration(
           color: Cartoon.yellow,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Cartoon.ink, width: 1.8),
+          border: Border.all(color: Cartoon.inkOn(Cartoon.yellow), width: 1.8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
+            Icon(
+              Icons.timer_off_rounded,
+              size: 16,
+              color: Cartoon.inkOn(Cartoon.yellow),
+            ),
             const SizedBox(width: 5),
             Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 14)),
             const SizedBox(width: 4),
@@ -3737,13 +3750,16 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.yellow,
                   borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: Cartoon.ink, width: 1.8),
+                  border: Border.all(
+                    color: Cartoon.inkOn(Cartoon.yellow),
+                    width: 1.8,
+                  ),
                 ),
                 child: Text(
                   L10n.of(context).skGameRoundResult(state.round),
                   style: Cartoon.userText(
                     size: isLandscape ? 16 : 18,
-                    color: Cartoon.ink,
+                    color: Cartoon.inkOn(Cartoon.yellow),
                   ),
                 ),
               ),
@@ -4007,11 +4023,17 @@ class _SKGameScreenState extends State<SKGameScreen> {
             decoration: BoxDecoration(
               color: Cartoon.yellow,
               borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: Cartoon.ink, width: 1.8),
+              border: Border.all(
+                color: Cartoon.inkOn(Cartoon.yellow),
+                width: 1.8,
+              ),
             ),
             child: Text(
               L10n.of(context).skGameGameOver,
-              style: Cartoon.userText(size: 18 + 2, color: Cartoon.ink),
+              style: Cartoon.userText(
+                size: 18 + 2,
+                color: Cartoon.inkOn(Cartoon.yellow),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -4035,7 +4057,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: isWinner ? Cartoon.yellow : Colors.white,
+                      color: isWinner
+                          ? Cartoon.yellow
+                          : Cartoon.surface(Colors.white),
                       shape: BoxShape.circle,
                       border: Border.all(color: Cartoon.ink, width: 1.8),
                     ),
@@ -4204,6 +4228,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     }
     final isWin = kind == SkCardHighlight.winner;
     final badge = size * 0.34;
+    // 이긴 카드는 노랑, 가져온 카드는 초록. 뜻이 다른 두 표식이라 색과
+    // 그림을 모두 다르게 둔다 — 모양만 다르면 작은 화면에서 구분이 안 된다.
+    final badgeFill = isWin ? const Color(0xFFFFC21A) : const Color(0xFF4CAF50);
     final marker = Container(
       width: badge,
       height: badge,
@@ -4211,7 +4238,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         // 이긴 카드는 노랑, 가져온 카드는 초록. 뜻이 다른 두 표식이라
         // 색과 그림을 모두 다르게 둔다 — 모양만 다르면 작은 화면에서
         // 구분이 안 된다.
-        color: isWin ? const Color(0xFFFFC21A) : const Color(0xFF4CAF50),
+        color: badgeFill,
         shape: BoxShape.circle,
         border: Border.all(color: Cartoon.ink, width: 1.8),
         boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.6))],
@@ -4219,7 +4246,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
       child: Icon(
         isWin ? Icons.emoji_events_rounded : Icons.south_rounded,
         size: badge * 0.62,
-        color: isWin ? Cartoon.ink : Cartoon.paper,
+        // 뱃지 바탕은 뜻을 가진 색이라 팔레트를 따라가지 않는다. 그림은
+        // 그 바탕에서 끌어내야 어두운 테마에서도 보인다.
+        color: Cartoon.inkOn(badgeFill),
       ),
     );
     final marked = Stack(

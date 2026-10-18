@@ -2068,7 +2068,10 @@ class _GameScreenState extends State<GameScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.yellow,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: Cartoon.ink, width: 1.5),
+                border: Border.all(
+                  color: Cartoon.inkOn(Cartoon.yellow),
+                  width: 1.5,
+                ),
               ),
               child: Text(
                 phoenixBeatLabel,
@@ -2213,7 +2216,10 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 child: Text(
                   state.myTeam,
-                  style: Cartoon.text(size: 11 * _ts, color: Colors.white),
+                  style: Cartoon.text(
+                    size: 11 * _ts,
+                    color: Cartoon.surface(Colors.white),
+                  ),
                 ),
               ),
               GestureDetector(
@@ -2234,7 +2240,10 @@ class _GameScreenState extends State<GameScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.orange,
                       borderRadius: BorderRadius.circular(99),
-                      border: Border.all(color: Cartoon.ink, width: 1.6),
+                      border: Border.all(
+                        color: Cartoon.inkOn(Cartoon.orange),
+                        width: 1.6,
+                      ),
                     ),
                     child: Text(
                       L10n.of(context).gameMyTurn,
@@ -2263,7 +2272,10 @@ class _GameScreenState extends State<GameScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.yellow,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Cartoon.ink, width: 1.6),
+                      border: Border.all(
+                        color: Cartoon.inkOn(Cartoon.yellow),
+                        width: 1.6,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

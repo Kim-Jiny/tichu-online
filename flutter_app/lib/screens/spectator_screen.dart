@@ -1259,7 +1259,10 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
         borderRadius: BorderRadius.circular(99),
         border: Border.all(color: border, width: 1.4),
       ),
-      child: Text(label, style: Cartoon.text(size: 11, color: Colors.white)),
+      child: Text(
+        label,
+        style: Cartoon.text(size: 11, color: Cartoon.surface(Colors.white)),
+      ),
     );
   }
 

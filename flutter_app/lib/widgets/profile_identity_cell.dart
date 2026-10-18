@@ -251,7 +251,7 @@ class ProfileIdentityCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: Cartoon.surface(Colors.white).withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE0D8D4)),
       ),

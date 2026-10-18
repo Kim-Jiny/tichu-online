@@ -1274,9 +1274,16 @@ class _TigressChoiceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF5E35B1),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.2),
+                  border: Border.all(
+                    color: Cartoon.surface(Colors.white),
+                    width: 1.2,
+                  ),
                 ),
-                child: const Icon(Icons.check, size: 10, color: Colors.white),
+                child: Icon(
+                  Icons.check,
+                  size: 10,
+                  color: Cartoon.surface(Colors.white),
+                ),
               ),
             ),
           ],
@@ -1338,7 +1345,10 @@ class _ExampleBlock extends StatelessWidget {
                 ),
                 child: Text(
                   result,
-                  style: Cartoon.text(size: 13, color: Colors.white),
+                  style: Cartoon.text(
+                    size: 13,
+                    color: Cartoon.surface(Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -1408,7 +1418,10 @@ class _TichuDeclarationRow extends StatelessWidget {
                 ),
                 child: Text(
                   L10n.of(context).rulesTichuDeclSuccess(success),
-                  style: Cartoon.text(size: 12, color: Colors.white),
+                  style: Cartoon.text(
+                    size: 12,
+                    color: Cartoon.surface(Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
@@ -1420,7 +1433,10 @@ class _TichuDeclarationRow extends StatelessWidget {
                 ),
                 child: Text(
                   L10n.of(context).rulesTichuDeclFail(fail),
-                  style: Cartoon.text(size: 12, color: Colors.white),
+                  style: Cartoon.text(
+                    size: 12,
+                    color: Cartoon.surface(Colors.white),
+                  ),
                 ),
               ),
             ],
@@ -1751,7 +1767,10 @@ class _FlowDemo extends StatelessWidget {
             ),
             child: Text(
               tag,
-              style: Cartoon.text(size: 14, color: Colors.white),
+              style: Cartoon.text(
+                size: 14,
+                color: Cartoon.surface(Colors.white),
+              ),
             ),
           ),
           const SizedBox(height: 8),

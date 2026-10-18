@@ -2002,7 +2002,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.78),
+        color: Cartoon.surface(Colors.white).withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Cartoon.surface(const Color(0xFFE9DED9))),
       ),
@@ -2365,7 +2365,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFE53935),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(
+                    color: Cartoon.surface(Colors.white),
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -2450,7 +2453,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE53935),
                     borderRadius: const BorderRadius.all(Radius.circular(999)),
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(
+                      color: Cartoon.surface(Colors.white),
+                      width: 1.5,
+                    ),
                   ),
                   constraints: const BoxConstraints(
                     minWidth: 18,
@@ -2479,7 +2485,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFE53935),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(
+                      color: Cartoon.surface(Colors.white),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -3734,7 +3743,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 decoration: BoxDecoration(
                   color: Cartoon.red,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Cartoon.ink, width: 1.4),
+                  border: Border.all(
+                    color: Cartoon.inkOn(Cartoon.red),
+                    width: 1.4,
+                  ),
                 ),
                 child: Text(
                   badge > 99 ? '99+' : '$badge',
@@ -3857,7 +3869,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.red,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Cartoon.ink, width: 1.4),
+                          border: Border.all(
+                            color: Cartoon.inkOn(Cartoon.red),
+                            width: 1.4,
+                          ),
                         ),
                         child: Text(
                           badgeCount > 99 ? '99+' : '$badgeCount',
@@ -3913,7 +3928,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Cartoon.surface(Colors.white).withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
@@ -5297,7 +5312,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               color: Cartoon.green,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Cartoon.ink,
+                                color: Cartoon.inkOn(Cartoon.green),
                                 width: 1.6,
                               ),
                             ),
@@ -5783,7 +5798,10 @@ class _LockChipState extends State<_LockChip>
         decoration: BoxDecoration(
           color: Cartoon.yellow,
           borderRadius: BorderRadius.circular(s * 0.34),
-          border: Border.all(color: Cartoon.ink, width: s >= 30 ? 2.5 : 2),
+          border: Border.all(
+            color: Cartoon.inkOn(Cartoon.yellow),
+            width: s >= 30 ? 2.5 : 2,
+          ),
         ),
         child: LockIcon(width: s * 0.6, height: s * 0.6),
       ),

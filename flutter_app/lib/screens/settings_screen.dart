@@ -231,7 +231,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? Cartoon.blue : Colors.white,
+          color: isSelected ? Cartoon.blue : Cartoon.surface(Colors.white),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: [
@@ -830,7 +830,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       vertical: 11,
                     ),
                     decoration: BoxDecoration(
-                      color: selected ? Cartoon.tint(color, 0.8) : Colors.white,
+                      color: selected
+                          ? Cartoon.tint(color, 0.8)
+                          : Cartoon.surface(Colors.white),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                       boxShadow: [

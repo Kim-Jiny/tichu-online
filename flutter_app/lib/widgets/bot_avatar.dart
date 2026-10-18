@@ -132,7 +132,10 @@ class BotAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: badgeColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                border: Border.all(
+                  color: Cartoon.surface(Colors.white),
+                  width: 1.5,
+                ),
               ),
               child: Icon(
                 Icons.smart_toy_rounded,

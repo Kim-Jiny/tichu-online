@@ -142,13 +142,13 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                               color: Cartoon.yellow,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Cartoon.ink,
+                                color: Cartoon.inkOn(Cartoon.yellow),
                                 width: 2.5,
                               ),
                             ),
                             child: Icon(
                               Icons.construction_rounded,
-                              color: Cartoon.ink,
+                              color: Cartoon.inkOn(Cartoon.yellow),
                               size: 46,
                             ),
                           ),

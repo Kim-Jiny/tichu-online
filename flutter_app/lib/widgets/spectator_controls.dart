@@ -94,7 +94,10 @@ class SpectatorActionSurface extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Cartoon.red,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Cartoon.ink, width: 1.5),
+                border: Border.all(
+                  color: Cartoon.inkOn(Cartoon.red),
+                  width: 1.5,
+                ),
               ),
               child: Text(
                 badgeCount > 99 ? '99+' : '$badgeCount',
@@ -188,7 +191,10 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
                   decoration: BoxDecoration(
                     color: Cartoon.blue,
                     borderRadius: BorderRadius.circular(13),
-                    border: Border.all(color: Cartoon.ink, width: 2),
+                    border: Border.all(
+                      color: Cartoon.inkOn(Cartoon.blue),
+                      width: 2,
+                    ),
                   ),
                   child: const EyeIcon(width: 26, height: 20),
                 ),
@@ -301,7 +307,11 @@ class _SpectatorRow extends StatelessWidget {
                   color: Cartoon.yellow,
                   borderRadius: BorderRadius.circular(avatarCornerRadius(36)),
                 ),
-                child: Icon(Icons.person_rounded, color: Cartoon.ink, size: 22),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: Cartoon.inkOn(Cartoon.yellow),
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -353,11 +363,14 @@ Widget _historyShell(
                   decoration: BoxDecoration(
                     color: Cartoon.yellow,
                     borderRadius: BorderRadius.circular(13),
-                    border: Border.all(color: Cartoon.ink, width: 2),
+                    border: Border.all(
+                      color: Cartoon.inkOn(Cartoon.yellow),
+                      width: 2,
+                    ),
                   ),
                   child: Icon(
                     Icons.emoji_events_rounded,
-                    color: Cartoon.ink,
+                    color: Cartoon.inkOn(Cartoon.yellow),
                     size: 24,
                   ),
                 ),
@@ -414,7 +427,10 @@ Widget _tichuScoreTotal({
           color: color,
           borderRadius: BorderRadius.circular(99),
         ),
-        child: Text(label, style: Cartoon.text(size: 13, color: Colors.white)),
+        child: Text(
+          label,
+          style: Cartoon.text(size: 13, color: Cartoon.surface(Colors.white)),
+        ),
       ),
       const SizedBox(height: 4),
       Text(

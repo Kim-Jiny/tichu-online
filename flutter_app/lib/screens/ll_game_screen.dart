@@ -1499,7 +1499,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
             decoration: BoxDecoration(
               color: Cartoon.blue,
               shape: BoxShape.circle,
-              border: Border.all(color: Cartoon.ink, width: 1.8),
+              border: Border.all(
+                color: Cartoon.inkOn(Cartoon.blue),
+                width: 1.8,
+              ),
             ),
             child: Icon(
               Icons.shield_rounded,
@@ -1774,7 +1777,10 @@ class _LLGameScreenState extends State<LLGameScreen> {
               decoration: BoxDecoration(
                 color: Cartoon.blue,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Cartoon.ink, width: 1.8),
+                border: Border.all(
+                  color: Cartoon.inkOn(Cartoon.blue),
+                  width: 1.8,
+                ),
               ),
               child: Icon(Icons.shield_rounded, color: Cartoon.paper, size: 26),
             ),

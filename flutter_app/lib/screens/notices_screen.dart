@@ -290,7 +290,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.red,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Cartoon.ink, width: 1.5),
+                          border: Border.all(
+                            color: Cartoon.inkOn(Cartoon.red),
+                            width: 1.5,
+                          ),
                         ),
                         child: const Text(
                           'NEW',
@@ -388,7 +391,10 @@ class _NoticesScreenState extends State<NoticesScreen> {
                       decoration: BoxDecoration(
                         color: Cartoon.red,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Cartoon.ink, width: 1.6),
+                        border: Border.all(
+                          color: Cartoon.inkOn(Cartoon.red),
+                          width: 1.6,
+                        ),
                       ),
                       child: const Icon(
                         Icons.push_pin_rounded,

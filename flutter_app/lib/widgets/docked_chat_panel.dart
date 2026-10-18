@@ -115,7 +115,7 @@ class _DockedChatPanelState extends State<DockedChatPanel> {
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       // 상자 없이 옅은 흰 바탕만 — 테두리와 그림자는 걷었다.
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.72),
+        color: Cartoon.surface(Colors.white).withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(20),
       ),
       clipBehavior: Clip.antiAlias,

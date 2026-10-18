@@ -491,7 +491,10 @@ class _ShopScreenState extends State<ShopScreen> {
                   decoration: BoxDecoration(
                     color: Cartoon.red,
                     borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: Cartoon.ink, width: 1.4),
+                    border: Border.all(
+                      color: Cartoon.inkOn(Cartoon.red),
+                      width: 1.4,
+                    ),
                   ),
                   child: Text(
                     badge,
@@ -1174,7 +1177,7 @@ class _ShopScreenState extends State<ShopScreen> {
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.6),
+          color: Cartoon.surface(Colors.white).withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -1472,7 +1475,7 @@ class _ShopScreenState extends State<ShopScreen> {
         margin: const EdgeInsets.only(bottom: 2),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.6),
+          color: Cartoon.surface(Colors.white).withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -3666,7 +3669,7 @@ class _ShopScreenState extends State<ShopScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Cartoon.surface(Colors.white).withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFCCCCCC)),
             ),
@@ -3780,7 +3783,7 @@ class _ShopScreenState extends State<ShopScreen> {
               child: Container(
                 height: 72,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.85),
+                  color: Cartoon.surface(Colors.white).withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -3871,7 +3874,10 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.2),
+                      border: Border.all(
+                        color: Cartoon.surface(Colors.white),
+                        width: 1.2,
+                      ),
                     ),
                     child: LevelBadge(level: myLevel, size: 14),
                   ),
@@ -4041,7 +4047,9 @@ class _ShopScreenState extends State<ShopScreen> {
                       height: 60,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.72),
+                        color: Cartoon.surface(
+                          Colors.white,
+                        ).withValues(alpha: 0.72),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Cartoon.surface(const Color(0xFFE6DDD8)),
@@ -4574,17 +4582,20 @@ class _ShopScreenState extends State<ShopScreen> {
                             decoration: BoxDecoration(
                               color: Cartoon.yellow,
                               borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: Cartoon.ink, width: 2),
+                              border: Border.all(
+                                color: Cartoon.inkOn(Cartoon.yellow),
+                                width: 2,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Cartoon.ink,
+                                  color: Cartoon.inkOn(Cartoon.yellow),
                                   offset: Offset(0, 2),
                                 ),
                               ],
                             ),
                             child: Icon(
                               Icons.event_available_rounded,
-                              color: Cartoon.ink,
+                              color: Cartoon.inkOn(Cartoon.yellow),
                               size: 26,
                             ),
                           ),

@@ -240,9 +240,13 @@ class _ConsentDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: Cartoon.yellow,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Cartoon.ink, width: 2),
+            border: Border.all(color: Cartoon.inkOn(Cartoon.yellow), width: 2),
           ),
-          child: Icon(Icons.campaign_rounded, size: 28, color: Cartoon.ink),
+          child: Icon(
+            Icons.campaign_rounded,
+            size: 28,
+            color: Cartoon.inkOn(Cartoon.yellow),
+          ),
         ),
         l10n.marketingConsentTitle,
       ),
@@ -433,12 +437,15 @@ class PushRewardDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: Cartoon.yellow,
               shape: BoxShape.circle,
-              border: Border.all(color: Cartoon.ink, width: 2.5),
+              border: Border.all(
+                color: Cartoon.inkOn(Cartoon.yellow),
+                width: 2.5,
+              ),
             ),
             child: Icon(
               isGold ? Icons.savings_rounded : Icons.card_giftcard_rounded,
               size: 40,
-              color: Cartoon.ink,
+              color: Cartoon.inkOn(Cartoon.yellow),
             ),
           ),
           const SizedBox(height: 16),

@@ -340,7 +340,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                               color: Cartoon.red,
                               borderRadius: BorderRadius.circular(9),
                               border: Border.all(
-                                color: Cartoon.ink,
+                                color: Cartoon.inkOn(Cartoon.red),
                                 width: 1.4,
                               ),
                             ),
@@ -657,14 +657,14 @@ class _FriendsScreenState extends State<FriendsScreen>
                                   color: Cartoon.yellow,
                                   borderRadius: BorderRadius.circular(11),
                                   border: Border.all(
-                                    color: Cartoon.ink,
+                                    color: Cartoon.inkOn(Cartoon.yellow),
                                     width: 1.6,
                                   ),
                                 ),
                                 child: Icon(
                                   Icons.chat_bubble_rounded,
                                   size: 17,
-                                  color: Cartoon.ink,
+                                  color: Cartoon.inkOn(Cartoon.yellow),
                                 ),
                               ),
                               // On the button it belongs to, not adrift in the
@@ -683,7 +683,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                       color: Cartoon.red,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: Cartoon.ink,
+                                        color: Cartoon.inkOn(Cartoon.red),
                                         width: 1.4,
                                       ),
                                     ),
@@ -1135,7 +1135,10 @@ class _FriendsScreenState extends State<FriendsScreen>
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Cartoon.ink, width: 1.6),
         ),
-        child: Text(label, style: Cartoon.text(size: 14, color: Colors.white)),
+        child: Text(
+          label,
+          style: Cartoon.text(size: 14, color: Cartoon.surface(Colors.white)),
+        ),
       ),
     );
   }
@@ -1450,9 +1453,15 @@ class _FriendsScreenState extends State<FriendsScreen>
                         decoration: BoxDecoration(
                           color: Cartoon.orange,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Cartoon.ink, width: 2),
+                          border: Border.all(
+                            color: Cartoon.inkOn(Cartoon.orange),
+                            width: 2,
+                          ),
                           boxShadow: [
-                            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                            BoxShadow(
+                              color: Cartoon.inkOn(Cartoon.orange),
+                              offset: Offset(0, 2),
+                            ),
                           ],
                         ),
                         child: const Icon(
@@ -1588,7 +1597,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                       borderRadius: bubbleRadius,
                     )
                   : BoxDecoration(
-                      color: isMine ? Cartoon.orange : Colors.white,
+                      color: isMine
+                          ? Cartoon.orange
+                          : Cartoon.surface(Colors.white),
                       borderRadius: bubbleRadius,
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),

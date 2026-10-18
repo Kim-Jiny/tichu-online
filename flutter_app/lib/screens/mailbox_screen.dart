@@ -424,7 +424,10 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     decoration: BoxDecoration(
                       color: Cartoon.red,
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: Cartoon.ink, width: 1.5),
+                      border: Border.all(
+                        color: Cartoon.inkOn(Cartoon.red),
+                        width: 1.5,
+                      ),
                     ),
                     // Says which of the two it is: still unopened, or opened
                     // and still holding something.
@@ -474,7 +477,10 @@ class _MailboxScreenState extends State<MailboxScreen> {
                         decoration: BoxDecoration(
                           color: Cartoon.yellow,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Cartoon.ink, width: 1.5),
+                          border: Border.all(
+                            color: Cartoon.inkOn(Cartoon.yellow),
+                            width: 1.5,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -482,7 +488,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                             Icon(
                               Icons.card_giftcard_rounded,
                               size: 15,
-                              color: Cartoon.ink,
+                              color: Cartoon.inkOn(Cartoon.yellow),
                             ),
                             const SizedBox(width: 4),
                             Flexible(

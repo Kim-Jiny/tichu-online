@@ -204,9 +204,15 @@ class _MissionsScreenState extends State<MissionsScreen> {
                   decoration: BoxDecoration(
                     color: Cartoon.orange,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Cartoon.ink, width: 2),
+                    border: Border.all(
+                      color: Cartoon.inkOn(Cartoon.orange),
+                      width: 2,
+                    ),
                     boxShadow: [
-                      BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
+                      BoxShadow(
+                        color: Cartoon.inkOn(Cartoon.orange),
+                        offset: Offset(0, 2),
+                      ),
                     ],
                   ),
                   child: const Icon(
@@ -431,7 +437,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
     ),
     child: Text(
       missionTierName(l10n, tier),
-      style: Cartoon.text(size: 11.5, color: Colors.white),
+      style: Cartoon.text(size: 11.5, color: Cartoon.surface(Colors.white)),
     ),
   );
 

@@ -557,7 +557,10 @@ class CouponTag extends StatelessWidget {
           decoration: BoxDecoration(
             color: Cartoon.yellow,
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: Cartoon.ink, width: 1.5),
+            border: Border.all(
+              color: Cartoon.inkOn(Cartoon.yellow),
+              width: 1.5,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -565,7 +568,7 @@ class CouponTag extends StatelessWidget {
               Icon(
                 Icons.confirmation_number_rounded,
                 size: 15,
-                color: Cartoon.ink,
+                color: Cartoon.inkOn(Cartoon.yellow),
               ),
               const SizedBox(width: 3),
               Text(
@@ -624,7 +627,7 @@ class NoticeCouponBlock extends StatelessWidget {
                               color: Cartoon.orange,
                               borderRadius: BorderRadius.circular(11),
                               border: Border.all(
-                                color: Cartoon.ink,
+                                color: Cartoon.inkOn(Cartoon.orange),
                                 width: 1.5,
                               ),
                             ),
@@ -696,14 +699,14 @@ class NoticeCouponBlock extends StatelessWidget {
                                   color: Cartoon.yellow,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: Cartoon.ink,
+                                    color: Cartoon.inkOn(Cartoon.yellow),
                                     width: 1.6,
                                   ),
                                 ),
                                 child: Icon(
                                   Icons.copy_rounded,
                                   size: 20,
-                                  color: Cartoon.ink,
+                                  color: Cartoon.inkOn(Cartoon.yellow),
                                 ),
                               ),
                             ),

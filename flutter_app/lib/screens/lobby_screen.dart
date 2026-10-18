@@ -38,6 +38,7 @@ import '../widgets/seat_chat_bubble.dart';
 import '../widgets/player_profile_dialog.dart';
 import '../widgets/title_chip.dart';
 import '../theme/cartoon.dart';
+import '../utils/banner_ink.dart';
 import '../widgets/gold_history_dialog.dart';
 import '../widgets/gold_icon.dart';
 import '../services/ad_service.dart';
@@ -4000,8 +4001,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               game.roomSkExpansions.isNotEmpty)
             _roomIconButton(
               icon: Icons.style_rounded,
-              onTap: () =>
-                  showSkExpansionGuide(context, game.roomSkExpansions),
+              onTap: () => showSkExpansionGuide(context, game.roomSkExpansions),
             ),
           // Inviting is a seat-holder's business: an invitee joins the room,
           // and a spectator has no standing to fill it.
@@ -4883,6 +4883,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
         !isBot &&
         game.blockedUsers.contains(player.name);
     final isReady = !isEmpty && !isBot && !player.isHost && player.isReady;
+    // 이 자리에 깔리는 배너와, 그 위에 올릴 글자색.
+    //
+    // 전에는 배너가 아래쪽 Builder 안에서만 계산돼서, 글자색 쪽은 서버가
+    // 지정한 색(metadata.visual.text.color)만 볼 수 있었다. 그 값이 비면
+    // 어두운 배너 위에 어두운 글자가 깔린다. 여기서 한 번 구해 두면 두
+    // 곳이 같은 배너를 보고 판단한다.
+    final slotBanner = (!isEmpty && !isBot)
+        ? game.bannerGradient(player.bannerKey)
+        : null;
+    final slotBannerOverride = (!isEmpty && !isBot && player.connected)
+        ? game.bannerTextColor(player.bannerKey)
+        : null;
+    final slotHasBanner = slotBanner != null;
     final isSlotBlocked = isEmpty && game.roomBlockedSlots.contains(slotIndex);
     final isFlexibleGame =
         game.currentGameType == 'skull_king' ||
@@ -4942,9 +4955,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // the player owns one — overrides the state-based pastel fill.
                 // The gradient comes from the server's visual catalog so it
                 // honors admin-edited angle/stops (not a hardcoded copy).
-                final bannerGradient = (!isEmpty && !isBot)
-                    ? game.bannerGradient(player.bannerKey)
-                    : null;
+                final bannerGradient = slotBanner;
                 // One neutral fill. Five different tints (ready green, bot indigo,
                 // blocked pink, blocked-slot grey, plain beige) made four seats look
                 // like four unrelated widgets; ready and "my slot" are already said
@@ -5180,9 +5191,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         titleName: player.titleName,
                                         // Same override the nickname below uses,
                                         // so both react to a dark banner together.
-                                        onInk: (!isEmpty && !isBot)
-                                            ? game.bannerTextColor(
-                                                player.bannerKey,
+                                        // 배너가 깔린 자리에서만 그 배너에
+                                        // 맞춘다. 배너가 없으면 칩이 제
+                                        // 기본색을 쓰게 둔다.
+                                        onInk: slotHasBanner
+                                            ? profileBannerInk(
+                                                slotBanner,
+                                                slotBannerOverride,
                                               )
                                             : null,
                                       ),
@@ -5194,12 +5209,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       // etc.) so the nickname stays readable on dark gradients.
                                       // Falls through to the existing state-based palette for
                                       // empty / bot / blocked / disconnected slots.
+                                      // 배너가 깔렸을 때만 배너 쪽 색을
+                                      // 쓴다. 봇·차단·연결 끊김은 아래
+                                      // 상태색이 뜻을 가지므로 건드리지
+                                      // 않는다.
                                       final bannerTextOverride =
-                                          (player != null &&
+                                          (slotHasBanner &&
+                                              player != null &&
                                               !isBot &&
                                               player.connected)
-                                          ? game.bannerTextColor(
-                                              player.bannerKey,
+                                          ? profileBannerInk(
+                                              slotBanner,
+                                              slotBannerOverride,
                                             )
                                           : null;
                                       final defaultColor = isBot
@@ -5475,12 +5496,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   // fainter at a given opacity than the original saturated green.
                   // isReady already implies player != null (isReady's own
                   // definition short-circuits on !isEmpty).
-                  final bannerTextOverride = (!isBot && player.connected)
-                      ? game.bannerTextColor(player.bannerKey)
-                      : null;
-                  final readyColor =
-                      bannerTextOverride ?? const Color(0xFF43A047);
-                  final readyAlpha = bannerTextOverride != null ? 0.3 : 0.4;
+                  // 준비 완료의 초록은 뜻이 있는 색이다. 밝은 배너
+                  // 위에서는 그대로 두고, 어두운 배너에서만 읽히게
+                  // 바꾼다 — 전부 배너색으로 넘기면 배너를 쓴 사람만
+                  // 준비 표시가 초록이 아니게 된다.
+                  final onDarkBanner =
+                      (!isBot && player.connected) && isDarkBanner(slotBanner);
+                  final readyColor = (!isBot && player.connected)
+                      ? onBannerAccent(
+                          slotBanner,
+                          slotBannerOverride,
+                          light: const Color(0xFF43A047),
+                        )
+                      : const Color(0xFF43A047);
+                  final readyAlpha = onDarkBanner ? 0.3 : 0.4;
                   return Positioned.fill(
                     child: IgnorePointer(
                       child: Center(

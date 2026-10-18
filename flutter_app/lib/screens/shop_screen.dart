@@ -9,6 +9,7 @@ import '../l10n/l10n_helpers.dart';
 import '../models/shop_visual.dart';
 import '../services/game_service.dart';
 import '../theme/cartoon.dart';
+import '../utils/banner_ink.dart';
 import '../widgets/hint_bubble.dart';
 import '../widgets/game_chrome.dart' show gameButton;
 import '../services/ad_service.dart';
@@ -3615,7 +3616,12 @@ class _ShopScreenState extends State<ShopScreen> {
     final isBanner = category == 'banner';
     final bannerKey = isBanner ? itemKey : _myBannerKey(g);
     final previewGradient = g.bannerGradient(bannerKey);
-    final textColor = g.bannerTextColor(bannerKey);
+    // 미리보기는 실제 화면과 같은 규칙으로 글자색을 정해야 한다. 여기만
+    // 다르면 "상점에서는 읽혔는데 로비에서는 안 보인다" 가 된다.
+    final textColor = profileBannerInk(
+      previewGradient,
+      g.bannerTextColor(bannerKey),
+    );
     final nickname = g.playerName.isNotEmpty
         ? g.playerName
         : l10n.shopPreviewNickname;
@@ -3709,7 +3715,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: textColor ?? const Color(0xFF5A4038),
+                    color: textColor,
                   ),
                 ),
               ],

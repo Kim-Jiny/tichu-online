@@ -7,6 +7,7 @@ import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
 import '../services/ad_service.dart';
 import '../theme/cartoon.dart';
+import '../utils/banner_ink.dart';
 import '../widgets/game_type_icon.dart';
 import '../widgets/host_crown.dart';
 import '../widgets/player_profile_dialog.dart';
@@ -723,7 +724,10 @@ class _RankingScreenState extends State<RankingScreen> {
 
     final game = context.read<GameService>();
     final bannerGradient = game.bannerGradient(bannerKey);
-    final bannerTextOverride = game.bannerTextColor(bannerKey);
+    final bannerOverride = game.bannerTextColor(bannerKey);
+    // 글자는 읽히기만 하면 된다 — 배너가 어두우면 흰색으로 뒤집는다.
+    // 관리자가 그 배너에 색을 지정했으면 그 값이 이긴다.
+    final bannerTextOverride = profileBannerInk(bannerGradient, bannerOverride);
     return InkWell(
       onTap: nickname.isEmpty
           ? null
@@ -748,8 +752,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 textAlign: TextAlign.center,
                 style: Cartoon.text(
                   size: 18,
-                  color:
-                      bannerTextOverride ?? Cartoon.ink.withValues(alpha: 0.7),
+                  color: bannerTextOverride.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -765,7 +768,7 @@ class _RankingScreenState extends State<RankingScreen> {
                     style: Cartoon.userText(
                       size: 15.5,
                       weight: FontWeight.w900,
-                      color: bannerTextOverride ?? Cartoon.ink,
+                      color: bannerTextOverride,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -776,9 +779,7 @@ class _RankingScreenState extends State<RankingScreen> {
                     style: Cartoon.userText(
                       size: 12,
                       weight: FontWeight.w600,
-                      color: (bannerTextOverride ?? Cartoon.ink).withValues(
-                        alpha: 0.65,
-                      ),
+                      color: bannerTextOverride.withValues(alpha: 0.65),
                     ),
                   ),
                 ],
@@ -789,7 +790,13 @@ class _RankingScreenState extends State<RankingScreen> {
               '$rating',
               style: Cartoon.text(
                 size: 20,
-                color: bannerTextOverride ?? const Color(0xFF4A4080),
+                // 순위 숫자의 보라는 뜻이 있는 색이다. 밝은 배너에서는
+                // 그대로 두고, 어두운 배너에서만 읽히게 바꾼다.
+                color: onBannerAccent(
+                  bannerGradient,
+                  bannerOverride,
+                  light: const Color(0xFF4A4080),
+                ),
               ),
             ),
           ],

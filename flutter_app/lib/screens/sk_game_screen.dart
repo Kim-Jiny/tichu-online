@@ -4147,11 +4147,14 @@ class _SKGameScreenState extends State<SKGameScreen> {
         return l10n.skCardSkullKing;
       case 'pirate':
         // 이름표에는 "해적 · 라스칼" 로 적는다. 이름만 적으면 처음 보는
-        // 사람에게 라스칼이 해적 다섯 중 하나라는 게 안 보인다 — 능력
-        // 모드를 켜야 나오는 이름이라 더 그렇다.
+        // 사람에게 라스칼이 해적 다섯 중 하나라는 게 안 보인다.
         //
         // 능력 창 제목이나 알림에는 쓰지 않는다. "해적 · 라스칼의 능력으로"
         // 는 읽기 나쁘고, 거기서는 이미 해적 카드 그림이 같이 보인다.
+        //
+        // 번호가 없거나 모르는 번호면 이름 없이 "해적" 이다. 티그리스를
+        // 해적으로 낸 카드가 그렇고, 구버전 앱에게 5번 해적을 번호 없이
+        // 내려 보낼 때도 그 경로를 탄다(server.js serializeForClient).
         final key = skPirateByNumber[info.number];
         return key == null
             ? l10n.skCardPirate

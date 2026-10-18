@@ -875,6 +875,64 @@ function clientSupportsSKPirate(ws) {
   return compareVersions(ws.appVersion, SK_PIRATE_MIN_VERSION) >= 0;
 }
 
+// ===== 5번 해적(후아니타) 구버전 호환 =====
+//
+// 공식 룰은 해적 5장이다. 그런데 후아니타의 그림(sk_pirate5.webp)은 3.3.0
+// 번들에서 처음 들어갔고, 3.2.0 클라이언트는 해적을 `sk_pirate${번호}.webp`
+// 로 찾으므로 5번에서 없는 에셋에 걸려 카드 자리에 색칠된 사각형을 띄운다.
+//
+// 번호가 '없는' 해적 id(`sk_pirate`)를 주면 3.2.0 은 그것을 해적으로 읽고
+// (`if (cardId == 'sk_pirate') return _CardInfo(type: 'pirate')`)
+// `sk_pirate.webp` 를 쓴다 — 그 그림은 3.2.0 번들에도 들어 있다. 그래서
+// 구버전에서는 이름만 모르는 일반 해적으로 보이고, 카드는 제대로 보인다.
+// 능력은 애초에 상관없다. 능력 모드 방은 버전 게이트가 막는다.
+//
+// 바꾸는 자리가 직렬화 '직전' 인 이유:
+//   - 상태 객체는 한 방의 여러 사람에게 조각이 공유된다
+//     (buildStateBroadcastCache). 객체를 고치면 그 방의 최신 버전 유저
+//     화면까지 따라 바뀐다. 문자열은 소켓마다 따로 만들어지므로 섞이지
+//     않는다.
+//   - 카드 id 는 상태·트릭·기록·재접속 스냅샷·관전 상태에 흩어져 나간다.
+//     한 곳이라도 빠뜨리면 그 경로에서만 카드가 깨진다. 직렬화 지점은
+//     모든 경로가 반드시 지나가는 유일한 좁은 목이다.
+//
+// 따옴표까지 포함해 바꾸는 것은 JSON 문자열 값 하나를 통째로 갈아 끼우기
+// 위해서다. 더 긴 id 의 일부를 건드리지 않는다.
+const LEGACY_PIRATE5_ID = 'sk_pirate_5';
+const LEGACY_PIRATE5_ALIAS = 'sk_pirate';
+
+/** 이 소켓에게 보낼 JSON 문자열. 구버전이면 5번 해적을 일반 해적으로. */
+function serializeForClient(ws, data) {
+  const str = JSON.stringify(data);
+  // 버전 비교를 먼저 한다. 그쪽은 짧은 문자열 하나를 쪼개는 일이고, 이쪽은
+  // 수 KB 짜리 상태 문자열을 처음부터 훑는 일이다. 이 함수는 모든 메시지가
+  // 지나가므로 순서가 그대로 비용이 된다.
+  if (clientSupportsSKPirate(ws)) return str;
+  if (!str.includes(LEGACY_PIRATE5_ID)) return str;
+  return str.split(`"${LEGACY_PIRATE5_ID}"`).join(`"${LEGACY_PIRATE5_ALIAS}"`);
+}
+
+/**
+ * 구버전이 되돌려 보낸 `sk_pirate` 를 다시 5번 해적으로.
+ *
+ * 내려 보낼 때 id 를 바꿨으므로, 그 사람이 그 카드를 낼 때도 바뀐 id 로
+ * 보낸다. 되돌리지 않으면 "손에 없는 카드" 로 거절된다.
+ *
+ * 최신 버전에는 손대지 않는다. 그쪽은 이 별칭을 받은 적이 없으므로 보낼
+ * 일도 없고, 덱에 `sk_pirate` 라는 카드는 없다.
+ */
+function normalizeLegacyPirateId(ws, data) {
+  if (!data || clientSupportsSKPirate(ws)) return;
+  if (data.cardId === LEGACY_PIRATE5_ALIAS) data.cardId = LEGACY_PIRATE5_ID;
+  for (const key of ['cards', 'cardIds', 'discard']) {
+    const v = data[key];
+    if (!Array.isArray(v)) continue;
+    for (let i = 0; i < v.length; i++) {
+      if (v[i] === LEGACY_PIRATE5_ALIAS) v[i] = LEGACY_PIRATE5_ID;
+    }
+  }
+}
+
 function roomHasSKPirateAbilities(room) {
   return room && room.gameType === 'skull_king'
     && Array.isArray(room.skExpansions)
@@ -6455,6 +6513,9 @@ async function handleGetMatchHistory(ws, data) {
 }
 
 function handleGameAction(ws, data) {
+  // 구버전에게 바꿔 보낸 카드 id 를 되돌린다. 게임 엔진은 별칭을 모른다 —
+  // 별칭은 선을 넘는 순간에만 존재한다.
+  normalizeLegacyPirateId(ws, data);
   const __diagActionOn = DIAG_ON
     && ['play_cards', 'pass', 'play_card'].includes(data?.type);
   const __diagActionStart = __diagActionOn ? process.hrtime.bigint() : 0n;
@@ -7008,7 +7069,9 @@ function _broadcastState(roomId, room) {
     const __s = process.hrtime.bigint();
     if (ws.readyState === ws.OPEN) {
       const __j = process.hrtime.bigint();
-      const str = JSON.stringify(obj);
+      // sendTo 와 같은 변환을 거쳐야 한다. 진단이 켜졌을 때만 다른 문자열이
+      // 나가면, 켜고 끄는 것에 따라 구버전에서 카드가 깨진다.
+      const str = serializeForClient(ws, obj);
       const __jsonMs = Number(process.hrtime.bigint() - __j) / 1e6;
       __tJson += __jsonMs;
       if (str.length > __maxBytes) __maxBytes = str.length;
@@ -11488,6 +11551,6 @@ async function notifyFriendsOfStatusChange(nickname, isOnline) {
 
 function sendTo(ws, data) {
   if (ws.readyState === ws.OPEN) {
-    ws.send(JSON.stringify(data), { compress: false });
+    ws.send(serializeForClient(ws, data), { compress: false });
   }
 }

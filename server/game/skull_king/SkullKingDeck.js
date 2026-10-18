@@ -1,8 +1,6 @@
 /**
- * Skull King Deck - 65 cards base (expansions add more)
- * Base: 52 numbered (4 suits x 13 ranks) + 5 Escape + 4 Pirate + 2 Mermaid + 1 Skull King + 1 Tigress
- *   해적이 4장인 것은 공식 룰이 아니라 구버전 앱 때문이다.
- *   FIFTH_PIRATE_REQUIRES_ABILITIES 를 보라.
+ * Skull King Deck - 66 cards base (expansions add more)
+ * Base: 52 numbered (4 suits x 13 ranks) + 5 Escape + 5 Pirate + 2 Mermaid + 1 Skull King + 1 Tigress
  * Expansions (optional):
  *   - 'kraken': +1 Kraken (voids trick)
  *   - 'white_whale': +1 White Whale (nullifies special card effects)
@@ -37,25 +35,6 @@ const SK_EXPANSIONS = ['kraken', 'white_whale', 'loot', 'pirate_abilities'];
 // 쓸 수 있고, 모드가 꺼져 있어도 카드는 그대로 쓴다(능력만 없다).
 const PIRATE_NAMES = { 1: 'rascal', 2: 'rosie', 3: 'bendt', 4: 'harry', 5: 'juanita' };
 
-/**
- * 5번째 해적(후아니타)을 해적 능력 모드에만 넣을지.
- *
- * 공식 룰은 모드와 상관없이 해적 5장이다. 이 플래그가 켜져 있는 이유는
- * 룰이 아니라 구버전 앱이다 — 후아니타의 그림(sk_pirate5.webp)은 3.3.0
- * 번들에서 처음 들어갔고, 버전 게이트(SK_PIRATE_MIN_VERSION, server.js)는
- * 능력 모드를 켠 방만 막는다. 그래서 일반 방에도 이 카드를 넣으면 3.2.0
- * 앱이 없는 에셋을 찾다 errorBuilder 로 떨어져, 카드 자리에 색칠된
- * 사각형이 뜬다 — 업데이트하지 않은 유저 전체에게. 5번째를 모드에 묶으면
- * 그 게이트가 그대로 보호막이 된다.
- *
- * ── 되돌리는 조건 ──
- * 3.3.0 을 스토어에 올리고 min_version(어드민 설정)을 3.3.0 이상으로
- * 올려 3.2.0 이 접속하지 못하게 되면, 보호막이 필요 없다. 이 값을 false
- * 로 바꾸면 공식 룰대로 항상 5장이 된다. 다른 데는 고칠 것이 없다 —
- * 테스트도 이 값을 읽는다.
- */
-const FIFTH_PIRATE_REQUIRES_ABILITIES = true;
-
 /** `sk_pirate_3` → 'bendt'. 해적 카드가 아니거나 번호가 없으면 null. */
 function pirateNameOf(cardId) {
   const m = /^sk_pirate_(\d+)$/.exec(cardId || '');
@@ -84,14 +63,13 @@ function createDeck(expansions = []) {
     deck.push({ id: `sk_escape_${i}`, suit: 'special', rank: 'escape', value: 0, type: CARD_TYPE.ESCAPE });
   }
 
-  // Pirate cards (Rascal / Rosie / Bendt / Harry / Juanita)
+  // Pirate cards (Rascal / Rosie / Bendt / Harry / Juanita) — 공식 룰대로 5장.
   //
-  // 공식 룰은 5장이다. 지금은 능력 모드에서만 5장이고 기본은 4장인데,
-  // 룰 때문이 아니라 구버전 앱 때문이다 — 아래 플래그를 보라.
-  const pirateCount = (FIFTH_PIRATE_REQUIRES_ABILITIES && !expansionSet.has('pirate_abilities'))
-    ? 4
-    : 5;
-  for (let i = 1; i <= pirateCount; i++) {
+  // 한동안 기본 덱은 4장이었다. 룰 해석이 아니라, 후아니타의 그림이 3.3.0
+  // 번들에서 처음 들어가서 구버전 앱에서 카드가 깨졌기 때문이다. 지금은
+  // 서버가 구버전에게만 이 카드를 번호 없는 일반 해적으로 바꿔 보내므로
+  // (server.js 의 serializeForClient) 덱을 룰대로 둘 수 있다.
+  for (let i = 1; i <= 5; i++) {
     deck.push({ id: `sk_pirate_${i}`, suit: 'special', rank: 'pirate', value: 0, type: CARD_TYPE.PIRATE });
   }
 
@@ -228,6 +206,6 @@ function sortCards(cards) {
 
 module.exports = {
   SK_SUITS, SK_RANKS, SK_RANK_VALUES, CARD_TYPE, SK_EXPANSIONS,
-  PIRATE_NAMES, pirateNameOf, FIFTH_PIRATE_REQUIRES_ABILITIES,
+  PIRATE_NAMES, pirateNameOf,
   createDeck, shuffle, deal, dealWithRest, getCardInfo, sortCards,
 };

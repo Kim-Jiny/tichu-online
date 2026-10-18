@@ -2620,14 +2620,16 @@ class GameService extends ChangeNotifier {
         // 성공이든 실패든 로딩은 끝났다. 실패에서 내리지 않으면 화면이
         // 계속 스피너를 돌리고 재시도 버튼이 나오지 않는다.
         tokenShopLoading = false;
-        if (data['success'] == true) {
+        if (data['success'] == true && _acceptShop(data)) {
           tokenShopState = TokenShopState.fromJson(data);
         }
         notifyListeners();
         break;
       case 'token_buy_result':
       case 'token_equip_result':
-        if (data['shop'] is Map) {
+        // 늦게 도착한 응답의 상점 정보는 이미 지난 것이다. 잠금만
+        // 가리고 이쪽을 그냥 세우면, 잔액이 옛 값으로 되돌아간다.
+        if (data['shop'] is Map && _acceptShop(data)) {
           tokenShopState = TokenShopState.fromJson(
             Map<String, dynamic>.from(data['shop'] as Map),
           );
@@ -3596,6 +3598,7 @@ class GameService extends ChangeNotifier {
     // A 에게 띄우려고 줄 세워 둔 완료 토스트가 B 에게 뜬다.
     missionsState = null;
     tokenShopState = null;
+    _shopSeq = 0;
     missionsLoading = false;
     missionBadgeCount = 0;
     _pendingMissionToasts.clear();
@@ -3643,6 +3646,7 @@ class GameService extends ChangeNotifier {
     attendanceLoading = false;
     missionsState = null;
     tokenShopState = null;
+    _shopSeq = 0;
     missionsLoading = false;
     _pendingMissionToasts.clear();
     missionBadgeCount = 0;
@@ -4049,6 +4053,22 @@ class GameService extends ChangeNotifier {
   /// 서버에서 막기 어렵다 — 같은 상품을 연달아 두 번 사는 것 자체는
   /// 정상이고(기간 연장), 두 요청을 구분할 표식이 없다. 누를 수 없게
   /// 하는 쪽이 맞다.
+  /// 지금까지 화면에 세운 상점 정보의 번호.
+  ///
+  /// 서버가 보낼 때마다 번호를 올려 준다. 늦게 도착한 응답 안의 상점
+  /// 정보는 이미 지난 것이라, 그대로 세우면 잔액·보유 기간·장착 표시가
+  /// 옛 상태로 되돌아간다.
+  int _shopSeq = 0;
+
+  /// 받은 상점 정보를 세울지. 번호가 없으면(옛 서버) 지금까지처럼 세운다.
+  bool _acceptShop(Map<String, dynamic> data) {
+    final seq = data['shopSeq'];
+    if (seq is! int) return true;
+    if (seq <= _shopSeq) return false;
+    _shopSeq = seq;
+    return true;
+  }
+
   /// 떠 있는 구매 요청들. 상품 키마다 따로 센다(PendingKeys 설명 참고).
   late final PendingKeys _tokenShopPending = PendingKeys(
     onChanged: () {

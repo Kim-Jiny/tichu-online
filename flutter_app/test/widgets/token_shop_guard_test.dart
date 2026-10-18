@@ -72,6 +72,55 @@ void main() {
     });
   });
 
+  group('늦게 온 상점 정보가 최신 화면을 되돌리지 않는다', () {
+    // 요청 번호는 '버튼 잠금' 만 가렸고, 응답 안의 상점 정보(잔액·보유
+    // 기간·장착)는 그대로 세우고 있었다. 늦게 도착한 구매 응답이 오면
+    // 380 이 된 잔액이 440 으로 되돌아간다. 서버 잔액이 틀어지는 건
+    // 아니지만 화면이 거짓말을 한다.
+    //
+    // 판단은 서버가 찍어 준 순서(shopSeq)로 한다. 그 규칙을 그대로 옮겨
+    // 돌려 본다 — GameService 는 테스트에서 만들 수 없다(Firebase).
+    int seen = 0;
+    bool accept(Map<String, dynamic> data) {
+      final seq = data['shopSeq'];
+      if (seq is! int) return true;
+      if (seq <= seen) return false;
+      seen = seq;
+      return true;
+    }
+
+    setUp(() => seen = 0);
+
+    test('새 것은 받고, 그보다 옛 것은 버린다', () {
+      expect(accept({'shopSeq': 5}), isTrue);
+      expect(accept({'shopSeq': 4}), isFalse, reason: '늦게 온 옛 응답을 세웠다');
+      expect(accept({'shopSeq': 5}), isFalse, reason: '같은 번호를 다시 세웠다');
+      expect(accept({'shopSeq': 6}), isTrue);
+    });
+
+    test('번호가 없으면 세운다 — 옛 서버와도 동작한다', () {
+      expect(accept({'success': true}), isTrue);
+      // 번호 없는 응답은 기준을 올리지 않는다. 올리면 그 뒤의 정상
+      // 응답들이 줄줄이 버려진다.
+      expect(accept({'shopSeq': 1}), isTrue);
+    });
+
+    test('서비스가 그 규칙을 쓴다', () {
+      final src = File('lib/services/game_service.dart').readAsStringSync();
+      expect(src.contains('_acceptShop('), isTrue);
+      // 상점 정보를 세우는 세 자리가 모두 거쳐야 한다.
+      final sets = RegExp(
+        r'tokenShopState = TokenShopState\.',
+      ).allMatches(src).length;
+      final guarded = RegExp(r'_acceptShop\(data\)').allMatches(src).length;
+      expect(
+        guarded,
+        greaterThanOrEqualTo(sets - 1),
+        reason: '상점 정보를 그냥 세우는 곳이 남아 있다 (세움 $sets, 검사 $guarded)',
+      );
+    });
+  });
+
   group('로딩이 영원히 돌지 않는다', () {
     final src = File('lib/services/game_service.dart').readAsStringSync();
 

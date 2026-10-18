@@ -9664,10 +9664,25 @@ async function handleGetTokenHistory(ws, data) {
   }
 }
 
+/// 상점 상태를 실어 보낼 때 찍는 번호.
+///
+/// 앱은 받은 상점 정보를 그대로 화면에 세운다. 그런데 구매 응답이 늦게
+/// 도착하면 그 안의 잔액·보유 기간·장착 상태는 이미 지난 것이다 — 최신
+/// 응답으로 380 이 된 잔액이 옛 응답 때문에 440 으로 되돌아간다. 서버
+/// 잔액이 틀어지는 건 아니지만 화면이 거짓말을 한다.
+///
+/// 보낸 순서를 찍어 주면 앱이 "이미 더 새 것을 봤다" 를 알 수 있다.
+/// 구매·장착·목록이 모두 상점 정보를 싣고 오므로 한곳에서 찍는다.
+/// 연결마다 따로 센다 — 앱도 연결이 끊기면 상태를 비운다.
+function withShopSeq(ws, payload) {
+  ws._shopSeq = (ws._shopSeq || 0) + 1;
+  return { ...payload, shopSeq: ws._shopSeq };
+}
+
 async function handleGetTokenShop(ws) {
   if (!ws.nickname) return sendTo(ws, { type: 'token_shop', success: false, message: t(ws.locale, 'login_required') });
   try {
-    sendTo(ws, { type: 'token_shop', success: true, ...(await missions.getShop(ws.nickname)) });
+    sendTo(ws, withShopSeq(ws, { type: 'token_shop', success: true, ...(await missions.getShop(ws.nickname)) }));
   } catch (e) {
     console.error('[missions] shop failed:', e.message);
     sendTo(ws, { type: 'token_shop', success: false, message: 'shop_failed' });
@@ -9704,7 +9719,7 @@ async function handleBuyTokenItem(ws, data) {
   } catch (e) {
     console.error('[missions] post-buy refresh failed:', e.message);
   }
-  sendTo(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, reqId, shop });
+  sendTo(ws, withShopSeq(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, reqId, shop }));
 }
 
 /// 장착·해제(key 가 null 이면 해제).
@@ -9722,7 +9737,7 @@ async function handleEquipTokenItem(ws, data) {
   } catch (e) {
     console.error('[missions] post-equip refresh failed:', e.message);
   }
-  sendTo(ws, { type: 'token_equip_result', success: result.success, reason: result.reason || null, shop });
+  sendTo(ws, withShopSeq(ws, { type: 'token_equip_result', success: result.success, reason: result.reason || null, shop }));
 }
 
 // Daily attendance state (7-day streak). Pure read; the client uses

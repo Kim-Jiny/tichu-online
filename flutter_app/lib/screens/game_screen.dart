@@ -2005,8 +2005,8 @@ class _GameScreenState extends State<GameScreen> {
                   style: Cartoon.userText(
                     size: 16 * _ts,
                     color: isMyTeam
-                        ? const Color(0xFF2F6FC4)
-                        : const Color(0xFFC73A4B),
+                        ? Cartoon.onSurface(const Color(0xFF2F6FC4))
+                        : Cartoon.onSurface(const Color(0xFFC73A4B)),
                   ),
                 ),
                 TextSpan(
@@ -3418,12 +3418,16 @@ class _GameScreenState extends State<GameScreen> {
   Widget _finishBadge(int rank) {
     // 꼴찌(4등)는 3명이 털면 저절로 정해져서 알릴 거리가 아니다.
     if (rank >= 4) return const SizedBox.shrink();
-    final (Color bg, Color border, Color fg) = switch (rank) {
-      1 => (Cartoon.yellow, Cartoon.ink, Cartoon.ink),
-      2 => (Cartoon.surface(const Color(0xFFE3E3E3)), Cartoon.ink, Cartoon.ink),
-      3 => (const Color(0xFFE0A877), Cartoon.ink, Cartoon.ink),
-      _ => (const Color(0xFFBDBDBD), Cartoon.ink, Cartoon.ink),
+    // 바탕은 등수를 뜻하는 색이라 팔레트를 따라가지 않는다(금·은·동).
+    // 그래서 글자색은 ink 가 아니라 그 바탕에서 끌어내야 한다 — 그대로
+    // 두면 어두운 테마에서 노란 1등 뱃지에 밝은 글자가 얹힌다.
+    final (Color bg, Color border) = switch (rank) {
+      1 => (Cartoon.yellow, Cartoon.ink),
+      2 => (Cartoon.surface(const Color(0xFFE3E3E3)), Cartoon.ink),
+      3 => (const Color(0xFFE0A877), Cartoon.ink),
+      _ => (const Color(0xFFBDBDBD), Cartoon.ink),
     };
+    final fg = Cartoon.inkOn(bg);
     // 처음 나타날 때만 통통 튀어나온다. 같은 값으로 다시 그려질 땐 가만히 있다.
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),

@@ -63,7 +63,6 @@ class _FxStyle {
     required this.duration,
     required this.titleSize,
     this.icon,
-    this.textFill,
   });
 
   /// 도장 판의 색.
@@ -74,7 +73,12 @@ class _FxStyle {
 
   /// 글자 속 색. 밝은 판에는 잉크, 진한 판에는 종이색.
   /// 글자 속 색. 넘기지 않으면 종이색 — 팔레트를 따라간다.
-  final Color? textFill;
+  /// 글자 속 색. 판 색에서 끌어낸다.
+  ///
+  /// 판 색(fill)은 강조색이라 팔레트를 따라가지 않는다. 그 위의 글자만
+  /// 팔레트를 따라가면 노란 판에 밝은 글자가 된다 — 티츄 성공 연출이
+  /// 그랬다.
+  Color get ink => Cartoon.inkOn(fill);
 
   final Duration duration;
   final double titleSize;
@@ -112,7 +116,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         titleSize: 36,
         icon: Icons.emoji_events_rounded,
         // 노란 판에는 종이색 글자가 묻힌다.
-        textFill: Cartoon.ink,
       );
     case TichuFxKind.tichuFail:
       return _FxStyle(
@@ -121,7 +124,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         duration: Duration(milliseconds: 2300),
         titleSize: 30,
         icon: Icons.heart_broken_rounded,
-        textFill: Cartoon.ink,
       );
     case TichuFxKind.oneTwo:
       return const _FxStyle(
@@ -137,7 +139,6 @@ _FxStyle _styleOf(TichuFxKind kind) {
         accent: Cartoon.orange,
         duration: Duration(milliseconds: 1500),
         titleSize: 20,
-        textFill: Cartoon.ink,
       );
   }
 }
@@ -329,7 +330,7 @@ class _FxBannerState extends State<_FxBanner>
     final title = Cartoon.outlinedText(
       widget.event.title,
       size: size,
-      fill: style.textFill ?? Cartoon.paper,
+      fill: style.ink,
       maxLines: 2,
       // 외곽선은 획 뒤에 깔리므로 글자 '속' 을 먹지는 않는다. 대신 획
       // 바깥으로 두께의 절반만큼 번지는데, 그게 한글의 속공간을 메운다 —
@@ -371,7 +372,7 @@ class _FxBannerState extends State<_FxBanner>
                   alignment: Alignment.center,
                   children: [
                     Icon(style.icon, size: size * 1.05, color: Cartoon.ink),
-                    Icon(style.icon, size: size * 0.82, color: style.textFill),
+                    Icon(style.icon, size: size * 0.82, color: style.ink),
                   ],
                 ),
                 const SizedBox(width: 8),
@@ -390,9 +391,7 @@ class _FxBannerState extends State<_FxBanner>
               overflow: TextOverflow.ellipsis,
               style: Cartoon.userText(
                 size: 16,
-                color: style.textFill == Cartoon.ink
-                    ? Cartoon.ink.withValues(alpha: 0.75)
-                    : Cartoon.paper,
+                color: style.ink.withValues(alpha: 0.78),
                 weight: FontWeight.w800,
               ),
             ),

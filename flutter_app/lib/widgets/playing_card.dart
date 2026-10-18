@@ -2,6 +2,7 @@ import 'tichu_special_art.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 
 class PlayingCard extends StatelessWidget {
   final String cardId;
@@ -311,7 +312,13 @@ class SuitIcon extends StatelessWidget {
       );
     }
     final paintColor =
-        color ?? PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
+        color ??
+        // 문양은 카드 앞면이 아니라 화면 위(비딩·죽일 카드 고르기 등)에
+        // 그려진다. 카드 앞면은 이 위젯을 쓰지 않으므로, 기본색을
+        // 팔레트에 맞춰도 카드의 검은 스페이드는 그대로다.
+        Cartoon.onSurface(
+          PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038),
+        );
     return SizedBox(
       width: size,
       height: size,

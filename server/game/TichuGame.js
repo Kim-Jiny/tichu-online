@@ -42,7 +42,7 @@ class TichuGame {
   resetRound() {
     this.hands = {};         // playerId -> [cardId]
     this.trickPiles = {};    // playerId -> [cardId] (collected tricks)
-    this.trickWins = {};     // playerId -> 이긴 트릭 수 (이번 라운드)
+    this.trickWins = {};     // playerId -> 먹은 트릭 수 (이번 라운드)
     this.largeTichuDeclarations = [];
     this.smallTichuDeclarations = [];
     this.largeTichuResponses = {}; // playerId -> true/false
@@ -784,7 +784,7 @@ class TichuGame {
       });
       if (eligibleOpponents.length === 1) {
         const targetId = eligibleOpponents[0];
-        this._awardTrick(targetId, this.pendingTrickCards, winner);
+        this._awardTrick(targetId, this.pendingTrickCards);
         this.dragonPending = false;
         this.dragonDecider = null;
         this.pendingTrickCards = null;
@@ -847,7 +847,7 @@ class TichuGame {
       return { success: false, messageKey: 'game_dragon_only_to_opponent' };
     }
 
-    this._awardTrick(targetId, this.pendingTrickCards, playerId);
+    this._awardTrick(targetId, this.pendingTrickCards);
     this.dragonPending = false;
     this.dragonDecider = null;
     this.pendingTrickCards = null;
@@ -1185,7 +1185,7 @@ class TichuGame {
       const opponents = deciderTeam === 'teamA' ? this.teams.teamB : this.teams.teamA;
       // Give to first available opponent (prefer the one not yet finished)
       const target = opponents.find(p => !this.finishOrder.includes(p)) || opponents[0];
-      this._awardTrick(target, this.pendingTrickCards, decider);
+      this._awardTrick(target, this.pendingTrickCards);
       this.dragonPending = false;
       this.pendingTrickCards = null;
     }
@@ -1477,20 +1477,18 @@ class TichuGame {
   }
 
   /**
-   * 트릭을 정리한다 — 카드는 [pileOwner] 앞에 쌓고, 승리 한 번은
-   * [winner] 에게 센다.
+   * 트릭을 이 사람 앞에 쌓는다 — 카드와 횟수를 같이 올린다.
    *
-   * 둘을 한 함수로 묶은 것은, 따로 두면 다섯 군데 중 하나를 빠뜨리기
-   * 쉽고 빠뜨려도 점수는 맞아서(점수는 카드로만 센다) 한참 모르기
-   * 때문이다.
+   * 따로 두면 다섯 군데 중 하나를 빠뜨리기 쉽고, 빠뜨려도 점수는
+   * 맞아서(점수는 카드로만 센다) 한참 모른다.
    *
-   * 보통은 둘이 같지만 용은 다르다. 용을 낸 사람이 트릭을 이기고,
-   * 카드는 상대에게 넘긴다. 세는 것은 '이긴 횟수' 이므로 넘긴 사람이
-   * 오른다 — 점수는 받은 쪽이 쥐지만 트릭을 이긴 것은 넘긴 쪽이다.
+   * 세는 기준은 '트릭을 먹은 사람' 이다. 용은 낸 사람이 트릭을 이기고
+   * 카드는 상대에게 넘기는데, 그 경우 오르는 쪽은 받은 사람이다 —
+   * 더미가 그 사람 앞에 쌓이기 때문이다.
    */
-  _awardTrick(pileOwner, cards, winner = pileOwner) {
-    this.trickPiles[pileOwner].push(...cards);
-    this.trickWins[winner] = (this.trickWins[winner] || 0) + 1;
+  _awardTrick(playerId, cards) {
+    this.trickPiles[playerId].push(...cards);
+    this.trickWins[playerId] = (this.trickWins[playerId] || 0) + 1;
   }
 
   getStateForPlayer(playerId) {
@@ -1512,7 +1510,7 @@ class TichuGame {
         name: this.playerNames[pid],
         position: position,
         cardCount: this.hands[pid].length,
-        // 이번 라운드에 이 사람이 이긴 트릭 수. 점수를 유추하는 데
+        // 이번 라운드에 이 사람이 먹은 트릭 수. 점수를 유추하는 데
         // 쓴다 — 카드를 보여 주지 않으면서 '누가 얼마나 긁어 갔나' 는
         // 알 수 있다.
         trickWins: this.trickWins[pid] || 0,

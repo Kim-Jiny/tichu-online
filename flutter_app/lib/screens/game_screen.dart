@@ -1477,29 +1477,44 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                         ),
                       ),
-                    AfkKickBadge(
-                      game: game,
-                      nickname: p?.name ?? '',
-                      avatarSize: avatarDiameter,
-                      child: ProfileAvatar(
-                        photoUrl: game.blockedUsers.contains(p?.name ?? '')
-                            ? null
-                            : game.resolvePhotoUrl(p?.photoUrl),
-                        size: avatarDiameter,
-                        blocked: game.blockedUsers.contains(p?.name ?? ''),
-                        // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
-                        // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
-                        border: (p?.hasLargeTichu ?? false)
-                            ? Border.all(color: Cartoon.red, width: 3.0)
-                            : (p?.hasSmallTichu ?? false)
-                            ? Border.all(color: Cartoon.blue, width: 3.0)
-                            : isTurn
-                            ? Border.all(color: Cartoon.orange, width: 3.0)
-                            : Border.all(color: Cartoon.ink, width: 2.0),
-                        fallback: (p?.isBot ?? false)
-                            ? BotAvatar(size: avatarDiameter, name: p!.name)
-                            : DefaultAvatar(size: avatarDiameter),
-                      ),
+                    // 먹은 트릭 수는 사진 아래쪽에 겹쳐 올린다. Stack 이
+                    // 사진 크기로 서고(trickWins 가 0 이든 아니든) 표시는
+                    // Positioned 라 자리를 먹지 않는다 — 사진이 줄지
+                    // 않는다.
+                    Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        AfkKickBadge(
+                          game: game,
+                          nickname: p?.name ?? '',
+                          avatarSize: avatarDiameter,
+                          child: ProfileAvatar(
+                            photoUrl: game.blockedUsers.contains(p?.name ?? '')
+                                ? null
+                                : game.resolvePhotoUrl(p?.photoUrl),
+                            size: avatarDiameter,
+                            blocked: game.blockedUsers.contains(p?.name ?? ''),
+                            // 라지 티츄(빨강) / 스몰 티츄(파랑) > 현재 턴(노랑).
+                            // 티츄 선언은 그 판의 결정적 신호라 턴보다 우선 노출.
+                            border: (p?.hasLargeTichu ?? false)
+                                ? Border.all(color: Cartoon.red, width: 3.0)
+                                : (p?.hasSmallTichu ?? false)
+                                ? Border.all(color: Cartoon.blue, width: 3.0)
+                                : isTurn
+                                ? Border.all(color: Cartoon.orange, width: 3.0)
+                                : Border.all(color: Cartoon.ink, width: 2.0),
+                            fallback: (p?.isBot ?? false)
+                                ? BotAvatar(size: avatarDiameter, name: p!.name)
+                                : DefaultAvatar(size: avatarDiameter),
+                          ),
+                        ),
+                        if ((p?.trickWins ?? 0) > 0)
+                          Positioned(
+                            bottom: -2 * _s,
+                            child: _trickWinChip(p!.trickWins, scale: _s),
+                          ),
+                      ],
                     ),
                     SizedBox(height: 3 * _s),
                     if (badge != null || (p?.finishPosition ?? 0) > 0)
@@ -1589,11 +1604,7 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                     SizedBox(height: 3 * _s),
-                    _buildCompactHandBacks(
-                      p?.cardCount ?? 0,
-                      scale: _s,
-                      trickWins: p?.trickWins ?? 0,
-                    ),
+                    _buildCompactHandBacks(p?.cardCount ?? 0, scale: _s),
                   ],
                 ),
               ),
@@ -2235,29 +2246,12 @@ class _GameScreenState extends State<GameScreen> {
                   style: Cartoon.userText(size: 14 * _ts),
                 ),
               ),
-              // 내가 이긴 트릭 수. 상대 좌석에는 손패 뒷면 왼쪽 위에
-              // 붙는데, 내 자리에는 뒷면이 없으므로(내 패는 펴서 본다)
-              // 이름 옆에 같은 노란 배지로 둔다.
+              // 내가 먹은 트릭 수. 상대 좌석에는 손패 아래에 붙는데,
+              // 내 자리에는 뒷면이 없으므로 — 내 패는 펴서 본다 —
+              // 이름 옆에 같은 표시를 둔다.
               if (myTrickWins > 0) ...[
                 SizedBox(width: 6 * _s),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 7 * _s,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Cartoon.yellow,
-                    borderRadius: BorderRadius.circular(99),
-                    border: Border.all(color: Cartoon.ink, width: 1.4),
-                  ),
-                  child: Text(
-                    '$myTrickWins',
-                    style: Cartoon.text(
-                      size: 11 * _ts,
-                      color: Cartoon.inkOn(Cartoon.yellow),
-                    ),
-                  ),
-                ),
+                _trickWinChip(myTrickWins, scale: _s),
               ],
               if (isMyTurn) ...[
                 SizedBox(width: 6 * _s),
@@ -3242,11 +3236,50 @@ class _GameScreenState extends State<GameScreen> {
   /// 아주 좁은 폭으로 겹쳐 그리고, 넘치면 +N 배지로 표시한다. Tichu 는
   /// 상대 손을 카드 개수만 알려주면 되므로 예전 큰 뒷면 스택 대신 이걸로
   /// 갈아탄다.
-  Widget _buildCompactHandBacks(
-    int count, {
-    double scale = 1.0,
-    int trickWins = 0,
-  }) {
+  /// 먹은 트릭 수 — 카드 그림과 숫자만.
+  ///
+  /// 처음에는 카드 수 배지 반대편(손패 뒷면 왼쪽 위)에 동그란 배지로
+  /// 달았는데, 좌석이 좁아 프로필 사진과 겹쳤다. 손패 아래로 내리고
+  /// 상자도 없앴다 — 그림이 무엇을 세는지 말해 주므로 테두리까지
+  /// 두르면 좁은 좌석에서 자리만 먹는다.
+  ///
+  /// 트로피가 아니라 카드 더미인 것은, 세는 기준이 '이긴 횟수' 가
+  /// 아니라 '먹은 횟수' 이기 때문이다. 용은 낸 사람이 이기고 카드는
+  /// 상대가 받는데, 오르는 쪽은 받은 사람이다.
+  Widget _trickWinChip(int wins, {double scale = 1.0}) {
+    // 사진 위에 얹히므로 제 바탕을 깐다. 사진은 유저가 올린 것이라
+    // 밝을 수도 어두울 수도 있어, 글자색만으로는 읽힌다고 보장할 수
+    // 없다. 바탕을 깔면 그 위에서만 따지면 된다.
+    final fill = Cartoon.cream;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5 * scale, vertical: 1),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Cartoon.ink, width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.style_rounded,
+            size: 11 * scale,
+            color: Cartoon.inkOn(fill),
+          ),
+          SizedBox(width: 3 * scale),
+          Text(
+            '$wins',
+            style: Cartoon.text(
+              size: 11 * _ts * scale,
+              color: Cartoon.inkOn(fill),
+            ).copyWith(height: 1.0),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactHandBacks(int count, {double scale = 1.0}) {
     if (count <= 0) return const SizedBox.shrink();
     final cardW = 14.0 * scale;
     final cardH = 20.0 * scale;
@@ -3281,33 +3314,6 @@ class _GameScreenState extends State<GameScreen> {
                 width: cardW,
                 height: cardH,
                 isInteractive: false,
-              ),
-            ),
-          // 이긴 트릭 수 — 카드 수 배지 반대편(왼쪽 위)에 단다.
-          //
-          // 점수를 유추하는 데 쓴다. 카드를 보여 주지 않으면서 "누가
-          // 얼마나 긁어 갔나" 는 알 수 있다. 0 이면 달지 않는다 — 네
-          // 자리에 전부 0 이 붙어 있으면 읽을 것이 없는데 자리만 먹는다.
-          if (trickWins > 0)
-            Positioned(
-              left: -badgeSize * 0.35,
-              top: -badgeSize * 0.35,
-              child: Container(
-                width: badgeSize,
-                height: badgeSize,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Cartoon.yellow,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Cartoon.ink, width: 1.4),
-                ),
-                child: Text(
-                  '$trickWins',
-                  style: Cartoon.text(
-                    size: 12 * _ts * scale,
-                    color: Cartoon.inkOn(Cartoon.yellow),
-                  ).copyWith(height: 1.0),
-                ),
               ),
             ),
           Positioned(

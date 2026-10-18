@@ -27,10 +27,10 @@ class Player {
   final String position; // 'self', 'partner', 'left', 'right'
   final int cardCount;
 
-  /// 이번 라운드에 이 사람이 이긴 트릭 수. 점수를 유추하는 데 쓴다.
+  /// 이번 라운드에 이 사람이 먹은 트릭 수. 점수를 유추하는 데 쓴다.
   ///
-  /// 용은 이긴 사람이 오른다 — 카드는 상대에게 넘기지만 트릭을 이긴
-  /// 것은 낸 쪽이다.
+  /// 용은 받은 사람이 오른다 — 트릭을 이긴 것은 낸 쪽이지만, 더미가
+  /// 쌓이는 곳은 받은 쪽이다.
   final int trickWins;
   final bool hasSmallTichu;
   final bool hasLargeTichu;

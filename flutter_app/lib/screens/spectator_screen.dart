@@ -1060,6 +1060,42 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                         ),
                       ),
                     ),
+                    // 먹은 트릭 수 — 게임 화면 좌석과 같이 사진 아래쪽에
+                    // 겹쳐 올린다. Positioned 라 사진 크기를 건드리지
+                    // 않는다.
+                    if (trickWins > 0)
+                      Positioned(
+                        bottom: -2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Cartoon.cream,
+                            borderRadius: BorderRadius.circular(99),
+                            border: Border.all(color: Cartoon.ink, width: 1.2),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.style_rounded,
+                                size: compact ? 10 : 11,
+                                color: Cartoon.inkOn(Cartoon.cream),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '$trickWins',
+                                style: Cartoon.text(
+                                  size: compact ? 10 : 11,
+                                  color: Cartoon.inkOn(Cartoon.cream),
+                                ).copyWith(height: 1.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1166,11 +1202,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               if (!hasFinished && cardCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: _compactHandBacks(
-                    cardCount,
-                    compact: compact,
-                    trickWins: trickWins,
-                  ),
+                  child: _compactHandBacks(cardCount, compact: compact),
                 ),
               // 여기서는 탈락 상태만 표시.
               if (hasFinished)
@@ -1194,11 +1226,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// 좌석 아래에 얹는 카드 뒷면 스트립. 게임 화면의
   /// `_buildCompactHandBacks` 와 같은 모양 — 폭이 좁으니 겹쳐 그리고,
   /// 장수는 오른쪽 끝 배지로 읽는다.
-  Widget _compactHandBacks(
-    int count, {
-    required bool compact,
-    int trickWins = 0,
-  }) {
+  Widget _compactHandBacks(int count, {required bool compact}) {
     // Web 부스트는 프로필 사진과 같은 비율 — 이 스트립도 그만큼 작아 보였다.
     final webBoost = kIsWeb ? 1.35 : 1.0;
     final scale = (compact ? 0.85 : 1.0) * webBoost;
@@ -1232,29 +1260,6 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 width: cardW,
                 height: cardH,
                 isInteractive: false,
-              ),
-            ),
-          // 이긴 트릭 수 — 게임 화면 좌석과 같은 자리(왼쪽 위).
-          if (trickWins > 0)
-            Positioned(
-              left: -badgeSize * 0.35,
-              top: -badgeSize * 0.35,
-              child: Container(
-                width: badgeSize,
-                height: badgeSize,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Cartoon.yellow,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Cartoon.ink, width: 1.4),
-                ),
-                child: Text(
-                  '$trickWins',
-                  style: Cartoon.text(
-                    size: 12 * scale,
-                    color: Cartoon.inkOn(Cartoon.yellow),
-                  ).copyWith(height: 1.0),
-                ),
               ),
             ),
           Positioned(

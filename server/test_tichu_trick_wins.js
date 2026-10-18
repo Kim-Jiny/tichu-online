@@ -9,7 +9,8 @@
  * 빠뜨려도 점수는 맞아서(점수는 카드로만 센다) 한참 모르기 때문이다.
  * 그래서 '카드가 쌓였으면 횟수도 올랐다' 를 직접 본다.
  *
- * 용을 넘긴 경우는 받는 쪽이 오른다 — 점수를 쥐는 쪽이 받은 사람이다.
+ * 용은 카드와 승리가 갈린다. 용을 낸 사람이 트릭을 이기고 카드는 상대에게
+ * 넘긴다. 세는 것은 '이긴 횟수' 이므로 넘긴 사람이 오른다.
  *
  *   node test_tichu_trick_wins.js
  */
@@ -44,7 +45,16 @@ g.resetRound();
 eq('라운드가 바뀌면 0', g.trickWins.p1, 0);
 eq('카드도 비워진다', g.trickPiles.p1.length, 0);
 
+// 용: 카드는 받는 쪽, 승리는 낸 쪽.
+g.resetRound();
+g._awardTrick('p3', ['special_dragon'], 'p0');   // p0 이 이기고 p3 에게 넘김
+eq('용 — 이긴 사람이 오른다', g.trickWins.p0, 1);
+eq('용 — 받은 사람은 안 오른다', g.trickWins.p3, 0);
+eq('용 — 카드는 받은 사람 앞에', g.trickPiles.p3.length, 1);
+eq('용 — 이긴 사람 앞에는 카드가 없다', g.trickPiles.p0.length, 0);
+
 // 클라로 나가는 상태에 실린다.
+g.resetRound();
 g._awardTrick('p2', ['heart_10']);
 const st = g.getStateForPlayer('p0');
 const p2 = st.players.find((p) => p.id === 'p2');

@@ -2235,7 +2235,7 @@ class _GameScreenState extends State<GameScreen> {
                   style: Cartoon.userText(size: 14 * _ts),
                 ),
               ),
-              // 내가 가져간 트릭 수. 상대 좌석에는 손패 뒷면 왼쪽 위에
+              // 내가 이긴 트릭 수. 상대 좌석에는 손패 뒷면 왼쪽 위에
               // 붙는데, 내 자리에는 뒷면이 없으므로(내 패는 펴서 본다)
               // 이름 옆에 같은 노란 배지로 둔다.
               if (myTrickWins > 0) ...[
@@ -3283,7 +3283,7 @@ class _GameScreenState extends State<GameScreen> {
                 isInteractive: false,
               ),
             ),
-          // 가져간 트릭 수 — 카드 수 배지 반대편(왼쪽 위)에 단다.
+          // 이긴 트릭 수 — 카드 수 배지 반대편(왼쪽 위)에 단다.
           //
           // 점수를 유추하는 데 쓴다. 카드를 보여 주지 않으면서 "누가
           // 얼마나 긁어 갔나" 는 알 수 있다. 0 이면 달지 않는다 — 네

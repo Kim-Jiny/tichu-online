@@ -1234,7 +1234,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 isInteractive: false,
               ),
             ),
-          // 가져간 트릭 수 — 게임 화면 좌석과 같은 자리(왼쪽 위).
+          // 이긴 트릭 수 — 게임 화면 좌석과 같은 자리(왼쪽 위).
           if (trickWins > 0)
             Positioned(
               left: -badgeSize * 0.35,

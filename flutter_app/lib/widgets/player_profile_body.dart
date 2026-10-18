@@ -224,7 +224,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                                   Icon(
                                     Icons.apps_rounded,
                                     size: 20,
-                                    color: on ? Colors.white : Cartoon.ink,
+                                    color: on
+                                        ? Cartoon.inkOn(color)
+                                        : Cartoon.ink,
                                   )
                                 else
                                   gameTypeSymbol(key, size: 22),
@@ -233,7 +235,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                                   label,
                                   style: Cartoon.text(
                                     size: 14.5,
-                                    color: on ? Colors.white : Cartoon.ink,
+                                    color: on
+                                        ? Cartoon.inkOn(color)
+                                        : Cartoon.ink,
                                   ),
                                 ),
                               ],

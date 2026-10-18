@@ -869,83 +869,31 @@ class GameService extends ChangeNotifier {
   List<Color> themeGradientFor(String? themeKey) {
     switch (themeKey) {
       case 'theme_cotton':
-        return [
-          Cartoon.surface(Color(0xFFFFF8F0)),
-          Cartoon.surface(Color(0xFFFFE8D8)),
-          Cartoon.surface(Color(0xFFFFF0E8)),
-        ];
+        return [Color(0xFFFFF8F0), Color(0xFFFFE8D8), Color(0xFFFFF0E8)];
       case 'theme_sky':
-        return [
-          Cartoon.surface(Color(0xFFE8F4FD)),
-          Cartoon.surface(Color(0xFFD0E8F8)),
-          Color(0xFFC4E0F4),
-        ];
+        return [Color(0xFFE8F4FD), Color(0xFFD0E8F8), Color(0xFFC4E0F4)];
       case 'theme_mocha_30d':
-        return [
-          Cartoon.surface(Color(0xFFF0E8E0)),
-          Color(0xFFE0D0C4),
-          Color(0xFFD8C8BC),
-        ];
+        return [Color(0xFFF0E8E0), Color(0xFFE0D0C4), Color(0xFFD8C8BC)];
       case 'theme_lavender':
-        return [
-          Cartoon.surface(Color(0xFFF3E8FF)),
-          Color(0xFFE8D5FF),
-          Cartoon.surface(Color(0xFFF0E0FF)),
-        ];
+        return [Color(0xFFF3E8FF), Color(0xFFE8D5FF), Color(0xFFF0E0FF)];
       case 'theme_cherry':
-        return [
-          Cartoon.surface(Color(0xFFFFF0F5)),
-          Cartoon.surface(Color(0xFFFFE0EC)),
-          Cartoon.surface(Color(0xFFFFE8F0)),
-        ];
+        return [Color(0xFFFFF0F5), Color(0xFFFFE0EC), Color(0xFFFFE8F0)];
       case 'theme_midnight':
-        return [
-          Cartoon.surface(Color(0xFFE8EAF6)),
-          Color(0xFFC5CAE9),
-          Color(0xFFD1D5E8),
-        ];
+        return [Color(0xFFE8EAF6), Color(0xFFC5CAE9), Color(0xFFD1D5E8)];
       case 'theme_sunset':
-        return [
-          Cartoon.surface(Color(0xFFFFF3E0)),
-          Cartoon.surface(Color(0xFFFFE0B2)),
-          Cartoon.surface(Color(0xFFFFECCC)),
-        ];
+        return [Color(0xFFFFF3E0), Color(0xFFFFE0B2), Color(0xFFFFECCC)];
       case 'theme_forest':
-        return [
-          Cartoon.surface(Color(0xFFE8F5E9)),
-          Cartoon.surface(Color(0xFFC8E6C9)),
-          Cartoon.surface(Color(0xFFDCE8DC)),
-        ];
+        return [Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFFDCE8DC)];
       case 'theme_rose':
-        return [
-          Cartoon.surface(Color(0xFFFBE9E7)),
-          Color(0xFFFFCCBC),
-          Cartoon.surface(Color(0xFFF0E0DC)),
-        ];
+        return [Color(0xFFFBE9E7), Color(0xFFFFCCBC), Color(0xFFF0E0DC)];
       case 'theme_ocean':
-        return [
-          Cartoon.surface(Color(0xFFE0F7FA)),
-          Cartoon.surface(Color(0xFFB2EBF2)),
-          Cartoon.surface(Color(0xFFD0F0F8)),
-        ];
+        return [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFFD0F0F8)];
       case 'theme_aurora':
-        return [
-          Cartoon.surface(Color(0xFFE8F5E9)),
-          Cartoon.surface(Color(0xFFE0F7FA)),
-          Cartoon.surface(Color(0xFFF3E5F5)),
-        ];
+        return [Color(0xFFE8F5E9), Color(0xFFE0F7FA), Color(0xFFF3E5F5)];
       case 'theme_mintchoco_30d':
-        return [
-          Cartoon.surface(Color(0xFFE8F5E9)),
-          Cartoon.surface(Color(0xFFE0F2F1)),
-          Cartoon.surface(Color(0xFFE8F0E8)),
-        ];
+        return [Color(0xFFE8F5E9), Color(0xFFE0F2F1), Color(0xFFE8F0E8)];
       case 'theme_peach_30d':
-        return [
-          Cartoon.surface(Color(0xFFFFF8E1)),
-          Cartoon.surface(Color(0xFFFFE8D0)),
-          Cartoon.surface(Color(0xFFFFF0E0)),
-        ];
+        return [Color(0xFFFFF8E1), Color(0xFFFFE8D0), Color(0xFFFFF0E0)];
       // 개척자 테마 — 개척자 배너와 짝을 이루는 색이다. 둘을 같이 걸면
       // 세트로 보이고, 따로 걸어도 어색하지 않을 만큼은 옅게 잡았다.
       //
@@ -953,59 +901,23 @@ class GameService extends ChangeNotifier {
       // 어두우면 모든 화면의 진한 글자가 죽는다 — 기존 13종이 전부 옅은
       // 이유이기도 하다.
       case 'theme_pio_deep':
-        return [
-          Cartoon.surface(Color(0xFFE6F2F1)),
-          Cartoon.surface(Color(0xFFD3E9E6)),
-          Cartoon.surface(Color(0xFFE8F4F2)),
-        ];
+        return [Color(0xFFE6F2F1), Color(0xFFD3E9E6), Color(0xFFE8F4F2)];
       case 'theme_pio_gilt':
-        return [
-          Cartoon.surface(Color(0xFFF2EFEA)),
-          Cartoon.surface(Color(0xFFE6DFD2)),
-          Cartoon.surface(Color(0xFFEFEAE1)),
-        ];
+        return [Color(0xFFF2EFEA), Color(0xFFE6DFD2), Color(0xFFEFEAE1)];
       case 'theme_pio_oilslick':
-        return [
-          Cartoon.surface(Color(0xFFEFE9F5)),
-          Cartoon.surface(Color(0xFFEDE6E0)),
-          Cartoon.surface(Color(0xFFF5EFE2)),
-        ];
+        return [Color(0xFFEFE9F5), Color(0xFFEDE6E0), Color(0xFFF5EFE2)];
       case 'theme_pio_nebula':
-        return [
-          Cartoon.surface(Color(0xFFEDE7F6)),
-          Cartoon.surface(Color(0xFFE3ECF7)),
-          Cartoon.surface(Color(0xFFE0F2F6)),
-        ];
+        return [Color(0xFFEDE7F6), Color(0xFFE3ECF7), Color(0xFFE0F2F6)];
       case 'theme_pio_aurora':
-        return [
-          Cartoon.surface(Color(0xFFE4F3EC)),
-          Cartoon.surface(Color(0xFFE6F0F2)),
-          Cartoon.surface(Color(0xFFEDE7F6)),
-        ];
+        return [Color(0xFFE4F3EC), Color(0xFFE6F0F2), Color(0xFFEDE7F6)];
       case 'theme_pio_pearl':
-        return [
-          Cartoon.surface(Color(0xFFF5EDF2)),
-          Cartoon.surface(Color(0xFFEAF1F7)),
-          Cartoon.surface(Color(0xFFEDF5EF)),
-        ];
+        return [Color(0xFFF5EDF2), Color(0xFFEAF1F7), Color(0xFFEDF5EF)];
       case 'theme_pio_champagne':
-        return [
-          Cartoon.surface(Color(0xFFFAF3E6)),
-          Cartoon.surface(Color(0xFFF3E6CE)),
-          Cartoon.surface(Color(0xFFFBF6EC)),
-        ];
+        return [Color(0xFFFAF3E6), Color(0xFFF3E6CE), Color(0xFFFBF6EC)];
       case 'theme_pio_haze':
-        return [
-          Cartoon.surface(Color(0xFFEAF1F9)),
-          Cartoon.surface(Color(0xFFEBE8F7)),
-          Cartoon.surface(Color(0xFFF4EEF5)),
-        ];
+        return [Color(0xFFEAF1F9), Color(0xFFEBE8F7), Color(0xFFF4EEF5)];
       case 'theme_pio_sage':
-        return [
-          Cartoon.surface(Color(0xFFF4F1E9)),
-          Cartoon.surface(Color(0xFFE6EDE1)),
-          Cartoon.surface(const Color(0xFFF0F3EC)),
-        ];
+        return [Color(0xFFF4F1E9), Color(0xFFE6EDE1), Color(0xFFF0F3EC)];
       // 심야 테마 — 어두운 테마가 이 앱에서 되는지 보려는 시험용.
       //
       // 다른 29종이 전부 밝은 데는 이유가 있다(위 주석). 테마는 앱 전체
@@ -1017,17 +929,9 @@ class GameService extends ChangeNotifier {
       // 확인하는 것이 목적이다. 상점에는 어드민이 켜기 전까지 뜨지
       // 않는다(is_purchasable = FALSE).
       case 'theme_dark_midnight':
-        return [
-          Cartoon.onSurface(const Color(0xFF1B2340)),
-          Cartoon.onSurface(const Color(0xFF223052)),
-          Cartoon.onSurface(const Color(0xFF1D2A46)),
-        ];
+        return [Color(0xFF1B2340), Color(0xFF223052), Color(0xFF1D2A46)];
       case 'theme_pio_dawn':
-        return [
-          Cartoon.surface(Color(0xFFFCEDE4)),
-          Cartoon.surface(Color(0xFFFDF4E8)),
-          Cartoon.surface(Color(0xFFEDF3F7)),
-        ];
+        return [Color(0xFFFCEDE4), Color(0xFFFDF4E8), Color(0xFFEDF3F7)];
       // 시즌 이벤트 테마 6종. 짝을 이루는 배너(banner_seollal 등)는 진하지만
       // 여기는 위 규칙대로 옅게 — 배너 색을 그대로 옮기지 않고 톤만 가져왔다.
       // 채도를 낮추다 보면 전부 같은 크림색으로 뭉개지므로, 밝기는 맞추되
@@ -1035,47 +939,19 @@ class GameService extends ChangeNotifier {
       // 추석=단풍(빨강→노랑→초록), 연말=그린/골드, 개천절=바이올렛/틸,
       // 한글날=먹빛 파치먼트+주홍, 크리스마스=레드/크림/골드.
       case 'theme_seollal':
-        return [
-          Cartoon.surface(Color(0xFFFFE3DE)),
-          Color(0xFFFFC9C2),
-          Cartoon.surface(Color(0xFFFCE0A8)),
-        ];
+        return [Color(0xFFFFE3DE), Color(0xFFFFC9C2), Color(0xFFFCE0A8)];
       case 'theme_chuseok':
-        return [
-          Cartoon.surface(Color(0xFFFFD6C7)),
-          Cartoon.surface(Color(0xFFFFEDAD)),
-          Cartoon.surface(Color(0xFFD7EAC0)),
-        ];
+        return [Color(0xFFFFD6C7), Color(0xFFFFEDAD), Color(0xFFD7EAC0)];
       case 'theme_yearend':
-        return [
-          Cartoon.surface(Color(0xFFD7ECDC)),
-          Color(0xFFB9DEC3),
-          Color(0xFFEBDCA0),
-        ];
+        return [Color(0xFFD7ECDC), Color(0xFFB9DEC3), Color(0xFFEBDCA0)];
       case 'theme_gaecheonjeol':
-        return [
-          Cartoon.surface(Color(0xFFE6DAF8)),
-          Color(0xFFCFC0EF),
-          Cartoon.surface(Color(0xFFC3EFE6)),
-        ];
+        return [Color(0xFFE6DAF8), Color(0xFFCFC0EF), Color(0xFFC3EFE6)];
       case 'theme_hangeul':
-        return [
-          Cartoon.surface(Color(0xFFEDE7D8)),
-          Color(0xFFD9D2BD),
-          Color(0xFFF0C8BE),
-        ];
+        return [Color(0xFFEDE7D8), Color(0xFFD9D2BD), Color(0xFFF0C8BE)];
       case 'theme_christmas':
-        return [
-          Cartoon.surface(Color(0xFFFCE4E1)),
-          Cartoon.surface(Color(0xFFFFF6EC)),
-          Cartoon.surface(Color(0xFFF5E3B8)),
-        ];
+        return [Color(0xFFFCE4E1), Color(0xFFFFF6EC), Color(0xFFF5E3B8)];
       default:
-        return [
-          Cartoon.surface(Color(0xFFF8F4F6)),
-          Cartoon.surface(Color(0xFFEDE6F0)),
-          Cartoon.surface(const Color(0xFFE0ECF6)),
-        ];
+        return [Color(0xFFF8F4F6), Color(0xFFEDE6F0), Color(0xFFE0ECF6)];
     }
   }
 
@@ -1087,149 +963,57 @@ class GameService extends ChangeNotifier {
   List<Color> cardBackColorsFor(String? themeKey) {
     switch (themeKey) {
       case 'theme_cotton':
-        return [
-          Cartoon.surface(Color(0xFFFFF0E0)),
-          Color(0xFFE8D8C8),
-          Cartoon.surface(Color(0xFFF0E0D0)),
-        ];
+        return [Color(0xFFFFF0E0), Color(0xFFE8D8C8), Color(0xFFF0E0D0)];
       case 'theme_sky':
-        return [
-          Cartoon.surface(Color(0xFFE0F0FF)),
-          Color(0xFFC8D8E8),
-          Cartoon.surface(Color(0xFFD0E0F0)),
-        ];
+        return [Color(0xFFE0F0FF), Color(0xFFC8D8E8), Color(0xFFD0E0F0)];
       case 'theme_mocha_30d':
-        return [
-          Cartoon.surface(Color(0xFFF0E8E0)),
-          Color(0xFFD8CCC0),
-          Color(0xFFE0D4C8),
-        ];
+        return [Color(0xFFF0E8E0), Color(0xFFD8CCC0), Color(0xFFE0D4C8)];
       case 'theme_lavender':
-        return [
-          Cartoon.surface(Color(0xFFF0E0FF)),
-          Color(0xFFD8C0E8),
-          Color(0xFFE0D0F0),
-        ];
+        return [Color(0xFFF0E0FF), Color(0xFFD8C0E8), Color(0xFFE0D0F0)];
       case 'theme_cherry':
-        return [
-          Cartoon.surface(Color(0xFFFFE8F0)),
-          Color(0xFFE8C8D8),
-          Color(0xFFF0D0E0),
-        ];
+        return [Color(0xFFFFE8F0), Color(0xFFE8C8D8), Color(0xFFF0D0E0)];
       case 'theme_midnight':
         return [Color(0xFFD0D4E8), Color(0xFFB0B8D0), Color(0xFFC0C8E0)];
       case 'theme_sunset':
-        return [
-          Cartoon.surface(Color(0xFFFFE8CC)),
-          Color(0xFFE8CCA8),
-          Color(0xFFF0D8B8),
-        ];
+        return [Color(0xFFFFE8CC), Color(0xFFE8CCA8), Color(0xFFF0D8B8)];
       case 'theme_forest':
-        return [
-          Cartoon.surface(Color(0xFFDCE8DC)),
-          Color(0xFFB8C8B8),
-          Color(0xFFC8D8C8),
-        ];
+        return [Color(0xFFDCE8DC), Color(0xFFB8C8B8), Color(0xFFC8D8C8)];
       case 'theme_rose':
-        return [
-          Cartoon.surface(Color(0xFFF0E0D8)),
-          Color(0xFFD8C0B8),
-          Color(0xFFE0D0C8),
-        ];
+        return [Color(0xFFF0E0D8), Color(0xFFD8C0B8), Color(0xFFE0D0C8)];
       case 'theme_ocean':
-        return [
-          Cartoon.surface(Color(0xFFD0F0F8)),
-          Color(0xFFB0D8E8),
-          Color(0xFFC0E0F0),
-        ];
+        return [Color(0xFFD0F0F8), Color(0xFFB0D8E8), Color(0xFFC0E0F0)];
       case 'theme_aurora':
-        return [
-          Cartoon.surface(Color(0xFFE0F0F0)),
-          Color(0xFFC0D8D8),
-          Cartoon.surface(Color(0xFFD0E0E0)),
-        ];
+        return [Color(0xFFE0F0F0), Color(0xFFC0D8D8), Color(0xFFD0E0E0)];
       case 'theme_mintchoco_30d':
-        return [
-          Cartoon.surface(Color(0xFFE0F0E8)),
-          Color(0xFFC0D8C8),
-          Color(0xFFD0E0D0),
-        ];
+        return [Color(0xFFE0F0E8), Color(0xFFC0D8C8), Color(0xFFD0E0D0)];
       case 'theme_peach_30d':
-        return [
-          Cartoon.surface(Color(0xFFFFE8D0)),
-          Color(0xFFE8D0B8),
-          Color(0xFFF0D8C8),
-        ];
+        return [Color(0xFFFFE8D0), Color(0xFFE8D0B8), Color(0xFFF0D8C8)];
       // 개척자 테마의 카드 뒷면. 배경보다 한 단계 진하게 잡아야
       // 카드가 배경에 묻히지 않는다.
       case 'theme_pio_deep':
-        return [
-          Cartoon.surface(Color(0xFFDCEFEC)),
-          Color(0xFFB9D9D4),
-          Cartoon.surface(Color(0xFFCBE5E1)),
-        ];
+        return [Color(0xFFDCEFEC), Color(0xFFB9D9D4), Color(0xFFCBE5E1)];
       case 'theme_pio_gilt':
-        return [
-          Cartoon.surface(Color(0xFFEDE8DF)),
-          Color(0xFFD8CDBA),
-          Color(0xFFE4DCCB),
-        ];
+        return [Color(0xFFEDE8DF), Color(0xFFD8CDBA), Color(0xFFE4DCCB)];
       case 'theme_pio_oilslick':
-        return [
-          Cartoon.surface(Color(0xFFE9E1F0)),
-          Color(0xFFD5C9DA),
-          Color(0xFFE2D6C4),
-        ];
+        return [Color(0xFFE9E1F0), Color(0xFFD5C9DA), Color(0xFFE2D6C4)];
       case 'theme_pio_nebula':
-        return [
-          Cartoon.surface(Color(0xFFE4DAF0)),
-          Color(0xFFCBDAEE),
-          Cartoon.surface(Color(0xFFC9E9F0)),
-        ];
+        return [Color(0xFFE4DAF0), Color(0xFFCBDAEE), Color(0xFFC9E9F0)];
       case 'theme_pio_aurora':
-        return [
-          Cartoon.surface(Color(0xFFD6EDE1)),
-          Cartoon.surface(Color(0xFFD2E6EA)),
-          Color(0xFFDFD5EE),
-        ];
+        return [Color(0xFFD6EDE1), Color(0xFFD2E6EA), Color(0xFFDFD5EE)];
       case 'theme_pio_pearl':
-        return [
-          Cartoon.surface(Color(0xFFEEE1E9)),
-          Cartoon.surface(Color(0xFFDAE6F1)),
-          Cartoon.surface(Color(0xFFDEEDE2)),
-        ];
+        return [Color(0xFFEEE1E9), Color(0xFFDAE6F1), Color(0xFFDEEDE2)];
       case 'theme_pio_champagne':
-        return [
-          Cartoon.surface(Color(0xFFF5EBD7)),
-          Color(0xFFE7D3AE),
-          Cartoon.surface(Color(0xFFF0E5CE)),
-        ];
+        return [Color(0xFFF5EBD7), Color(0xFFE7D3AE), Color(0xFFF0E5CE)];
       case 'theme_pio_haze':
-        return [
-          Cartoon.surface(Color(0xFFDDE8F5)),
-          Color(0xFFDCD7F0),
-          Cartoon.surface(Color(0xFFEBDFEC)),
-        ];
+        return [Color(0xFFDDE8F5), Color(0xFFDCD7F0), Color(0xFFEBDFEC)];
       case 'theme_pio_sage':
-        return [
-          Cartoon.surface(Color(0xFFEDE8DA)),
-          Cartoon.surface(Color(0xFFD5E2CB)),
-          Cartoon.surface(Color(0xFFE2E9D9)),
-        ];
+        return [Color(0xFFEDE8DA), Color(0xFFD5E2CB), Color(0xFFE2E9D9)];
       // 심야 테마의 카드 뒷면. 배경보다 한 단계 더 어둡게 둬서 카드가
       // 배경 위에 떠 보인다 — 밝은 테마들도 같은 관계다.
       case 'theme_dark_midnight':
-        return [
-          Cartoon.onSurface(const Color(0xFF131A33)),
-          Cartoon.onSurface(const Color(0xFF1B2748)),
-          Cartoon.onSurface(const Color(0xFF16203C)),
-        ];
+        return [Color(0xFF131A33), Color(0xFF1B2748), Color(0xFF16203C)];
       case 'theme_pio_dawn':
-        return [
-          Cartoon.surface(Color(0xFFF8E0D0)),
-          Cartoon.surface(Color(0xFFF7E9CF)),
-          Cartoon.surface(const Color(0xFFDDE9F1)),
-        ];
+        return [Color(0xFFF8E0D0), Color(0xFFF7E9CF), Color(0xFFDDE9F1)];
       case 'theme_seollal':
         return const [Color(0xFFFFD0C6), Color(0xFFF2A89C), Color(0xFFF5D28C)];
       case 'theme_chuseok':
@@ -1243,11 +1027,7 @@ class GameService extends ChangeNotifier {
       case 'theme_christmas':
         return [Color(0xFFF7C9C2), Color(0xFFE0A03C), Color(0xFFF0D584)];
       default:
-        return [
-          Cartoon.surface(Color(0xFFFFF1F5)),
-          Cartoon.surface(Color(0xFFE6DCE8)),
-          Cartoon.surface(const Color(0xFFEDE2EF)),
-        ];
+        return [Color(0xFFFFF1F5), Color(0xFFE6DCE8), Color(0xFFEDE2EF)];
     }
   }
 

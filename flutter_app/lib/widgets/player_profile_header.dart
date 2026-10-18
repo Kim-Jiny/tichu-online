@@ -346,7 +346,7 @@ class PlayerProfileHeader extends StatelessWidget {
               child: Icon(
                 editable ? Icons.edit : Icons.zoom_in,
                 size: 13,
-                color: Colors.white,
+                color: Cartoon.inkOn(Cartoon.ink),
               ),
             ),
           ),

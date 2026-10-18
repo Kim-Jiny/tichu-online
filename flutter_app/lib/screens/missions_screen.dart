@@ -357,7 +357,10 @@ class _MissionsScreenState extends State<MissionsScreen> {
                   ),
                   child: Text(
                     l10n.missionsStreakToday,
-                    style: Cartoon.text(size: 12, color: Colors.white),
+                    style: Cartoon.text(
+                      size: 12,
+                      color: Cartoon.inkOn(Cartoon.ink),
+                    ),
                   ),
                 ),
             ],
@@ -768,7 +771,7 @@ class MissionsHelpDialog extends StatelessWidget {
                                 child: Icon(
                                   icon,
                                   size: 20,
-                                  color: Colors.white,
+                                  color: Cartoon.inkOn(Cartoon.ink),
                                 ),
                               ),
                               const SizedBox(width: 10),

@@ -469,7 +469,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             ),
             child: Text(
               '${positive ? '+' : ''}${formatGold(delta)}',
-              style: Cartoon.text(size: 16, color: Colors.white),
+              style: Cartoon.text(size: 16, color: Cartoon.inkOn(Cartoon.ink)),
             ),
           ),
         ],

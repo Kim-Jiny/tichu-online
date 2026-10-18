@@ -2893,7 +2893,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                         '$value',
                                         style: Cartoon.text(
                                           size: 13,
-                                          color: Colors.white,
+                                          color: Cartoon.inkOn(Cartoon.ink),
                                         ),
                                       ),
                                     ),

@@ -534,7 +534,9 @@ class _CartoonButtonState extends State<CartoonButton> {
               height: widget.height * 0.22,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: enabled ? 0.35 : 0.2),
+                  color: Cartoon.inkOn(
+                    Cartoon.ink,
+                  ).withValues(alpha: enabled ? 0.35 : 0.2),
                   borderRadius: BorderRadius.circular(widget.height),
                 ),
               ),

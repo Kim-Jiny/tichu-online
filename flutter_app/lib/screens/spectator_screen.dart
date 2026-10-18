@@ -930,6 +930,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
     final hasFinished = player['hasFinished'] ?? false;
     final finishPosition = player['finishPosition'] ?? 0;
     final cardCount = ((player['cardCount'] as num?) ?? 0).toInt();
+    final trickWins = ((player['trickWins'] as num?) ?? 0).toInt();
     final hasSmallTichu = player['hasSmallTichu'] ?? false;
     final hasLargeTichu = player['hasLargeTichu'] ?? false;
     final connected = player['connected'] ?? true;
@@ -1165,7 +1166,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               if (!hasFinished && cardCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: _compactHandBacks(cardCount, compact: compact),
+                  child: _compactHandBacks(
+                    cardCount,
+                    compact: compact,
+                    trickWins: trickWins,
+                  ),
                 ),
               // 여기서는 탈락 상태만 표시.
               if (hasFinished)
@@ -1189,7 +1194,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   /// 좌석 아래에 얹는 카드 뒷면 스트립. 게임 화면의
   /// `_buildCompactHandBacks` 와 같은 모양 — 폭이 좁으니 겹쳐 그리고,
   /// 장수는 오른쪽 끝 배지로 읽는다.
-  Widget _compactHandBacks(int count, {required bool compact}) {
+  Widget _compactHandBacks(
+    int count, {
+    required bool compact,
+    int trickWins = 0,
+  }) {
     // Web 부스트는 프로필 사진과 같은 비율 — 이 스트립도 그만큼 작아 보였다.
     final webBoost = kIsWeb ? 1.35 : 1.0;
     final scale = (compact ? 0.85 : 1.0) * webBoost;
@@ -1225,6 +1234,29 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 isInteractive: false,
               ),
             ),
+          // 가져간 트릭 수 — 게임 화면 좌석과 같은 자리(왼쪽 위).
+          if (trickWins > 0)
+            Positioned(
+              left: -badgeSize * 0.35,
+              top: -badgeSize * 0.35,
+              child: Container(
+                width: badgeSize,
+                height: badgeSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Cartoon.yellow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Cartoon.ink, width: 1.4),
+                ),
+                child: Text(
+                  '$trickWins',
+                  style: Cartoon.text(
+                    size: 12 * scale,
+                    color: Cartoon.inkOn(Cartoon.yellow),
+                  ).copyWith(height: 1.0),
+                ),
+              ),
+            ),
           Positioned(
             right: -badgeSize * 0.35,
             top: -badgeSize * 0.35,
@@ -1241,7 +1273,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 '$count',
                 style: Cartoon.text(
                   size: 12 * scale,
-                  color: Colors.white,
+                  color: Cartoon.inkOn(Cartoon.ink),
                 ).copyWith(height: 1.0),
               ),
             ),

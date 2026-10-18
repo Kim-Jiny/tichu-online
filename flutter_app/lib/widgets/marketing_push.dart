@@ -339,10 +339,10 @@ class _ConfirmConsentDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: Cartoon.ink, width: 2),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.notifications_active_rounded,
             size: 26,
-            color: Colors.white,
+            color: Cartoon.inkOn(Cartoon.ink),
           ),
         ),
         l10n.marketingConfirmTitle,

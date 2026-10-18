@@ -42,6 +42,7 @@ class TichuGame {
   resetRound() {
     this.hands = {};         // playerId -> [cardId]
     this.trickPiles = {};    // playerId -> [cardId] (collected tricks)
+    this.trickWins = {};     // playerId -> 가져간 트릭 수 (이번 라운드)
     this.largeTichuDeclarations = [];
     this.smallTichuDeclarations = [];
     this.largeTichuResponses = {}; // playerId -> true/false
@@ -67,6 +68,7 @@ class TichuGame {
     for (const pid of this.playerIds) {
       this.hands[pid] = [];
       this.trickPiles[pid] = [];
+      this.trickWins[pid] = 0;
     }
   }
 
@@ -782,7 +784,7 @@ class TichuGame {
       });
       if (eligibleOpponents.length === 1) {
         const targetId = eligibleOpponents[0];
-        this.trickPiles[targetId].push(...this.pendingTrickCards);
+        this._awardTrick(targetId, this.pendingTrickCards);
         this.dragonPending = false;
         this.dragonDecider = null;
         this.pendingTrickCards = null;
@@ -799,7 +801,7 @@ class TichuGame {
     }
 
     // Add cards to winner's trick pile
-    this.trickPiles[winner].push(...allTrickCards);
+    this._awardTrick(winner, allTrickCards);
 
     // Save last trick for round_end display
     this.lastTrick = this.currentTrick.slice();
@@ -845,7 +847,7 @@ class TichuGame {
       return { success: false, messageKey: 'game_dragon_only_to_opponent' };
     }
 
-    this.trickPiles[targetId].push(...this.pendingTrickCards);
+    this._awardTrick(targetId, this.pendingTrickCards);
     this.dragonPending = false;
     this.dragonDecider = null;
     this.pendingTrickCards = null;
@@ -1171,7 +1173,7 @@ class TichuGame {
       }
       const lastPlay = this.currentTrick[this.currentTrick.length - 1];
       const winner = lastPlay.playerId;
-      this.trickPiles[winner].push(...allTrickCards);
+      this._awardTrick(winner, allTrickCards);
       this.lastTrick = this.currentTrick.slice();
       this.currentTrick = [];
     }
@@ -1183,7 +1185,7 @@ class TichuGame {
       const opponents = deciderTeam === 'teamA' ? this.teams.teamB : this.teams.teamA;
       // Give to first available opponent (prefer the one not yet finished)
       const target = opponents.find(p => !this.finishOrder.includes(p)) || opponents[0];
-      this.trickPiles[target].push(...this.pendingTrickCards);
+      this._awardTrick(target, this.pendingTrickCards);
       this.dragonPending = false;
       this.pendingTrickCards = null;
     }
@@ -1369,9 +1371,11 @@ class TichuGame {
 
     c.hands = {};
     c.trickPiles = {};
+    c.trickWins = {};
     for (const pid of this.playerIds) {
       c.hands[pid] = (this.hands[pid] || []).slice();
       c.trickPiles[pid] = (this.trickPiles[pid] || []).slice();
+      c.trickWins[pid] = this.trickWins[pid] || 0;
     }
 
     // serialize() 와 짝을 맞춘다 — 봇방 티츄 스위치.
@@ -1438,6 +1442,7 @@ class TichuGame {
       lastRoundScores: this.lastRoundScores || null,
       hands: this.hands,
       trickPiles: this.trickPiles,
+      trickWins: this.trickWins,
       // 어드민 봇방의 티츄 선언 스위치. 결정은 워커에서 내려지므로 이
       // 스냅샷에 실리지 않으면 워커 쪽 봇은 스위치를 못 본다 — 티츄 봇은
       // winrate 전략이라 실제로 워커로 나간다.
@@ -1471,6 +1476,21 @@ class TichuGame {
     return c;
   }
 
+  /**
+   * 트릭을 이 사람 앞에 쌓는다.
+   *
+   * 카드와 횟수를 같이 올린다. 따로 두면 다섯 군데 중 하나를 빠뜨리기
+   * 쉽고, 빠뜨려도 점수는 맞아서(점수는 카드로만 센다) 한참 모른다.
+   *
+   * 용을 넘긴 경우는 '받는 쪽' 이 오른다. 이 수를 쓰는 이유가 점수
+   * 유추이고, 점수를 쥐는 쪽은 받은 사람이기 때문이다 — 넘긴 사람은
+   * 트릭을 이겼지만 그 점수는 갖지 않는다.
+   */
+  _awardTrick(playerId, cards) {
+    this.trickPiles[playerId].push(...cards);
+    this.trickWins[playerId] = (this.trickWins[playerId] || 0) + 1;
+  }
+
   getStateForPlayer(playerId) {
     const playerIdx = this.playerIds.indexOf(playerId);
     const otherPlayers = [];
@@ -1490,6 +1510,10 @@ class TichuGame {
         name: this.playerNames[pid],
         position: position,
         cardCount: this.hands[pid].length,
+        // 이번 라운드에 이 사람 앞에 쌓인 트릭 수. 점수를 유추하는 데
+        // 쓴다 — 카드를 보여 주지 않으면서 '누가 얼마나 긁어 갔나' 는
+        // 알 수 있다.
+        trickWins: this.trickWins[pid] || 0,
         hasFinished: this.finishOrder.includes(pid),
         finishPosition: this.finishOrder.indexOf(pid) + 1 || 0,
         hasSmallTichu: this.smallTichuDeclarations.includes(pid),
@@ -1569,6 +1593,7 @@ class TichuGame {
           ? sortCards(this.hands[pid]).map((c) => typeof c === 'string' ? c : c.id)
           : [],
         cardCount: this.hands[pid].length,
+        trickWins: this.trickWins[pid] || 0,
         canSeeCards: canSeeCards,
         hasFinished: this.finishOrder.includes(pid),
         finishPosition: this.finishOrder.indexOf(pid) + 1 || 0,

@@ -1049,11 +1049,8 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
-  static TextStyle get _bodyStyle => Cartoon.userText(
-    size: 15,
-    weight: FontWeight.w500,
-    height: 1.6,
-  );
+  static TextStyle get _bodyStyle =>
+      Cartoon.userText(size: 15, weight: FontWeight.w500, height: 1.6);
 }
 
 // ─── Special card rule block (used in Tichu rules) ───────────────────────────

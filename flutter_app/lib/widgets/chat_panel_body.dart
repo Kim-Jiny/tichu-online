@@ -155,10 +155,10 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.send_rounded,
                       size: 20,
-                      color: Colors.white,
+                      color: Cartoon.inkOn(Cartoon.ink),
                     ),
                   ),
                 ),

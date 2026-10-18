@@ -4792,7 +4792,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         style: Cartoon.userText(
           size: 12.5,
           weight: FontWeight.w900,
-          color: Colors.white,
+          color: Cartoon.inkOn(Cartoon.ink),
         ),
       ),
     );

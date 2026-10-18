@@ -249,7 +249,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: Cartoon.userText(
                   size: 16,
                   weight: FontWeight.w800,
-                  color: isSelected ? Colors.white : Cartoon.ink,
+                  // 칩이 파랄 때 흰 글자는 2.23:1 밖에 안 된다. 칩
+                  // 색에서 끌어내면 5.20 이다.
+                  color: isSelected ? Cartoon.inkOn(Cartoon.blue) : Cartoon.ink,
                 ),
               ),
             ),

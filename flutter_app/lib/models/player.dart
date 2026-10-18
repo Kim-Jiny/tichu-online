@@ -26,6 +26,9 @@ class Player {
   final String name;
   final String position; // 'self', 'partner', 'left', 'right'
   final int cardCount;
+
+  /// 이번 라운드에 이 사람 앞에 쌓인 트릭 수. 점수를 유추하는 데 쓴다.
+  final int trickWins;
   final bool hasSmallTichu;
   final bool hasLargeTichu;
   final bool hasExchanged;
@@ -62,6 +65,7 @@ class Player {
     required this.name,
     this.position = '',
     this.cardCount = 0,
+    this.trickWins = 0,
     this.hasSmallTichu = false,
     this.hasLargeTichu = false,
     this.hasExchanged = false,
@@ -88,6 +92,7 @@ class Player {
       name: json['name'] ?? '',
       position: json['position'] ?? '',
       cardCount: json['cardCount'] ?? 0,
+      trickWins: json['trickWins'] ?? 0,
       hasSmallTichu: json['hasSmallTichu'] ?? false,
       hasLargeTichu: json['hasLargeTichu'] ?? false,
       hasExchanged: json['hasExchanged'] ?? false,

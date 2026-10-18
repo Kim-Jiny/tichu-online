@@ -34,7 +34,14 @@ void main() {
         if (!RegExp('BoxDecoration|ColoredBox').hasMatch(ctx)) continue;
         for (var k = i + 1; k < lines.length && k < i + 15; k++) {
           if (RegExp('BoxDecoration|ColoredBox').hasMatch(lines[k])) break;
-          if (RegExp(r'color:\s*Cartoon\.ink\b').hasMatch(lines[k])) {
+          // 테두리·그림자의 색은 글자가 아니다. 강조색 알약에 ink 로
+          // 테두리를 두르는 것은 이 앱의 평범한 모양인데, 그것까지
+          // 잡으면 멀쩡한 배지가 걸린다.
+          final isEdge = RegExp(
+            r'Border|BorderSide|BoxShadow|shadowColor|borderColor',
+          ).hasMatch(lines[k] + (k > 0 ? lines[k - 1] : ''));
+          if (!isEdge &&
+              RegExp(r'color:\s*Cartoon\.ink\b').hasMatch(lines[k])) {
             offenders.add('${f.path}:${k + 1}  (바탕 ${m.group(1)}, ink 명시)');
           }
           // 색을 안 적으면 기본값이 ink 라 같은 문제가 된다. 명시된

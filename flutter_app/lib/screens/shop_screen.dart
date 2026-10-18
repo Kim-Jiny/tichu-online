@@ -1417,7 +1417,7 @@ class _ShopScreenState extends State<ShopScreen> {
           text,
           style: Cartoon.userText(
             size: 10.5,
-            color: Colors.white,
+            color: Cartoon.inkOn(Cartoon.ink),
             weight: FontWeight.w900,
           ),
         ),

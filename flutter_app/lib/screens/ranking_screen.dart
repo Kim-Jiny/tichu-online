@@ -635,7 +635,10 @@ class _RankingScreenState extends State<RankingScreen> {
                     padding: const EdgeInsets.all(4),
                     child: Text(
                       '$rank',
-                      style: Cartoon.text(size: 18, color: Colors.white),
+                      style: Cartoon.text(
+                        size: 18,
+                        color: Cartoon.inkOn(Cartoon.ink),
+                      ),
                     ),
                   ),
                 ),
@@ -669,11 +672,11 @@ class _RankingScreenState extends State<RankingScreen> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Cartoon.ink, width: 1.4),
                           ),
-                          child: const Text(
+                          child: Text(
                             'ME',
                             style: TextStyle(
                               fontSize: 10,
-                              color: Colors.white,
+                              color: Cartoon.inkOn(Cartoon.ink),
                               fontWeight: FontWeight.w900,
                             ),
                           ),

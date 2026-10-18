@@ -1589,7 +1589,11 @@ class _GameScreenState extends State<GameScreen> {
                       ),
                     ),
                     SizedBox(height: 3 * _s),
-                    _buildCompactHandBacks(p?.cardCount ?? 0, scale: _s),
+                    _buildCompactHandBacks(
+                      p?.cardCount ?? 0,
+                      scale: _s,
+                      trickWins: p?.trickWins ?? 0,
+                    ),
                   ],
                 ),
               ),
@@ -2185,6 +2189,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildBottomArea(GameStateData state, GameService game) {
+    final myTrickWins =
+        _firstWhereOrNull(
+          state.players,
+          (p) => p.position == 'self',
+        )?.trickWins ??
+        0;
     final isMyTurn = state.isMyTurn;
     return Container(
       padding: EdgeInsets.all(10 * _s),
@@ -2225,6 +2235,30 @@ class _GameScreenState extends State<GameScreen> {
                   style: Cartoon.userText(size: 14 * _ts),
                 ),
               ),
+              // 내가 가져간 트릭 수. 상대 좌석에는 손패 뒷면 왼쪽 위에
+              // 붙는데, 내 자리에는 뒷면이 없으므로(내 패는 펴서 본다)
+              // 이름 옆에 같은 노란 배지로 둔다.
+              if (myTrickWins > 0) ...[
+                SizedBox(width: 6 * _s),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 7 * _s,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Cartoon.yellow,
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(color: Cartoon.ink, width: 1.4),
+                  ),
+                  child: Text(
+                    '$myTrickWins',
+                    style: Cartoon.text(
+                      size: 11 * _ts,
+                      color: Cartoon.inkOn(Cartoon.yellow),
+                    ),
+                  ),
+                ),
+              ],
               if (isMyTurn) ...[
                 SizedBox(width: 6 * _s),
                 CartoonPulse(
@@ -3208,7 +3242,11 @@ class _GameScreenState extends State<GameScreen> {
   /// 아주 좁은 폭으로 겹쳐 그리고, 넘치면 +N 배지로 표시한다. Tichu 는
   /// 상대 손을 카드 개수만 알려주면 되므로 예전 큰 뒷면 스택 대신 이걸로
   /// 갈아탄다.
-  Widget _buildCompactHandBacks(int count, {double scale = 1.0}) {
+  Widget _buildCompactHandBacks(
+    int count, {
+    double scale = 1.0,
+    int trickWins = 0,
+  }) {
     if (count <= 0) return const SizedBox.shrink();
     final cardW = 14.0 * scale;
     final cardH = 20.0 * scale;
@@ -3245,6 +3283,33 @@ class _GameScreenState extends State<GameScreen> {
                 isInteractive: false,
               ),
             ),
+          // 가져간 트릭 수 — 카드 수 배지 반대편(왼쪽 위)에 단다.
+          //
+          // 점수를 유추하는 데 쓴다. 카드를 보여 주지 않으면서 "누가
+          // 얼마나 긁어 갔나" 는 알 수 있다. 0 이면 달지 않는다 — 네
+          // 자리에 전부 0 이 붙어 있으면 읽을 것이 없는데 자리만 먹는다.
+          if (trickWins > 0)
+            Positioned(
+              left: -badgeSize * 0.35,
+              top: -badgeSize * 0.35,
+              child: Container(
+                width: badgeSize,
+                height: badgeSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Cartoon.yellow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Cartoon.ink, width: 1.4),
+                ),
+                child: Text(
+                  '$trickWins',
+                  style: Cartoon.text(
+                    size: 12 * _ts * scale,
+                    color: Cartoon.inkOn(Cartoon.yellow),
+                  ).copyWith(height: 1.0),
+                ),
+              ),
+            ),
           Positioned(
             right: -badgeSize * 0.35,
             top: -badgeSize * 0.35,
@@ -3261,7 +3326,7 @@ class _GameScreenState extends State<GameScreen> {
                 '$count',
                 style: Cartoon.text(
                   size: 12 * _ts * scale,
-                  color: Colors.white,
+                  color: Cartoon.inkOn(Cartoon.ink),
                 ).copyWith(height: 1.0),
               ),
             ),

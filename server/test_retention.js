@@ -20,6 +20,13 @@ const check = (label, cond, detail = '') => {
 };
 const eq = (label, got, want) => check(label, got === want, `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 
+// created_at 은 타임존 없는 timestamp 에 UTC 벽시계로 들어 있다. KST
+// 날짜를 얻으려면 UTC 로 꼬리표를 붙인 뒤 서울로 옮겨야 한다.
+// `timezone('Asia/Seoul', created_at)` 은 그 값을 이미 서울 시각으로
+// 해석해 9시간을 빼므로 하루 어긋난다.
+//
+// 이 테스트가 그 틀린 식으로 방문을 심고 있었다. 제품과 테스트가 같이
+// 틀려서 D1/D7 이 맞아 보였고, 그래서 버그가 살아남았다.
 const run = Date.now().toString(36).slice(-5);
 const nick = (s) => `리텐${run}_${s}`;
 const P = db.pool;
@@ -39,7 +46,7 @@ async function visit(name, offset, hour = 0) {
   await P.query(
     `INSERT INTO tc_daily_active (nickname, kst_day, sessions, hours_mask)
      SELECT $1::varchar,
-            DATE(timezone('Asia/Seoul', u.created_at)) + $2::int,
+            DATE((u.created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') + $2::int,
             1, (1 << $3::int)
        FROM tc_users u WHERE u.nickname = $1::varchar
      ON CONFLICT (nickname, kst_day) DO NOTHING`,
@@ -52,6 +59,45 @@ const ago = (d) => new Date(Date.now() - d * 86400000).toISOString();
 (async () => {
   await db.initDatabase();
 
+  // ── KST 경계: 식이 아니라 '아는 답' 과 맞춘다 ──
+  //
+  // 위 코호트 검사는 가입일을 테스트가 직접 계산해 쓰므로, 제품과
+  // 테스트가 같은 식으로 같이 틀리면 통과해 버린다(실제로 그랬다).
+  // 그래서 날짜를 손으로 박은 사람을 하나 심어, 집계가 돌려주는
+  // 가입일이 그 사람의 진짜 KST 가입일인지 본다.
+  console.log('[KST 경계 — 새벽 가입자가 전날로 밀리지 않는다]');
+  {
+    // KST 2026-10-11 01:00 = UTC 2026-10-10 16:00. 틀린 식은 10-10 을 준다.
+    await P.query(
+      `INSERT INTO tc_users (username, nickname, gold, created_at)
+       VALUES ($1, $2, 0, '2026-10-10 16:00:00'::timestamp)
+       ON CONFLICT (nickname) DO NOTHING`,
+      [`rt_${run}_dawn`, nick('dawn')],
+    );
+    // ::text 로 받는다. DATE 를 JS Date 로 받으면 '로컬 자정' 이 되고,
+    // toISOString() 은 그것을 UTC 로 되돌려 또 하루를 뺀다 — 날짜를
+    // 확인하는 테스트에서 가장 쉽게 밟는 함정이다.
+    const got = (await P.query(
+      `SELECT (DATE((created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul'))::text AS kst,
+              (DATE(timezone('Asia/Seoul', created_at)))::text AS wrong
+         FROM tc_users WHERE nickname = $1`, [nick('dawn')])).rows[0];
+    // 집계가 돌려주는 Date 는 로컬 자정이므로, 로컬 성분으로 읽는다.
+    const ymd = (d) => {
+      const t = new Date(d);
+      const p2 = (n) => String(n).padStart(2, '0');
+      return `${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`;
+    };
+    eq('새벽 1시 가입의 KST 날짜는 그날', got.kst, '2026-10-11');
+    eq('틀린 식은 전날을 준다(이 차이가 버그였다)', got.wrong, '2026-10-10');
+
+    // 제품의 집계가 어느 쪽을 쓰는지 — 그 사람을 10-11 코호트로 잡아야 한다.
+    const rows = await db.getRetentionCohorts('2026-10-09', '2026-10-12');
+    const days = rows.map((r) => ymd(r.joinDay));
+    check('집계가 10-11 코호트로 잡는다',
+      days.includes('2026-10-11') && !days.includes('2026-10-10'),
+      `코호트 날짜들: ${days.join(', ')}`);
+  }
+
   // ── 성숙한 코호트: 창이 모두 닫혔으므로 전부 숫자여야 한다 ──
   //
   // 45일 전 가입 4명. 복귀를 일부러 어긋나게 심는다:
@@ -63,7 +109,8 @@ const ago = (d) => new Date(Date.now() - d * 86400000).toISOString();
   await visit('c', 7);
 
   const joinDay = (await P.query(
-    `SELECT DATE(timezone('Asia/Seoul', created_at)) AS d FROM tc_users WHERE nickname = $1`,
+    `SELECT DATE((created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') AS d
+       FROM tc_users WHERE nickname = $1`,
     [nick('a')])).rows[0].d;
   const cohorts = await db.getRetentionCohorts(ago(50), ago(40));
   const c = cohorts.find((x) => new Date(x.joinDay).getTime() === new Date(joinDay).getTime());
@@ -92,7 +139,8 @@ const ago = (d) => new Date(Date.now() - d * 86400000).toISOString();
   await makeUser('young', 2);
   await visit('young', 1);
   const youngDay = (await P.query(
-    `SELECT DATE(timezone('Asia/Seoul', created_at)) AS d FROM tc_users WHERE nickname = $1`,
+    `SELECT DATE((created_at) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul') AS d
+       FROM tc_users WHERE nickname = $1`,
     [nick('young')])).rows[0].d;
   const yc = (await db.getRetentionCohorts(ago(3), ago(0)))
     .find((x) => new Date(x.joinDay).getTime() === new Date(youngDay).getTime());

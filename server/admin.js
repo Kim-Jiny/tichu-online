@@ -2817,7 +2817,9 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
     const missionTable = msSorted.length > 0
       ? `<div class="table-wrap"><table>
           <tr><th>미션</th><th>게임</th><th>발행</th><th>받은 사람</th><th>완료</th>
-              <th>완료율</th><th>만료</th><th>평균 소요</th><th>실패 진행도</th><th>토큰</th></tr>
+              <th>완료율</th><th>만료</th>
+              <th title="미션을 고른 시각부터 깬 시각까지. 고른 시각을 남기기 시작한 뒤의 건만 셉니다 — 괄호 안이 그 건수입니다.">평균 소요 ⓘ</th>
+              <th>실패 진행도</th><th>토큰</th></tr>
           ${msSorted.map((m) => `<tr>
             <td>
               <div style="font-weight:700">${escapeHtml(missionName(m.key))}</div>
@@ -2831,7 +2833,8 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
             ${rateCell(m.doneRate)}
             <td style="color:#c0563f">${formatNumber(m.expired)}</td>
             <td style="white-space:nowrap">${m.avgMinutes === null ? '-'
-              : m.avgMinutes >= 60 ? `${(m.avgMinutes / 60).toFixed(1)}시간` : `${m.avgMinutes}분`}</td>
+              : `${m.avgMinutes >= 60 ? `${(m.avgMinutes / 60).toFixed(1)}시간` : `${m.avgMinutes}분`}`
+                + `<span style="color:#999;font-size:11px"> (${formatNumber(m.avgMinutesN)}건)</span>`}</td>
             <td>${m.avgFailProgress === null ? '-' : formatPercent(m.avgFailProgress * 100, 0)}</td>
             <td style="color:#b35b19;font-weight:700">${formatNumber(m.tokensAwarded)}</td>
           </tr>`).join('')}

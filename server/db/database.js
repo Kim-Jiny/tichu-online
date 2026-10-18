@@ -8665,11 +8665,26 @@ async function getAdminRecentMatches(page = 1, limit = 30) {
 /// 자르는 기준은 KST 날짜라서, 경계선 그대로 자르면 KST 로 그 날에 속하는
 /// 이른 아침 기록(= UTC 로는 전날)이 떨어져 나간다. 그렇게 더 들어온
 /// 하루치는 쓰는 쪽의 kst_day 조건에서 다시 걸러진다.
+/// 타임존 없는 timestamp 컬럼(UTC 벽시계)의 KST 날짜.
+///
+/// `timezone('Asia/Seoul', col)` 로 쓰면 안 된다. 그 형태는 타임존 없는
+/// 값을 "이미 서울 시각" 으로 해석해 9시간을 빼 버리고, 세션이 UTC 라
+/// DATE() 가 다시 UTC 로 읽으므로 결과가 하루 어긋난다. UTC 로 꼬리표를
+/// 붙인 뒤 서울로 옮겨야 한다.
+///
+/// 틀린 형태는 24시간 중 18시간을 하루 틀리게 만든다 — UTC 09~15시
+/// (KST 18~24시)만 우연히 맞는다. 신규 가입자가 어제 코호트로 묶이고,
+/// 가입 당일 접속이 D1 재방문으로 세어졌다.
+///
+/// NOW() 처럼 timestamptz 인 값에는 `timezone('Asia/Seoul', ...)` 가
+/// 맞다. 그쪽은 이 함수를 쓰지 않는다.
+const kstDay = (col) => `DATE((${col}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul')`;
+
 const activityDaysSql = (since) => `
   SELECT nickname, kst_day FROM tc_daily_active
    WHERE kst_day >= ${since}
   UNION
-  SELECT nickname, DATE(timezone('Asia/Seoul', created_at))
+  SELECT nickname, ${kstDay('created_at')}
     FROM tc_gold_history
    WHERE nickname IS NOT NULL
      AND created_at >= (${since})::timestamp - INTERVAL '1 day'
@@ -8680,23 +8695,23 @@ const activityDaysSql = (since) => `
   SELECT nickname, picked_day FROM tc_user_missions
    WHERE nickname IS NOT NULL AND picked_day >= ${since}
   UNION
-  SELECT v.p, DATE(timezone('Asia/Seoul', m.created_at))
+  SELECT v.p, ${kstDay('m.created_at')}
     FROM tc_match_history m,
          LATERAL (VALUES (m.player_a1), (m.player_a2), (m.player_b1), (m.player_b2)) v(p)
    WHERE v.p IS NOT NULL
      AND m.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
-  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+  SELECT p.nickname, ${kstDay('h.created_at')}
     FROM tc_sk_match_players p JOIN tc_sk_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
      AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
-  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+  SELECT p.nickname, ${kstDay('h.created_at')}
     FROM tc_ll_match_players p JOIN tc_ll_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
      AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
   UNION
-  SELECT p.nickname, DATE(timezone('Asia/Seoul', h.created_at))
+  SELECT p.nickname, ${kstDay('h.created_at')}
     FROM tc_mighty_match_players p JOIN tc_mighty_match_history h ON h.id = p.match_id
    WHERE p.is_bot IS NOT TRUE AND p.nickname IS NOT NULL
      AND h.created_at >= (${since})::timestamp - INTERVAL '1 day'
@@ -8742,10 +8757,10 @@ async function getActiveUsersSeries(fromIso, toIso) {
        SELECT a.kst_day,
               COUNT(DISTINCT a.nickname)::int AS dau,
               COUNT(DISTINCT a.nickname) FILTER (
-                WHERE DATE(timezone('Asia/Seoul', u.created_at)) = a.kst_day
+                WHERE ${kstDay('u.created_at')} = a.kst_day
               )::int AS new_users,
               COUNT(DISTINCT a.nickname) FILTER (
-                WHERE DATE(timezone('Asia/Seoul', u.created_at)) < a.kst_day
+                WHERE ${kstDay('u.created_at')} < a.kst_day
               )::int AS returning_users,
               COALESCE(SUM(d.sessions), 0)::int AS sessions
          FROM acts a
@@ -8825,12 +8840,12 @@ async function getRetentionCohorts(fromIso, toIso) {
       `${actsCte(RANGE_START_DAY)},
        today AS (SELECT DATE(timezone('Asia/Seoul', NOW())) AS d),
        cohort AS (
-         SELECT u.nickname, DATE(timezone('Asia/Seoul', u.created_at)) AS join_day
+         SELECT u.nickname, ${kstDay('u.created_at')} AS join_day
            FROM tc_users u
           WHERE u.is_deleted IS NOT TRUE
-            AND DATE(timezone('Asia/Seoul', u.created_at))
+            AND ${kstDay('u.created_at')}
                 >= DATE(timezone('Asia/Seoul', $1::timestamptz))
-            AND DATE(timezone('Asia/Seoul', u.created_at))
+            AND ${kstDay('u.created_at')}
                 <= DATE(timezone('Asia/Seoul', $2::timestamptz))
        )
        SELECT c.join_day,
@@ -8963,7 +8978,7 @@ async function getStickyUsers(fromIso, toIso, limit = 20) {
        SELECT p.nickname, p.days,
               u.level, u.gold, u.total_games, u.device_platform,
               COALESCE(u.last_seen_at, u.last_login) AS last_seen_at,
-              DATE(timezone('Asia/Seoul', u.created_at)) AS join_day,
+              ${kstDay('u.created_at')} AS join_day,
               COALESCE((SELECT SUM(sessions) FROM tc_daily_active d
                          WHERE d.nickname = p.nickname
                            AND d.kst_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))

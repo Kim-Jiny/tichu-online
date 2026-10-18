@@ -99,6 +99,22 @@ async function ensureSchema(client) {
   `);
   await client.query(`CREATE INDEX IF NOT EXISTS idx_tc_user_missions_nick ON tc_user_missions (nickname, status)`);
 
+  // 고른 시각.
+  //
+  // picked_day(날짜)만 남겨서, "평균 소요 시간" 을 고른 날 자정부터 재고
+  // 있었다. 그건 걸린 시간이 아니라 '그날 몇 시에 깼나' 라서, 하루 안에
+  // 깬 건은 전부 0~1440분 안에 들어온다 — 미션이 쉬운지 어려운지는 그
+  // 숫자로 알 수 없다.
+  //
+  // DEFAULT 를 주지 않는다. PG11+ 에서 DEFAULT 와 함께 컬럼을 붙이면
+  // 기존 행이 그 시점 값으로 채워지는데, 그건 없는 시각을 만들어 내는
+  // 일이다. 예전 행은 NULL 로 두고 집계에서 빼면, 표에 "n건 기준" 이
+  // 적히므로 모르는 것을 모른다고 말할 수 있다.
+  await client.query(`ALTER TABLE tc_user_missions ADD COLUMN IF NOT EXISTS picked_at TIMESTAMP`);
+  // 새로 꽂히는 행만 채운다(위와 달리 이 문장은 기존 행을 건드리지 않는다).
+  await client.query(`ALTER TABLE tc_user_missions
+    ALTER COLUMN picked_at SET DEFAULT (NOW() AT TIME ZONE 'UTC')`);
+
   // 하루에 게임별로 새로고침을 몇 번 썼는지.
   await client.query(`
     CREATE TABLE IF NOT EXISTS tc_mission_rerolls (
@@ -442,8 +458,9 @@ async function pick(nickname, missionKey) {
       return { success: false, reason: 'too_many' };
     }
     await client.query(
-      `INSERT INTO tc_user_missions (nickname, mission_key, picked_day, expires_day, target)
-       VALUES ($1, $2, $3::date, $3::date + $4::int, $5)`,
+      `INSERT INTO tc_user_missions
+         (nickname, mission_key, picked_day, expires_day, target, picked_at)
+       VALUES ($1, $2, $3::date, $3::date + $4::int, $5, (NOW() AT TIME ZONE 'UTC'))`,
       [nickname, missionKey, day, defs.MISSION_LIFETIME_DAYS - 1, def.target]
     );
     await client.query('COMMIT');
@@ -797,6 +814,20 @@ async function adminSetProduct(key, { enabled, price }, adminName) {
 }
 
 /** 관리자 화면: 미션별 고른/완료한 수와 오늘·누적 토큰. */
+/// 집계 시점에 다시 판정한 상태.
+///
+/// 만료 처리(expireOld)는 그 사용자가 미션을 조회할 때만 돌아간다. 돌아
+/// 오지 않는 사람의 못 깬 미션은 기한이 지나도 'active' 로 남고, 통계는
+/// 'active' 를 완료율에서 빼므로 완료율이 실제보다 높게 나온다 — 깬
+/// 사람만 세고 조용히 떠난 사람은 안 세는 셈이다.
+///
+/// 저장값을 고치지 않는다. 읽는 쪽에서 같은 규칙으로 판정하면 충분하고,
+/// 통계를 보는 것이 사용자 데이터를 쓰는 일이 되어서는 안 된다.
+const EFFECTIVE_STATUS = `
+  CASE WHEN status = 'active'
+            AND expires_day < DATE(timezone('Asia/Seoul', NOW()))
+       THEN 'expired' ELSE status END`;
+
 async function adminOverview() {
   await loadOverrides();
   const [perMission, today, totals, holders, shop] = await Promise.all([
@@ -804,8 +835,8 @@ async function adminOverview() {
       `SELECT mission_key,
               COUNT(*)::int AS picked,
               COUNT(*) FILTER (WHERE status = 'done')::int AS done,
-              COUNT(*) FILTER (WHERE status = 'active')::int AS active,
-              COUNT(*) FILTER (WHERE status = 'expired')::int AS expired,
+              COUNT(*) FILTER (WHERE ${EFFECTIVE_STATUS} = 'active')::int AS active,
+              COUNT(*) FILTER (WHERE ${EFFECTIVE_STATUS} = 'expired')::int AS expired,
               COUNT(*) FILTER (WHERE status = 'dropped')::int AS dropped
          FROM tc_user_missions GROUP BY mission_key`
     ),
@@ -918,20 +949,34 @@ async function adminStats(fromIso, toIso) {
                 COUNT(*)::int AS picked,
                 COUNT(DISTINCT nickname)::int AS pickers,
                 COUNT(*) FILTER (WHERE status = 'done')::int AS done,
-                COUNT(*) FILTER (WHERE status = 'active')::int AS active,
-                COUNT(*) FILTER (WHERE status = 'expired')::int AS expired,
+                COUNT(*) FILTER (WHERE ${EFFECTIVE_STATUS} = 'active')::int AS active,
+                COUNT(*) FILTER (WHERE ${EFFECTIVE_STATUS} = 'expired')::int AS expired,
                 COUNT(*) FILTER (WHERE status = 'dropped')::int AS dropped,
                 COALESCE(SUM(tokens_awarded), 0)::int AS tokens,
-                -- 깬 사람들이 평균 몇 분 걸렸나. 고른 날 자정부터 센다
-                -- (고른 시각은 남기지 않으므로 하루 단위가 한계다).
+                -- 고른 때부터 깬 때까지 평균 몇 분.
+                --
+                -- 둘 다 타임존 없는 timestamp 에 UTC 벽시계로 들어 있어
+                -- 그대로 빼면 된다(시차가 양쪽에서 같은 만큼 상쇄된다).
+                -- picked_at 이 없는 예전 행은 분모에서 뺀다 — 그 행들의
+                -- 고른 시각은 알 수 없고, picked_day 자정으로 메우면
+                -- 걸린 시간이 아니라 '그날 몇 시에 깼나' 가 된다.
                 ROUND(AVG(
-                  EXTRACT(EPOCH FROM (done_at - picked_day::timestamp)) / 60.0
-                ) FILTER (WHERE status = 'done' AND done_at IS NOT NULL))::int AS avg_minutes,
+                  EXTRACT(EPOCH FROM (done_at - picked_at)) / 60.0
+                ) FILTER (
+                  WHERE status = 'done' AND done_at IS NOT NULL
+                    AND picked_at IS NOT NULL AND done_at >= picked_at
+                ))::int AS avg_minutes,
+                -- 위 평균이 몇 건을 보고 낸 값인지. 표에 같이 적어야
+                -- "2건 평균" 을 전체 경향으로 읽지 않는다.
+                COUNT(*) FILTER (
+                  WHERE status = 'done' AND done_at IS NOT NULL
+                    AND picked_at IS NOT NULL AND done_at >= picked_at
+                )::int AS avg_minutes_n,
                 -- 진행도의 중앙값. 못 깬 미션이 "거의 다 갔는데 못 깬" 것인지
                 -- "손도 못 댄" 것인지는 완료율만으로는 알 수 없다.
                 ROUND(AVG(
                   CASE WHEN target > 0 THEN progress::numeric / target ELSE NULL END
-                ) FILTER (WHERE status IN ('expired', 'dropped')), 3) AS avg_fail_progress
+                ) FILTER (WHERE ${EFFECTIVE_STATUS} IN ('expired', 'dropped')), 3) AS avg_fail_progress
            FROM tc_user_missions
           WHERE picked_day >= DATE(timezone('Asia/Seoul', $1::timestamptz))
             AND picked_day <= DATE(timezone('Asia/Seoul', $2::timestamptz))
@@ -1040,6 +1085,7 @@ async function adminStats(fromIso, toIso) {
       dropped: Number(row.dropped || 0),
       tokensAwarded: Number(row.tokens || 0),
       avgMinutes: row.avg_minutes == null ? null : Number(row.avg_minutes),
+      avgMinutesN: Number(row.avg_minutes_n || 0),
       avgFailProgress: row.avg_fail_progress == null ? null : Number(row.avg_fail_progress),
       // 끝난 것들 중 깬 비율. 진행 중인 건 분모에 넣지 않는다.
       doneRate: settled > 0 ? done / settled : null,

@@ -175,7 +175,7 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
             surfaceTintColor: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(26),
-              side: const BorderSide(color: Cartoon.ink, width: 2.5),
+              side: BorderSide(color: Cartoon.ink, width: 2.5),
             ),
             titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
             contentPadding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
@@ -301,11 +301,7 @@ class _SpectatorRow extends StatelessWidget {
                   color: Cartoon.yellow,
                   borderRadius: BorderRadius.circular(avatarCornerRadius(36)),
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Cartoon.ink,
-                  size: 22,
-                ),
+                child: Icon(Icons.person_rounded, color: Cartoon.ink, size: 22),
               ),
             ),
             const SizedBox(width: 12),
@@ -317,7 +313,7 @@ class _SpectatorRow extends StatelessWidget {
                 style: Cartoon.userText(size: 16),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
+            Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
           ],
         ),
       ),
@@ -339,7 +335,7 @@ Widget _historyShell(
     insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(26),
-      side: const BorderSide(color: Cartoon.ink, width: 2.5),
+      side: BorderSide(color: Cartoon.ink, width: 2.5),
     ),
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 360, maxHeight: 560),
@@ -359,7 +355,7 @@ Widget _historyShell(
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: Cartoon.ink, width: 2),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.emoji_events_rounded,
                     color: Cartoon.ink,
                     size: 24,
@@ -758,7 +754,7 @@ class SpectatorHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: Cartoon.ink, width: 1.8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_back_rounded,
                     color: Cartoon.ink,
                     size: 22,
@@ -790,7 +786,7 @@ class SpectatorHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.visibility_rounded,
                       size: 14,
                       color: Cartoon.ink,

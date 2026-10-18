@@ -77,7 +77,7 @@ void showSkExpansionGuide(
     context: context,
     backgroundColor: Cartoon.paper,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       side: BorderSide(color: Cartoon.ink, width: 2.5),
     ),
@@ -216,7 +216,7 @@ class _SkGuideCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Cartoon.ink, width: 2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.asset(

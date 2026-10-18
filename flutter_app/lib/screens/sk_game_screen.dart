@@ -515,7 +515,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.anchor_rounded, size: 17, color: Cartoon.ink),
+                Icon(Icons.anchor_rounded, size: 17, color: Cartoon.ink),
                 const SizedBox(width: 6),
                 Text(
                   L10n.of(
@@ -927,7 +927,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     if (viewingPlayer == null) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -947,7 +947,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     if (isPending && !isApproved) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -983,7 +983,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         onClose: () => setState(() => _viewingPlayerId = null),
         child: Container(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Cartoon.paper,
             borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
             border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -1019,7 +1019,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // Not pending, not approved — rejected or timed out, show hint
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -1176,7 +1176,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(
           L10n.of(context).skGameLeaveTitle,
@@ -2371,11 +2371,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.visibility_rounded,
-                  size: 18,
-                  color: Cartoon.ink,
-                ),
+                Icon(Icons.visibility_rounded, size: 18, color: Cartoon.ink),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -2385,7 +2381,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 20,
                     color: Cartoon.ink,
@@ -2563,7 +2559,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         backgroundColor: Cartoon.paper,
         surfaceTintColor: Colors.transparent,
@@ -2582,7 +2578,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Cartoon.ink, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.emoji_events_rounded,
                       size: 23,
                       color: Cartoon.ink,
@@ -2615,7 +2611,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   String text, {
                   TextAlign align = TextAlign.center,
                   FontWeight fontWeight = FontWeight.w600,
-                  Color color = Cartoon.ink,
+                  Color? color,
                   double fontSize = 12,
                   EdgeInsets padding = const EdgeInsets.symmetric(
                     horizontal: 3,
@@ -2631,7 +2627,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: Cartoon.userText(
                         size: fontSize + 2,
-                        color: color,
+                        color: color ?? Cartoon.ink,
                         weight: fontWeight,
                         height: 1.2,
                       ),
@@ -3431,7 +3427,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
+            Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
             const SizedBox(width: 5),
             Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 14)),
             const SizedBox(width: 4),
@@ -3616,7 +3612,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -4125,7 +4121,8 @@ class _SKGameScreenState extends State<SKGameScreen> {
   ///
   /// 창 아래 안전 영역을 채우는 띠(SpectatorBottomFill)가 같은 값을 써야
   /// 한다 — 두 곳에 숫자를 적어 두면 한쪽만 고쳐져 이음새가 생긴다.
-  static const _handPaper = Cartoon.paper;
+  // 팔레트가 바뀌면 같이 바뀌어야 하므로 getter 다.
+  static Color get _handPaper => Cartoon.paper;
   static const _handMyTurn = Color(0xFFFFF1B8);
 
   static const _specialBgColors = {
@@ -4204,9 +4201,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         color: isWin ? const Color(0xFFFFC21A) : const Color(0xFF4CAF50),
         shape: BoxShape.circle,
         border: Border.all(color: Cartoon.ink, width: 1.8),
-        boxShadow: const [
-          BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.6)),
-        ],
+        boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.6))],
       ),
       child: Icon(
         isWin ? Icons.emoji_events_rounded : Icons.south_rounded,

@@ -307,7 +307,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   // 관전자용 하단 손패 영역. SK 의 _buildSpectatorHandArea 와 동일한 상태 머신:
   // 대상 없음(안내) / 요청 중 / 승인됨 / 거절.
   Widget _buildSpectatorHandArea(GameService game, List players) {
-    BoxDecoration panelBg() => const BoxDecoration(
+    BoxDecoration panelBg() => BoxDecoration(
       color: Cartoon.paper,
       borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -427,11 +427,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               padding: EdgeInsets.zero,
               splashRadius: 18,
-              icon: const Icon(
-                Icons.close_rounded,
-                size: 20,
-                color: Cartoon.ink,
-              ),
+              icon: Icon(Icons.close_rounded, size: 20, color: Cartoon.ink),
               onPressed: () => setState(() => _viewingPlayerId = null),
             ),
           ),

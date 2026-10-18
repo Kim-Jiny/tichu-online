@@ -654,7 +654,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.chevron_right_rounded,
                               color: Cartoon.ink,
                               size: 26,
@@ -977,9 +977,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: bg,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Cartoon.ink, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-              ],
+              boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
             ),
             child: Row(
               children: [
@@ -1091,7 +1089,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Cartoon.ink, width: 2),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),
@@ -1138,11 +1136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Cartoon.ink,
-              size: 26,
-            ),
+            Icon(Icons.chevron_right_rounded, color: Cartoon.ink, size: 26),
           ],
         ),
       ),
@@ -1217,11 +1211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (trailing != null)
             trailing
           else if (onTap != null && enabled)
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Cartoon.ink,
-              size: 26,
-            ),
+            Icon(Icons.chevron_right_rounded, color: Cartoon.ink, size: 26),
         ],
       ),
     );
@@ -1346,14 +1336,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     color: Cartoon.ink,
                                     width: 2,
                                   ),
-                                  boxShadow: const [
+                                  boxShadow: [
                                     BoxShadow(
                                       color: Cartoon.ink,
                                       offset: Offset(0, 2),
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.arrow_back_rounded,
                                   color: Cartoon.ink,
                                 ),
@@ -1459,7 +1449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           textAlign: TextAlign.center,
                                         ),
                                       ),
-                                    const Icon(
+                                    Icon(
                                       Icons.chevron_right_rounded,
                                       color: Cartoon.ink,
                                       size: 26,
@@ -1511,7 +1501,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           textAlign: TextAlign.center,
                                         ),
                                       ),
-                                    const Icon(
+                                    Icon(
                                       Icons.chevron_right_rounded,
                                       color: Cartoon.ink,
                                       size: 26,
@@ -1667,7 +1657,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   l10n,
                                   game.cardViewPref,
                                 ),
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: Cartoon.ink,
                                   size: 26,
@@ -1703,7 +1693,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       localeService,
                                       l10n,
                                     ),
-                                    trailing: const Icon(
+                                    trailing: Icon(
                                       Icons.chevron_right_rounded,
                                       color: Cartoon.ink,
                                       size: 26,
@@ -1729,7 +1719,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     builder: (_) => const RulesScreen(),
                                   ),
                                 ),
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: Cartoon.ink,
                                   size: 26,
@@ -1749,7 +1739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   leading: couponIcon(size: 22),
                                   title: l10n.couponRedeemTitle,
                                   onTap: () => showCouponRedeemDialog(context),
-                                  trailing: const Icon(
+                                  trailing: Icon(
                                     Icons.chevron_right_rounded,
                                     color: Cartoon.ink,
                                     size: 26,
@@ -1765,7 +1755,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFFBA68C8),
                                 title: l10n.settingsSubmitInquiry,
                                 onTap: _showInquiryDialog,
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: Cartoon.ink,
                                   size: 26,
@@ -1796,7 +1786,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             shape: BoxShape.circle,
                                           ),
                                         ),
-                                      const Icon(
+                                      Icon(
                                         Icons.chevron_right_rounded,
                                         color: Cartoon.ink,
                                         size: 26,
@@ -1882,7 +1872,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       game.eulaContent,
                                       isTermsOfService: true,
                                     ),
-                                    trailing: const Icon(
+                                    trailing: Icon(
                                       Icons.chevron_right_rounded,
                                       color: Cartoon.ink,
                                       size: 26,
@@ -1900,7 +1890,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       l10n.settingsPrivacyPolicy,
                                       game.privacyPolicy,
                                     ),
-                                    trailing: const Icon(
+                                    trailing: Icon(
                                       Icons.chevron_right_rounded,
                                       color: Cartoon.ink,
                                       size: 26,
@@ -1936,7 +1926,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFF8A7A72),
                                 title: l10n.settingsLogout,
                                 onTap: _logout,
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: Cartoon.ink,
                                   size: 26,
@@ -1951,7 +1941,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 iconColor: const Color(0xFFC62828),
                                 title: l10n.settingsDeleteAccount,
                                 onTap: _showDeleteAccountDialog,
-                                trailing: const Icon(
+                                trailing: Icon(
                                   Icons.chevron_right_rounded,
                                   color: Cartoon.ink,
                                   size: 26,

@@ -176,7 +176,7 @@ AlertDialog _marketingShell({
     scrollable: true,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(26),
-      side: const BorderSide(color: Cartoon.ink, width: 2.5),
+      side: BorderSide(color: Cartoon.ink, width: 2.5),
     ),
     titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
     contentPadding: const EdgeInsets.fromLTRB(22, 14, 22, 8),
@@ -242,11 +242,7 @@ class _ConsentDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: Cartoon.ink, width: 2),
           ),
-          child: const Icon(
-            Icons.campaign_rounded,
-            size: 28,
-            color: Cartoon.ink,
-          ),
+          child: Icon(Icons.campaign_rounded, size: 28, color: Cartoon.ink),
         ),
         l10n.marketingConsentTitle,
       ),

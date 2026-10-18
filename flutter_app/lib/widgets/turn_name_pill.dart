@@ -26,7 +26,7 @@ class TurnNamePill extends StatelessWidget {
   final double vertical;
 
   static const Color background = Cartoon.yellow;
-  static const Color border = Cartoon.ink;
+  static Color border = Cartoon.ink;
 
   @override
   Widget build(BuildContext context) {

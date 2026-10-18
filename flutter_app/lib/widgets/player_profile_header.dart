@@ -267,9 +267,7 @@ class PlayerProfileHeader extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Cartoon.ink, width: 2.2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(17),
@@ -281,7 +279,7 @@ class PlayerProfileHeader extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Cartoon.ink, width: 2.2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       child: ClipRRect(borderRadius: BorderRadius.circular(17), child: child),
     );
@@ -566,7 +564,7 @@ Future<void> confirmDeleteProfilePhoto(
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(26),
-        side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        side: BorderSide(color: Cartoon.ink, width: 2.5),
       ),
       backgroundColor: Cartoon.paper,
       surfaceTintColor: Colors.transparent,
@@ -639,7 +637,7 @@ Future<void> changeProfilePhoto(
   final choice = await showModalBottomSheet<Object>(
     context: context,
     backgroundColor: Cartoon.paper,
-    shape: const RoundedRectangleBorder(
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       side: BorderSide(color: Cartoon.ink, width: 2.5),
     ),
@@ -814,7 +812,7 @@ Future<void> _promptOpenSettings(
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(26),
-        side: const BorderSide(color: Cartoon.ink, width: 2.5),
+        side: BorderSide(color: Cartoon.ink, width: 2.5),
       ),
       backgroundColor: Cartoon.paper,
       surfaceTintColor: Colors.transparent,
@@ -873,9 +871,7 @@ class _UploadingNotice extends StatelessWidget {
               color: Cartoon.cream,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Cartoon.ink, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-              ],
+              boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -950,7 +946,7 @@ void showProfileReportDialog(
           child: AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(26),
-              side: const BorderSide(color: Cartoon.ink, width: 2.5),
+              side: BorderSide(color: Cartoon.ink, width: 2.5),
             ),
             backgroundColor: Cartoon.paper,
             surfaceTintColor: Colors.transparent,

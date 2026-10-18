@@ -222,7 +222,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Cartoon.ink, width: 2),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close_rounded,
                           color: Cartoon.ink,
                           size: 26,
@@ -309,9 +309,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Cartoon.ink, width: 2.5),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
-              ],
+              boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
             ),
             clipBehavior: Clip.antiAlias,
             child: InteractiveViewer(

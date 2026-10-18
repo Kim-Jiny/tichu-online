@@ -113,17 +113,11 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        color: Cartoon.ink,
-                        width: 1.6,
-                      ),
+                      borderSide: BorderSide(color: Cartoon.ink, width: 1.6),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        color: Cartoon.ink,
-                        width: 1.6,
-                      ),
+                      borderSide: BorderSide(color: Cartoon.ink, width: 1.6),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(18),

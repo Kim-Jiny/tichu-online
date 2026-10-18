@@ -734,9 +734,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Cartoon.ink, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-            ],
+            boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
           ),
           child: Center(child: child),
         ),
@@ -915,10 +913,7 @@ Widget _signupCard({
                             color: Cartoon.cream,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            color: Cartoon.ink,
-                          ),
+                          child: Icon(Icons.close_rounded, color: Cartoon.ink),
                         ),
                       ),
                     ],

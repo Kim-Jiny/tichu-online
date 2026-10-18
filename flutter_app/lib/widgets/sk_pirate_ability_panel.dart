@@ -176,9 +176,7 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
           color: Cartoon.paper,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Cartoon.ink, width: 2.8),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 4)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 4))],
         ),
         child: SingleChildScrollView(
           child: Column(

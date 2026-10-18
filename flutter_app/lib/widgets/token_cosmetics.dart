@@ -13,7 +13,7 @@ class BubbleStyle {
     required this.fill,
     this.fillEnd,
     required this.border,
-    this.text = Cartoon.ink,
+    this.text,
   });
 
   final Color fill;
@@ -21,7 +21,9 @@ class BubbleStyle {
   /// 있으면 fill → fillEnd 로 비스듬히 번지는 바탕.
   final Color? fillEnd;
   final Color border;
-  final Color text;
+
+  /// 넘기지 않으면 팔레트의 글자색.
+  final Color? text;
 
   /// 꼬리(말풍선 아래 삼각형)가 맞춰 칠할 색.
   Color get tailFill => fillEnd ?? fill;
@@ -200,7 +202,7 @@ class BubblePreview extends StatelessWidget {
         style: Cartoon.userText(
           size: 13,
           weight: FontWeight.w800,
-          color: style.text,
+          color: style.text ?? Cartoon.ink,
         ),
       ),
     );

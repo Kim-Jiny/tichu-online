@@ -12,6 +12,46 @@ import 'package:flutter/material.dart';
 ///
 /// 화면은 이 파일의 위젯만 쓰고 색·그림자를 직접 정하지 않는다 — 스타일을
 /// 바꾸고 싶을 때 여기 한 곳만 고치면 된다.
+/// 바탕과 글자의 색 한 벌.
+///
+/// 어두운 테마를 지원하려고 만들었다. 앱이 OS 다크 모드를 따라가지는
+/// 않는다 — 어두운 '테마' 를 장착했을 때만 어두운 한 벌로 갈아 끼운다.
+///
+/// 여기 들어가는 것은 "바탕이 밝은지 어두운지에 따라 반드시 뒤집혀야
+/// 하는" 색뿐이다. 주황·파랑 같은 강조색은 뜻을 지닌 색이라 양쪽에서
+/// 같은 값을 쓴다(Cartoon 의 상수로 둔다).
+class CartoonPalette {
+  const CartoonPalette({
+    required this.ink,
+    required this.cream,
+    required this.paper,
+    required this.skyTop,
+    required this.skyBottom,
+  });
+
+  /// 글자·테두리·단색 그림자.
+  final Color ink;
+
+  /// 한 단계 낮은 바탕(카드 안쪽, 칩).
+  final Color cream;
+
+  /// 패널 바탕.
+  final Color paper;
+
+  /// 기본 배경 그라데이션의 위/아래.
+  final Color skyTop;
+  final Color skyBottom;
+}
+
+/// 지금까지 쓰던 색. 이 한 벌만 쓰는 동안 화면은 전과 똑같다.
+const CartoonPalette cartoonLight = CartoonPalette(
+  ink: Color(0xFF3B2A20),
+  cream: Color(0xFFFFF4DC),
+  paper: Color(0xFFFFFBF2),
+  skyTop: Color(0xFF9ADCFF),
+  skyBottom: Color(0xFFFFF1D6),
+);
+
 class Cartoon {
   Cartoon._();
 
@@ -22,13 +62,31 @@ class Cartoon {
   /// 글자(방 이름, 닉네임, 입력창)에는 Jua 를 아예 쓰지 않는다.
   static const List<String> fontFallback = ['Pretendard'];
 
-  /// 모든 테두리와 단색 그림자의 색.
-  static const Color ink = Color(0xFF3B2A20);
+  /// 지금 쓰는 색 한 벌.
+  ///
+  /// 바탕과 글자 색만 여기 있다. 주황·파랑 같은 강조색은 아래에 상수로
+  /// 둔다 — 밝은 바탕에서나 어두운 바탕에서나 같은 뜻으로 읽힌다.
+  static CartoonPalette _palette = cartoonLight;
 
-  static const Color cream = Color(0xFFFFF4DC);
-  static const Color paper = Color(0xFFFFFBF2);
-  static const Color skyTop = Color(0xFF9ADCFF);
-  static const Color skyBottom = Color(0xFFFFF1D6);
+  static CartoonPalette get palette => _palette;
+
+  /// 색 한 벌을 통째로 갈아 끼운다. 테마를 바꿀 때 부른다.
+  ///
+  /// 돌려주는 값은 "바뀌었는가" 다. 안 바뀌었으면 화면을 다시 그릴 이유가
+  /// 없다.
+  static bool usePalette(CartoonPalette next) {
+    if (identical(_palette, next)) return false;
+    _palette = next;
+    return true;
+  }
+
+  /// 모든 테두리와 단색 그림자의 색.
+  static Color get ink => _palette.ink;
+
+  static Color get cream => _palette.cream;
+  static Color get paper => _palette.paper;
+  static Color get skyTop => _palette.skyTop;
+  static Color get skyBottom => _palette.skyBottom;
 
   static const Color orange = Color(0xFFFF9A1F);
   static const Color orangeDeep = Color(0xFFE0720A);
@@ -53,7 +111,7 @@ class Cartoon {
     String text, {
     double size = 32,
     Color fill = Colors.white,
-    Color stroke = ink,
+    Color? stroke,
     double letterSpacing = 0,
     TextAlign align = TextAlign.center,
     int? maxLines,
@@ -71,7 +129,7 @@ class Cartoon {
               ..style = PaintingStyle.stroke
               ..strokeWidth = strokeWidth ?? size * 0.28
               ..strokeJoin = StrokeJoin.round
-              ..color = stroke)
+              ..color = stroke ?? ink)
           : null,
     );
     return Stack(
@@ -94,37 +152,36 @@ class Cartoon {
   }
 
   /// 본문용 글자: 진한 갈색, Jua.
-  static TextStyle text({
-    double size = 16,
-    Color color = ink,
-    double? height,
-  }) => TextStyle(
-    fontFamily: font,
-    fontFamilyFallback: fontFallback,
-    fontSize: size,
-    color: color,
-    height: height,
-  );
+  static TextStyle text({double size = 16, Color? color, double? height}) =>
+      TextStyle(
+        fontFamily: font,
+        fontFamilyFallback: fontFallback,
+        fontSize: size,
+        // 안 넘기면 팔레트의 글자색. 기본값으로 박아 두면 앱을 켤 때의
+        // 색이 굳어서, 한 벌을 갈아 끼워도 글자만 그대로 남는다.
+        color: color ?? ink,
+        height: height,
+      );
 
   /// 사용자가 입력하거나 서버가 내려준 글자용: Jua 없이 기본 글꼴, 같은 색.
   static TextStyle userText({
     double size = 16,
-    Color color = ink,
+    Color? color,
     FontWeight weight = FontWeight.w700,
     double? height,
   }) => TextStyle(
     fontSize: size,
-    color: color,
+    color: color ?? ink,
     fontWeight: weight,
     height: height,
   );
 
   static BoxDecoration panelDecoration({
-    Color color = paper,
+    Color? color,
     double radius = 24,
     double shadowOffset = shadow,
   }) => BoxDecoration(
-    color: color,
+    color: color ?? paper,
     borderRadius: BorderRadius.circular(radius),
     border: Border.all(color: ink, width: border),
     boxShadow: [BoxShadow(color: ink, offset: Offset(0, shadowOffset))],
@@ -162,7 +219,7 @@ class CartoonBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -198,13 +255,16 @@ class CartoonPanel extends StatelessWidget {
   const CartoonPanel({
     super.key,
     required this.child,
-    this.color = Cartoon.paper,
+    this.color,
     this.radius = 24,
     this.padding = const EdgeInsets.all(20),
   });
 
   final Widget child;
-  final Color color;
+
+  /// 넘기지 않으면 팔레트의 패널색. 어두운 한 벌로 갈아 끼우면 같이
+  /// 따라간다 — 기본값으로 박아 두면 앱을 켤 때의 색이 굳는다.
+  final Color? color;
   final double radius;
   final EdgeInsetsGeometry padding;
 
@@ -503,12 +563,12 @@ class _CartoonPulseState extends State<CartoonPulse>
 /// 호출한 context 의 테마를 캡처한다). 화면별로 대화상자를 일일이 고치지 않아도
 /// 되고, 나중에 앱 전체 테마로 올리기도 쉽다.
 ThemeData cartoonTheme(ThemeData base) {
-  const ink = Cartoon.ink;
-  TextStyle jua(double size, {Color color = ink}) => TextStyle(
+  final ink = Cartoon.ink;
+  TextStyle jua(double size, {Color? color}) => TextStyle(
     fontFamily: Cartoon.font,
     fontFamilyFallback: Cartoon.fontFallback,
     fontSize: size,
-    color: color,
+    color: color ?? ink,
   );
   final side = BorderSide(color: ink, width: 2.5);
   RoundedRectangleBorder shape(double r) => RoundedRectangleBorder(
@@ -525,7 +585,7 @@ ThemeData cartoonTheme(ThemeData base) {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: ink, width: 3),
+        side: BorderSide(color: ink, width: 3),
       ),
       titleTextStyle: jua(21),
       contentTextStyle: base.textTheme.bodyMedium?.copyWith(
@@ -534,7 +594,7 @@ ThemeData cartoonTheme(ThemeData base) {
         height: 1.5,
       ),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
+    bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: Cartoon.paper,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
@@ -548,7 +608,7 @@ ThemeData cartoonTheme(ThemeData base) {
         foregroundColor: Colors.white,
         elevation: 0,
         textStyle: jua(16, color: Colors.white),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: shape(14),
       ),
     ),
@@ -588,7 +648,7 @@ ThemeData cartoonTheme(ThemeData base) {
       focusedBorder: border(Cartoon.orange, 3),
       errorBorder: border(Cartoon.red, 2.5),
       focusedErrorBorder: border(Cartoon.red, 3),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
@@ -597,18 +657,18 @@ ThemeData cartoonTheme(ThemeData base) {
       trackColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.selected) ? Cartoon.green : Colors.white,
       ),
-      trackOutlineColor: const WidgetStatePropertyAll(ink),
-      trackOutlineWidth: const WidgetStatePropertyAll(2.5),
+      trackOutlineColor: WidgetStatePropertyAll(ink),
+      trackOutlineWidth: WidgetStatePropertyAll(2.5),
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: Cartoon.paper,
       contentTextStyle: jua(16),
       behavior: SnackBarBehavior.floating,
       elevation: 0,
-      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      insetPadding: EdgeInsets.fromLTRB(16, 0, 16, 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: ink, width: 2.2),
+        side: BorderSide(color: ink, width: 2.2),
       ),
     ),
     dividerTheme: DividerThemeData(

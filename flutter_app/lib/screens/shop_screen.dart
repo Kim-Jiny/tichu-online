@@ -522,7 +522,7 @@ class _ShopScreenState extends State<ShopScreen> {
               children: [
                 chip(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_back_rounded,
                     color: Cartoon.ink,
                     size: 24,
@@ -624,7 +624,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               ),
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.history_rounded,
                             size: 20,
                             color: Cartoon.ink,
@@ -714,7 +714,7 @@ class _ShopScreenState extends State<ShopScreen> {
   /// card, a category card and a card per item.
   Widget _buildContentSheet(GameService game) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
@@ -837,7 +837,7 @@ class _ShopScreenState extends State<ShopScreen> {
     bool loading = false,
     IconData icon = Icons.info_outline_rounded,
     String text = '',
-    Color color = Cartoon.ink,
+    Color? color,
   }) {
     if (loading) return const Center(child: CartoonLoader());
     return Center(
@@ -862,7 +862,7 @@ class _ShopScreenState extends State<ShopScreen> {
               textAlign: TextAlign.center,
               style: Cartoon.userText(
                 size: 15,
-                color: color == Cartoon.ink
+                color: (color ?? Cartoon.ink) == Cartoon.ink
                     ? Cartoon.ink.withValues(alpha: 0.6)
                     : color,
               ),
@@ -2760,7 +2760,7 @@ class _ShopScreenState extends State<ShopScreen> {
           maxChildSize: 0.9,
           expand: false,
           builder: (_, scrollCtl) => Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Cartoon.paper,
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               border: Border(
@@ -2959,7 +2959,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: Cartoon.cream,
-                    border: const Border(
+                    border: Border(
                       top: BorderSide(color: Cartoon.ink, width: 2.2),
                     ),
                   ),
@@ -4330,7 +4330,7 @@ class _ShopScreenState extends State<ShopScreen> {
             child: Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
-                side: const BorderSide(color: Cartoon.ink, width: 2.2),
+                side: BorderSide(color: Cartoon.ink, width: 2.2),
               ),
               // Capped, not free-sizing. Dialog lets its child take whatever
               // width is on offer, and the rows inside are Expanded — so on a
@@ -4353,14 +4353,14 @@ class _ShopScreenState extends State<ShopScreen> {
                               color: Cartoon.yellow,
                               borderRadius: BorderRadius.circular(15),
                               border: Border.all(color: Cartoon.ink, width: 2),
-                              boxShadow: const [
+                              boxShadow: [
                                 BoxShadow(
                                   color: Cartoon.ink,
                                   offset: Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.event_available_rounded,
                               color: Cartoon.ink,
                               size: 26,
@@ -4386,14 +4386,14 @@ class _ShopScreenState extends State<ShopScreen> {
                                   color: Cartoon.ink,
                                   width: 2,
                                 ),
-                                boxShadow: const [
+                                boxShadow: [
                                   BoxShadow(
                                     color: Cartoon.ink,
                                     offset: Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.close_rounded,
                                 color: Cartoon.ink,
                               ),
@@ -4705,7 +4705,7 @@ class _ShopScreenState extends State<ShopScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Row(
           children: [

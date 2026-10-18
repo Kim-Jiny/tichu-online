@@ -260,7 +260,7 @@ class _GameScreenState extends State<GameScreen> {
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(26),
-            side: const BorderSide(color: Cartoon.ink, width: 2.5),
+            side: BorderSide(color: Cartoon.ink, width: 2.5),
           ),
           titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
@@ -917,7 +917,7 @@ class _GameScreenState extends State<GameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(
           L10n.of(context).gameLeaveTitle,
@@ -1110,11 +1110,7 @@ class _GameScreenState extends State<GameScreen> {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.visibility_rounded,
-                  size: 18,
-                  color: Cartoon.ink,
-                ),
+                Icon(Icons.visibility_rounded, size: 18, color: Cartoon.ink),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -1124,7 +1120,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 20,
                     color: Cartoon.ink,
@@ -2534,7 +2530,7 @@ class _GameScreenState extends State<GameScreen> {
                 surfaceTintColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
-                  side: const BorderSide(color: Cartoon.ink, width: 2.5),
+                  side: BorderSide(color: Cartoon.ink, width: 2.5),
                 ),
                 title: Text(
                   L10n.of(context).gameSmallTichuConfirmTitle,

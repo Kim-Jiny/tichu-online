@@ -791,9 +791,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           color: Color.lerp(accent, Colors.white, 0.55),
           borderRadius: BorderRadius.circular(r),
           border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(r - 1),
@@ -860,9 +858,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           color: Color.lerp(color, Colors.white, 0.55),
           borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
           border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         child: Icon(icon, color: Cartoon.ink, size: _headerGlyphFor(box)),
       ),
@@ -1044,9 +1040,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       activeThumbColor: Colors.white,
                       inactiveTrackColor: Colors.white,
                       inactiveThumbColor: Cartoon.ink,
-                      trackOutlineColor: const WidgetStatePropertyAll(
-                        Cartoon.ink,
-                      ),
+                      trackOutlineColor: WidgetStatePropertyAll(Cartoon.ink),
                       trackOutlineWidth: const WidgetStatePropertyAll(2.5),
                     ),
                   ],
@@ -1092,7 +1086,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               child: AlertDialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: const BorderSide(color: Cartoon.ink, width: 2.2),
+                  side: BorderSide(color: Cartoon.ink, width: 2.2),
                 ),
                 backgroundColor: Cartoon.paper,
                 contentPadding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
@@ -1429,10 +1423,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(
-                                        Icons.tune,
-                                        color: Cartoon.ink,
-                                      ),
+                                      Icon(Icons.tune, color: Cartoon.ink),
                                       const SizedBox(width: 8),
                                       Text(
                                         l10n.lobbyGameSettings,
@@ -1463,7 +1454,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                         duration: const Duration(
                                           milliseconds: 220,
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.keyboard_arrow_down_rounded,
                                           color: Cartoon.ink,
                                         ),
@@ -1769,7 +1760,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: Cartoon.ink, width: 2),
+                        side: BorderSide(color: Cartoon.ink, width: 2),
                       ),
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(
@@ -2160,7 +2151,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
@@ -2177,7 +2168,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
@@ -2224,7 +2215,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           6,
           6 + MediaQuery.paddingOf(context).bottom,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -2672,7 +2663,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       trailing: CartoonPressable(
         scale: 0.85,
         onTap: () => game.requestInquiries(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
           child: Icon(Icons.refresh_rounded, size: 22, color: Cartoon.ink),
         ),
@@ -2879,9 +2870,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   border: Border.all(color: Cartoon.ink, width: 2),
                   boxShadow: _roomGameFilter == type
                       ? null
-                      : const [
-                          BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-                        ],
+                      : [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
                 ),
                 child: Text(
                   label,
@@ -3403,7 +3392,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         backgroundColor: Cartoon.paper,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Cartoon.ink, width: 2.2),
+          side: BorderSide(color: Cartoon.ink, width: 2.2),
         ),
         titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
         title: Row(
@@ -3661,7 +3650,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         child: Icon(icon, color: Cartoon.ink),
       ),
       title: Text(label, style: Cartoon.text(size: 17)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
+      trailing: Icon(Icons.chevron_right_rounded, color: Cartoon.ink),
       onTap: onTap,
     );
   }
@@ -3905,7 +3894,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
+              child: Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
             ),
           ),
           const SizedBox(width: 10),
@@ -5792,17 +5781,11 @@ class _RefreshChipState extends State<_RefreshChip>
           color: Cartoon.paper,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         child: RotationTransition(
           turns: CurvedAnimation(parent: _c, curve: Curves.easeInOutCubic),
-          child: const Icon(
-            Icons.refresh_rounded,
-            color: Cartoon.ink,
-            size: 22,
-          ),
+          child: Icon(Icons.refresh_rounded, color: Cartoon.ink, size: 22),
         ),
       ),
     );

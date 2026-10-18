@@ -255,7 +255,7 @@ class _SeatHandoffBanner extends StatelessWidget {
                 color: Cartoon.cream,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Cartoon.ink, width: 2),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),

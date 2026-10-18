@@ -125,7 +125,7 @@ void showPlayerProfileDialog(
                   color: banner == null ? Cartoon.paper : null,
                   borderRadius: BorderRadius.circular(26),
                   border: Border.all(color: Cartoon.ink, width: 2.2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
                   ],
                 ),

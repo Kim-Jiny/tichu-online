@@ -63,7 +63,7 @@ class _FxStyle {
     required this.duration,
     required this.titleSize,
     this.icon,
-    this.textFill = Cartoon.paper,
+    this.textFill,
   });
 
   /// 도장 판의 색.
@@ -73,7 +73,8 @@ class _FxStyle {
   final Color accent;
 
   /// 글자 속 색. 밝은 판에는 잉크, 진한 판에는 종이색.
-  final Color textFill;
+  /// 글자 속 색. 넘기지 않으면 종이색 — 팔레트를 따라간다.
+  final Color? textFill;
 
   final Duration duration;
   final double titleSize;
@@ -104,7 +105,7 @@ _FxStyle _styleOf(TichuFxKind kind) {
         icon: Icons.local_fire_department_rounded,
       );
     case TichuFxKind.tichuSuccess:
-      return const _FxStyle(
+      return _FxStyle(
         fill: Cartoon.yellow,
         accent: Cartoon.orange,
         duration: Duration(milliseconds: 2900),
@@ -114,7 +115,7 @@ _FxStyle _styleOf(TichuFxKind kind) {
         textFill: Cartoon.ink,
       );
     case TichuFxKind.tichuFail:
-      return const _FxStyle(
+      return _FxStyle(
         fill: Cartoon.cream,
         accent: Cartoon.ink,
         duration: Duration(milliseconds: 2300),
@@ -131,7 +132,7 @@ _FxStyle _styleOf(TichuFxKind kind) {
         icon: Icons.military_tech_rounded,
       );
     case TichuFxKind.finished:
-      return const _FxStyle(
+      return _FxStyle(
         fill: Cartoon.paper,
         accent: Cartoon.orange,
         duration: Duration(milliseconds: 1500),
@@ -328,7 +329,7 @@ class _FxBannerState extends State<_FxBanner>
     final title = Cartoon.outlinedText(
       widget.event.title,
       size: size,
-      fill: style.textFill,
+      fill: style.textFill ?? Cartoon.paper,
       maxLines: 2,
       // 외곽선은 획 뒤에 깔리므로 글자 '속' 을 먹지는 않는다. 대신 획
       // 바깥으로 두께의 절반만큼 번지는데, 그게 한글의 속공간을 메운다 —

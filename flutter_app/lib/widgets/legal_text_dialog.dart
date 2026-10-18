@@ -217,7 +217,7 @@ class _LegalBodyState extends State<_LegalBody> {
                   ),
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
@@ -248,11 +248,11 @@ class _LegalBodyState extends State<_LegalBody> {
                     color: Cartoon.paper,
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: Cartoon.ink, width: 2),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                     ],
                   ),
-                  child: const Icon(Icons.close_rounded, color: Cartoon.ink),
+                  child: Icon(Icons.close_rounded, color: Cartoon.ink),
                 ),
               ),
             ],

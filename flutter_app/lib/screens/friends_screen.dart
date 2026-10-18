@@ -237,7 +237,7 @@ class _FriendsScreenState extends State<FriendsScreen>
   Widget _headerChip({
     required IconData icon,
     required VoidCallback onTap,
-    Color color = Cartoon.ink,
+    Color? color,
   }) {
     return CartoonPressable(
       scale: 0.88,
@@ -249,11 +249,9 @@ class _FriendsScreenState extends State<FriendsScreen>
           color: Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: color ?? Cartoon.ink, size: 24),
       ),
     );
   }
@@ -527,7 +525,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 width: 1.6,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.refresh_rounded,
                               size: 19,
                               color: Cartoon.ink,
@@ -659,7 +657,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                     width: 1.6,
                                   ),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.chat_bubble_rounded,
                                   size: 17,
                                   color: Cartoon.ink,
@@ -703,16 +701,13 @@ class _FriendsScreenState extends State<FriendsScreen>
                         PopupMenuButton<String>(
                           tooltip: '',
                           padding: EdgeInsets.zero,
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.more_vert_rounded,
                             color: Cartoon.ink,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(
-                              color: Cartoon.ink,
-                              width: 2,
-                            ),
+                            side: BorderSide(color: Cartoon.ink, width: 2),
                           ),
                           color: Cartoon.paper,
                           onSelected: (v) {
@@ -978,7 +973,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: onTap == null
               ? null
-              : const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.5))],
+              : [BoxShadow(color: Cartoon.ink, offset: Offset(0, 1.5))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1386,7 +1381,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                   12,
                   10 + MediaQuery.viewPaddingOf(context).bottom,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Cartoon.paper,
                   border: Border(top: BorderSide(color: Cartoon.ink, width: 2)),
                 ),
@@ -1448,7 +1443,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                           color: Cartoon.orange,
                           shape: BoxShape.circle,
                           border: Border.all(color: Cartoon.ink, width: 2),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                           ],
                         ),
@@ -1536,7 +1531,9 @@ class _FriendsScreenState extends State<FriendsScreen>
       topLeft: const Radius.circular(18),
       topRight: const Radius.circular(18),
       bottomLeft: isMine ? const Radius.circular(18) : const Radius.circular(4),
-      bottomRight: isMine ? const Radius.circular(4) : const Radius.circular(18),
+      bottomRight: isMine
+          ? const Radius.circular(4)
+          : const Radius.circular(18),
     );
     final dt = _dmSentAt(msg);
     final timeStr = dt == null
@@ -1593,7 +1590,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                   size: 15,
                   weight: FontWeight.w600,
                   color:
-                      bubbleStyle?.text ?? (isMine ? Colors.white : Cartoon.ink),
+                      bubbleStyle?.text ??
+                      (isMine ? Colors.white : Cartoon.ink),
                   height: 1.35,
                 ),
               ),

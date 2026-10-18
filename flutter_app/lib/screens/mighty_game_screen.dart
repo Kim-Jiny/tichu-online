@@ -716,7 +716,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.style, size: 15, color: Cartoon.ink),
+                    Icon(Icons.style, size: 15, color: Cartoon.ink),
                     const SizedBox(width: 5),
                     Text(
                       state.phase == 'round_end'
@@ -813,11 +813,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.visibility_rounded,
-                  size: 18,
-                  color: Cartoon.ink,
-                ),
+                Icon(Icons.visibility_rounded, size: 18, color: Cartoon.ink),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -827,7 +823,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 20,
                     color: Cartoon.ink,
@@ -1464,7 +1460,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(
           L10n.of(context).mtLeaveGame,
@@ -2846,7 +2842,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(26),
-            side: const BorderSide(color: Cartoon.ink, width: 2.5),
+            side: BorderSide(color: Cartoon.ink, width: 2.5),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
@@ -3283,7 +3279,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(title, style: Cartoon.text(size: 20)),
         content: DefaultTextStyle.merge(
@@ -3317,7 +3313,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(l10n.mtDealMiss, style: Cartoon.text(size: 20)),
         content: Text(
@@ -3497,11 +3493,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(
-                Icons.swap_horiz_rounded,
-                size: 20,
-                color: Cartoon.ink,
-              ),
+              Icon(Icons.swap_horiz_rounded, size: 20, color: Cartoon.ink),
               const SizedBox(width: 6),
               Text(L10n.of(context).mtDiscard3, style: Cartoon.text(size: 16)),
               const Spacer(),
@@ -4128,7 +4120,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   Widget _spectatorInfoBar({required Widget child}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -4202,7 +4194,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
+            Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
           ],
         ),
       ),
@@ -4220,7 +4212,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
       width: double.infinity,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Cartoon.paper,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -4307,7 +4299,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           state.phase == 'round_end';
       return Container(
         padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -4413,7 +4405,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.swap_horiz_rounded,
                       size: 18,
                       color: Cartoon.ink,
@@ -5751,7 +5743,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
+            Icon(Icons.timer_off_rounded, size: 16, color: Cartoon.ink),
             const SizedBox(width: 5),
             Text('${game.myTimeoutCount}/3', style: Cartoon.text(size: 13)),
             const SizedBox(width: 4),
@@ -5998,11 +5990,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             const SizedBox(width: 8),
             suitChip(info.oldTrump!),
             const SizedBox(width: 6),
-            const Icon(
-              Icons.arrow_forward_rounded,
-              size: 18,
-              color: Cartoon.ink,
-            ),
+            Icon(Icons.arrow_forward_rounded, size: 18, color: Cartoon.ink),
             const SizedBox(width: 6),
             suitChip(info.newTrump!),
           ],
@@ -6025,11 +6013,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(
-              Icons.arrow_forward_rounded,
-              size: 18,
-              color: Cartoon.ink,
-            ),
+            Icon(Icons.arrow_forward_rounded, size: 18, color: Cartoon.ink),
             const SizedBox(width: 6),
             Text(
               '${info.newBid}',
@@ -6133,7 +6117,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         surfaceTintColor: Colors.transparent,
         backgroundColor: Cartoon.paper,
@@ -6606,7 +6590,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         backgroundColor: Cartoon.paper,
         surfaceTintColor: Colors.transparent,
@@ -6625,7 +6609,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Cartoon.ink, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.emoji_events_rounded,
                       size: 23,
                       color: Cartoon.ink,
@@ -6680,7 +6664,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         String text, {
                         TextAlign align = TextAlign.center,
                         FontWeight fontWeight = FontWeight.w600,
-                        Color color = Cartoon.ink,
+                        Color? color,
                         double fontSize = 12,
                         EdgeInsets padding = const EdgeInsets.symmetric(
                           horizontal: 3,
@@ -6696,7 +6680,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                             overflow: TextOverflow.ellipsis,
                             style: Cartoon.userText(
                               size: fontSize + 2,
-                              color: color,
+                              color: color ?? Cartoon.ink,
                               weight: fontWeight,
                             ),
                           ),
@@ -6708,7 +6692,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       Widget bidCell({
                         required String? trumpSuit,
                         required String label,
-                        Color color = Cartoon.ink,
+                        Color? color,
                         bool dealMiss = false,
                       }) {
                         if (dealMiss || trumpSuit == null) {

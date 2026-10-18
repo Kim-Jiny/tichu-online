@@ -180,7 +180,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: Cartoon.ink, width: 1.8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_rounded,
                 color: Cartoon.ink,
                 size: 22,

@@ -86,7 +86,7 @@ class SpectatorHandWithChip extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
+                Icon(Icons.close_rounded, size: 18, color: Cartoon.ink),
               ],
             ),
           ),

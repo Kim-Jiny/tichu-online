@@ -85,14 +85,14 @@ class _RulesScreenState extends State<RulesScreen> {
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: Cartoon.ink, width: 2),
-                              boxShadow: const [
+                              boxShadow: [
                                 BoxShadow(
                                   color: Cartoon.ink,
                                   offset: Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_rounded,
                               color: Cartoon.ink,
                             ),
@@ -1862,9 +1862,7 @@ class _GuideCardImage extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Cartoon.ink, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
         ),
         clipBehavior: Clip.antiAlias,
         child: TichuSpecialArt(asset),

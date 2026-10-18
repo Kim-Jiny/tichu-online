@@ -425,7 +425,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.style, color: Cartoon.ink, size: 15),
+                      Icon(Icons.style, color: Cartoon.ink, size: 15),
                       const SizedBox(width: 4),
                       Text(
                         '${state.drawPileCount}',
@@ -633,7 +633,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 ),
                 GestureDetector(
                   onTap: () => setState(() => _viewersOpen = false),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 20,
                     color: Cartoon.ink,
@@ -1016,7 +1016,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.style, size: 14, color: Cartoon.ink),
+                    Icon(Icons.style, size: 14, color: Cartoon.ink),
                     const SizedBox(width: 3),
                     Text(
                       '${state.drawPileCount}',
@@ -1613,7 +1613,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(
           L10n.of(context).llDiscardedCardsTitle(playerName),
@@ -2076,7 +2076,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.visibility_rounded, size: 15, color: Cartoon.ink),
+            Icon(Icons.visibility_rounded, size: 15, color: Cartoon.ink),
             const SizedBox(width: 6),
             Text(L10n.of(context).llGuardPeek, style: Cartoon.text(size: 13)),
           ],
@@ -2805,7 +2805,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Cartoon.paper,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         side: BorderSide(color: Cartoon.ink, width: 2.5),
       ),
@@ -3225,7 +3225,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (viewingPlayer == null) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -3244,7 +3244,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     if (isPending && !isApproved) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Cartoon.paper,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
           border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -3279,7 +3279,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         onClose: () => setState(() => _viewingPlayerId = null),
         child: Container(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Cartoon.paper,
             borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
             border: Border(top: BorderSide(color: Cartoon.ink, width: 2.2)),
@@ -3393,7 +3393,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         title: Text(l10n.skGameLeaveTitle, style: Cartoon.text(size: 22)),
         // A mid-game-join room hands the seat to a bot instead of ending

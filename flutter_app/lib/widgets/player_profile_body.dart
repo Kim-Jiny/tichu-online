@@ -1522,11 +1522,11 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                       color: Cartoon.cream,
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(color: Cartoon.ink, width: 2),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                       ],
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.history_rounded,
                       size: 26,
                       color: Cartoon.ink,
@@ -1551,14 +1551,11 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                         color: Cartoon.paper,
                         borderRadius: BorderRadius.circular(13),
                         border: Border.all(color: Cartoon.ink, width: 2),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        color: Cartoon.ink,
-                      ),
+                      child: Icon(Icons.close_rounded, color: Cartoon.ink),
                     ),
                   ),
                 ],

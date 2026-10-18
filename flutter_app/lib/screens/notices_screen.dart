@@ -83,14 +83,14 @@ class _NoticesScreenState extends State<NoticesScreen> {
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: Cartoon.ink, width: 2),
-                              boxShadow: const [
+                              boxShadow: [
                                 BoxShadow(
                                   color: Cartoon.ink,
                                   offset: Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_rounded,
                               color: Cartoon.ink,
                             ),
@@ -351,11 +351,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 26,
-                color: Cartoon.ink,
-              ),
+              Icon(Icons.chevron_right_rounded, size: 26, color: Cartoon.ink),
             ],
           ),
         ],
@@ -563,14 +559,14 @@ class _NoticeDetailPage extends StatelessWidget {
                               color: Cartoon.paper,
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(color: Cartoon.ink, width: 2),
-                              boxShadow: const [
+                              boxShadow: [
                                 BoxShadow(
                                   color: Cartoon.ink,
                                   offset: Offset(0, 2),
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_rounded,
                               color: Cartoon.ink,
                             ),

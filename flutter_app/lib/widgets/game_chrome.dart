@@ -29,7 +29,7 @@ class GameNoticeBar extends StatelessWidget {
         color: Color.lerp(color, Colors.white, 0.8),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Cartoon.ink, width: 2),
-        boxShadow: const [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
       ),
       child: Row(
         children: [

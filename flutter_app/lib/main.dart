@@ -416,7 +416,7 @@ ThemeData _buildTheme() {
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: Cartoon.ink, width: 2.2),
+        side: BorderSide(color: Cartoon.ink, width: 2.2),
       ),
     ),
     dividerTheme: DividerThemeData(color: colorScheme.outlineVariant),

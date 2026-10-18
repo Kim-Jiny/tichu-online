@@ -213,11 +213,11 @@ class _RankingScreenState extends State<RankingScreen> {
                   color: Cartoon.paper,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
-                child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
+                child: Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
               ),
             ),
             const SizedBox(width: 12),
@@ -259,7 +259,7 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_month_rounded,
                     size: 20,
                     color: Cartoon.ink,
@@ -272,7 +272,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         isExpanded: true,
                         dropdownColor: Cartoon.paper,
                         borderRadius: BorderRadius.circular(16),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.keyboard_arrow_down_rounded,
                           color: Cartoon.ink,
                         ),
@@ -334,7 +334,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
-              child: const Icon(Icons.refresh_rounded, color: Cartoon.ink),
+              child: Icon(Icons.refresh_rounded, color: Cartoon.ink),
             ),
           ),
         ],
@@ -547,7 +547,7 @@ class _RankingScreenState extends State<RankingScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Cartoon.ink, width: 2),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                 ],
               ),

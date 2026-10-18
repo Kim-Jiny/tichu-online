@@ -329,9 +329,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
               color: Cartoon.paper,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Cartoon.ink, width: 2.2),
-              boxShadow: const [
-                BoxShadow(color: Cartoon.ink, offset: Offset(0, 3)),
-              ],
+              boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 3))],
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -402,9 +400,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
           color: widget.accentColor,
-          border: const Border(
-            bottom: BorderSide(color: Cartoon.ink, width: 2),
-          ),
+          border: Border(bottom: BorderSide(color: Cartoon.ink, width: 2)),
         ),
         child: Row(
           children: [

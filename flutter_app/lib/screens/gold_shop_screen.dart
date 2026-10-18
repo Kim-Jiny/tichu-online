@@ -111,7 +111,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         scrollable: true,
         content: Column(
@@ -231,7 +231,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 _buildHeader(),
                 Expanded(
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Cartoon.paper,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(26),
@@ -273,11 +273,11 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   color: Cartoon.paper,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_back_rounded,
                   color: Cartoon.ink,
                   size: 24,
@@ -300,7 +300,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                   color: Cartoon.cream,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
@@ -603,7 +603,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(26),
-          side: const BorderSide(color: Cartoon.ink, width: 2.5),
+          side: BorderSide(color: Cartoon.ink, width: 2.5),
         ),
         scrollable: true,
         title: Text(
@@ -829,7 +829,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               // price is still resolving (pd == null) — clearer than a disabled
               // "..." that looks broken.
               child: pending
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(

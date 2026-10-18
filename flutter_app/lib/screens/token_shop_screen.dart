@@ -106,11 +106,11 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                   color: Cartoon.paper,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Cartoon.ink, width: 2),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(color: Cartoon.ink, offset: Offset(0, 2)),
                   ],
                 ),
-                child: const Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
+                child: Icon(Icons.arrow_back_rounded, color: Cartoon.ink),
               ),
             ),
             const SizedBox(width: 12),

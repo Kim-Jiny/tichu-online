@@ -323,7 +323,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                                       cursorColor: Cartoon.orangeDeep,
                                       // 입력한 글자는 진한 굵은 고정폭, 예시 글자는 연하고 기울임 —
                                       // 예시가 이미 채워진 코드로 보여 그대로 등록을 누르는 일이 없게.
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'monospace',
                                         fontSize: 21,
                                         fontWeight: FontWeight.w800,
@@ -554,7 +554,7 @@ class CouponTag extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.confirmation_number_rounded,
                 size: 15,
                 color: Cartoon.ink,
@@ -659,7 +659,7 @@ class NoticeCouponBlock extends StatelessWidget {
                               child: SelectableText(
                                 code,
                                 maxLines: 1,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'monospace',
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
@@ -692,7 +692,7 @@ class NoticeCouponBlock extends StatelessWidget {
                                     width: 1.6,
                                   ),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.copy_rounded,
                                   size: 20,
                                   color: Cartoon.ink,

@@ -120,9 +120,11 @@ class SeatChatBubble extends StatelessWidget {
   /// two of them could be read as either one's.
   final bool tail;
 
-  static const _fill = Color(0xE6FFFBF2); // 크림 종이, 90%
-  static const _fillOpaque = Color(0xFFFFFBF2);
-  static const _border = Cartoon.ink;
+  static final _fill = Color(0xE6FFFBF2); // 크림 종이, 90%
+  static final _fillOpaque = Color(0xFFFFFBF2);
+  // 팔레트가 바뀌면 같이 바뀌어야 하므로 getter 다. final 로 두면 앱을
+  // 켤 때의 색이 그대로 굳는다.
+  static Color get _border => Cartoon.ink;
   static const _borderWidth = 1.8;
   static const tailHeight = 7.0;
 

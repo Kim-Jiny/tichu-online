@@ -146,7 +146,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                                 width: 2.5,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.construction_rounded,
                               color: Cartoon.ink,
                               size: 46,

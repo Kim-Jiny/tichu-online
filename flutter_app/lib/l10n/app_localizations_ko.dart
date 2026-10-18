@@ -5328,6 +5328,12 @@ class L10nKo extends L10n {
   String get tokenShopBuy => '구매';
 
   @override
+  String get tokenShopBuying => '구매 중…';
+
+  @override
+  String get tokenShopNotForSale => '판매 종료';
+
+  @override
   String get tokenShopExtend => '연장';
 
   @override

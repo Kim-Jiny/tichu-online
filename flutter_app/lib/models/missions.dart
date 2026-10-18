@@ -188,6 +188,7 @@ class TokenProduct {
     required this.days,
     required this.ownedUntil,
     required this.equipped,
+    this.canBuy = true,
   });
 
   final String key;
@@ -199,6 +200,14 @@ class TokenProduct {
   final int days;
   final DateTime? ownedUntil;
   final bool equipped;
+
+  /// 지금 살 수 있는 상품인가. 서버가 판매를 내리면 false 로 온다.
+  ///
+  /// 읽지 않고 있었다. 그래서 판매 중단된 상품에도 연장 버튼이 살아
+  /// 있었고, 누르면 서버가 not_for_sale 로 거절하는데 앱은 그걸 일반
+  /// 오류로 안내했다 — 토큰이 빠지지는 않지만, 왜 안 되는지 알 수 없다.
+  /// 기본값은 true: 이 필드가 없던 서버와도 지금처럼 동작한다.
+  final bool canBuy;
 
   bool get owned => ownedUntil != null && ownedUntil!.isAfter(DateTime.now());
 
@@ -215,6 +224,7 @@ class TokenProduct {
         ? DateTime.tryParse(j['ownedUntil'] as String)?.toLocal()
         : null,
     equipped: j['equipped'] == true,
+    canBuy: j['canBuy'] != false,
   );
 }
 

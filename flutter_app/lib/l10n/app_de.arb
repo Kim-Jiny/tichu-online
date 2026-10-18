@@ -1954,6 +1954,8 @@
   "tokenShopKindRoomHighlightDesc": "Dein Raum fällt in der Raumliste auf",
   "tokenShopKindBubbleDesc": "Deine Sprechblase über dem Platz sieht besonders aus",
   "tokenShopBuy": "Kaufen",
+  "tokenShopBuying": "Wird gekauft …",
+  "tokenShopNotForSale": "Nicht erhältlich",
   "tokenShopExtend": "Verlängern",
   "tokenShopOwnedUntil": "Bis {date}",
   "@tokenShopOwnedUntil": {

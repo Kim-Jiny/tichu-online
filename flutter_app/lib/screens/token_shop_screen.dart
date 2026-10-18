@@ -364,15 +364,34 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
           Row(
             children: [
               Expanded(
-                child: CartoonButton(
-                  height: 36,
-                  radius: 12,
-                  color: canAfford ? Cartoon.orange : const Color(0xFF9AA5B1),
-                  onPressed: canAfford ? () => game.buyTokenItem(p.key) : null,
-                  child: CartoonButton.label(
-                    p.owned ? l10n.tokenShopExtend : l10n.tokenShopBuy,
-                    size: 14,
-                  ),
+                child: Builder(
+                  builder: (context) {
+                    // 응답을 기다리는 동안 다시 누르면 같은 요청이 한 번 더
+                    // 나가고, 서버는 둘 다 정상 구매로 처리한다 — 토큰이 두
+                    // 번 빠지고 기간도 두 배가 된다.
+                    final pending = game.isTokenShopPending(p.key);
+                    // 판매가 내려간 상품은 서버가 거절한다. 눌리게 두면
+                    // 왜 안 되는지 모른 채 오류만 본다.
+                    final enabled = p.canBuy && canAfford && !pending;
+                    return CartoonButton(
+                      height: 36,
+                      radius: 12,
+                      color: enabled ? Cartoon.orange : const Color(0xFF9AA5B1),
+                      onPressed: enabled
+                          ? () => game.buyTokenItem(p.key)
+                          : null,
+                      child: CartoonButton.label(
+                        !p.canBuy
+                            ? l10n.tokenShopNotForSale
+                            : pending
+                            ? l10n.tokenShopBuying
+                            : (p.owned
+                                  ? l10n.tokenShopExtend
+                                  : l10n.tokenShopBuy),
+                        size: 14,
+                      ),
+                    );
+                  },
                 ),
               ),
               if (p.owned) ...[

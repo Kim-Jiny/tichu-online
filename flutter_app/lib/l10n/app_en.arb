@@ -3239,6 +3239,8 @@
   "tokenShopKindRoomHighlightDesc": "Your room stands out in the room list",
   "tokenShopKindBubbleDesc": "Your chat bubble above your seat gets a special look",
   "tokenShopBuy": "Buy",
+  "tokenShopBuying": "Buying…",
+  "tokenShopNotForSale": "Not for sale",
   "tokenShopExtend": "Extend",
   "tokenShopOwnedUntil": "Until {date}",
   "@tokenShopOwnedUntil": {

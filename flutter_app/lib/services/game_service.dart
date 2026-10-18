@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'iap_service.dart';
 import '../models/player.dart';
+import '../utils/pending_keys.dart';
 import '../utils/mail_status.dart';
 import '../models/room.dart';
 import '../models/game_state.dart';
@@ -70,6 +71,7 @@ class GameService extends ChangeNotifier {
   int _pushPrefsLoadVersion = 0;
   final Map<String, DateTime> _roomInviteCooldowns = {};
   Completer<String?>? _shareInviteLinkCompleter;
+
   /// 탈퇴 요청의 서버 응답(account_deleted)을 기다리는 곳.
   Completer<({bool ok, String? message})>? _deleteAccountCompleter;
   GameStateData? _prevGameState;
@@ -580,15 +582,19 @@ class GameService extends ChangeNotifier {
   // 미션 · 토큰 · 토큰 상점. 판정은 서버가 하고 앱은 상태를 받아 보여 준다.
   MissionsState? missionsState;
   TokenShopState? tokenShopState;
+
   /// 토큰 상점 응답이 무엇에 대한 것인지. 결과 안내 문구를 고르는 데 쓴다.
   TokenShopAction? tokenShopAction;
+
   /// 상점을 받아오는 중인가. false 이고 tokenShopState 가 null 이면 실패다.
   bool tokenShopLoading = false;
   Timer? _tokenShopLoadTimer;
+
   /// 마지막 equip 요청의 key — null 이면 해제 요청이었다.
   String? _lastEquipKey;
 
   bool missionsLoading = false;
+
   /// requestMissions 의 응답 대기 타임아웃. 머리말 참고.
   Timer? _missionsLoadTimer;
 
@@ -800,9 +806,7 @@ class GameService extends ChangeNotifier {
       // 끝난 판의 결과 화면(game_end)도 아직 상태가 남아 있는 동안은 게임 화면이다.
       // 봇끼리 빨리 끝난 판에 들어오면 결과가 아니라 대기실이 보이던 문제.
       final hasAnyBoard =
-          llGameState != null ||
-          skGameState != null ||
-          mightyGameState != null;
+          llGameState != null || skGameState != null || mightyGameState != null;
       if (!hasActiveGame && !hasSpectatorGameState && !hasAnyBoard) {
         return AppDestination.waitingRoom;
       }
@@ -2593,13 +2597,17 @@ class GameService extends ChangeNotifier {
         _network.send({'type': 'get_missions'});
         break;
       case 'token_history':
+        _tokenHistoryLoadTimer?.cancel();
+        _tokenHistoryLoadTimer = null;
         tokenHistoryLoading = false;
         if (data['success'] == true) {
           final rows = [
             for (final r in (data['rows'] as List? ?? const []))
               TokenHistoryEntry.fromJson(Map<String, dynamic>.from(r as Map)),
           ];
-          tokenHistory = data['append'] == true ? [...tokenHistory, ...rows] : rows;
+          tokenHistory = data['append'] == true
+              ? [...tokenHistory, ...rows]
+              : rows;
           tokenHistoryHasMore = data['hasMore'] == true;
           tokenHistoryFailed = false;
         } else {
@@ -2636,6 +2644,15 @@ class GameService extends ChangeNotifier {
             : (_lastEquipKey == null
                   ? TokenShopAction.unequip
                   : TokenShopAction.equip);
+        // 구매 응답일 때만 구매 잠금을 푼다. 장착 응답(token_equip_result)
+        // 은 key 를 담지 않으므로, 이걸 가리지 않으면 다른 상품을 장착한
+        // 응답이 떠 있는 구매의 잠금까지 풀어 버린다.
+        if (type == 'token_buy_result') {
+          _tokenShopPending.end(
+            data['key'] as String?,
+            id: data['reqId'] is int ? data['reqId'] as int : null,
+          );
+        }
         tokenShopResultSeq++;
         notifyListeners();
         break;
@@ -3595,6 +3612,9 @@ class GameService extends ChangeNotifier {
     _missionsLoadTimer = null;
     _tokenShopLoadTimer?.cancel();
     _tokenShopLoadTimer = null;
+    _tokenHistoryLoadTimer?.cancel();
+    _tokenHistoryLoadTimer = null;
+    _tokenShopPending.end(null);
     _pushToggleTimer?.cancel();
     _pushToggleTimer = null;
     _prevGameState = null;
@@ -3977,9 +3997,32 @@ class GameService extends ChangeNotifier {
     _network.send({'type': 'get_token_shop'});
   }
 
+  Timer? _tokenHistoryLoadTimer;
+
+  /// 응답이 오지 않아도 로딩을 끝낸다.
+  ///
+  /// 상점 목록(requestTokenShop)에는 이 안전장치가 있는데 내역에는 없었다.
+  /// 연결이 끊긴 사이에 열면 요청이 유실되고, 그러면 영원히 도는 바퀴만
+  /// 남는다 — 창을 닫았다 다시 열기 전에는 재요청도 없다.
+  void _armTokenHistoryTimeout() {
+    _tokenHistoryLoadTimer?.cancel();
+    _tokenHistoryLoadTimer = Timer(const Duration(seconds: 8), () {
+      if (_disposed) return;
+      if (!tokenHistoryLoading) return;
+      tokenHistoryLoading = false;
+      // 실패도 같이 알린다. 로딩만 끄면 화면이 '내역 없음' 을 띄우는데,
+      // 받지 못한 것과 정말 없는 것은 다르다 — 앞의 경우 다시 받을
+      // 방법이 있다는 걸 알려 줘야 한다.
+      tokenHistoryFailed = true;
+      notifyListeners();
+    });
+  }
+
   /// 첫 장을 새로 받는다. 이미 받은 게 있으면 그대로 보여 주면서 갱신한다.
   void requestTokenHistory() {
     tokenHistoryLoading = true;
+    tokenHistoryFailed = false;
+    _armTokenHistoryTimeout();
     notifyListeners();
     _network.send({'type': 'get_token_history'});
   }
@@ -3988,11 +4031,44 @@ class GameService extends ChangeNotifier {
   void requestMoreTokenHistory() {
     if (tokenHistoryLoading || tokenHistory.isEmpty) return;
     tokenHistoryLoading = true;
+    _armTokenHistoryTimeout();
     notifyListeners();
-    _network.send({'type': 'get_token_history', 'before': tokenHistory.last.id});
+    _network.send({
+      'type': 'get_token_history',
+      'before': tokenHistory.last.id,
+    });
   }
-  void buyTokenItem(String key) =>
-      _network.send({'type': 'buy_token_item', 'key': key});
+
+  /// 지금 서버 응답을 기다리는 상품 키. 없으면 null.
+  ///
+  /// 버튼이 응답을 기다리는 동안에도 눌렸다. 같은 요청이 두 번 나가면
+  /// 서버는 둘 다 정상 구매로 처리하므로(각각은 제대로 된 거래다) 토큰이
+  /// 두 번 빠지고 기간도 두 배가 된다. 60토큰 상품을 두 번 눌러 500 →
+  /// 380, 60일이 되는 것이 확인됐다.
+  ///
+  /// 서버에서 막기 어렵다 — 같은 상품을 연달아 두 번 사는 것 자체는
+  /// 정상이고(기간 연장), 두 요청을 구분할 표식이 없다. 누를 수 없게
+  /// 하는 쪽이 맞다.
+  /// 떠 있는 구매 요청들. 상품 키마다 따로 센다(PendingKeys 설명 참고).
+  late final PendingKeys _tokenShopPending = PendingKeys(
+    onChanged: () {
+      if (_disposed) return;
+      notifyListeners();
+    },
+  );
+
+  /// 이 상품의 구매 응답을 기다리는 중인가.
+  bool isTokenShopPending(String key) => _tokenShopPending.contains(key);
+
+  void buyTokenItem(String key) {
+    // 같은 상품이 이미 떠 있으면 무시한다. 다른 상품은 막지 않는다.
+    if (isTokenShopPending(key)) return;
+    // 번호를 함께 보낸다. 서버가 그대로 돌려주므로, 시간이 지나 버튼을
+    // 다시 열어 준 뒤 눌린 요청과 늦게 도착한 옛 응답을 구별할 수 있다.
+    final id = _tokenShopPending.begin(key);
+    _network.send({'type': 'buy_token_item', 'key': key, 'reqId': id});
+  }
+
   void equipTokenItem(String slot, String? key) {
     // 해제는 key 가 null 로 오는 같은 메시지다. 응답에는 그 구분이 없으므로
     // 보낼 때 기억해 둬야 "장착했어요"와 "해제했어요"를 가를 수 있다.
@@ -5483,6 +5559,8 @@ class GameService extends ChangeNotifier {
     _inquiryBannerTimer?.cancel();
     _missionsLoadTimer?.cancel();
     _tokenShopLoadTimer?.cancel();
+    _tokenHistoryLoadTimer?.cancel();
+    _tokenShopPending.dispose();
     _pushToggleTimer?.cancel();
     super.dispose();
   }

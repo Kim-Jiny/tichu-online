@@ -33,6 +33,11 @@ class _FakeGame extends ChangeNotifier implements GameService {
   String? missionActionReason;
   @override
   int tokenShopResultSeq = 0;
+
+  /// 구매 요청이 떠 있는 동안 버튼이 잠긴다. 화면이 이 값을 읽으므로
+  /// 가짜도 답해야 한다(기본은 '떠 있는 요청 없음').
+  @override
+  bool isTokenShopPending(String key) => false;
   @override
   String? tokenShopReason;
   @override

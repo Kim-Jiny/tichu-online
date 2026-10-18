@@ -9686,7 +9686,16 @@ async function afterTokenEquipChange(ws) {
 /// missions.buy 는 이미 토큰을 깎았으므로, 여기서 던지면 앱은 응답을 못
 /// 받아 돌기만 하고 사용자는 안 산 줄 알고 다시 누른다 — 두 번 깎인다.
 async function handleBuyTokenItem(ws, data) {
-  if (!ws.nickname) return sendTo(ws, { type: 'token_buy_result', success: false, reason: 'login_required' });
+  // 요청 번호를 그대로 돌려준다.
+  //
+  // 앱은 응답이 8초 안 오면 버튼을 다시 열어 준다(영영 잠기지 않게).
+  // 그 뒤 같은 상품을 다시 누르면, 늦게 도착한 첫 응답과 방금 보낸
+  // 요청을 상품 키만으로는 구별할 수 없다 — 옛 응답이 새 요청의 잠금을
+  // 풀어 버린다. 번호를 되돌려 주면 앱이 "내가 기다리던 그 응답인지"를
+  // 가릴 수 있다. 번호를 안 보내는 앱에는 null 이 가고, 앱은 지금처럼
+  // 키로만 맞춘다.
+  const reqId = data.reqId ?? null;
+  if (!ws.nickname) return sendTo(ws, { type: 'token_buy_result', success: false, reason: 'login_required', key: data.key ?? null, reqId });
   const result = await missions.buy(ws.nickname, String(data.key || ''));
   let shop = null;
   try {
@@ -9695,7 +9704,7 @@ async function handleBuyTokenItem(ws, data) {
   } catch (e) {
     console.error('[missions] post-buy refresh failed:', e.message);
   }
-  sendTo(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, shop });
+  sendTo(ws, { type: 'token_buy_result', success: result.success, reason: result.reason || null, key: data.key, reqId, shop });
 }
 
 /// 장착·해제(key 가 null 이면 해제).

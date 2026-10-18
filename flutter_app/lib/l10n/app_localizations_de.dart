@@ -5491,6 +5491,12 @@ class L10nDe extends L10n {
   String get tokenShopBuy => 'Kaufen';
 
   @override
+  String get tokenShopBuying => 'Wird gekauft …';
+
+  @override
+  String get tokenShopNotForSale => 'Nicht erhältlich';
+
+  @override
   String get tokenShopExtend => 'Verlängern';
 
   @override

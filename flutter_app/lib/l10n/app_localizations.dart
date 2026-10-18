@@ -9585,6 +9585,18 @@ abstract class L10n {
   /// **'Buy'**
   String get tokenShopBuy;
 
+  /// No description provided for @tokenShopBuying.
+  ///
+  /// In en, this message translates to:
+  /// **'Buying…'**
+  String get tokenShopBuying;
+
+  /// No description provided for @tokenShopNotForSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Not for sale'**
+  String get tokenShopNotForSale;
+
   /// No description provided for @tokenShopExtend.
   ///
   /// In en, this message translates to:

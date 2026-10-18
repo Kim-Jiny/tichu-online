@@ -5454,6 +5454,12 @@ class L10nEn extends L10n {
   String get tokenShopBuy => 'Buy';
 
   @override
+  String get tokenShopBuying => 'Buying…';
+
+  @override
+  String get tokenShopNotForSale => 'Not for sale';
+
+  @override
   String get tokenShopExtend => 'Extend';
 
   @override

@@ -119,12 +119,23 @@ async function sendCampaign(campaign, deps) {
     console.error(`[campaign] send threw for #${claimed.id}:`, err.message);
     return giveUp(REFUSED.SEND_THREW);
   }
-  await markFcmTokensInvalid(push.invalidUserIds || []);
-
   // 하나라도 전달됐으면 바로 연다. 뒤의 1인분 집계는 전체를 훑어 가장 잘
   // 죽는 구간이고, 보상 수령 게이트가 읽는 건 이 플래그 하나다.
   let opened = { success: true };
   if (push.successCount > 0) opened = await openCampaignForClaims(claimed.id);
+
+  // 죽은 FCM 토큰 정리. 여는 일보다 뒤에 두고, 실패해도 넘어간다.
+  //
+  // 전에는 이 줄이 위에 있었다. 푸시는 이미 나갔는데 여기서 DB 가 한 번
+  // 흔들리면 그대로 던져서, 캠페인이 'sending' 에 갇히고 멀쩡히 푸시를
+  // 받은 사람들까지 보상을 못 받았다 — 알림을 열어 보니 받을 게 없는
+  // 상태다. 이건 다음 발송을 조금 비효율적으로 만들 뿐인 뒷정리이지,
+  // 보상을 막을 만한 일이 아니다.
+  try {
+    await markFcmTokensInvalid(push.invalidUserIds || []);
+  } catch (err) {
+    console.error(`[campaign] token cleanup failed for #${claimed.id}:`, err.message);
+  }
 
   const byId = new Map(audience.map((u) => [u.id, u.nickname]));
   const recorded = await recordCampaignSend(claimed.id,

@@ -178,7 +178,7 @@ void showPlayerProfileDialog(
                         decoration: BoxDecoration(
                           color: banner == null
                               ? null
-                              : Colors.white.withValues(alpha: 0.95),
+                              : bannerSheet(banner).withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(

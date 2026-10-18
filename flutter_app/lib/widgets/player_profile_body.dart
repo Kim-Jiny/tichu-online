@@ -576,7 +576,11 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 19, color: on ? Colors.white : Cartoon.ink),
+                Icon(
+                  icon,
+                  size: 19,
+                  color: on ? Cartoon.inkOn(Cartoon.orange) : Cartoon.ink,
+                ),
                 const SizedBox(width: 5),
                 on
                     ? Cartoon.outlinedText(label, size: 15)
@@ -788,12 +792,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
 
   /// A game's colour, dark enough to be read as text on its own tint.
   static Color _cardAccent(String gameType) =>
-      Color.lerp(gameTypeColor(gameType), Colors.black, 0.45)!;
+      Color.lerp(gameTypeColor(gameType), Cartoon.ink, 0.45)!;
 
   /// The same colour as a wash behind the card.
   static Color _cardTint(String gameType) => Color.alphaBlend(
     gameTypeColor(gameType).withValues(alpha: 0.10),
-    Colors.white,
+    Cartoon.paper,
   );
 
   /// 시즌 랭크·전적 한 줄. 상자는 없다 — 바깥 [_statsPanel] 안에서 구분선으로 이어진다.
@@ -1030,14 +1034,14 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   /// amber of a desertion) sat at 3.6:1 against their own pill at 0.38, under
   /// the 4.5:1 that 12px text needs. This clears 4.8:1 for all five.
   static Color _outcomeInk(_MatchOutcome outcome) =>
-      Color.lerp(_outcomeColor(outcome), Colors.black, 0.5)!;
+      Color.lerp(_outcomeColor(outcome), Cartoon.ink, 0.5)!;
 
   /// The outcome colour washed towards white. Two strengths are in use: a pale
   /// one for a whole card, a stronger one for the pill sitting on it.
   static Color _outcomeTint(_MatchOutcome outcome, double amount) =>
       Color.alphaBlend(
         _outcomeColor(outcome).withValues(alpha: amount),
-        Colors.white,
+        Cartoon.paper,
       );
 
   /// One match.
@@ -1509,7 +1513,7 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
             label,
             style: Cartoon.text(
               size: 14.5,
-              color: on ? Colors.white : Cartoon.ink,
+              color: on ? Cartoon.inkOn(color) : Cartoon.ink,
             ),
           ),
         ),

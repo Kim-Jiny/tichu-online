@@ -56,3 +56,32 @@ Color onBannerAccent(
   if (override != null) return override;
   return isDarkBanner(gradient) ? Colors.white : light;
 }
+
+/// 배너를 쓴 프로필 팝업에서, 기록이 얹히는 판의 색.
+///
+/// 흰색으로 박아두면 배너가 머리글과 테두리로만 남는다 — 팝업 가운데를
+/// 다 차지하는 판이 흰색이니, 그 사람 배너를 보여주려던 뜻이 거의
+/// 사라진다. 어두운 한 벌에서는 더 나쁘다: 판은 흰데 그 위의 글자는
+/// 팔레트 잉크(밝은 크림)라 아무것도 읽히지 않는다.
+///
+/// 그래서 판은 팔레트의 종이색에서 출발해 배너 쪽으로 조금 당긴다.
+/// 밝은 한 벌에서는 흰 판에 그 배너의 기운이 돌고, 어두운 한 벌에서는
+/// 어두운 판이 되어 팔레트 잉크가 그대로 읽힌다. 어느 쪽이든 판의
+/// 밝기는 팔레트가 정하고, 색조만 배너가 정한다.
+///
+/// 0.14 만 당긴다. 배너가 어느 배너인지 보일 만큼은 되어야 하고, 판
+/// 위에 얹힌 승패색·등급색의 뜻을 흐릴 만큼은 안 되어야 한다.
+Color bannerSheet(LinearGradient gradient) {
+  if (gradient.colors.isEmpty) return Cartoon.paper;
+  var r = 0.0;
+  var g = 0.0;
+  var b = 0.0;
+  for (final c in gradient.colors) {
+    r += c.r;
+    g += c.g;
+    b += c.b;
+  }
+  final n = gradient.colors.length;
+  final average = Color.from(alpha: 1, red: r / n, green: g / n, blue: b / n);
+  return Color.lerp(Cartoon.paper, average, 0.14)!;
+}

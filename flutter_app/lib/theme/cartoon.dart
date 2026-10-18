@@ -52,6 +52,30 @@ const CartoonPalette cartoonLight = CartoonPalette(
   skyBottom: Color(0xFFFFF1D6),
 );
 
+/// 어두운 바탕용 한 벌.
+///
+/// 밝은 한 벌을 그대로 뒤집지 않았다. 완전한 검정·흰색은 이 앱의 두꺼운
+/// 테두리와 단색 그림자에서 너무 날카롭게 보인다. 바탕은 푸른 기가 도는
+/// 짙은 남색, 글자는 살짝 누런 흰색으로 둬서 원래의 따뜻한 결을 남긴다.
+///
+/// 대비는 글자(ink)와 패널(paper) 사이에서 가장 중요하다. 글자가 패널
+/// 위에 놓이기 때문이다 — 그 둘의 대비는 테스트가 지킨다.
+const CartoonPalette cartoonDark = CartoonPalette(
+  // 글자·테두리·그림자. 순백(#FFFFFF)이 아니라 살짝 따뜻한 쪽.
+  ink: Color(0xFFF0EADC),
+  // 한 단계 낮은 바탕(칩, 카드 안쪽). 패널보다 밝아야 층이 보인다.
+  cream: Color(0xFF2B3550),
+  // 패널 바탕.
+  paper: Color(0xFF1E2740),
+  // 기본 배경 그라데이션.
+  //
+  // 위가 더 어둡고 아래가 패널에 가깝다 — 밝은 한 벌도 같은 구조다
+  // (하늘색 1.45 → 크림 1.08). 패널과 배경의 대비가 작은 것은 이 앱의
+  // 원래 성질이고, 층은 두꺼운 테두리와 단색 그림자가 만든다.
+  skyTop: Color(0xFF0C1120),
+  skyBottom: Color(0xFF1B2440),
+);
+
 class Cartoon {
   Cartoon._();
 
@@ -70,6 +94,17 @@ class Cartoon {
 
   static CartoonPalette get palette => _palette;
 
+  /// 한 벌이 바뀌었음을 알린다.
+  ///
+  /// cartoonTheme() 이 만든 ThemeData 안에는 색이 '값' 으로 박힌다
+  /// (다이얼로그 배경, 아이콘 색 등). 그래서 팔레트만 바꾸면 화면 글자는
+  /// 따라오는데 다이얼로그는 옛 색 그대로 남는다 — 밝은 팝업에 밝은
+  /// 글자가 얹혀 아무것도 안 보였다.
+  ///
+  /// MaterialApp 을 GameService 로 다시 그리게 하면 게임 상태가 바뀔
+  /// 때마다 앱 전체가 다시 그려진다. 팔레트만 보는 신호를 따로 둔다.
+  static final ValueNotifier<int> paletteRevision = ValueNotifier<int>(0);
+
   /// 색 한 벌을 통째로 갈아 끼운다. 테마를 바꿀 때 부른다.
   ///
   /// 돌려주는 값은 "바뀌었는가" 다. 안 바뀌었으면 화면을 다시 그릴 이유가
@@ -77,6 +112,7 @@ class Cartoon {
   static bool usePalette(CartoonPalette next) {
     if (identical(_palette, next)) return false;
     _palette = next;
+    paletteRevision.value++;
     return true;
   }
 
@@ -107,6 +143,32 @@ class Cartoon {
   /// 외곽선은 획 '가운데' 에 그려지므로 절반이 안쪽을 먹는다. 36~42 에서는
   /// 10~12px 이 되어 Jua 의 획보다 두꺼워지고, 속이 남지 않아 글자가
   /// 뭉개진다. 큰 글자를 쓸 때는 [strokeWidth] 로 직접 주면 된다.
+  /// 강조색을 바탕색 쪽으로 섞어 만든 연한 면.
+  ///
+  /// 탭 아이콘 바탕처럼 "주황을 옅게 깔아 둔" 자리에 쓴다. 전에는
+  /// Colors.white 와 섞었는데, 어두운 한 벌에서도 흰색이라 그 자리만
+  /// 환하게 남았다.
+  ///
+  /// 밝은 한 벌에서는 paper 가 거의 흰색(#FFFBF2)이라 눈에 띄는 차이가
+  /// 없다 — 섞는 대상만 팔레트를 따라가게 바꾼 것이다.
+  static Color tint(Color accent, double amount) =>
+      Color.lerp(accent, paper, amount)!;
+
+  /// 글자 외곽선의 색.
+  ///
+  /// 팔레트의 ink 를 쓰면 안 된다. 외곽선이 하는 일은 '바탕과 구분' 이
+  /// 아니라 '채움색을 또렷하게 세우는 것' 이라, 채움색과 대비돼야 한다.
+  /// 어두운 한 벌에서 ink 는 밝은색이 되는데, 채움은 대개 흰색이라 흰
+  /// 글자에 밝은 테두리가 둘러져 회색 자국처럼 보였다.
+  ///
+  /// 그래서 채움색의 밝기로 정한다. 밝은 한 벌에서는 채움이 거의 항상
+  /// 밝은색이라 지금까지와 같은 진한 갈색이 나온다 — 화면이 바뀌지 않는다.
+  static Color _outlineFor(Color fill) =>
+      fill.computeLuminance() > 0.5 ? _outlineDark : _outlineLight;
+
+  static const Color _outlineDark = Color(0xFF3B2A20);
+  static const Color _outlineLight = Color(0xFFF2ECE0);
+
   static Widget outlinedText(
     String text, {
     double size = 32,
@@ -129,7 +191,7 @@ class Cartoon {
               ..style = PaintingStyle.stroke
               ..strokeWidth = strokeWidth ?? size * 0.28
               ..strokeJoin = StrokeJoin.round
-              ..color = stroke ?? ink)
+              ..color = stroke ?? _outlineFor(fill))
           : null,
     );
     return Stack(

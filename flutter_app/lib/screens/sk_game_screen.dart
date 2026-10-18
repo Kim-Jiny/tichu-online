@@ -2470,9 +2470,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           decoration:
               gamePillDecoration(
                 radius: 12,
-                color: selected
-                    ? Color.lerp(color, Colors.white, 0.8)
-                    : Cartoon.cream,
+                color: selected ? Cartoon.tint(color, 0.8) : Cartoon.cream,
               ).copyWith(
                 border: Border.all(
                   color: selected ? color : Cartoon.ink.withValues(alpha: 0.35),

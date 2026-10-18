@@ -422,7 +422,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: Color.lerp(color, Colors.white, 0.5),
+            color: Cartoon.tint(color, 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: Cartoon.ink, size: 22),
@@ -788,7 +788,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         width: box,
         height: box,
         decoration: BoxDecoration(
-          color: Color.lerp(accent, Colors.white, 0.55),
+          color: Cartoon.tint(accent, 0.55),
           borderRadius: BorderRadius.circular(r),
           border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
@@ -855,7 +855,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         height: box,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Color.lerp(color, Colors.white, 0.55),
+          color: Cartoon.tint(color, 0.55),
           borderRadius: BorderRadius.circular(_headerRadiusFor(box)),
           border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],
@@ -2616,7 +2616,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
       decoration: BoxDecoration(
-        color: Color.lerp(color, Colors.white, 0.75),
+        color: Cartoon.tint(color, 0.75),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 1.6),
       ),

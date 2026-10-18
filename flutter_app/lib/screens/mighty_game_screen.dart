@@ -909,9 +909,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           decoration:
               gamePillDecoration(
                 radius: 12,
-                color: selected
-                    ? Color.lerp(color, Colors.white, 0.8)
-                    : Cartoon.cream,
+                color: selected ? Cartoon.tint(color, 0.8) : Cartoon.cream,
               ).copyWith(
                 border: Border.all(
                   color: selected ? color : Cartoon.ink.withValues(alpha: 0.35),
@@ -3369,7 +3367,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         decoration:
             gamePillDecoration(
               radius: 14,
-              color: on ? Color.lerp(color, Colors.white, 0.75) : Cartoon.cream,
+              color: on ? Cartoon.tint(color, 0.75) : Cartoon.cream,
             ).copyWith(
               border: Border.all(
                 color: on
@@ -3981,7 +3979,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                               gamePillDecoration(
                                 radius: 12,
                                 color: isSelected
-                                    ? Color.lerp(entry.$3, Colors.white, 0.78)
+                                    ? Cartoon.tint(entry.$3, 0.78)
                                     : Cartoon.cream,
                               ).copyWith(
                                 border: Border.all(
@@ -5341,9 +5339,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         decoration:
             gamePillDecoration(
               radius: 12,
-              color: selected
-                  ? Color.lerp(accent, Colors.white, 0.72)
-                  : Cartoon.cream,
+              color: selected ? Cartoon.tint(accent, 0.72) : Cartoon.cream,
             ).copyWith(
               border: Border.all(
                 color: selected ? accent : Cartoon.ink.withValues(alpha: 0.35),

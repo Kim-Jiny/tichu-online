@@ -161,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Color.lerp(tone, Colors.white, 0.75),
+            color: Cartoon.tint(tone, 0.75),
             borderRadius: BorderRadius.circular(13),
             border: Border.all(color: Cartoon.ink, width: 1.6),
           ),
@@ -821,9 +821,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       vertical: 11,
                     ),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? Color.lerp(color, Colors.white, 0.8)
-                          : Colors.white,
+                      color: selected ? Cartoon.tint(color, 0.8) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Cartoon.ink, width: 1.6),
                       boxShadow: [
@@ -1163,7 +1161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Color.lerp(tone, Colors.white, 0.78),
+              color: Cartoon.tint(tone, 0.78),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: enabled

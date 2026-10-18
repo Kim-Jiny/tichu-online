@@ -21,6 +21,7 @@ import 'profile_store.dart';
 import 'restore_sync_tracker.dart';
 import 'sfx_service.dart';
 import '../utils/notice_badge.dart';
+import '../theme/cartoon.dart';
 
 enum AppDestination {
   lobby,
@@ -296,7 +297,28 @@ class GameService extends ChangeNotifier {
   bool? shopActionSuccess;
 
   // Equipped theme
-  String? equippedTheme;
+  String? _equippedTheme;
+
+  String? get equippedTheme => _equippedTheme;
+
+  /// 테마가 바뀌면 색 한 벌도 같이 갈아 끼운다.
+  ///
+  /// 대입을 setter 한 곳으로 모은 이유: 테마가 바뀌는 곳이 네 군데다
+  /// (장착 응답, 해제, 상점 결과, 로그아웃). 각자 팔레트를 바꾸게 두면
+  /// 한 곳만 빠져도 배경은 어두운데 글자는 어두운 상태가 된다.
+  set equippedTheme(String? key) {
+    _equippedTheme = key;
+    Cartoon.usePalette(isDarkThemeKey(key) ? cartoonDark : cartoonLight);
+  }
+
+  /// 어두운 색 한 벌을 쓰는 테마.
+  ///
+  /// 이름 규칙(theme_dark_*)이 아니라 목록으로 둔다. 규칙으로 하면
+  /// 'theme_darkwood' 같은 이름이 생겼을 때 조용히 끌려 들어간다.
+  static const Set<String> darkThemeKeys = {'theme_dark_midnight'};
+
+  static bool isDarkThemeKey(String? key) =>
+      key != null && darkThemeKeys.contains(key);
 
   // Equipped title
   String? equippedTitle;

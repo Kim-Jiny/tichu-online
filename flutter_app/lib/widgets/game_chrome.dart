@@ -26,7 +26,7 @@ class GameNoticeBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(8 * scale, 8 * scale, 14 * scale, 8 * scale),
       decoration: BoxDecoration(
-        color: Color.lerp(color, Colors.white, 0.8),
+        color: Cartoon.tint(color, 0.8),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Cartoon.ink, width: 2),
         boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],

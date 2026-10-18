@@ -470,49 +470,63 @@ class TichuApp extends StatelessWidget {
         ),
       ],
       child: Consumer<LocaleService>(
-        builder: (context, localeService, _) => MaterialApp(
-          navigatorKey: appNavigatorKey,
-          title: 'Tichu Online',
-          debugShowCheckedModeBanner: false,
-          // The Korean delegate goes first so it wins for L10n: it settles
-          // 이(가)/을(를) by the nickname's final consonant.
-          localizationsDelegates: const [
-            L10nJosaDelegate(),
-            ...L10n.localizationsDelegates,
-          ],
-          supportedLocales: L10n.supportedLocales,
-          locale: localeService.userSelectedLocale,
-          localeResolutionCallback: (deviceLocale, supportedLocales) {
-            if (deviceLocale != null) {
-              for (final supported in supportedLocales) {
-                if (supported.languageCode == deviceLocale.languageCode) {
-                  return supported;
+        // 팔레트가 바뀌면 MaterialApp 을 다시 만든다. ThemeData 안에는
+        // 색이 값으로 박혀서(다이얼로그 배경·아이콘 색), 한 번 만들고
+        // 두면 어두운 테마를 켰을 때 팝업만 밝은 채로 남는다.
+        //
+        // GameService 로 다시 그리면 게임 상태가 바뀔 때마다 앱 전체가
+        // 다시 그려진다. 팔레트만 보는 신호를 쓴다.
+        builder: (context, localeService, _) => ValueListenableBuilder<int>(
+          valueListenable: Cartoon.paletteRevision,
+          builder: (context, _, _) => MaterialApp(
+            navigatorKey: appNavigatorKey,
+            title: 'Tichu Online',
+            debugShowCheckedModeBanner: false,
+            // The Korean delegate goes first so it wins for L10n: it settles
+            // 이(가)/을(를) by the nickname's final consonant.
+            localizationsDelegates: const [
+              L10nJosaDelegate(),
+              ...L10n.localizationsDelegates,
+            ],
+            supportedLocales: L10n.supportedLocales,
+            locale: localeService.userSelectedLocale,
+            localeResolutionCallback: (deviceLocale, supportedLocales) {
+              if (deviceLocale != null) {
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == deviceLocale.languageCode) {
+                    return supported;
+                  }
                 }
               }
-            }
-            return const Locale('en');
-          },
-          builder: (context, child) {
-            final media = MediaQuery.of(context);
-            final platform = Theme.of(context).platform;
-            final currentScale = media.textScaler.scale(1.0);
-            final adjustedScale = platform == TargetPlatform.android
-                ? (currentScale * 0.97).clamp(0.9, 1.5)
-                : currentScale;
-            final scaled = MediaQuery(
-              data: media.copyWith(
-                textScaler: TextScaler.linear(adjustedScale),
-              ),
-              child: child ?? const SizedBox.shrink(),
-            );
-            final sized = _isDesktopWeb ? _WebMinHeight(child: scaled) : scaled;
-            // 미션을 깨면 어느 화면에서든 알림이 내려온다.
-            return MissionToastHost(child: sized);
-          },
-          // 앱 전체 기본을 카툰으로: 화면마다 따로 씌우지 않은 다이얼로그·시트·
-          // 버튼·입력칸도 같은 모양이 된다.
-          theme: cartoonTheme(_buildTheme()),
-          home: const _OrientationGate(child: _EntryScreen()),
+              return const Locale('en');
+            },
+            builder: (context, child) {
+              final media = MediaQuery.of(context);
+              final platform = Theme.of(context).platform;
+              final currentScale = media.textScaler.scale(1.0);
+              final adjustedScale = platform == TargetPlatform.android
+                  ? (currentScale * 0.97).clamp(0.9, 1.5)
+                  : currentScale;
+              final scaled = MediaQuery(
+                data: media.copyWith(
+                  textScaler: TextScaler.linear(adjustedScale),
+                ),
+                child: child ?? const SizedBox.shrink(),
+              );
+              final sized = _isDesktopWeb
+                  ? _WebMinHeight(child: scaled)
+                  : scaled;
+              // 미션을 깨면 어느 화면에서든 알림이 내려온다.
+              return MissionToastHost(child: sized);
+            },
+            // 앱 전체 기본을 카툰으로: 화면마다 따로 씌우지 않은 다이얼로그·시트·
+            // 버튼·입력칸도 같은 모양이 된다.
+            // 팔레트가 바뀌면 다시 계산해야 한다. ThemeData 안에는 색이
+            // 값으로 박히므로(다이얼로그 배경 등), 한 번 만들고 두면
+            // 어두운 테마를 켰을 때 팝업만 밝은 채로 남는다.
+            theme: cartoonTheme(_buildTheme()),
+            home: const _OrientationGate(child: _EntryScreen()),
+          ),
         ),
       ),
     );

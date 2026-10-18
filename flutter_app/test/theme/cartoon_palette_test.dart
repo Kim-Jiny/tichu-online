@@ -65,6 +65,112 @@ void main() {
     });
   });
 
+  group('외곽선 글자', () {
+    // 외곽선이 하는 일은 '바탕과 구분' 이 아니라 '채움색을 또렷하게
+    // 세우는 것' 이다. 그래서 팔레트가 아니라 채움색을 따라야 한다.
+    //
+    // 처음에는 ink 를 썼다. 어두운 한 벌에서 ink 가 밝아지니, 흰 글자에
+    // 밝은 테두리가 둘러져 회색 자국처럼 보였다.
+    Color strokeOf(Widget w) {
+      final stack = w as Stack;
+      final outline = stack.children.first as Text;
+      return outline.style!.foreground!.color;
+    }
+
+    test('밝은 채움에는 진한 테두리 — 두 한 벌 모두', () {
+      for (final p in [cartoonLight, cartoonDark]) {
+        Cartoon.usePalette(p);
+        final c = strokeOf(Cartoon.outlinedText('가', fill: Colors.white));
+        expect(
+          c.computeLuminance(),
+          lessThan(0.2),
+          reason: '흰 글자에 밝은 테두리가 둘러진다',
+        );
+      }
+    });
+
+    test('어두운 채움에는 밝은 테두리', () {
+      final c = strokeOf(
+        Cartoon.outlinedText('가', fill: const Color(0xFF221100)),
+      );
+      expect(c.computeLuminance(), greaterThan(0.6));
+    });
+
+    test('넘긴 테두리색은 그대로', () {
+      final c = strokeOf(
+        Cartoon.outlinedText('가', fill: Colors.white, stroke: Cartoon.red),
+      );
+      expect(c.toARGB32(), Cartoon.red.toARGB32());
+    });
+  });
+
+  group('팔레트가 바뀌면 신호를 보낸다', () {
+    // ThemeData 안에는 색이 값으로 박힌다(다이얼로그 배경 등). 신호가
+    // 없으면 화면 글자는 따라오는데 팝업만 옛 색으로 남는다.
+    test('바뀔 때만 올라간다', () {
+      final before = Cartoon.paletteRevision.value;
+      Cartoon.usePalette(cartoonDark);
+      expect(Cartoon.paletteRevision.value, before + 1);
+      Cartoon.usePalette(cartoonDark);
+      expect(
+        Cartoon.paletteRevision.value,
+        before + 1,
+        reason: '같은 한 벌인데 올라갔다',
+      );
+      Cartoon.usePalette(cartoonLight);
+      expect(Cartoon.paletteRevision.value, before + 2);
+    });
+  });
+
+  group('어두운 한 벌', () {
+    // 밝은 한 벌을 그대로 뒤집지 않았다. 이 앱은 두꺼운 테두리와 단색
+    // 그림자로 층을 만들기 때문에, 순백·순흑은 너무 날카롭다.
+    double lum(Color c) => c.computeLuminance();
+    double ratio(Color a, Color b) {
+      final x = [lum(a), lum(b)]..sort();
+      return (x[1] + 0.05) / (x[0] + 0.05);
+    }
+
+    test('글자와 패널의 대비가 밝은 한 벌에 맞먹는다', () {
+      final light = ratio(cartoonLight.ink, cartoonLight.paper);
+      final dark = ratio(cartoonDark.ink, cartoonDark.paper);
+      expect(dark, greaterThanOrEqualTo(7.0), reason: '글자가 패널 위에서 안 읽힌다');
+      expect(
+        dark,
+        greaterThan(light * 0.8),
+        reason: '밝은 한 벌($light)보다 많이 떨어진다($dark)',
+      );
+    });
+
+    test('칩(cream)도 글자가 읽힌다', () {
+      expect(
+        ratio(cartoonDark.ink, cartoonDark.cream),
+        greaterThanOrEqualTo(7.0),
+      );
+    });
+
+    test('바탕끼리는 층 순서가 맞는다', () {
+      // 패널이 배경보다 밝아야 떠 보인다. 밝은 한 벌에서는 반대로
+      // 패널이 더 밝다 — 어두운 쪽도 같은 방향이어야 한다.
+      expect(
+        lum(cartoonDark.paper),
+        greaterThan(lum(cartoonDark.skyTop)),
+        reason: '패널이 배경보다 어둡다 — 가라앉아 보인다',
+      );
+      expect(
+        lum(cartoonDark.cream),
+        greaterThan(lum(cartoonDark.paper)),
+        reason: '칩이 패널보다 어둡다',
+      );
+    });
+
+    test('정말 어둡다', () {
+      expect(lum(cartoonDark.paper), lessThan(0.2));
+      expect(lum(cartoonDark.skyTop), lessThan(0.2));
+      expect(lum(cartoonDark.ink), greaterThan(0.6), reason: '글자가 안 밝다');
+    });
+  });
+
   group('공용 헬퍼가 팔레트를 따라간다', () {
     test('글자 기본색', () {
       expect(Cartoon.text().color, const Color(0xFF3B2A20));

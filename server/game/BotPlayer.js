@@ -1483,13 +1483,23 @@ function handleFollowStraight(state, cards, normalCards, combos, lastValue, last
       // Phoenix extends the straight at top or fills a gap
       // The effective high value is the max value that the straight reaches
       const normalVals = straight.filter(c => c !== 'special_phoenix').map(c => getCardValue(c)).sort((a, b) => a - b);
-      let effectiveHigh = normalVals[normalVals.length - 1];
+      const top = normalVals[normalVals.length - 1];
+      let effectiveHigh = top;
       // Check if phoenix extends at top (all consecutive without gap)
       let hasGap = false;
       for (let i = 1; i < normalVals.length; i++) {
         if (normalVals[i] - normalVals[i-1] === 2) hasGap = true;
       }
-      if (!hasGap) effectiveHigh = normalVals[normalVals.length - 1] + 1;
+      // Phoenix can only extend upward while there is room above the top card.
+      // A straight tops out at the Ace (TichuGame: `start + L - 1 <= 14`), so
+      // with an Ace already in hand the phoenix has to fill in below and the
+      // high value does not move.
+      //
+      // Without this cap the bot read J-Q-K-A + phoenix as a 15-high straight
+      // and played it onto a 10-J-Q-K-A (14-high) trick, which the engine
+      // rejects with game_combo_cannot_beat — the same straight cannot beat
+      // itself. Rare (about 1 in 30k plays) but it wasted the bot's turn.
+      if (!hasGap && top < 14) effectiveHigh = top + 1;
 
       if (effectiveHigh > lastValue) {
         if (straight.length === cards.length || trickPts >= 10 || minOppCards <= 3) {

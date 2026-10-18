@@ -42,6 +42,13 @@ class Cartoon {
   static const double shadow = 3;
 
   /// 외곽선 + 채움을 겹쳐 그린 글자. 어떤 배경 위에서도 읽힌다.
+  /// 외곽선을 두른 Jua 글자.
+  ///
+  /// [strokeWidth] 를 넘기지 않으면 글자 크기에 비례한다(0.28). 그 비율은
+  /// 버튼·제목 크기(11~30)에 맞춰 둔 값이고, 더 큰 글자에서는 두꺼워진다 —
+  /// 외곽선은 획 '가운데' 에 그려지므로 절반이 안쪽을 먹는다. 36~42 에서는
+  /// 10~12px 이 되어 Jua 의 획보다 두꺼워지고, 속이 남지 않아 글자가
+  /// 뭉개진다. 큰 글자를 쓸 때는 [strokeWidth] 로 직접 주면 된다.
   static Widget outlinedText(
     String text, {
     double size = 32,
@@ -50,6 +57,7 @@ class Cartoon {
     double letterSpacing = 0,
     TextAlign align = TextAlign.center,
     int? maxLines,
+    double? strokeWidth,
   }) {
     TextStyle style({required bool outline}) => TextStyle(
       fontFamily: font,
@@ -61,7 +69,7 @@ class Cartoon {
       foreground: outline
           ? (Paint()
               ..style = PaintingStyle.stroke
-              ..strokeWidth = size * 0.28
+              ..strokeWidth = strokeWidth ?? size * 0.28
               ..strokeJoin = StrokeJoin.round
               ..color = stroke)
           : null,

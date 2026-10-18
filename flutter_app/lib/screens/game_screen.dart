@@ -25,6 +25,7 @@ import '../widgets/connection_overlay.dart';
 import '../widgets/draggable_chat_panel.dart';
 import '../widgets/game_chrome.dart';
 import '../widgets/spectator_controls.dart';
+import '../widgets/spectator_bottom_fill.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../widgets/mid_game_join.dart';
@@ -408,166 +409,191 @@ class _GameScreenState extends State<GameScreen> {
                 colors: themeColors,
               ),
             ),
-            child: SafeArea(
-              bottom: true,
-              child: Consumer<GameService>(
-                builder: (context, game, _) {
-                  if (session.isRestoring || _waitingForRoomRecovery) {
-                    final l10n = L10n.of(context);
-                    return _buildRecoveryLoading(
-                      title: session.isRestoring
-                          ? l10n.gameRestoringGame
-                          : l10n.gameCheckingState,
-                      subtitle: session.isRestoring
-                          ? localizeRestorePhase(session, l10n)
-                          : l10n.gameRecheckingRoomState,
-                    );
-                  }
-
-                  final state = game.gameState;
-                  if (state == null) {
-                    if (game.hasRoom) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          _recoverRoomState();
+            // 손패 창은 SafeArea 안에 그려지므로, 홈 바가 있는 기기에서는
+            // 창 아래 안전 영역에 배경 그라데이션이 그대로 비친다 — 창이
+            // 거기서 잘린 것처럼 보인다. 그 띠를 창과 같은 색으로 채운다.
+            // (스컬킹 화면에서 같은 것을 고쳤고, 같은 위젯을 쓴다.)
+            child: Stack(
+              children: [
+                SpectatorBottomFill(
+                  // 창이 보이는 동안만. 복구 로딩이나 다른 화면으로 넘어가는
+                  // 중에는 창이 없으므로 띠만 남으면 그게 더 어색하다.
+                  when: (g) =>
+                      g.gameState != null &&
+                      g.currentDestination == AppDestination.game,
+                  color: (g) => _bottomAreaColor(g.gameState),
+                ),
+                Positioned.fill(
+                  child: SafeArea(
+                    bottom: true,
+                    child: Consumer<GameService>(
+                      builder: (context, game, _) {
+                        if (session.isRestoring || _waitingForRoomRecovery) {
+                          final l10n = L10n.of(context);
+                          return _buildRecoveryLoading(
+                            title: session.isRestoring
+                                ? l10n.gameRestoringGame
+                                : l10n.gameCheckingState,
+                            subtitle: session.isRestoring
+                                ? localizeRestorePhase(session, l10n)
+                                : l10n.gameRecheckingRoomState,
+                          );
                         }
-                      });
-                      return _buildRecoveryLoading(
-                        title: L10n.of(context).gameReloadingRoom,
-                        subtitle: L10n.of(context).gameWaitForRestore,
-                      );
-                    }
 
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).gamePreparingScreen,
-                      subtitle: L10n.of(context).gameAdjustingScreen,
-                    );
-                  }
+                        final state = game.gameState;
+                        if (state == null) {
+                          if (game.hasRoom) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _recoverRoomState();
+                              }
+                            });
+                            return _buildRecoveryLoading(
+                              title: L10n.of(context).gameReloadingRoom,
+                              subtitle: L10n.of(context).gameWaitForRestore,
+                            );
+                          }
 
-                  final destination = game.currentDestination;
-                  if (destination != AppDestination.game) {
-                    return _buildRecoveryLoading(
-                      title: L10n.of(context).gameTransitioningScreen,
-                      subtitle: L10n.of(context).gameRecheckingDestination,
-                    );
-                  }
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).gamePreparingScreen,
+                            subtitle: L10n.of(context).gameAdjustingScreen,
+                          );
+                        }
 
-                  _waitingForRoomRecovery = false;
+                        final destination = game.currentDestination;
+                        if (destination != AppDestination.game) {
+                          return _buildRecoveryLoading(
+                            title: L10n.of(context).gameTransitioningScreen,
+                            subtitle: L10n.of(
+                              context,
+                            ).gameRecheckingDestination,
+                          );
+                        }
 
-                  // Bug #1: Clear exchange assignments when phase leaves card_exchange
-                  if (state.phase != 'card_exchange') {
-                    if (_exchangeAssignments.isNotEmpty || _exchangeSubmitted) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() {
-                          _exchangeAssignments.clear();
-                          _selectedCards.clear();
-                          _exchangeSubmitted = false;
-                        });
-                      });
-                    }
-                  }
+                        _waitingForRoomRecovery = false;
 
-                  // Track phase transitions for exchange summary
-                  if (state.phase == 'card_exchange' && !state.exchangeDone) {
-                    _exchangeSummaryShown = false;
-                  }
-                  // Only show exchange summary on card_exchange → playing transition
-                  if (_prevPhase == 'card_exchange' &&
-                      state.phase != 'card_exchange') {
-                    _maybeShowExchangeSummary(state);
-                  }
-                  // Delay round end dialog so players can see the last card played
-                  if (_prevPhase != 'round_end' &&
-                      _prevPhase != 'game_end' &&
-                      (state.phase == 'round_end' ||
-                          state.phase == 'game_end')) {
-                    _roundEndReady = false;
-                    Future.delayed(const Duration(seconds: 1), () {
-                      if (mounted) setState(() => _roundEndReady = true);
-                    });
-                  } else if (state.phase != 'round_end' &&
-                      state.phase != 'game_end') {
-                    _roundEndReady = false;
-                  }
-                  _prevPhase = state.phase;
-                  _collectFx(state);
+                        // Bug #1: Clear exchange assignments when phase leaves card_exchange
+                        if (state.phase != 'card_exchange') {
+                          if (_exchangeAssignments.isNotEmpty ||
+                              _exchangeSubmitted) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
+                              setState(() {
+                                _exchangeAssignments.clear();
+                                _selectedCards.clear();
+                                _exchangeSubmitted = false;
+                              });
+                            });
+                          }
+                        }
 
-                  return Stack(
-                    children: [
-                      if (_tichuOverlayColor(state) != null)
-                        Positioned.fill(
-                          child: Container(color: _tichuOverlayColor(state)),
-                        ),
-                      _buildPortraitGameLayout(state, game),
+                        // Track phase transitions for exchange summary
+                        if (state.phase == 'card_exchange' &&
+                            !state.exchangeDone) {
+                          _exchangeSummaryShown = false;
+                        }
+                        // Only show exchange summary on card_exchange → playing transition
+                        if (_prevPhase == 'card_exchange' &&
+                            state.phase != 'card_exchange') {
+                          _maybeShowExchangeSummary(state);
+                        }
+                        // Delay round end dialog so players can see the last card played
+                        if (_prevPhase != 'round_end' &&
+                            _prevPhase != 'game_end' &&
+                            (state.phase == 'round_end' ||
+                                state.phase == 'game_end')) {
+                          _roundEndReady = false;
+                          Future.delayed(const Duration(seconds: 1), () {
+                            if (mounted) setState(() => _roundEndReady = true);
+                          });
+                        } else if (state.phase != 'round_end' &&
+                            state.phase != 'game_end') {
+                          _roundEndReady = false;
+                        }
+                        _prevPhase = state.phase;
+                        _collectFx(state);
 
-                      // Dialogs/Panels
-                      // (Large Tichu is NOT here — it rides in the bottom
-                      // column with the exchange panel so it sits on the hand.)
-                      if (state.dragonPending) _buildDragonDialog(state, game),
+                        return Stack(
+                          children: [
+                            if (_tichuOverlayColor(state) != null)
+                              Positioned.fill(
+                                child: Container(
+                                  color: _tichuOverlayColor(state),
+                                ),
+                              ),
+                            _buildPortraitGameLayout(state, game),
 
-                      if (state.needsToCallRank && !_birdCallDialogOpen)
-                        _buildCallRankDialog(game),
+                            // Dialogs/Panels
+                            // (Large Tichu is NOT here — it rides in the bottom
+                            // column with the exchange panel so it sits on the hand.)
+                            if (state.dragonPending)
+                              _buildDragonDialog(state, game),
 
-                      // Tichu / finish / one-two effects sit under the score
-                      // dialog (a banner over the board hid the scores) and
-                      // let touches through.
-                      Positioned.fill(
-                        child: TichuFxLayer(
-                          events: _fx,
-                          onDone: (id) {
-                            if (mounted) {
-                              setState(
-                                () => _fx.removeWhere((e) => e.id == id),
-                              );
-                            }
-                          },
-                        ),
-                      ),
+                            if (state.needsToCallRank && !_birdCallDialogOpen)
+                              _buildCallRankDialog(game),
 
-                      if (_roundEndReady &&
-                          (state.phase == 'round_end' ||
-                              state.phase == 'game_end'))
-                        _buildRoundEndDialog(state, game),
+                            // Tichu / finish / one-two effects sit under the score
+                            // dialog (a banner over the board hid the scores) and
+                            // let touches through.
+                            Positioned.fill(
+                              child: TichuFxLayer(
+                                events: _fx,
+                                onDone: (id) {
+                                  if (mounted) {
+                                    setState(
+                                      () => _fx.removeWhere((e) => e.id == id),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
 
-                      // Timeout banner
-                      if (game.timeoutPlayerName != null)
-                        _buildTimeoutBanner(game.timeoutPlayerName!),
+                            if (_roundEndReady &&
+                                (state.phase == 'round_end' ||
+                                    state.phase == 'game_end'))
+                              _buildRoundEndDialog(state, game),
 
-                      // Desertion banner
-                      if (game.desertedPlayerName != null)
-                        _buildDesertionBanner(
-                          game.desertedPlayerName!,
-                          game.desertedReason ?? 'leave',
-                        ),
+                            // Timeout banner
+                            if (game.timeoutPlayerName != null)
+                              _buildTimeoutBanner(game.timeoutPlayerName!),
 
-                      // Error message banner
-                      if (game.errorMessage != null)
-                        _buildErrorBanner(game.errorMessage!),
+                            // Desertion banner
+                            if (game.desertedPlayerName != null)
+                              _buildDesertionBanner(
+                                game.desertedPlayerName!,
+                                game.desertedReason ?? 'leave',
+                              ),
 
-                      // Spectator card view requests
-                      if (game.hasIncomingCardViewRequests)
-                        _buildCardViewRequestPopup(game),
+                            // Error message banner
+                            if (game.errorMessage != null)
+                              _buildErrorBanner(game.errorMessage!),
 
-                      // Viewers panel popup
-                      if (_viewersOpen)
-                        _buildViewersPanel(
-                          game,
-                          topOffset: _moreOpen ? 150 : 66,
-                        ),
+                            // Spectator card view requests
+                            if (game.hasIncomingCardViewRequests)
+                              _buildCardViewRequestPopup(game),
 
-                      // Sound panel
-                      if (_soundPanelOpen) _buildSoundPanel(game),
+                            // Viewers panel popup
+                            if (_viewersOpen)
+                              _buildViewersPanel(
+                                game,
+                                topOffset: _moreOpen ? 150 : 66,
+                              ),
 
-                      // More menu
-                      if (_moreOpen) _buildMoreMenu(game),
+                            // Sound panel
+                            if (_soundPanelOpen) _buildSoundPanel(game),
 
-                      // Chat panel
-                      if (_chatOpen) _buildChatPanel(game),
-                    ],
-                  );
-                },
-              ),
+                            // More menu
+                            if (_moreOpen) _buildMoreMenu(game),
+
+                            // Chat panel
+                            if (_chatOpen) _buildChatPanel(game),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1937,6 +1963,9 @@ class _GameScreenState extends State<GameScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: 4 * _s),
+          // 트릭 자리에는 '카드' 를 둔다. 여기는 무엇이 나왔는지 기록처럼
+          // 남는 자리라서, 다른 낸 패들과 같은 모양이어야 나란히 읽힌다.
+          // (배경을 지운 강아지는 날아가는 연출 쪽에서 쓴다 — _DogFlight.)
           PlayingCard(
             cardId: 'special_dog',
             width: 52 * _s,
@@ -2140,20 +2169,28 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _buildBottomArea(GameStateData state, GameService game) {
-    final isMyTurn = state.isMyTurn;
+  /// 손패 창의 바탕색.
+  ///
+  /// 창 아래 안전 영역을 채우는 띠(SpectatorBottomFill)가 같은 값을 써야
+  /// 하므로 여기 모아 둔다. 두 곳에서 따로 계산하면 차례가 바뀔 때마다
+  /// 창과 띠 사이에 이음새가 보인다.
+  Color _bottomAreaColor(GameStateData? state) {
+    final isMyTurn = state?.isMyTurn == true;
     // 내 차례에 5초 이하로 남으면 바탕이 붉어져 시간이 없다는 걸 한눈에 보여 준다.
     final urgent = isMyTurn && _remainingSeconds > 0 && _remainingSeconds <= 5;
+    if (urgent) return const Color(0xFFFFC9C4);
+    if (isMyTurn) return const Color(0xFFFFF1B8);
+    return Cartoon.paper;
+  }
+
+  Widget _buildBottomArea(GameStateData state, GameService game) {
+    final isMyTurn = state.isMyTurn;
     return Container(
       padding: EdgeInsets.all(10 * _s),
       // 내 차례엔 노란 바탕과 두꺼운 윗줄, 아니면 크림 바탕. 번지는 그림자 대신
       // 윗줄 하나로만 구분한다.
       decoration: BoxDecoration(
-        color: urgent
-            ? const Color(0xFFFFC9C4)
-            : isMyTurn
-            ? const Color(0xFFFFF1B8)
-            : Cartoon.paper,
+        color: _bottomAreaColor(state),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),
@@ -3709,11 +3746,25 @@ class _DogFlightState extends State<_DogFlight>
                   angle: (1 - fly) * -0.25 + fly * 0.1,
                   child: Transform.scale(
                     scale: scale,
-                    child: PlayingCard(
-                      cardId: 'special_dog',
-                      width: widget.cardWidth,
-                      height: widget.cardHeight,
-                      isInteractive: false,
+                    // 날아가는 것은 카드가 아니라 강아지다. 선을 넘기는
+                    // 동작이라 "패가 테이블로 간다" 가 아니라 "강아지가
+                    // 저쪽으로 뛰어간다" 로 보여야 한다. 배경을 지운
+                    // 그림이라 판 위를 그대로 가로지른다.
+                    //
+                    // 그림은 server/tools/make_sk_creature_art.js 가
+                    // 카드에서 뽑는다(dog_art.webp).
+                    child: Image.asset(
+                      'assets/cards/dog_art.webp',
+                      height: widget.cardHeight * 1.25,
+                      fit: BoxFit.contain,
+                      // 그림이 없으면 예전처럼 카드가 날아간다 — 연출이
+                      // 통째로 사라지면 선이 누구에게 갔는지 안 보인다.
+                      errorBuilder: (_, _, _) => PlayingCard(
+                        cardId: 'special_dog',
+                        width: widget.cardWidth,
+                        height: widget.cardHeight,
+                        isInteractive: false,
+                      ),
                     ),
                   ),
                 ),

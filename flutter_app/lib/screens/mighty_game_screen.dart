@@ -21,6 +21,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../widgets/turn_name_pill.dart';
 import '../widgets/game_chrome.dart';
+import '../widgets/spectator_bottom_fill.dart';
 import '../widgets/mid_game_join.dart';
 
 class MightyGameScreen extends StatefulWidget {
@@ -214,26 +215,28 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             ),
             child: Stack(
               children: [
-                // 관전 손패 창은 SafeArea 안에 있어 아래 안전 영역이 배경으로
-                // 비어 따로 놀아 보였다 — 창과 같은 색으로 그 띠를 채운다.
-                Consumer<GameService>(
-                  builder: (context, g, _) {
-                    final st = g.mightyGameState;
-                    final inset = MediaQuery.of(context).padding.bottom;
-                    if (!g.isSpectator ||
-                        st == null ||
-                        st.phase == 'game_end' ||
-                        inset <= 0) {
-                      return const SizedBox.shrink();
-                    }
-                    return Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: inset,
-                      child: const ColoredBox(color: Cartoon.paper),
-                    );
-                  },
+                // 손패 창은 SafeArea 안에 그려지므로, 홈 바가 있는 기기에서는
+                // 창 아래 안전 영역에 배경 그라데이션이 그대로 비친다 — 창이
+                // 거기서 잘린 것처럼 보인다.
+                //
+                // 전에는 여기서 직접 띠를 칠했는데 관전자에게만 칠했다
+                // (`!g.isSpectator` 면 그만뒀다). 그런데 아래에 창을 그리는
+                // 것은 플레이어도 같아서, 정작 대부분의 사람이 잘린 화면을
+                // 봤다. 창을 만드는 _buildHandArea 는 둘을 가리지 않는다.
+                //
+                // 다른 게임 화면과 같은 위젯을 쓴다. 띠는 네 게임에서 같은
+                // 문제이고, 화면마다 따로 칠하면 이번처럼 한 곳만 조건이
+                // 어긋난 채 남는다.
+                SpectatorBottomFill(
+                  // 창이 보이는 동안만 — game_end 에서는 창이 사라진다
+                  // (_buildActiveBoardStage 의 showBottomOverlay 와 같은 조건).
+                  when: (g) =>
+                      g.mightyGameState != null &&
+                      g.mightyGameState!.phase != 'game_end',
+                  // 마이티 손패 창은 늘 종이색이다(티츄·스컬킹처럼 차례에
+                  // 따라 바뀌지 않는다). 그래도 넘겨 두면 창 색이 바뀔 때
+                  // 띠가 따라오지 않는 일이 생기지 않는다.
+                  color: (_) => Cartoon.paper,
                 ),
                 SafeArea(child: _buildMainContent()),
                 // Edge-to-edge dim + result UI for round_end / game_end so the

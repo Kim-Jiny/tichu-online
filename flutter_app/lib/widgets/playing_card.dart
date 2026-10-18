@@ -43,6 +43,19 @@ class PlayingCard extends StatelessWidget {
     'special_dragon': 'assets/cards/dragon.webp',
   };
 
+  /// 특수 카드의 테두리 색.
+  ///
+  /// 용과 봉황만 색을 준다. 한 판을 가장 크게 흔드는 두 장인데, 손패에서
+  /// 작아지면 그림만으로는 금방 구분되지 않았다 — 둘 다 붉은 계열 일러스트라
+  /// 더 그렇다. 테두리 색으로 가른다.
+  ///
+  /// 개와 참새는 색을 주지 않는다. 그 둘은 모서리 뱃지(발바닥 / 숫자 1)로
+  /// 갈리고, 네 장 모두에 색을 주면 어느 것도 눈에 걸리지 않는다.
+  static const Map<String, Color> specialBorders = {
+    'special_dragon': Color(0xFF2E8B45),
+    'special_phoenix': Color(0xFFCE3A33),
+  };
+
   @override
   Widget build(BuildContext context) {
     final cardColors = context.watch<GameService>().cardBackColors;
@@ -51,12 +64,20 @@ class PlayingCard extends StatelessWidget {
     // 입체감: 진한 테두리 + 아래로 어긋난 단색 그림자(카드가 종이처럼 떠 보이게),
     // 앞면은 위가 밝고 아래가 살짝 따뜻한 그라데이션. 선택하면 더 높이 떠오른다.
     const edge = Color(0xFF3B2A20);
+    // 특수 카드 색은 뒤집힌 카드에는 쓰지 않는다 — 뒷면만 보고 손에 뭐가
+    // 있는지 알 수 있으면 안 된다. 부르는 쪽이 borderColor 를 직접 넘기면
+    // 그게 이긴다(마이티의 으뜸 표시 등).
+    final specialBorder = isFaceUp ? specialBorders[cardId] : null;
     final effectiveBorderColor = isSelected
         ? const Color(0xFF2F7DE0)
-        : borderColor ?? edge.withValues(alpha: isFaceUp ? 0.7 : 0.85);
+        : borderColor ??
+              specialBorder ??
+              edge.withValues(alpha: isFaceUp ? 0.7 : 0.85);
     final effectiveBorderWidth = isSelected
         ? 2.4
-        : (borderColor != null ? 2.4 : (width < 40 ? 1.2 : 1.5));
+        : (borderColor != null || specialBorder != null
+              ? 2.4
+              : (width < 40 ? 1.2 : 1.5));
     final lift = isSelected ? -12.0 : 0.0;
     final shadowY = isSelected ? 5.0 : 2.5;
     final radius = (width / 48 * 12).clamp(4.0, 13.0);

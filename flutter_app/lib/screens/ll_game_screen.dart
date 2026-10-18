@@ -177,11 +177,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
               child: Stack(
                 children: [
                   SpectatorBottomFill(
+                    // 관전자 전용이었다. 그런데 아래에 창을 그리는 것은
+                    // 플레이어도 같아서, 정작 대부분의 사람이 잘린 화면을
+                    // 봤다(_buildBottomArea 는 둘 다 그린다).
+                    //
+                    // 끝난 단계에서는 창 자체가 사라지므로 띠도 걷는다.
                     when: (g) =>
-                        g.isSpectator &&
                         g.llGameState != null &&
                         g.llGameState!.phase != 'game_end' &&
                         g.llGameState!.phase != 'round_end',
+                    // 색을 넘기지 않으면 종이색 고정이라, 내 차례(노랑)에
+                    // 창과 띠 사이에 이음새가 생긴다.
+                    color: (g) => _bottomAreaColor(g, g.llGameState),
                   ),
                   Positioned.fill(
                     child: SafeArea(
@@ -2973,6 +2980,18 @@ class _LLGameScreenState extends State<LLGameScreen> {
 
   // ====================== BOTTOM (MY HAND) ======================
 
+  /// 손패 창의 바탕색.
+  ///
+  /// 창 아래 안전 영역을 채우는 띠(SpectatorBottomFill)가 같은 값을 써야
+  /// 하므로 여기 모아 둔다. 두 곳에서 따로 계산하면 내 차례가 될 때마다
+  /// 창(노랑)과 띠(종이색) 사이에 이음새가 보인다.
+  ///
+  /// 관전 창은 차례와 무관하게 종이색이다.
+  static Color _bottomAreaColor(GameService gs, LLGameStateData? state) {
+    if (state == null || gs.isSpectator) return Cartoon.paper;
+    return state.isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper;
+  }
+
   Widget _buildBottomArea(
     BuildContext context,
     GameService gs,
@@ -2993,7 +3012,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
     return Container(
       // 내 차례엔 노란 바탕과 두꺼운 윗줄, 아니면 크림 바탕(티츄와 같은 규칙).
       decoration: BoxDecoration(
-        color: isMyTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        color: _bottomAreaColor(gs, state),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyTurn ? 3.2 : 2.2),

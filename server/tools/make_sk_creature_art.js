@@ -1,6 +1,6 @@
 'use strict';
 /**
- * 크라켄·흰고래의 '배경 없는 캐릭터' 그림을 뽑는다.
+ * 배경 없는 캐릭터 그림을 뽑는다(스컬킹 크라켄·흰고래, 티츄 개).
  *
  * 트릭 보드의 효과 연출은 카드가 아니라 캐릭터만 띄운다(둥근 빛 번짐 위에
  * 얹히므로, 카드 틀과 그 안의 배경이 들어 있으면 배경이 두 겹으로 보인다).
@@ -21,8 +21,18 @@ const fs = require('fs');
 /// 단색 배경이 아니라 그라데이션이므로, 씨앗 색 하나와 비교하면 아래쪽에서
 /// 끊긴다. 대신 "직전 픽셀과 비슷한가"를 보며 번지면 그라데이션을 따라가고,
 /// 굵은 검은 외곽선에서 자연히 멈춘다.
-async function cutout(src, out, { tol = 14, feather = 0.6 } = {}) {
-  const img = sharp(src);
+async function cutout(src, out, { tol = 14, feather = 0.6, crop = 0, largestOnly = false } = {}) {
+  let input = src;
+  if (crop > 0) {
+    // 카드 틀과 모서리 장식을 먼저 잘라 낸다. 그대로 두면 장식이 배경과
+    // 맞닿지 않은 섬이라 번짐이 비껴가고 그대로 남는다.
+    const m0 = await sharp(src).metadata();
+    const ix = Math.round(m0.width * crop), iy = Math.round(m0.height * crop);
+    input = await sharp(src)
+      .extract({ left: ix, top: iy, width: m0.width - ix * 2, height: m0.height - iy * 2 })
+      .toBuffer();
+  }
+  const img = sharp(input);
   const { width: w, height: h, channels: ch } =
     await img.metadata().then((m) => ({ ...m, channels: m.channels }));
   const { data } = await img.raw().toBuffer({ resolveWithObject: true });
@@ -56,6 +66,35 @@ async function cutout(src, out, { tol = 14, feather = 0.6 } = {}) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
     push(x + 1, y, r, g, b); push(x - 1, y, r, g, b);
     push(x, y + 1, r, g, b); push(x, y - 1, r, g, b);
+  }
+
+  // 배경과 맞닿지 않은 조각은 번짐이 비껴가 그대로 남는다(개 카드의 구름이
+  // 그랬다). 허용치를 키워 넘어가게 하면 이번엔 밝은 털까지 타고 들어간다.
+  // 그래서 색이 아니라 '덩어리' 로 거른다 — 가장 큰 덩어리 하나만 남긴다.
+  //
+  // 크라켄·흰고래는 이 과정이 필요 없어서 기본값은 꺼 둔다. 켜면 그 둘의
+  // 결과도 바뀌므로 (이미 커밋된 그림이다) 필요한 쪽에서만 켠다.
+  if (largestOnly) {
+    const comp = new Int32Array(w * h).fill(-1);
+    let best = -1, bestN = 0, id = 0;
+    const st = [];
+    for (let p0 = 0; p0 < w * h; p0++) {
+      if (bg[p0] || comp[p0] !== -1) continue;
+      let n = 0; st.push(p0); comp[p0] = id;
+      while (st.length) {
+        const p = st.pop(); n++;
+        const x = p % w, y = (p / w) | 0;
+        const nb = [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1,
+                    y > 0 ? p - w : -1, y < h - 1 ? p + w : -1];
+        for (const q of nb) {
+          if (q < 0 || bg[q] || comp[q] !== -1) continue;
+          comp[q] = id; st.push(q);
+        }
+      }
+      if (n > bestN) { bestN = n; best = id; }
+      id++;
+    }
+    for (let p = 0; p < w * h; p++) if (!bg[p] && comp[p] !== best) bg[p] = 1;
   }
 
   // 알파 채널로. 경계를 살짝 깎아 배경색 테두리가 남지 않게 한다.
@@ -95,4 +134,13 @@ async function cutout(src, out, { tol = 14, feather = 0.6 } = {}) {
   const S = '../flutter_app/art/cards/', A = '../flutter_app/assets/cards/';
   await cutout(S + 'kraken.png', A + 'sk_kraken_art.webp');
   await cutout(S + 'white_whale.png', A + 'sk_white_whale_art.webp');
+
+  // 티츄 개 카드. 개를 냈을 때 뜨는 안내에서 카드가 아니라 강아지만 띄운다.
+  //
+  // 원본 PNG 가 없어서 번들 webp 에서 바로 뽑는다(sharp 가 읽는다).
+  // crop 0.10 — 흰 카드 틀과 모서리 발바닥 장식을 먼저 떼어 낸다.
+  // tol 5    — 6 이면 하늘이 밝은 털로 타고 들어가 귀·꼬리가 패이고,
+  //            4 면 하늘이 덜 지워져 개 둘레에 푸른 띠가 남는다.
+  await cutout(A + 'dog.webp', A + 'dog_art.webp',
+    { tol: 5, crop: 0.10, largestOnly: true });
 })();

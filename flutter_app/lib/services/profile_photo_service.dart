@@ -18,18 +18,18 @@ class PhotoUploadResult {
   final String? url;
   final String? error;
   const PhotoUploadResult.success(this.url)
-      : ok = true,
-        cancelled = false,
-        error = null;
+    : ok = true,
+      cancelled = false,
+      error = null;
   const PhotoUploadResult.cancelled()
-      : ok = false,
-        cancelled = true,
-        url = null,
-        error = null;
+    : ok = false,
+      cancelled = true,
+      url = null,
+      error = null;
   const PhotoUploadResult.failure(this.error)
-      : ok = false,
-        cancelled = false,
-        url = null;
+    : ok = false,
+      cancelled = false,
+      url = null;
 }
 
 /// Profile-photo picking + upload. The app is otherwise WebSocket-only; this is
@@ -148,12 +148,14 @@ class ProfilePhotoService {
       final uri = Uri.parse('${game.httpBase}/upload/profile-photo');
       final req = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer ${tok.token}'
-        ..files.add(http.MultipartFile.fromBytes(
-          'photo',
-          bytes,
-          filename: filename,
-          contentType: contentType,
-        ));
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'photo',
+            bytes,
+            filename: filename,
+            contentType: contentType,
+          ),
+        );
       final streamed = await req.send().timeout(const Duration(seconds: 30));
       final resp = await http.Response.fromStream(streamed);
       if (resp.statusCode == 200) {
@@ -164,7 +166,8 @@ class ProfilePhotoService {
       }
       String reason = 'upload_failed';
       try {
-        reason = (jsonDecode(resp.body) as Map<String, dynamic>)['error']
+        reason =
+            (jsonDecode(resp.body) as Map<String, dynamic>)['error']
                 as String? ??
             reason;
       } catch (_) {}

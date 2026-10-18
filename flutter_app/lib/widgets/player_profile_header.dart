@@ -663,7 +663,7 @@ Future<void> changeProfilePhoto(
               style: Cartoon.userText(
                 size: 12,
                 weight: FontWeight.w500,
-                color: Color(0xFF8A8078),
+                color: Cartoon.onSurface(const Color(0xFF8A8078)),
                 height: 1.35,
               ),
             ),
@@ -696,13 +696,15 @@ Future<void> changeProfilePhoto(
             // Deleting keeps the paid pass — the server only drops the key —
             // so another photo can be uploaded afterwards.
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.delete_outline,
-                color: Color(0xFFE57373),
+                color: Cartoon.onSurface(const Color(0xFFE57373)),
               ),
               title: Text(
                 l10n.profilePhotoDelete,
-                style: const TextStyle(color: Color(0xFFC62828)),
+                style: TextStyle(
+                  color: Cartoon.onSurface(const Color(0xFFC62828)),
+                ),
               ),
               onTap: () => Navigator.pop(sheetCtx, 'delete'),
             ),
@@ -993,12 +995,12 @@ void showProfileReportDialog(
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: 1),
                           child: Icon(
                             Icons.info_outline,
                             size: 14,
-                            color: Color(0xFFC98A8A),
+                            color: Cartoon.onSurface(const Color(0xFFC98A8A)),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -1008,7 +1010,7 @@ void showProfileReportDialog(
                             style: Cartoon.userText(
                               size: 11.5,
                               weight: FontWeight.w500,
-                              color: Color(0xFFA47C7C),
+                              color: Cartoon.onSurface(const Color(0xFFA47C7C)),
                               height: 1.4,
                             ),
                           ),
@@ -1132,7 +1134,11 @@ Widget privateProfileNotice(L10n l10n) {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.lock_rounded, size: 30, color: Color(0xFF7E57C2)),
+        Icon(
+          Icons.lock_rounded,
+          size: 30,
+          color: Cartoon.onSurface(const Color(0xFF7E57C2)),
+        ),
         const SizedBox(height: 10),
         Text(
           l10n.profilePrivateTitle,
@@ -1173,7 +1179,11 @@ Widget _botCard(L10n l10n) {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.smart_toy_rounded, size: 20, color: Color(0xFF3949AB)),
+        Icon(
+          Icons.smart_toy_rounded,
+          size: 20,
+          color: Cartoon.onSurface(const Color(0xFF3949AB)),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -1181,7 +1191,10 @@ Widget _botCard(L10n l10n) {
             children: [
               Text(
                 l10n.profileBotHeadline,
-                style: Cartoon.text(size: 13, color: Color(0xFF3949AB)),
+                style: Cartoon.text(
+                  size: 13,
+                  color: Cartoon.onSurface(const Color(0xFF3949AB)),
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -1189,7 +1202,7 @@ Widget _botCard(L10n l10n) {
                 style: Cartoon.userText(
                   size: 12,
                   weight: FontWeight.w500,
-                  color: Color(0xFF5C5F73),
+                  color: Cartoon.onSurface(const Color(0xFF5C5F73)),
                   height: 1.4,
                 ),
               ),

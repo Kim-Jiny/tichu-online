@@ -45,8 +45,7 @@ class SocialConfig {
   static bool get appleEnabled =>
       kIsWeb ? DefaultFirebaseOptions.hasWebConfig : Platform.isIOS;
 
-  static bool get kakaoEnabled =>
-      kIsWeb ? kakaoJavaScriptKey.isNotEmpty : true;
+  static bool get kakaoEnabled => kIsWeb ? kakaoJavaScriptKey.isNotEmpty : true;
 
   /// True when the "간편 로그인" divider has anything to sit above.
   static bool get anyEnabled => googleEnabled || appleEnabled || kakaoEnabled;

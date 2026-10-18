@@ -17,12 +17,15 @@ class Room {
   final int targetScore;
   final String gameType;
   final int maxPlayers;
+
   /// Effective max players after host has blocked some empty slots.
   /// Equal to [maxPlayers] minus the number of blocked slots.
   final int effectiveMaxPlayers;
+
   /// Enabled Skull King expansions — only meaningful when [gameType] is
   /// `skull_king`. Subset of `['kraken', 'white_whale', 'loot', 'pirate_abilities']`.
   final List<String> skExpansions;
+
   /// Tichu-only: host opted to randomize teams at game start instead of
   /// using the fixed (0,2) vs (1,3) seat-to-team mapping. Mirrors SK/Mighty
   /// free-seat UX.
@@ -79,9 +82,9 @@ class Room {
 
     List<String> expansions = const [];
     if (json['skExpansions'] is List) {
-      expansions = (json['skExpansions'] as List)
-          .whereType<String>()
-          .toList(growable: false);
+      expansions = (json['skExpansions'] as List).whereType<String>().toList(
+        growable: false,
+      );
     }
 
     return Room(
@@ -102,8 +105,8 @@ class Room {
       effectiveMaxPlayers: json['effectiveMaxPlayers'] is int
           ? json['effectiveMaxPlayers'] as int
           : (json['effectiveMaxPlayers'] is num
-              ? (json['effectiveMaxPlayers'] as num).toInt()
-              : null),
+                ? (json['effectiveMaxPlayers'] as num).toInt()
+                : null),
       skExpansions: expansions,
       randomSeating: json['randomSeating'] == true,
       allowMidGameJoin: json['allowMidGameJoin'] == true,
@@ -113,8 +116,8 @@ class Room {
       botSeatCount: json['botSeatCount'] is int
           ? json['botSeatCount'] as int
           : (json['botSeatCount'] is num
-              ? (json['botSeatCount'] as num).toInt()
-              : 0),
+                ? (json['botSeatCount'] as num).toInt()
+                : 0),
     );
   }
 }

@@ -13,7 +13,9 @@ class AnalyticsService {
   /// from FirebaseCoreWeb.app. A field initialiser makes that a constructor
   /// crash for whoever holds this singleton, which is how it took GameService —
   /// and the whole first frame — down with it.
-  final FirebaseAnalytics? _analytics = kIsWeb ? null : FirebaseAnalytics.instance;
+  final FirebaseAnalytics? _analytics = kIsWeb
+      ? null
+      : FirebaseAnalytics.instance;
 
   FirebaseAnalyticsObserver? get observer {
     final analytics = _analytics;
@@ -51,41 +53,35 @@ class AnalyticsService {
     required String gameType,
     required bool isRanked,
     required int maxPlayers,
-  }) =>
-      _log('room_create', {
-        'game_type': gameType,
-        'is_ranked': isRanked ? 1 : 0,
-        'max_players': maxPlayers,
-      });
+  }) => _log('room_create', {
+    'game_type': gameType,
+    'is_ranked': isRanked ? 1 : 0,
+    'max_players': maxPlayers,
+  });
 
   Future<void> logRoomJoin({
     required String gameType,
     required bool isRanked,
   }) =>
-      _log('room_join', {
-        'game_type': gameType,
-        'is_ranked': isRanked ? 1 : 0,
-      });
+      _log('room_join', {'game_type': gameType, 'is_ranked': isRanked ? 1 : 0});
 
   Future<void> logGameStart({
     required String gameType,
     required bool isRanked,
     required int playerCount,
-  }) =>
-      _log('game_start', {
-        'game_type': gameType,
-        'is_ranked': isRanked ? 1 : 0,
-        'player_count': playerCount,
-      });
+  }) => _log('game_start', {
+    'game_type': gameType,
+    'is_ranked': isRanked ? 1 : 0,
+    'player_count': playerCount,
+  });
 
   Future<void> logGameEnd({
     required String gameType,
     required bool isRanked,
     bool? won,
-  }) =>
-      _log('game_end', {
-        'game_type': gameType,
-        'is_ranked': isRanked ? 1 : 0,
-        if (won != null) 'won': won ? 1 : 0,
-      });
+  }) => _log('game_end', {
+    'game_type': gameType,
+    'is_ranked': isRanked ? 1 : 0,
+    if (won != null) 'won': won ? 1 : 0,
+  });
 }

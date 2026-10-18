@@ -38,6 +38,7 @@ class Player {
   final String? titleKey;
   final String? titleName;
   final String? bannerKey;
+
   /// Public avatar URL (paid profile-photo item, active + unexpired). Null =
   /// default avatar. Always null for bots. Server resolves eligibility.
   final String? photoUrl;
@@ -47,9 +48,11 @@ class Player {
   final bool isBot;
   final String? botSpeed;
   final String? botStrategy;
+
   /// Player's account level. Null for bots and (transitionally) for old
   /// server responses that haven't redeployed level support yet.
   final int? level;
+
   /// Current season rating for the game type this room hosts. Null for bots
   /// and for older server responses. Used by ranked waiting rooms.
   final int? seasonRating;

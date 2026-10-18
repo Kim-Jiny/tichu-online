@@ -1164,7 +1164,7 @@ class _GameScreenState extends State<GameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: const Color(0xFFFFD9D6),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -1580,7 +1580,9 @@ class _GameScreenState extends State<GameScreen> {
                               child: Icon(
                                 Icons.check_circle,
                                 size: 12,
-                                color: const Color(0xFF3A8F52),
+                                color: Cartoon.onSurface(
+                                  const Color(0xFF3A8F52),
+                                ),
                               ),
                             ),
                         ],
@@ -1738,7 +1740,9 @@ class _GameScreenState extends State<GameScreen> {
       padding: EdgeInsets.symmetric(horizontal: 10 * _s, vertical: 4 * _s),
       decoration: gamePillDecoration(
         radius: 14,
-        color: urgent ? const Color(0xFFFFD9D6) : Cartoon.cream,
+        color: urgent
+            ? Cartoon.surface(const Color(0xFFFFD9D6))
+            : Cartoon.cream,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

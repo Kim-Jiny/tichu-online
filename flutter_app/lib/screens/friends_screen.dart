@@ -602,9 +602,11 @@ class _FriendsScreenState extends State<FriendsScreen>
                               ),
                               child: Text(
                                 l10n.friendsRestrictedDuringGame,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 10,
-                                  color: Color(0xFFB45309),
+                                  color: Cartoon.onSurface(
+                                    const Color(0xFFB45309),
+                                  ),
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -720,9 +722,11 @@ class _FriendsScreenState extends State<FriendsScreen>
                               value: 'remove',
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.person_remove_rounded,
-                                    color: Color(0xFFE5484D),
+                                    color: Cartoon.onSurface(
+                                      const Color(0xFFE5484D),
+                                    ),
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
@@ -730,7 +734,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                                     l10n.friendsRemoveTitle,
                                     style: Cartoon.text(
                                       size: 15,
-                                      color: const Color(0xFFE5484D),
+                                      color: Cartoon.onSurface(
+                                        const Color(0xFFE5484D),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1590,7 +1596,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                   size: 15,
                   weight: FontWeight.w600,
                   color:
-                      bubbleStyle?.text ??
+                      bubbleStyle?.inkOn ??
                       (isMine ? Colors.white : Cartoon.ink),
                   height: 1.35,
                 ),

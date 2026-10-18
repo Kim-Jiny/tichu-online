@@ -258,14 +258,18 @@ class ProfileIdentityCell extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_outline, size: 11, color: Color(0xFF8A7A72)),
+          Icon(
+            Icons.lock_outline,
+            size: 11,
+            color: Cartoon.onSurface(const Color(0xFF8A7A72)),
+          ),
           const SizedBox(width: 3),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF8A7A72),
+              color: Cartoon.onSurface(const Color(0xFF8A7A72)),
             ),
           ),
         ],

@@ -449,7 +449,9 @@ class _MissionsScreenState extends State<MissionsScreen> {
       decoration: Cartoon.panelDecoration(
         radius: 18,
         shadowOffset: 2.5,
-        color: m.done ? const Color(0xFFE6F8EA) : Cartoon.paper,
+        color: m.done
+            ? Cartoon.surface(const Color(0xFFE6F8EA))
+            : Cartoon.paper,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -25,6 +25,19 @@ class BubbleStyle {
   /// 넘기지 않으면 팔레트의 글자색.
   final Color? text;
 
+  /// 글자색. 지정이 없으면 바탕 밝기로 정한다.
+  ///
+  /// 팔레트의 ink 를 쓰면 안 된다. 말풍선은 '산 물건' 이라 테마와 무관
+  /// 하게 같은 모양이어야 하는데, ink 는 어두운 한 벌에서 밝아진다 —
+  /// 연분홍 말풍선 위에 밝은 글자가 얹혀 안 보였다.
+  Color get inkOn {
+    if (text != null) return text!;
+    final bg = fillEnd == null ? fill : Color.lerp(fill, fillEnd, 0.5)!;
+    return bg.computeLuminance() > 0.5
+        ? const Color(0xFF3B2A20)
+        : const Color(0xFFF7F2E6);
+  }
+
   /// 꼬리(말풍선 아래 삼각형)가 맞춰 칠할 색.
   Color get tailFill => fillEnd ?? fill;
 
@@ -93,6 +106,15 @@ class RoomHighlightStyle {
 
   final Color fill;
   final Color border;
+
+  /// 이 강조 위에 쓰는 글자색.
+  ///
+  /// 말풍선과 같은 이유로 팔레트를 따라가면 안 된다 — 산 물건이라
+  /// 테마와 무관하게 같은 모양이어야 하는데, 바탕은 고정이고 글자만
+  /// 밝아지면 안 보인다.
+  Color get inkOn => fill.computeLuminance() > 0.5
+      ? const Color(0xFF3B2A20)
+      : const Color(0xFFF7F2E6);
 }
 
 const Map<String, RoomHighlightStyle> _roomHighlights = {
@@ -202,7 +224,7 @@ class BubblePreview extends StatelessWidget {
         style: Cartoon.userText(
           size: 13,
           weight: FontWeight.w800,
-          color: style.text ?? Cartoon.ink,
+          color: style.inkOn,
         ),
       ),
     );
@@ -232,7 +254,7 @@ class RoomHighlightPreview extends StatelessWidget {
           name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Cartoon.userText(size: 15),
+          style: Cartoon.userText(size: 15, color: style.inkOn),
         ),
       ),
     );

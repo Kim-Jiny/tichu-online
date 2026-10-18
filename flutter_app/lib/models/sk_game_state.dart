@@ -98,6 +98,7 @@ class SKGameStateData {
   final String? trickStarter;
   final String? roundStarter;
   final int? turnDeadline;
+
   /// Enabled Skull King expansions for this game.
   /// Subset of `['kraken', 'white_whale', 'loot', 'pirate_abilities']`.
   final List<String> expansions;
@@ -200,9 +201,9 @@ class SKGameStateData {
 
     List<String> expansions = const [];
     if (json['expansions'] is List) {
-      expansions = (json['expansions'] as List)
-          .whereType<String>()
-          .toList(growable: false);
+      expansions = (json['expansions'] as List).whereType<String>().toList(
+        growable: false,
+      );
     }
 
     final info = json['abilityInfo'];

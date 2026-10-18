@@ -64,6 +64,7 @@ class LLPendingEffect {
   final bool resolved;
   final String? guess;
   final Map<String, dynamic>? result;
+
   /// When type == 'blocked', this carries the card that fizzled
   /// (guard / spy / baron / king). Null otherwise.
   final String? originalType;
@@ -194,8 +195,9 @@ class LLGameStateData {
   factory LLGameStateData.fromJson(Map<String, dynamic> json) {
     List<LLPlayer> playerList = [];
     if (json['players'] != null) {
-      playerList =
-          (json['players'] as List).map((p) => LLPlayer.fromJson(p)).toList();
+      playerList = (json['players'] as List)
+          .map((p) => LLPlayer.fromJson(p))
+          .toList();
     }
 
     LLPendingEffect? pending;

@@ -225,7 +225,7 @@ class _LegalBodyState extends State<_LegalBody> {
                   widget.isTermsOfService
                       ? Icons.description_rounded
                       : Icons.privacy_tip_rounded,
-                  color: const Color(0xFF1E88E5),
+                  color: Cartoon.onSurface(const Color(0xFF1E88E5)),
                   size: 26,
                 ),
               ),

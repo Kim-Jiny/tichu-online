@@ -19,11 +19,12 @@ import 'package:in_app_purchase_android/billing_client_wrappers.dart';
 /// from the server and passes the ids into [loadProducts]. The store is the
 /// source of truth for price/currency; the server is the source of truth for
 /// how much gold each product grants and whether the grant succeeded.
-typedef IapVerify = Future<Map<String, dynamic>> Function({
-  required String productId,
-  required String verificationData,
-  String? transactionId,
-});
+typedef IapVerify =
+    Future<Map<String, dynamic>> Function({
+      required String productId,
+      required String verificationData,
+      String? transactionId,
+    });
 
 class IapService {
   IapService({required this.verify, this.bindingTokenProvider});
@@ -233,8 +234,8 @@ class IapService {
       // re-buy and (b) close the transaction. So on Android we attempt
       // _finishConsumable whenever mayFinish, regardless of the flag. iOS
       // keeps the strict pendingCompletePurchase gate.
-      final shouldFinish = mayFinish &&
-          (Platform.isAndroid || p.pendingCompletePurchase);
+      final shouldFinish =
+          mayFinish && (Platform.isAndroid || p.pendingCompletePurchase);
       if (shouldFinish) {
         final finished = await _finishConsumable(p);
         // Only mark the txn settled in-memory if consume actually succeeded.
@@ -275,12 +276,15 @@ class IapService {
         // satisfy "transaction is done on Google's side". Any other code
         // (error, billingUnavailable, ...) leaves the purchase un-consumed,
         // so we report failure and let next emit retry.
-        if (code == BillingResponse.ok || code == BillingResponse.itemNotOwned) {
+        if (code == BillingResponse.ok ||
+            code == BillingResponse.itemNotOwned) {
           return true;
         }
         // ignore: avoid_print
-        print('[IAP] Android consume non-ok responseCode=$code '
-            'msg=${result.debugMessage} (will retry next launch)');
+        print(
+          '[IAP] Android consume non-ok responseCode=$code '
+          'msg=${result.debugMessage} (will retry next launch)',
+        );
         return false;
       } catch (e) {
         // Intentional: NO ack fallback. See comment above.

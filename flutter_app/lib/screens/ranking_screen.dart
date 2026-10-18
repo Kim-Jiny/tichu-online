@@ -404,7 +404,10 @@ class _RankingScreenState extends State<RankingScreen> {
             Text(
               localizeServiceMessage(game.rankingsError!, l10n),
               textAlign: TextAlign.center,
-              style: Cartoon.userText(size: 14, color: const Color(0xFFCC4444)),
+              style: Cartoon.userText(
+                size: 14,
+                color: Cartoon.onSurface(const Color(0xFFCC4444)),
+              ),
             ),
             const SizedBox(height: 12),
             TextButton(
@@ -488,7 +491,7 @@ class _RankingScreenState extends State<RankingScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 14, 8, 0),
       decoration: Cartoon.panelDecoration(
-        color: const Color(0xFFFFF6DD),
+        color: Cartoon.surface(const Color(0xFFFFF6DD)),
         radius: 22,
         shadowOffset: 2.5,
       ),
@@ -612,7 +615,7 @@ class _RankingScreenState extends State<RankingScreen> {
           margin: const EdgeInsets.fromLTRB(14, 6, 14, 8),
           padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
           decoration: Cartoon.panelDecoration(
-            color: const Color(0xFFE9E1FF),
+            color: Cartoon.surface(const Color(0xFFE9E1FF)),
             radius: 20,
             shadowOffset: 2.5,
           ),

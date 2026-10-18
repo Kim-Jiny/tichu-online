@@ -135,7 +135,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             const SizedBox(height: 4),
             Text(
               L10n.of(ctx).goldBalanceNow(_fmt(newGold)),
-              style: Cartoon.text(size: 13, color: Color(0xFFB35B19)),
+              style: Cartoon.text(
+                size: 13,
+                color: Cartoon.onSurface(const Color(0xFFB35B19)),
+              ),
             ),
           ],
         ),
@@ -456,10 +459,10 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.account_balance,
                 size: 17,
-                color: Color(0xFFB07A12),
+                color: Cartoon.onSurface(const Color(0xFFB07A12)),
               ),
               const SizedBox(width: 6),
               Text(l10n.goldBankSectionTitle, style: Cartoon.text(size: 14)),
@@ -502,7 +505,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             style: Cartoon.userText(
               size: 11.5,
               weight: FontWeight.w500,
-              color: Color(0xFF7A6A62),
+              color: Cartoon.onSurface(const Color(0xFF7A6A62)),
               height: 1.45,
             ),
           ),
@@ -513,7 +516,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
               style: Cartoon.userText(
                 size: 11.5,
                 weight: FontWeight.w600,
-                color: Color(0xFFB35B19),
+                color: Cartoon.onSurface(const Color(0xFFB35B19)),
                 height: 1.45,
               ),
             ),
@@ -524,7 +527,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             style: Cartoon.userText(
               size: 11,
               weight: FontWeight.w500,
-              color: Color(0xFF9A8A82),
+              color: Cartoon.onSurface(const Color(0xFF9A8A82)),
               height: 1.4,
             ),
           ),
@@ -577,7 +580,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             style: Cartoon.userText(
               size: 11.5,
               weight: FontWeight.w500,
-              color: Color(0xFF9A8A82),
+              color: Cartoon.onSurface(const Color(0xFF9A8A82)),
             ),
           ),
         ),
@@ -704,7 +707,9 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: Cartoon.panelDecoration(
-        color: isBest ? const Color(0xFFFFF4D6) : Cartoon.paper,
+        color: isBest
+            ? Cartoon.surface(const Color(0xFFFFF4D6))
+            : Cartoon.paper,
         radius: 20,
         shadowOffset: 2.5,
       ),
@@ -759,7 +764,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                           '+$bonusPct%',
                           style: Cartoon.text(
                             size: 11,
-                            color: Color(0xFF2E7D32),
+                            color: Cartoon.onSurface(const Color(0xFF2E7D32)),
                           ),
                         ),
                       ),
@@ -793,7 +798,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                             L10n.of(context).goldBestValue,
                             style: Cartoon.text(
                               size: 10.5,
-                              color: Color(0xFFE07A1F),
+                              color: Cartoon.onSurface(const Color(0xFFE07A1F)),
                             ),
                           ),
                         ),
@@ -805,7 +810,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                         style: Cartoon.userText(
                           size: 11.5,
                           weight: FontWeight.w500,
-                          color: Color(0xFF2E7D32),
+                          color: Cartoon.onSurface(const Color(0xFF2E7D32)),
                         ),
                       ),
                     ],

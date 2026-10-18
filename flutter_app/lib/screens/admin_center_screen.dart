@@ -690,7 +690,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                                 platform,
                                                 style: Cartoon.text(
                                                   size: 12,
-                                                  color: Color(0xFF1565C0),
+                                                  color: Cartoon.onSurface(
+                                                    const Color(0xFF1565C0),
+                                                  ),
                                                 ),
                                               ),
                                             Text(
@@ -702,13 +704,15 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                               ),
                                             ),
                                             if (item['is_admin'] == true)
-                                              const Padding(
+                                              Padding(
                                                 padding: EdgeInsets.only(
                                                   left: 2,
                                                 ),
                                                 child: Icon(
                                                   Icons.verified,
-                                                  color: Color(0xFF7E57C2),
+                                                  color: Cartoon.onSurface(
+                                                    const Color(0xFF7E57C2),
+                                                  ),
                                                   size: 18,
                                                 ),
                                               ),
@@ -958,13 +962,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               const Spacer(),
               Text(
                 '추정 ${_won(gross)}',
-                style: Cartoon.text(size: 14, color: Color(0xFF2E7D32)),
+                style: Cartoon.text(
+                  size: 14,
+                  color: Cartoon.onSurface(const Color(0xFF2E7D32)),
+                ),
               ),
               if (refundCount > 0) ...[
                 const SizedBox(width: 8),
                 Text(
                   '환불 $refundCount',
-                  style: Cartoon.text(size: 12, color: Color(0xFFC62828)),
+                  style: Cartoon.text(
+                    size: 12,
+                    color: Cartoon.onSurface(const Color(0xFFC62828)),
+                  ),
                 ),
               ],
             ],
@@ -1155,12 +1165,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       color: const Color(0xFFFF7043).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: Text(
                       'RANK',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFFE64A19),
+                        color: Cartoon.onSurface(const Color(0xFFE64A19)),
                         letterSpacing: 0.4,
                       ),
                     ),
@@ -1183,10 +1193,10 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.flag_outlined,
                     size: 12,
-                    color: Color(0xFFE53935),
+                    color: Cartoon.onSurface(const Color(0xFFE53935)),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -1195,7 +1205,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       style: Cartoon.userText(
                         size: 11,
                         weight: FontWeight.w600,
-                        color: Color(0xFFE53935),
+                        color: Cartoon.onSurface(const Color(0xFFE53935)),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),

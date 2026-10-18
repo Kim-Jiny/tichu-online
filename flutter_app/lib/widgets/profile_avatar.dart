@@ -50,7 +50,7 @@ class DefaultAvatar extends StatelessWidget {
       child: Icon(
         Icons.person,
         size: size * 0.58,
-        color: const Color(0xFF9C8B84),
+        color: Cartoon.onSurface(const Color(0xFF9C8B84)),
       ),
     );
   }

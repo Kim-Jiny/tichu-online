@@ -1143,7 +1143,9 @@ class _ShopScreenState extends State<ShopScreen> {
       trailing = Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+          color: onSale
+              ? Cartoon.surface(const Color(0xFFFFE3E3))
+              : Cartoon.cream,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -1155,7 +1157,9 @@ class _ShopScreenState extends State<ShopScreen> {
               formatGold(price),
               style: Cartoon.text(
                 size: 16,
-                color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
+                color: onSale
+                    ? Cartoon.onSurface(const Color(0xFFD32F2F))
+                    : Cartoon.ink,
               ),
             ),
           ],
@@ -1219,7 +1223,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: Cartoon.userText(
                         size: 11,
-                        color: const Color(0xFF2E8B57),
+                        color: Cartoon.onSurface(const Color(0xFF2E8B57)),
                       ),
                     ),
                   if (saleWindow != null)
@@ -1497,7 +1501,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: Cartoon.userText(
                         size: 11,
-                        color: const Color(0xFF2E8B57),
+                        color: Cartoon.onSurface(const Color(0xFF2E8B57)),
                       ),
                     ),
                 ],
@@ -1539,7 +1543,9 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: onSale ? const Color(0xFFFFE3E3) : Cartoon.cream,
+        color: onSale
+            ? Cartoon.surface(const Color(0xFFFFE3E3))
+            : Cartoon.cream,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
@@ -1556,7 +1562,9 @@ class _ShopScreenState extends State<ShopScreen> {
             formatGold(price),
             style: Cartoon.text(
               size: 15,
-              color: onSale ? const Color(0xFFD32F2F) : Cartoon.ink,
+              color: onSale
+                  ? Cartoon.onSurface(const Color(0xFFD32F2F))
+                  : Cartoon.ink,
             ),
           ),
         ],
@@ -1861,7 +1869,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
       decoration: BoxDecoration(
-        color: equipped ? const Color(0xFFE6F2FF) : null,
+        color: equipped ? Cartoon.surface(const Color(0xFFE6F2FF)) : null,
         borderRadius: BorderRadius.circular(14),
         border: Border(
           bottom: BorderSide(
@@ -2892,17 +2900,21 @@ class _ShopScreenState extends State<ShopScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.schedule_rounded,
                                 size: 15,
-                                color: Color(0xFF7E57C2),
+                                color: Cartoon.onSurface(
+                                  const Color(0xFF7E57C2),
+                                ),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 ownedExpiryText,
                                 style: Cartoon.userText(
                                   size: 13,
-                                  color: const Color(0xFF7E57C2),
+                                  color: Cartoon.onSurface(
+                                    const Color(0xFF7E57C2),
+                                  ),
                                 ),
                               ),
                             ],
@@ -3192,14 +3204,18 @@ class _ShopScreenState extends State<ShopScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_rounded, size: 18, color: Color(0xFF7E57C2)),
+            Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: Cartoon.onSurface(const Color(0xFF7E57C2)),
+            ),
             const SizedBox(width: 6),
             Text(
               l10n.shopSheetEquipped,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF7E57C2),
+                color: Cartoon.onSurface(const Color(0xFF7E57C2)),
               ),
             ),
           ],
@@ -3397,7 +3413,7 @@ class _ShopScreenState extends State<ShopScreen> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE6DCE8)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
@@ -3405,7 +3421,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
+                    color: Cartoon.onSurface(const Color(0xFF5A4038)),
                   ),
                 ),
                 Text(
@@ -3413,7 +3429,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF8A7A6A),
+                    color: Cartoon.onSurface(const Color(0xFF8A7A6A)),
                   ),
                 ),
                 SizedBox(width: 8),
@@ -3422,7 +3438,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
+                    color: Cartoon.onSurface(const Color(0xFF5A4038)),
                   ),
                 ),
                 Text(
@@ -3430,14 +3446,17 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF8A7A6A),
+                    color: Cartoon.onSurface(const Color(0xFF8A7A6A)),
                   ),
                 ),
                 SizedBox(width: 8),
                 Text('\u{1F409}', style: TextStyle(fontSize: 13)),
                 Text(
                   '\u25CB',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF4A90D9)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Cartoon.onSurface(const Color(0xFF4A90D9)),
+                  ),
                 ),
                 SizedBox(width: 6),
                 Text('\u{1F426}', style: TextStyle(fontSize: 13)),
@@ -3461,7 +3480,7 @@ class _ShopScreenState extends State<ShopScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFCCCCCC)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 SuitIcon(suit: 'spade', size: 14),
@@ -3471,7 +3490,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E2E2E),
+                    color: Cartoon.onSurface(const Color(0xFF2E2E2E)),
                   ),
                 ),
               ],
@@ -3579,10 +3598,10 @@ class _ShopScreenState extends State<ShopScreen> {
                   itemName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF5A4038),
+                    color: Cartoon.onSurface(const Color(0xFF5A4038)),
                   ),
                 ),
               ),
@@ -3779,10 +3798,10 @@ class _ShopScreenState extends State<ShopScreen> {
             backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
             title: Text(
               l10n.customTitleEditTitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF4A3A33),
+                color: Cartoon.onSurface(const Color(0xFF4A3A33)),
               ),
             ),
             // Scrollable: the keyboard is up the whole time this dialog is
@@ -3818,10 +3837,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     const SizedBox(height: 14),
                     Text(
                       l10n.customTitlePreviewLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF8A7A72),
+                        color: Cartoon.onSurface(const Color(0xFF8A7A72)),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -3858,10 +3877,12 @@ class _ShopScreenState extends State<ShopScreen> {
                                       : game.playerName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF5A4038),
+                                    color: Cartoon.onSurface(
+                                      const Color(0xFF5A4038),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -3873,10 +3894,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     const SizedBox(height: 10),
                     Text(
                       l10n.customTitleColorLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF8A7A72),
+                        color: Cartoon.onSurface(const Color(0xFF8A7A72)),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -3909,10 +3930,10 @@ class _ShopScreenState extends State<ShopScreen> {
                     const SizedBox(height: 10),
                     Text(
                       l10n.customTitleRule,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         height: 1.35,
-                        color: Color(0xFF9A8E8A),
+                        color: Cartoon.onSurface(const Color(0xFF9A8E8A)),
                       ),
                     ),
                   ],
@@ -3932,7 +3953,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         game.setCustomTitle(text, colorId);
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFC7E6D0),
+                  backgroundColor: Cartoon.surface(const Color(0xFFC7E6D0)),
                   foregroundColor: const Color(0xFF2E5A3A),
                   elevation: 0,
                 ),
@@ -3967,20 +3988,20 @@ class _ShopScreenState extends State<ShopScreen> {
           currentlyOn
               ? l10n.shopFeatureDisableTitle
               : l10n.shopFeatureEnableTitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF4A3A33),
+            color: Cartoon.onSurface(const Color(0xFF4A3A33)),
           ),
         ),
         content: Text(
           currentlyOn
               ? l10n.shopFeatureDisableBody
               : l10n.shopFeatureEnableBody,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13.5,
             height: 1.45,
-            color: Color(0xFF6A5A52),
+            color: Cartoon.onSurface(const Color(0xFF6A5A52)),
           ),
         ),
         actions: [
@@ -4025,7 +4046,10 @@ class _ShopScreenState extends State<ShopScreen> {
           children: [
             Text(
               L10n.of(context).shopNicknameChangeDesc,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6A5A52)),
+              style: TextStyle(
+                fontSize: 13,
+                color: Cartoon.onSurface(const Color(0xFF6A5A52)),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -4490,8 +4514,8 @@ class _ShopScreenState extends State<ShopScreen> {
                           child: Text(
                             l.attendanceDoneToday,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Color(0xFF2E7D32),
+                            style: TextStyle(
+                              color: Cartoon.onSurface(const Color(0xFF2E7D32)),
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -4640,7 +4664,9 @@ class _ShopScreenState extends State<ShopScreen> {
               '$reward',
               style: Cartoon.text(
                 size: finale ? 17 : 14,
-                color: finale ? const Color(0xFFE65100) : Cartoon.ink,
+                color: finale
+                    ? Cartoon.onSurface(const Color(0xFFE65100))
+                    : Cartoon.ink,
               ),
             ),
           ],
@@ -4709,10 +4735,10 @@ class _ShopScreenState extends State<ShopScreen> {
         ),
         title: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.play_circle_rounded,
               size: 30,
-              color: Color(0xFF7E57C2),
+              color: Cartoon.onSurface(const Color(0xFF7E57C2)),
             ),
             const SizedBox(width: 8),
             Expanded(

@@ -553,17 +553,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.construction,
-                        color: Color(0xFFE65100),
+                        color: Cartoon.onSurface(const Color(0xFFE65100)),
                         size: 24,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           _error!,
-                          style: const TextStyle(
-                            color: Color(0xFFE65100),
+                          style: TextStyle(
+                            color: Cartoon.onSurface(const Color(0xFFE65100)),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -594,8 +594,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
                       l10n.loginQuickLogin,
-                      style: const TextStyle(
-                        color: Color(0xFFAA9A92),
+                      style: TextStyle(
+                        color: Cartoon.onSurface(const Color(0xFFAA9A92)),
                         fontSize: 13,
                       ),
                     ),
@@ -658,7 +658,10 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(height: compact ? 18 : 24),
               Text(
                 l10n.loginGetTheApp,
-                style: const TextStyle(color: Color(0xFFAA9A92), fontSize: 12),
+                style: TextStyle(
+                  color: Cartoon.onSurface(const Color(0xFFAA9A92)),
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -766,19 +769,19 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Text(
             l10n.loginAutoLoginFailed,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF7A4B1F),
+              color: Cartoon.onSurface(const Color(0xFF7A4B1F)),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             localizeRestoreError(session.restoreErrorRaw, l10n) ??
                 l10n.loginCheckSavedInfo,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: Color(0xFF7A4B1F),
+              color: Cartoon.onSurface(const Color(0xFF7A4B1F)),
               height: 1.4,
             ),
           ),
@@ -1040,7 +1043,9 @@ Widget _signupNicknameRow({
             status,
             style: Cartoon.userText(
               size: 13.5,
-              color: available ? const Color(0xFF2E9B52) : Cartoon.red,
+              color: available
+                  ? Cartoon.onSurface(const Color(0xFF2E9B52))
+                  : Cartoon.red,
             ),
           ),
         ),

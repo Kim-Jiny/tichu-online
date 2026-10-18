@@ -867,7 +867,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: const Color(0xFFFFD9D6),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -3195,7 +3195,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (cardId == 'mighty_joker') {
       return Text(
         l10n.mtFriendCardJoker,
-        style: Cartoon.text(size: fontSize + 1, color: const Color(0xFF7B1FA2)),
+        style: Cartoon.text(
+          size: fontSize + 1,
+          color: Cartoon.onSurface(const Color(0xFF7B1FA2)),
+        ),
       );
     }
     if (cardId == 'no_friend') {
@@ -3632,7 +3635,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   BoxDecoration _pickDecoration(bool selected, {double radius = 12}) {
     return gamePillDecoration(
       radius: radius,
-      color: selected ? const Color(0xFFDDEEFF) : Cartoon.cream,
+      color: selected
+          ? Cartoon.surface(const Color(0xFFDDEEFF))
+          : Cartoon.cream,
     ).copyWith(
       border: Border.all(
         color: selected ? Cartoon.blue : Cartoon.ink.withValues(alpha: 0.4),
@@ -3846,7 +3851,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: gamePillDecoration(
             radius: 16,
-            color: const Color(0xFFFFF1B8),
+            color: Cartoon.surface(const Color(0xFFFFF1B8)),
           ),
           child: Row(
             children: [
@@ -3931,7 +3936,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: gamePillDecoration(
                   radius: 8,
-                  color: const Color(0xFFFFD9D6),
+                  color: Cartoon.surface(const Color(0xFFFFD9D6)),
                 ),
                 child: Text(
                   l10n.mtTrumpPenalty(2),
@@ -5960,11 +5965,14 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: gamePillDecoration(
             radius: 8,
-            color: const Color(0xFFF3E5F5),
+            color: Cartoon.surface(const Color(0xFFF3E5F5)),
           ),
           child: Text(
             'NT',
-            style: Cartoon.text(size: 15, color: const Color(0xFF7B1FA2)),
+            style: Cartoon.text(
+              size: 15,
+              color: Cartoon.onSurface(const Color(0xFF7B1FA2)),
+            ),
           ),
         );
       }
@@ -6032,7 +6040,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: Cartoon.panelDecoration(
-                color: const Color(0xFFFFF1B8),
+                color: Cartoon.surface(const Color(0xFFFFF1B8)),
                 radius: 18,
                 shadowOffset: 3,
               ),

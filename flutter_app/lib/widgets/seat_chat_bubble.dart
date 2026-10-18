@@ -160,7 +160,7 @@ class SeatChatBubble extends StatelessWidget {
           size: fontSize,
           weight: FontWeight.w800,
           height: 1.2,
-          color: style?.text ?? Cartoon.ink,
+          color: style?.inkOn ?? Cartoon.ink,
         ),
       ),
     );

@@ -1980,7 +1980,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                 child: Icon(
                                   Icons.wifi_off,
                                   size: offlineIconSize,
-                                  color: const Color(0xFFE53935),
+                                  color: Cartoon.onSurface(
+                                    const Color(0xFFE53935),
+                                  ),
                                 ),
                               ),
                             Flexible(
@@ -2425,7 +2427,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: gamePillDecoration(
                             radius: 8,
-                            color: const Color(0xFFFFD9D6),
+                            color: Cartoon.surface(const Color(0xFFFFD9D6)),
                           ),
                           child: const Icon(
                             Icons.close_rounded,
@@ -3161,7 +3163,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, isLandscape ? 12 : 16),
       decoration: BoxDecoration(
-        color: isMyBidTurn ? const Color(0xFFFFF1B8) : Cartoon.paper,
+        color: isMyBidTurn
+            ? Cartoon.surface(const Color(0xFFFFF1B8))
+            : Cartoon.paper,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         border: Border(
           top: BorderSide(color: Cartoon.ink, width: isMyBidTurn ? 3.2 : 2.2),
@@ -4008,7 +4012,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: isWinner ? const Color(0xFFFFF1B8) : Cartoon.cream,
+                color: isWinner
+                    ? Cartoon.surface(const Color(0xFFFFF1B8))
+                    : Cartoon.cream,
                 borderRadius: BorderRadius.circular(14),
                 border: isWinner
                     ? Border.all(color: Cartoon.ink, width: 1.8)

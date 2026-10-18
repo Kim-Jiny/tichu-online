@@ -62,7 +62,7 @@ class ChatBubble extends StatelessWidget {
 
   /// 말풍선 몸통. 토큰 상점 모양이 있으면 그 색·테두리, 없으면 기본 카툰 모양.
   Widget _bubble(BubbleStyle? style) {
-    final textColor = style?.text ?? (isMe ? Colors.white : Cartoon.ink);
+    final textColor = style?.inkOn ?? (isMe ? Colors.white : Cartoon.ink);
     final body = Container(
       padding: bubblePadding,
       // 카툰: 내 말풍선과 남의 말풍선 모두 진한 테두리 + 작은 단색 그림자.
@@ -121,7 +121,7 @@ class ChatBubble extends StatelessWidget {
               child: Icon(
                 Icons.person,
                 size: avatarRadius * 1.15,
-                color: const Color(0xFF9C8B84),
+                color: Cartoon.onSurface(const Color(0xFF9C8B84)),
               ),
             ),
           ),

@@ -548,7 +548,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             game.inquiriesError!,
                             L10n.of(context),
                           ),
-                          style: const TextStyle(color: Color(0xFFCC6666)),
+                          style: TextStyle(
+                            color: Cartoon.onSurface(const Color(0xFFCC6666)),
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 10),
@@ -567,7 +569,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Center(
                     child: Text(
                       l10n.inquiryEmpty,
-                      style: const TextStyle(color: Color(0xFF9A8E8A)),
+                      style: TextStyle(
+                        color: Cartoon.onSurface(const Color(0xFF9A8E8A)),
+                      ),
                     ),
                   ),
                 );
@@ -717,7 +721,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (status == 'resolved' && adminNote.isNotEmpty) ...[
                 Text(
                   l10n.inquiryAnswerLabel,
-                  style: Cartoon.text(size: 12, color: Color(0xFF4CAF50)),
+                  style: Cartoon.text(
+                    size: 12,
+                    color: Cartoon.onSurface(const Color(0xFF4CAF50)),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 NoticeBody(content: adminNote),
@@ -1105,10 +1112,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(
+                    child: Icon(
                       Icons.person,
                       size: 26,
-                      color: Color(0xFF9C8B84),
+                      color: Cartoon.onSurface(const Color(0xFF9C8B84)),
                     ),
                   ),
                 ),
@@ -1402,7 +1409,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           style: Cartoon.userText(
                                             size: 12,
                                             weight: FontWeight.w500,
-                                            color: Color(0xFF7E57C2),
+                                            color: Cartoon.onSurface(
+                                              const Color(0xFF7E57C2),
+                                            ),
                                           ),
                                         ),
                                       )

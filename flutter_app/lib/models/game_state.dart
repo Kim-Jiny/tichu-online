@@ -5,6 +5,7 @@ class TrickPlay {
   final String playerName;
   final List<String> cards;
   final String combo;
+
   /// Effective rank value of the play (e.g. 12 for Q-single, 5.5 for the
   /// Phoenix played as a single beating a 5). UI overlays the fractional
   /// value on a Phoenix-as-single card so the table knows what it beat.
@@ -44,8 +45,10 @@ class GameStateData {
   final bool needsToCallRank;
   final bool dragonPending;
   final bool exchangeDone;
-  final Map<String, String>? exchangeGiven; // { left: cardId, partner: cardId, right: cardId }
-  final Map<String, String>? receivedFrom; // { left: cardId, partner: cardId, right: cardId }
+  final Map<String, String>?
+  exchangeGiven; // { left: cardId, partner: cardId, right: cardId }
+  final Map<String, String>?
+  receivedFrom; // { left: cardId, partner: cardId, right: cardId }
   final bool largeTichuResponded;
   final bool canDeclareSmallTichu;
   final int? turnDeadline; // epoch ms
@@ -153,13 +156,19 @@ class GameStateData {
       turnDeadline: json['turnDeadline'] as int?,
       myTeam: _resolveMyTeam(json, playerList),
       remainingAces: (json['remainingSpecials'] as Map?)?['aces'] as int? ?? 0,
-      remainingKings: (json['remainingSpecials'] as Map?)?['kings'] as int? ?? 0,
-      remainingDragon: (json['remainingSpecials'] as Map?)?['dragon'] as int? ?? 0,
-      remainingPhoenix: (json['remainingSpecials'] as Map?)?['phoenix'] as int? ?? 0,
+      remainingKings:
+          (json['remainingSpecials'] as Map?)?['kings'] as int? ?? 0,
+      remainingDragon:
+          (json['remainingSpecials'] as Map?)?['dragon'] as int? ?? 0,
+      remainingPhoenix:
+          (json['remainingSpecials'] as Map?)?['phoenix'] as int? ?? 0,
     );
   }
 
-  static String _resolveMyTeam(Map<String, dynamic> json, List<Player> players) {
+  static String _resolveMyTeam(
+    Map<String, dynamic> json,
+    List<Player> players,
+  ) {
     final teams = json['teams'];
     if (teams == null) return 'A';
     final selfPlayer = players.cast<Player?>().firstWhere(

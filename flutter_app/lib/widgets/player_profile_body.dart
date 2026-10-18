@@ -890,7 +890,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           if (recentMatches.isEmpty)
             Text(
               L10n.of(context).lobbyNoRecentMatches,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF9A8E8A)),
+              style: TextStyle(
+                fontSize: 13,
+                color: Cartoon.onSurface(const Color(0xFF9A8E8A)),
+              ),
             )
           else
             Column(
@@ -1151,9 +1154,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                     const SizedBox(width: 7),
                     Text(
                       date,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8A8A8A),
+                        color: Cartoon.onSurface(const Color(0xFF8A8A8A)),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -1187,10 +1190,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                 const SizedBox(height: 2),
                 Text.rich(
                   TextSpan(children: playerSpans),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF5A4038),
+                    color: Cartoon.onSurface(const Color(0xFF5A4038)),
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -1266,14 +1269,18 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_rounded, size: 16, color: Color(0xFF7E57C2)),
+          Icon(
+            Icons.lock_rounded,
+            size: 16,
+            color: Cartoon.onSurface(const Color(0xFF7E57C2)),
+          ),
           const SizedBox(width: 6),
           Text(
             l10n.profilePrivateHidePhoto,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF5A4038),
+              color: Cartoon.onSurface(const Color(0xFF5A4038)),
             ),
           ),
           // Tap, read, gone — a bubble over the popup instead of two lines of
@@ -1290,12 +1297,12 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               color: const Color(0xE6473A55),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(6),
               child: Icon(
                 Icons.help_outline_rounded,
                 size: 15,
-                color: Color(0xFF9C8FAE),
+                color: Cartoon.onSurface(const Color(0xFF9C8FAE)),
               ),
             ),
           ),

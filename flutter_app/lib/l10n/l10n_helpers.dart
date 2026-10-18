@@ -15,8 +15,8 @@ String localizeRestorePhase(SessionService session, L10n l10n) {
     case RestorePhase.loadingLobbyData:
       return l10n.serviceRestoreLoadingLobby;
     case RestorePhase.failed:
-      return localizeRestoreError(session.restoreErrorRaw, l10n)
-          ?? l10n.serviceRestoreAutoLoginFailed;
+      return localizeRestoreError(session.restoreErrorRaw, l10n) ??
+          l10n.serviceRestoreAutoLoginFailed;
     case RestorePhase.idle:
       return l10n.serviceRestoreConnecting;
   }
@@ -109,7 +109,9 @@ String localizeInquiryBanner(String? raw, L10n l10n) {
   if (raw == null) return '';
   if (raw.startsWith('inquiry_reply:')) {
     final title = raw.substring('inquiry_reply:'.length);
-    return l10n.serviceInquiryReply(title.isEmpty ? l10n.serviceInquiryDefault : title);
+    return l10n.serviceInquiryReply(
+      title.isEmpty ? l10n.serviceInquiryDefault : title,
+    );
   }
   return raw;
 }
@@ -133,7 +135,12 @@ String localizeAdRewardSuccess(int remaining, L10n l10n) {
 
 /// Localize a gold history title key to a user-facing string.
 /// For shop_purchase, the title contains pipe-separated localized names.
-String localizeGoldTitle(String? title, String? source, L10n l10n, String locale) {
+String localizeGoldTitle(
+  String? title,
+  String? source,
+  L10n l10n,
+  String locale,
+) {
   // A mailbox reward stores the letter's own title, which is free text written
   // by whoever sent it — it could be anything, in any language, and it says
   // nothing about where the gold came from. The category is what belongs in a
@@ -271,4 +278,3 @@ String localizeGoldDescription(String? desc, String? source, L10n l10n) {
       return desc;
   }
 }
-

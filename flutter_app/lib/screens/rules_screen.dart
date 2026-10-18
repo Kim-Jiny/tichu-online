@@ -617,9 +617,11 @@ class _RulesScreenState extends State<RulesScreen> {
                           children: [
                             TextSpan(
                               text: '${L10n.of(context).rulesSkTrumpTitle}\n',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF212121),
+                                color: Cartoon.onSurface(
+                                  const Color(0xFF212121),
+                                ),
                               ),
                             ),
                             TextSpan(text: L10n.of(context).rulesSkTrumpBody),
@@ -1257,7 +1259,7 @@ class _TigressChoiceCard extends StatelessWidget {
                 errorBuilder: (_, _, _) => Container(
                   width: 36,
                   height: 50,
-                  color: const Color(0xFFEDE7F6),
+                  color: Cartoon.surface(const Color(0xFFEDE7F6)),
                 ),
               ),
             ),
@@ -1351,11 +1353,11 @@ class _ExampleBlock extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '→ $calc',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               height: 1.4,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF6D615B),
+              color: Cartoon.onSurface(const Color(0xFF6D615B)),
               fontFamily: 'monospace',
             ),
           ),
@@ -2051,7 +2053,10 @@ class _CardGuide extends StatelessWidget {
                     ),
                     child: Text(
                       L10n.of(context).rulesSkIncludedByDefault,
-                      style: Cartoon.text(size: 12, color: Color(0xFFE65100)),
+                      style: Cartoon.text(
+                        size: 12,
+                        color: Cartoon.onSurface(const Color(0xFFE65100)),
+                      ),
                     ),
                   ),
                 ],

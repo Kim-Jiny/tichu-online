@@ -176,6 +176,29 @@ class Cartoon {
         .toColor();
   }
 
+  /// 밝은 바탕을 전제로 고른 '진한 글자·아이콘' 색.
+  ///
+  /// [surface] 의 짝이다. 화면 곳곳에 "진한 초록 글씨", "진한 주황 숫자"
+  /// 처럼 손으로 고른 색이 있는데, 어두운 한 벌에서 바탕만 어두워지면
+  /// 그 글자는 그대로 진한 채 남아 묻힌다.
+  ///
+  /// 밝은 한 벌에서는 받은 값을 그대로 돌려준다 — 지금 화면은 바뀌지
+  /// 않는다. 어두울 때만 색조와 채도를 지킨 채 밝기를 올린다.
+  ///
+  /// 밝은 면 위에 얹히는 글자에는 쓰지 않는다(주황 버튼 위 흰 글씨 등).
+  /// 그 면은 어두워지지 않으므로 글자도 그대로여야 한다.
+  static Color onSurface(Color light) {
+    if (!_palette.dark) return light;
+    final h = HSLColor.fromColor(light);
+    // 진한 색일수록 더 올린다. 거의 검정(0.1)은 0.82 쯤으로, 중간 톤
+    // (0.4)은 0.70 쯤으로 — 원래의 진하기 차이가 남는다.
+    final l = (0.86 - h.lightness * 0.40).clamp(0.62, 0.88);
+    return h
+        .withLightness(l.toDouble())
+        .withSaturation((h.saturation * 0.75).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   /// 강조색을 바탕색 쪽으로 섞어 만든 연한 면.
   ///
   /// 탭 아이콘 바탕처럼 "주황을 옅게 깔아 둔" 자리에 쓴다. 전에는
@@ -296,7 +319,7 @@ class Cartoon {
       hintStyle: text(size: 16, color: ink.withValues(alpha: 0.4)),
       prefixIcon: icon == null ? null : Icon(icon, color: ink),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: paper,
       enabledBorder: b(ink, 2.5),
       focusedBorder: b(orange, 3),
       border: b(ink, 2.5),
@@ -736,7 +759,7 @@ ThemeData cartoonTheme(ThemeData base) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: Cartoon.paper,
       hintStyle: TextStyle(color: ink.withValues(alpha: 0.4)),
       border: border(ink, 2.5),
       enabledBorder: border(ink, 2.5),

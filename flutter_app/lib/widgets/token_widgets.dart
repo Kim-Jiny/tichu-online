@@ -258,7 +258,9 @@ class _TokenHistorySheet extends StatelessWidget {
             '${gain ? '+' : ''}${e.delta}',
             style: Cartoon.text(
               size: 18,
-              color: gain ? const Color(0xFF2E8B57) : const Color(0xFFD64550),
+              color: gain
+                  ? Cartoon.onSurface(const Color(0xFF2E8B57))
+                  : const Color(0xFFD64550),
             ),
           ),
         ],

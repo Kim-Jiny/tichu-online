@@ -8946,7 +8946,7 @@ async function handleChatMessage(ws, data) {
   }
 
   // 방에 메시지 저장
-  const bubble = (ws.tokenEquips && ws.tokenEquips.bubble) || null;
+  const bubble = equippedBubble(ws);
   room.addChatMessage(ws.nickname, ws.playerId, message, ws.photoUrl || null, bubble);
 
   const chatData = {
@@ -9407,17 +9407,77 @@ function forgetTokenEquips(nickname) {
   if (!nickname) return;
   tokenEquipsByNick.delete(nickname);
   tokenEquipAt.delete(nickname);
+  tokenEquipGen.delete(nickname);
 }
 
-/// 캐시된 장착 상태. 너무 오래된 것은 없는 것으로 본다.
+/// 갱신 중인 닉네임. 로비 목록은 자주 다시 그려지므로, 식은 캐시를 본
+/// 호출이 각자 질의를 날리면 같은 사람 몫이 한꺼번에 여러 건이 된다.
+const tokenEquipRefreshing = new Set();
+
+/// 캐시에 값을 담은 횟수. 늦게 끝난 조회가 더 새 값을 덮지 않게 쓴다.
+///
+/// 시각(tokenEquipAt)으로 비교하면 같은 밀리초에 겹칠 때 통과해 버리고,
+/// 닉네임별 번호로 하면 접속이 끊겼다 다시 들어올 때 번호가 되돌아간다.
+/// 그래서 전역으로 올라가는 번호를 쓴다 — 한 번 쓴 값보다 작아지는 일이
+/// 없다.
+let tokenEquipSeq = 0;
+const tokenEquipGen = new Map();
+
+/// 캐시에 담는 유일한 경로. 쓰기 번호를 같이 올린다.
+function putTokenEquips(nickname, eq) {
+  tokenEquipsByNick.set(nickname, eq);
+  tokenEquipAt.set(nickname, Date.now());
+  tokenEquipGen.set(nickname, ++tokenEquipSeq);
+}
+
+/// 식은 값을 뒤에서 다시 읽어 둔다. 기다리지 않는다 — 부르는 쪽
+/// (로비 강조 resolver)은 동기이고, 그 자리에서 DB 를 볼 수 없다.
+function revalidateTokenEquips(nickname) {
+  if (!nickname || tokenEquipRefreshing.has(nickname)) return;
+  // 조회를 시작한 시점의 번호. 돌아왔을 때 이것과 다르면, 그 사이에
+  // 누군가 더 새 값을 담았다는 뜻이다.
+  const gen = tokenEquipGen.get(nickname);
+  tokenEquipRefreshing.add(nickname);
+  missions.getEquippedKeys(nickname)
+    .then((eq) => {
+      // 그 사이 접속이 끊겨 캐시에서 지워졌다면 되살리지 않는다.
+      // 닉네임은 재사용되므로, 떠난 사람의 장착을 다음 사람에게
+      // 물려주는 일이 생긴다.
+      if (!tokenEquipAt.has(nickname)) return;
+      // 재접속이나 장착 변경이 먼저 끝났다면, 이 조회의 결과는 이미
+      // 지난 상태다. 담으면 방금 바꾼 장착이 옛것으로 되돌아간다.
+      if (tokenEquipGen.get(nickname) !== gen) return;
+      putTokenEquips(nickname, eq);
+    })
+    .catch((e) => console.error('[missions] equip revalidate failed:', e.message))
+    .finally(() => tokenEquipRefreshing.delete(nickname));
+}
+
+/// 캐시된 장착 상태. 식었으면 그 값을 쓰면서 뒤에서 다시 읽는다.
+///
+/// 전에는 식은 값을 '없는 것' 으로 보고 지웠다. 그런데 다시 채우는 곳은
+/// 로그인·장착 변경·닉네임 변경뿐이어서, 아무도 다시 채우지 않았다 —
+/// 유효기간이 한참 남은 '방 목록 강조' 가 접속 5분 뒤 사라졌고, 재접속
+/// 하거나 다시 장착할 때까지 돌아오지 않았다.
+///
+/// TTL 의 뜻은 위 주석에 적힌 대로 "만료가 늦게 반영되는 최대 시간" 이다.
+/// 그러려면 식었을 때 버리는 게 아니라 새로 읽어야 한다.
 function cachedTokenEquips(nickname) {
   if (!nickname) return null;
   const at = tokenEquipAt.get(nickname);
-  if (!at || Date.now() - at > TOKEN_EQUIP_TTL_MS) {
-    forgetTokenEquips(nickname);
-    return null;
-  }
+  if (!at) return null;
+  if (Date.now() - at > TOKEN_EQUIP_TTL_MS) revalidateTokenEquips(nickname);
   return tokenEquipsByNick.get(nickname) || null;
+}
+
+/// 이 사람이 장착한 말풍선.
+///
+/// 캐시를 먼저 본다. 소켓에 붙은 ws.tokenEquips 는 접속할 때 한 번 담고
+/// 다시 갱신하지 않아서, 접속 중에 아이템이 만료되어도 효과가 남았다.
+/// 캐시는 위에서 다시 읽으므로 TTL 안에 반영된다.
+function equippedBubble(ws) {
+  const eq = cachedTokenEquips(ws && ws.nickname) || (ws && ws.tokenEquips);
+  return (eq && eq.bubble) || null;
 }
 
 lobby.setHighlightResolver((nickname) => {
@@ -9430,8 +9490,7 @@ async function refreshTokenEquips(ws) {
   try {
     const eq = await missions.getEquippedKeys(ws.nickname);
     ws.tokenEquips = eq;
-    tokenEquipsByNick.set(ws.nickname, eq);
-    tokenEquipAt.set(ws.nickname, Date.now());
+    putTokenEquips(ws.nickname, eq);
     return eq;
   } catch (e) {
     console.error('[missions] equip refresh failed:', e.message);
@@ -11409,7 +11468,7 @@ async function handleSendDm(ws, data) {
     return;
   }
   // 보낸 사람이 장착한 말풍선 모양(토큰 상점)도 함께 보낸다 — 받는 쪽 친구 채팅에도 그대로 보인다.
-  const senderBubble = (ws.tokenEquips && ws.tokenEquips.bubble) || null;
+  const senderBubble = equippedBubble(ws);
   const dmMsg = {
     type: 'dm_message',
     id: result.id,

@@ -235,7 +235,7 @@ class _RulesScreenState extends State<RulesScreen> {
   // ─── TICHU ─────────────────────────────────────────────────────────────────
 
   Widget _buildTichuRules() {
-    const tichuAccent = Color(0xFF6C63FF);
+    final tichuAccent = Cartoon.onSurface(const Color(0xFF6C63FF));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -390,7 +390,7 @@ class _RulesScreenState extends State<RulesScreen> {
         ),
         _section(
           icon: Icons.local_fire_department,
-          iconColor: const Color(0xFFE53935),
+          iconColor: Cartoon.onSurface(const Color(0xFFE53935)),
           title: L10n.of(context).rulesTichuBombTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +436,7 @@ class _RulesScreenState extends State<RulesScreen> {
   // ─── SKULL KING ────────────────────────────────────────────────────────────
 
   Widget _buildSkullKingRules() {
-    const skAccent = Color(0xFF2D2D3D);
+    final skAccent = Cartoon.onSurface(const Color(0xFF2D2D3D));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -595,10 +595,14 @@ class _RulesScreenState extends State<RulesScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF212121).withValues(alpha: 0.08),
+                  color: Cartoon.onSurface(
+                    const Color(0xFF212121),
+                  ).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFF212121).withValues(alpha: 0.3),
+                    color: Cartoon.onSurface(
+                      const Color(0xFF212121),
+                    ).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -620,7 +624,7 @@ class _RulesScreenState extends State<RulesScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: Cartoon.onSurface(
-                                  const Color(0xFF212121),
+                                  Cartoon.onSurface(const Color(0xFF212121)),
                                 ),
                               ),
                             ),
@@ -656,7 +660,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 ],
                 caption: L10n.of(context).rulesSkLeadDemoEscape,
                 tag: L10n.of(context).rulesSkLeadDemoEscapeTag,
-                tagColor: const Color(0xFF6A1B9A),
+                tagColor: Cartoon.onSurface(const Color(0xFF6A1B9A)),
               ),
               const SizedBox(height: 10),
               _FlowDemo(
@@ -667,7 +671,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 ],
                 caption: L10n.of(context).rulesSkLeadDemoPirate,
                 tag: L10n.of(context).rulesSkLeadDemoPirateTag,
-                tagColor: const Color(0xFF455A64),
+                tagColor: Cartoon.onSurface(const Color(0xFF455A64)),
               ),
               const SizedBox(height: 10),
               _FlowDemo(
@@ -677,7 +681,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 ],
                 caption: L10n.of(context).rulesSkLootDemo,
                 tag: L10n.of(context).rulesSkLootDemoTag,
-                tagColor: const Color(0xFF2E7D32),
+                tagColor: Cartoon.onSurface(const Color(0xFF2E7D32)),
               ),
             ],
           ),
@@ -743,7 +747,7 @@ class _RulesScreenState extends State<RulesScreen> {
         ),
         _section(
           icon: Icons.emoji_events,
-          iconColor: const Color(0xFF2D2D3D),
+          iconColor: Cartoon.onSurface(const Color(0xFF2D2D3D)),
           title: L10n.of(context).rulesSkWinTitle,
           art: 'assets/icons/crown.webp',
           child: _RuleText(L10n.of(context).rulesSkWinBody),
@@ -755,7 +759,7 @@ class _RulesScreenState extends State<RulesScreen> {
   // ─── LOVE LETTER ──────────────────────────────────────────────────────────
 
   Widget _buildLoveLetterRules() {
-    const llAccent = Color(0xFFE91E63);
+    final llAccent = Cartoon.onSurface(const Color(0xFFE91E63));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -870,7 +874,7 @@ class _RulesScreenState extends State<RulesScreen> {
   // ─── MIGHTY ──────────────────────────────────────────────────────────────
 
   Widget _buildMightyRules() {
-    const mtAccent = Color(0xFF1565C0);
+    final mtAccent = Cartoon.onSurface(const Color(0xFF1565C0));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -927,7 +931,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 // small purple mark here helps readers match the rule to
                 // the joker artwork.
                 badgeIcon: Icons.auto_awesome,
-                badgeColor: const Color(0xFF7B1FA2),
+                badgeColor: Cartoon.onSurface(const Color(0xFF7B1FA2)),
               ),
               const SizedBox(height: 10),
               _SpecialRule(
@@ -940,7 +944,7 @@ class _RulesScreenState extends State<RulesScreen> {
                 cardId: 'mighty_club_3',
                 // Matches the red gps_fixed badge on the joker-call card in play.
                 badgeIcon: Icons.gps_fixed,
-                badgeColor: const Color(0xFFE53935),
+                badgeColor: Cartoon.onSurface(const Color(0xFFE53935)),
               ),
             ],
           ),
@@ -1198,10 +1202,14 @@ class _TigressDisplayPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFF5E35B1).withValues(alpha: 0.06),
+        color: Cartoon.onSurface(
+          const Color(0xFF5E35B1),
+        ).withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: const Color(0xFF5E35B1).withValues(alpha: 0.22),
+          color: Cartoon.onSurface(
+            const Color(0xFF5E35B1),
+          ).withValues(alpha: 0.22),
         ),
       ),
       child: Column(
@@ -1272,7 +1280,7 @@ class _TigressChoiceCard extends StatelessWidget {
                 width: 16,
                 height: 16,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF5E35B1),
+                  color: Cartoon.onSurface(const Color(0xFF5E35B1)),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Cartoon.surface(Colors.white),
@@ -1384,7 +1392,7 @@ class _TichuDeclarationRow extends StatelessWidget {
   final String when;
   final String success;
   final String fail;
-  final Color accent;
+  final Color? accent;
 
   const _TichuDeclarationRow({
     required this.title,
@@ -1399,7 +1407,7 @@ class _TichuDeclarationRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.07),
+        color: (accent ?? Cartoon.ink).withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
@@ -1413,7 +1421,7 @@ class _TichuDeclarationRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF43A047),
+                  color: Cartoon.onSurface(const Color(0xFF43A047)),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1428,7 +1436,7 @@ class _TichuDeclarationRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFC62828),
+                  color: Cartoon.onSurface(const Color(0xFFC62828)),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1502,8 +1510,8 @@ class _RuleText extends StatelessWidget {
 
   final String text;
 
-  static const _ink = Color(0xFF5A4038);
-  static const _strong = Color(0xFF3E312A);
+  static final _ink = Cartoon.onSurface(const Color(0xFF5A4038));
+  static final _strong = Cartoon.onSurface(const Color(0xFF3E312A));
 
   @override
   Widget build(BuildContext context) {
@@ -1566,7 +1574,7 @@ class _RuleText extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: deep
                           ? const Color(0xFFB8A9A2)
-                          : const Color(0xFF8A7A72),
+                          : Cartoon.onSurface(const Color(0xFF8A7A72)),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -1622,15 +1630,11 @@ class _RuleText extends StatelessWidget {
 
 /// 조합 이름 + 실제 카드 그림.
 class _ComboRow extends StatelessWidget {
-  const _ComboRow({
-    required this.label,
-    required this.cards,
-    this.accent = const Color(0xFF6C63FF),
-  });
+  const _ComboRow({required this.label, required this.cards, this.accent});
 
   final String label;
   final List<String> cards;
-  final Color accent;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
@@ -1639,9 +1643,11 @@ class _ComboRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.06),
+        color: (accent ?? Cartoon.ink).withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: (accent ?? Cartoon.ink).withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2039,8 +2045,8 @@ class _CardGuide extends StatelessWidget {
                         style: Cartoon.text(
                           size: 17,
                           color: highlight
-                              ? const Color(0xFFE65100)
-                              : const Color(0xFF3E312A),
+                              ? Cartoon.onSurface(const Color(0xFFE65100))
+                              : Cartoon.onSurface(const Color(0xFF3E312A)),
                           height: 1.25,
                         ),
                       ),

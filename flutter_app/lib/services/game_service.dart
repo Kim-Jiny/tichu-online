@@ -1017,7 +1017,11 @@ class GameService extends ChangeNotifier {
       // 확인하는 것이 목적이다. 상점에는 어드민이 켜기 전까지 뜨지
       // 않는다(is_purchasable = FALSE).
       case 'theme_dark_midnight':
-        return [Color(0xFF1B2340), Color(0xFF223052), Color(0xFF1D2A46)];
+        return [
+          Cartoon.onSurface(const Color(0xFF1B2340)),
+          Cartoon.onSurface(const Color(0xFF223052)),
+          Cartoon.onSurface(const Color(0xFF1D2A46)),
+        ];
       case 'theme_pio_dawn':
         return [
           Cartoon.surface(Color(0xFFFCEDE4)),
@@ -1215,7 +1219,11 @@ class GameService extends ChangeNotifier {
       // 심야 테마의 카드 뒷면. 배경보다 한 단계 더 어둡게 둬서 카드가
       // 배경 위에 떠 보인다 — 밝은 테마들도 같은 관계다.
       case 'theme_dark_midnight':
-        return [Color(0xFF131A33), Color(0xFF1B2748), Color(0xFF16203C)];
+        return [
+          Cartoon.onSurface(const Color(0xFF131A33)),
+          Cartoon.onSurface(const Color(0xFF1B2748)),
+          Cartoon.onSurface(const Color(0xFF16203C)),
+        ];
       case 'theme_pio_dawn':
         return [
           Cartoon.surface(Color(0xFFF8E0D0)),

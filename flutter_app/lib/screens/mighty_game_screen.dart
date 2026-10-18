@@ -1388,8 +1388,8 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       _scrollChatToBottom();
     }
     return DraggableChatPanel(
-      accentColor: const Color(0xFF1565C0),
-      sendIconColor: const Color(0xFF1565C0),
+      accentColor: Cartoon.onSurface(const Color(0xFF1565C0)),
+      sendIconColor: Cartoon.onSurface(const Color(0xFF1565C0)),
       title: L10n.of(context).mtChat,
       hintText: L10n.of(context).mtTypeMessage,
       controller: _chatController,
@@ -1431,7 +1431,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       message: message,
       isMe: isMe,
       game: game,
-      mineColor: const Color(0xFF1565C0),
+      mineColor: Cartoon.onSurface(const Color(0xFF1565C0)),
       onTap: sender.isEmpty
           ? null
           : () => _showPlayerProfileDialog(
@@ -2448,7 +2448,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               ? const Color(0xFFFFB300)
               : (state.jokerCallActive &&
                     trickPlay.cardId == state.jokerCallCard)
-              ? const Color(0xFFE53935)
+              ? Cartoon.onSurface(const Color(0xFFE53935))
               : null,
         ),
       ),
@@ -3347,8 +3347,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
   // color, NT to a distinct purple, and an unknown/missing suit to a neutral
   // brown so the call sites don't have to repeat the ternary.
   Color _bidAccentColor(String? suit) {
-    if (suit == 'no_trump') return const Color(0xFF7B1FA2);
-    return PlayingCard.suitColors[suit] ?? const Color(0xFF5A4038);
+    if (suit == 'no_trump') return Cartoon.onSurface(const Color(0xFF7B1FA2));
+    return PlayingCard.suitColors[suit] ??
+        Cartoon.onSurface(const Color(0xFF5A4038));
   }
 
   Widget _buildSuitChip(
@@ -3950,11 +3951,11 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         Row(
           children: [
             for (final entry in [
-              ('spade', '♠', const Color(0xFF2B2B2B)),
+              ('spade', '♠', Cartoon.onSurface(const Color(0xFF2B2B2B))),
               ('diamond', '♦', const Color(0xFF6FB6E5)),
-              ('heart', '♥', const Color(0xFFD24B4B)),
-              ('club', '♣', const Color(0xFF4BAA6A)),
-              ('no_trump', 'NT', const Color(0xFF7B1FA2)),
+              ('heart', '♥', Cartoon.onSurface(const Color(0xFFD24B4B))),
+              ('club', '♣', Cartoon.onSurface(const Color(0xFF4BAA6A))),
+              ('no_trump', 'NT', Cartoon.onSurface(const Color(0xFF7B1FA2))),
             ])
               Builder(
                 builder: (_) {
@@ -4838,7 +4839,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             _buildSuitChip(
               'spade',
               '\u2660',
-              const Color(0xFF2B2B2B),
+              Cartoon.onSurface(const Color(0xFF2B2B2B)),
               enabled: suitAvailable('spade'),
               onTap: () => selectSuit('spade'),
             ),
@@ -4852,21 +4853,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             _buildSuitChip(
               'heart',
               '\u2665',
-              const Color(0xFFD24B4B),
+              Cartoon.onSurface(const Color(0xFFD24B4B)),
               enabled: suitAvailable('heart'),
               onTap: () => selectSuit('heart'),
             ),
             _buildSuitChip(
               'club',
               '\u2663',
-              const Color(0xFF4BAA6A),
+              Cartoon.onSurface(const Color(0xFF4BAA6A)),
               enabled: suitAvailable('club'),
               onTap: () => selectSuit('club'),
             ),
             _buildSuitChip(
               'no_trump',
               'NT',
-              const Color(0xFF7B1FA2),
+              Cartoon.onSurface(const Color(0xFF7B1FA2)),
               enabled: suitAvailable('no_trump'),
               onTap: () => selectSuit('no_trump'),
             ),
@@ -4889,7 +4890,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             gameButton(
               L10n.of(context).mtPass,
               () => game.mightyPass(),
-              color: const Color(0xFF9A8F86),
+              color: Cartoon.onSurface(const Color(0xFF9A8F86)),
               height: 44,
               size: 16,
               hPad: 18,
@@ -5271,13 +5272,13 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                       badgeColor: isMightyCard
                           ? const Color(0xFFFFB300)
                           : isJokerCallCard
-                          ? const Color(0xFFE53935)
+                          ? Cartoon.onSurface(const Color(0xFFE53935))
                           : isFriendCard
-                          ? const Color(0xFF4CAF50)
+                          ? Cartoon.onSurface(const Color(0xFF4CAF50))
                           : isKittyCard
-                          ? const Color(0xFF7B1FA2)
+                          ? Cartoon.onSurface(const Color(0xFF7B1FA2))
                           : isRedistCard
-                          ? const Color(0xFF7B1FA2)
+                          ? Cartoon.onSurface(const Color(0xFF7B1FA2))
                           : null,
                       borderColor: trumpBorder,
                     ),
@@ -5364,10 +5365,10 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           Text(L10n.of(context).mtJokerSuit, style: Cartoon.text(size: 14)),
           const SizedBox(width: 4),
           ...[
-            ('spade', const Color(0xFF2B2B2B)),
+            ('spade', Cartoon.onSurface(const Color(0xFF2B2B2B))),
             ('diamond', const Color(0xFF6FB6E5)),
-            ('heart', const Color(0xFFD24B4B)),
-            ('club', const Color(0xFF4BAA6A)),
+            ('heart', Cartoon.onSurface(const Color(0xFFD24B4B))),
+            ('club', Cartoon.onSurface(const Color(0xFF4BAA6A))),
           ].map((e) {
             return _choiceChip(
               selected: _jokerSuitChoice == e.$1,
@@ -6306,7 +6307,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     String? suit;
     Color textColor;
     if (isJoker) {
-      textColor = const Color(0xFF7B1FA2);
+      textColor = Cartoon.onSurface(const Color(0xFF7B1FA2));
     } else {
       final parts = cardId.replaceFirst('mighty_', '').split('_');
       suit = parts[0];
@@ -6976,7 +6977,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
       dismissWhen: (g) =>
           g.mightyGameState == null || g.mightyGameState!.phase == 'game_end',
       placeholderBackground: Cartoon.surface(const Color(0xFFE8F5E9)),
-      placeholderForeground: const Color(0xFF2E7D32),
+      placeholderForeground: Cartoon.onSurface(const Color(0xFF2E7D32)),
     );
   }
 }

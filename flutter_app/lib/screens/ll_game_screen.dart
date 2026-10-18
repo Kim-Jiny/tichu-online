@@ -1346,7 +1346,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                 padding: EdgeInsets.symmetric(
                                   vertical: ultraTight ? 1.0 : 2.0,
                                 ),
-                                color: Cartoon.ink.withValues(alpha: 0.75),
+                                color: Cartoon.scrim(),
                                 child: Text(
                                   L10n.of(context).llEliminated,
                                   textAlign: TextAlign.center,
@@ -1441,7 +1441,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             Icons.favorite_rounded,
                             color: i < player.tokens
                                 ? player.eliminated
-                                      ? const Color(0xFFB98B95)
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFFB98B95),
+                                        )
                                       : Cartoon.red
                                 : Cartoon.ink.withValues(alpha: 0.18),
                             size: tokenSize,
@@ -2188,7 +2190,9 @@ class _LLGameScreenState extends State<LLGameScreen> {
               final button = CartoonButton(
                 expand: false,
                 height: 46,
-                color: c.enabled ? Cartoon.red : const Color(0xFF9A8F86),
+                color: c.enabled
+                    ? Cartoon.red
+                    : Cartoon.onSurface(const Color(0xFF9A8F86)),
                 onPressed: c.enabled
                     ? () => gs.llSelectTarget(player.id)
                     : null,
@@ -3340,8 +3344,8 @@ class _LLGameScreenState extends State<LLGameScreen> {
     }
 
     return DraggableChatPanel(
-      accentColor: const Color(0xFFE91E63),
-      sendIconColor: const Color(0xFFE91E63),
+      accentColor: Cartoon.onSurface(const Color(0xFFE91E63)),
+      sendIconColor: Cartoon.onSurface(const Color(0xFFE91E63)),
       title: L10n.of(context).spectatorChat,
       hintText: L10n.of(context).spectatorMessageHint,
       controller: _chatController,
@@ -3373,7 +3377,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
       game: _gameService!,
       // Love Letter's pink, like the panel around it — the shared bubble
       // defaults to Tichu blue.
-      mineColor: const Color(0xFFE91E63),
+      mineColor: Cartoon.onSurface(const Color(0xFFE91E63)),
       onTap: sender.isEmpty
           ? null
           : () => _showPlayerProfileDialog(sender, _gameService!),

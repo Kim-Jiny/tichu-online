@@ -74,7 +74,7 @@ class _CornerBadge extends StatelessWidget {
   final String? text;
   final IconData? icon;
 
-  static const _brown = Color(0xFF7A4A24);
+  static final _brown = Cartoon.onSurface(const Color(0xFF7A4A24));
 
   @override
   Widget build(BuildContext context) {

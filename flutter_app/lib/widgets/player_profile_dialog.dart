@@ -38,7 +38,7 @@ void showPlayerProfileDialog(
   double? maxHeight,
   bool Function(GameService game)? dismissWhen,
   Color? placeholderBackground,
-  Color placeholderForeground = const Color(0xFF4F6B7A),
+  Color? placeholderForeground,
 }) {
   // A bot has no account, so the fetch would only ever come back empty and the
   // popup would render its "profile not found" error.
@@ -152,7 +152,9 @@ void showPlayerProfileDialog(
                                   fontSize: 13,
                                   color:
                                       ink?.withValues(alpha: 0.78) ??
-                                      const Color(0xFF84766E),
+                                      Cartoon.onSurface(
+                                        const Color(0xFF84766E),
+                                      ),
                                 ),
                               )
                             : profileLevelStrip(
@@ -163,7 +165,9 @@ void showPlayerProfileDialog(
                         isBot: isBot,
                         onCloseDialog: () => Navigator.pop(ctx),
                         placeholderBackground: placeholderBackground,
-                        placeholderForeground: placeholderForeground,
+                        placeholderForeground:
+                            placeholderForeground ??
+                            Cartoon.onSurface(const Color(0xFF4F6B7A)),
                         ink: ink,
                       ),
                     ),

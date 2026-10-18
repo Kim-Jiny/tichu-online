@@ -70,7 +70,7 @@ class AfkKickBadge extends StatelessWidget {
             button: true,
             label: L10n.of(context).kickAfkAction,
             child: Material(
-              color: const Color(0xFFC1553F),
+              color: Cartoon.onSurface(const Color(0xFFC1553F)),
               shape: const CircleBorder(),
               elevation: 2,
               child: InkWell(

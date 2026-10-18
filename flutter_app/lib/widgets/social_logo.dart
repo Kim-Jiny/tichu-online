@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 /// 소셜 로그인/연동 버튼에 쓰는 로고들. 로그인 화면과 설정의 연동 팝업이 같이 쓴다.
 class KakaoLogo extends StatelessWidget {
@@ -15,7 +16,7 @@ class _KakaoLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF3C1E1E)
+      ..color = Cartoon.onSurface(const Color(0xFF3C1E1E))
       ..style = PaintingStyle.fill;
 
     final cx = size.width / 2;

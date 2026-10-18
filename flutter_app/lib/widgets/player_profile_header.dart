@@ -58,7 +58,7 @@ class PlayerProfileHeader extends StatelessWidget {
   /// Placeholder colours behind the person icon when there is no photo.
   /// Mighty's popup is green where the others are blue.
   final Color? placeholderBackground;
-  final Color placeholderForeground;
+  final Color? placeholderForeground;
 
   /// Text colour when this header is sitting on someone's equipped banner.
   ///
@@ -78,7 +78,7 @@ class PlayerProfileHeader extends StatelessWidget {
     this.subtitleBuilder,
     this.isBot = false,
     this.placeholderBackground,
-    this.placeholderForeground = const Color(0xFF4F6B7A),
+    this.placeholderForeground,
     this.ink,
   });
 
@@ -127,8 +127,10 @@ class PlayerProfileHeader extends StatelessWidget {
     final isBlockedUser = game.isBlocked(nickname);
     final editable = _canEditPhoto(inner);
     final onBanner = ink != null;
-    final nameColor = ink ?? const Color(0xFF3E312A);
-    final mutedColor = ink?.withValues(alpha: 0.78) ?? const Color(0xFF84766E);
+    final nameColor = ink ?? Cartoon.onSurface(const Color(0xFF3E312A));
+    final mutedColor =
+        ink?.withValues(alpha: 0.78) ??
+        Cartoon.onSurface(const Color(0xFF84766E));
     final titleName = isBot ? null : inner?['titleName'] as String?;
 
     return Column(
@@ -210,7 +212,7 @@ class PlayerProfileHeader extends StatelessWidget {
                 child: _iconButton(
                   iconOnly: true,
                   icon: Icons.report_outlined,
-                  color: const Color(0xFFE57373),
+                  color: Cartoon.onSurface(const Color(0xFFE57373)),
                   tooltip: l10n.gameReport,
                   onBanner: onBanner,
                   onTap: () {

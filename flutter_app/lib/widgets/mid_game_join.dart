@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'cartoon_icons.dart';
 import '../l10n/app_localizations.dart';
 import '../services/game_service.dart';
+import '../theme/cartoon.dart';
 
 /// Breaking into a match that is already running.
 ///
@@ -64,7 +65,7 @@ class MidGameJoinButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFF4A4080),
+          color: Cartoon.onSurface(const Color(0xFF4A4080)),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(

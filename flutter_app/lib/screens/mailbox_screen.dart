@@ -549,7 +549,7 @@ class _MailboxScreenState extends State<MailboxScreen> {
                     label: Text(l10n.mailboxDelete),
                     style: TextButton.styleFrom(
                       foregroundColor: Cartoon.onSurface(
-                        const Color(0xFFA1887F),
+                        Cartoon.onSurface(const Color(0xFFA1887F)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       minimumSize: const Size(0, 32),
@@ -591,8 +591,12 @@ class _MailboxScreenState extends State<MailboxScreen> {
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: expired
-                                      ? const Color(0xFFC62828)
-                                      : const Color(0xFFA1887F),
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFFC62828),
+                                        )
+                                      : Cartoon.onSurface(
+                                          const Color(0xFFA1887F),
+                                        ),
                                 ),
                               ),
                           ],
@@ -602,7 +606,10 @@ class _MailboxScreenState extends State<MailboxScreen> {
                       if (claimed)
                         _stateChip(l10n.mailboxClaimed, Cartoon.green)
                       else if (expired)
-                        _stateChip(l10n.mailboxExpired, const Color(0xFF8A7A72))
+                        _stateChip(
+                          l10n.mailboxExpired,
+                          Cartoon.onSurface(const Color(0xFF8A7A72)),
+                        )
                       else
                         CartoonButton(
                           expand: false,

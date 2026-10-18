@@ -62,26 +62,40 @@ class ShopVisual {
   static Map<String, Object> categoryDefault(String? category) {
     switch (category) {
       case 'banner':
-        return _legacyMap(Icons.flag, const Color(0xFFB24B5A), [
-          Color(0xFFF6C1C9),
-          Cartoon.surface(const Color(0xFFF3E7EA)),
-        ], Cartoon.surface(const Color(0xFFE6DDD8)));
+        return _legacyMap(
+          Icons.flag,
+          Cartoon.onSurface(const Color(0xFFB24B5A)),
+          [Color(0xFFF6C1C9), Cartoon.surface(const Color(0xFFF3E7EA))],
+          Cartoon.surface(const Color(0xFFE6DDD8)),
+        );
       case 'title':
-        return _legacyMap(Icons.badge, const Color(0xFF6B5CA5), [
-          Color(0xFFD9D0F2),
-          Cartoon.surface(const Color(0xFFF1ECFA)),
-        ], Cartoon.surface(const Color(0xFFE6DDD8)));
+        return _legacyMap(
+          Icons.badge,
+          Cartoon.onSurface(const Color(0xFF6B5CA5)),
+          [Color(0xFFD9D0F2), Cartoon.surface(const Color(0xFFF1ECFA))],
+          Cartoon.surface(const Color(0xFFE6DDD8)),
+        );
       case 'theme':
-        return _legacyMap(Icons.palette, const Color(0xFF3A7D5C), [
-          Cartoon.surface(Color(0xFFCDEBD8)),
-          Cartoon.surface(const Color(0xFFEFF8F2)),
-        ], Cartoon.surface(const Color(0xFFE6DDD8)));
+        return _legacyMap(
+          Icons.palette,
+          Cartoon.onSurface(const Color(0xFF3A7D5C)),
+          [
+            Cartoon.surface(Color(0xFFCDEBD8)),
+            Cartoon.surface(const Color(0xFFEFF8F2)),
+          ],
+          Cartoon.surface(const Color(0xFFE6DDD8)),
+        );
       case 'utility':
       default:
-        return _legacyMap(Icons.handyman, const Color(0xFFB46B00), [
-          Cartoon.surface(Color(0xFFFFF3E0)),
-          Cartoon.surface(const Color(0xFFFFE0B2)),
-        ], const Color(0xFFFFB74D));
+        return _legacyMap(
+          Icons.handyman,
+          Cartoon.onSurface(const Color(0xFFB46B00)),
+          [
+            Cartoon.surface(Color(0xFFFFF3E0)),
+            Cartoon.surface(const Color(0xFFFFE0B2)),
+          ],
+          const Color(0xFFFFB74D),
+        );
     }
   }
 }

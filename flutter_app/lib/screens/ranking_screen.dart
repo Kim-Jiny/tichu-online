@@ -626,7 +626,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7E57C2),
+                  color: Cartoon.onSurface(const Color(0xFF7E57C2)),
                   shape: BoxShape.circle,
                   border: Border.all(color: Cartoon.ink, width: 2),
                 ),
@@ -665,7 +665,7 @@ class _RankingScreenState extends State<RankingScreen> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7E57C2),
+                            color: Cartoon.onSurface(const Color(0xFF7E57C2)),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Cartoon.ink, width: 1.4),
                           ),
@@ -798,7 +798,7 @@ class _RankingScreenState extends State<RankingScreen> {
                 color: onBannerAccent(
                   bannerGradient,
                   bannerOverride,
-                  light: const Color(0xFF4A4080),
+                  light: Cartoon.onSurface(const Color(0xFF4A4080)),
                 ),
               ),
             ),

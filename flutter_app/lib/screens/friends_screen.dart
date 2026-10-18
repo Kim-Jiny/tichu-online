@@ -573,7 +573,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                     isOnline: isOnline,
                     subtitle: statusText,
                     subtitleColor: isOnline
-                        ? const Color(0xFF2E8B57)
+                        ? Cartoon.onSurface(const Color(0xFF2E8B57))
                         : Cartoon.ink.withValues(alpha: 0.5),
                     // Tapping the row opens who they are. Talking to them is a
                     // button — a whole row that means "chat" gives the profile
@@ -607,7 +607,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: Cartoon.onSurface(
-                                    const Color(0xFFB45309),
+                                    Cartoon.onSurface(const Color(0xFFB45309)),
                                   ),
                                   fontWeight: FontWeight.w900,
                                 ),
@@ -621,7 +621,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                               ? _buildActionChip(
                                   l10n.friendsInvited,
                                   Icons.schedule_rounded,
-                                  const Color(0xFF8A8A8A),
+                                  Cartoon.onSurface(const Color(0xFF8A8A8A)),
                                   Cartoon.surface(const Color(0xFFF1F1F1)),
                                   () {},
                                 )
@@ -727,7 +727,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                                   Icon(
                                     Icons.person_remove_rounded,
                                     color: Cartoon.onSurface(
-                                      const Color(0xFFE5484D),
+                                      Cartoon.onSurface(
+                                        const Color(0xFFE5484D),
+                                      ),
                                     ),
                                     size: 20,
                                   ),
@@ -737,7 +739,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                                     style: Cartoon.text(
                                       size: 15,
                                       color: Cartoon.onSurface(
-                                        const Color(0xFFE5484D),
+                                        Cartoon.onSurface(
+                                          const Color(0xFFE5484D),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1015,21 +1019,21 @@ class _FriendsScreenState extends State<FriendsScreen>
         return chip(
           Icons.check_rounded,
           l10n.friendsStatusFriend,
-          const Color(0xFF2E8B57),
+          Cartoon.onSurface(const Color(0xFF2E8B57)),
           Cartoon.surface(const Color(0xFFD8F5DF)),
         );
       case 'pending_incoming':
         return chip(
           null,
           l10n.friendsStatusReceivedShort,
-          const Color(0xFFB45309),
+          Cartoon.onSurface(const Color(0xFFB45309)),
           Cartoon.surface(const Color(0xFFFFE9B8)),
         );
       case 'pending_outgoing':
         return chip(
           Icons.close_rounded,
           l10n.friendsStatusPendingShort,
-          const Color(0xFF1E6FD0),
+          Cartoon.onSurface(const Color(0xFF1E6FD0)),
           Cartoon.surface(const Color(0xFFDCEBFF)),
           onTap: () {
             game.cancelFriendRequestAction(nickname);

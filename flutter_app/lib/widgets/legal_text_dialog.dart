@@ -211,7 +211,7 @@ class _LegalBodyState extends State<_LegalBody> {
                 height: 46,
                 decoration: BoxDecoration(
                   color: Color.lerp(
-                    const Color(0xFF42A5F5),
+                    Cartoon.onSurface(const Color(0xFF42A5F5)),
                     Colors.white,
                     0.75,
                   ),

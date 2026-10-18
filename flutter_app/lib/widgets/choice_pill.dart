@@ -14,14 +14,14 @@ class ChoicePill extends StatelessWidget {
   final VoidCallback onTap;
 
   /// Colour of the selected state. Defaults to the app's violet.
-  final Color accent;
+  final Color? accent;
 
   const ChoicePill({
     super.key,
     required this.label,
     required this.selected,
     required this.onTap,
-    this.accent = const Color(0xFF7E57C2),
+    this.accent,
   });
 
   @override
@@ -32,7 +32,9 @@ class ChoicePill extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 3),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? accent : Cartoon.paper,
+          color: selected
+              ? (accent ?? Cartoon.onSurface(const Color(0xFF7E57C2)))
+              : Cartoon.paper,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Cartoon.ink, width: 1.6),
           boxShadow: [

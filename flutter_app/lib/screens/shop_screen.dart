@@ -568,7 +568,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   rewardChip(
                     icon: Icons.play_circle_rounded,
                     color: (adCanWatch && _rewardedAdReady)
-                        ? const Color(0xFF7E57C2)
+                        ? Cartoon.onSurface(const Color(0xFF7E57C2))
                         : Cartoon.ink.withValues(alpha: 0.4),
                     tooltip: adCanWatch
                         ? l10n.shopAdWatchTitle
@@ -754,8 +754,8 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget _newDot() => Container(
     width: 8,
     height: 8,
-    decoration: const BoxDecoration(
-      color: Color(0xFFE53935),
+    decoration: BoxDecoration(
+      color: Cartoon.onSurface(const Color(0xFFE53935)),
       shape: BoxShape.circle,
     ),
   );
@@ -1237,7 +1237,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       style: Cartoon.userText(
                         size: 10.5,
                         color: onSale
-                            ? const Color(0xFFD32F2F)
+                            ? Cartoon.onSurface(const Color(0xFFD32F2F))
                             : Cartoon.ink.withValues(alpha: 0.5),
                       ),
                     ),
@@ -1588,7 +1588,8 @@ class _ShopScreenState extends State<ShopScreen> {
         [Colors.white, Colors.grey.shade100];
     final iconData = (visual['icon'] as IconData?) ?? Icons.flag;
     final iconColor =
-        (visual['iconColor'] as Color?) ?? const Color(0xFF888888);
+        (visual['iconColor'] as Color?) ??
+        Cartoon.onSurface(const Color(0xFF888888));
     final thumbnail = Container(
       width: size,
       height: size,
@@ -1624,13 +1625,18 @@ class _ShopScreenState extends State<ShopScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF5F6D), Color(0xFFFFC371)],
+                  gradient: LinearGradient(
+                    colors: [
+                      Cartoon.onSurface(const Color(0xFFFF5F6D)),
+                      Color(0xFFFFC371),
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(6),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF5F6D).withValues(alpha: 0.5),
+                      color: Cartoon.onSurface(
+                        const Color(0xFFFF5F6D),
+                      ).withValues(alpha: 0.5),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -1914,7 +1920,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           if (equipped)
                             _badge(
                               l10n.shopStatusInUse,
-                              const Color(0xFF1565C0),
+                              Cartoon.onSurface(const Color(0xFF1565C0)),
                               Cartoon.surface(const Color(0xFFDDECF7)),
                             )
                           // A pass that is switched off is not "활성화됨": the
@@ -1924,7 +1930,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               (!isToggleable || featureOn))
                             _badge(
                               l10n.shopStatusActivated,
-                              const Color(0xFF1565C0),
+                              Cartoon.onSurface(const Color(0xFF1565C0)),
                               Cartoon.surface(const Color(0xFFDDECF7)),
                             ),
                         ],
@@ -2137,12 +2143,14 @@ class _ShopScreenState extends State<ShopScreen> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: _busyItemKeys.contains(itemKey)
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Color(0xFF4A3A33),
+                                    color: Cartoon.onSurface(
+                                      const Color(0xFF4A3A33),
+                                    ),
                                   ),
                                 )
                               : Text(
@@ -2210,7 +2218,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner_blossom':
         return {
           'icon': Icons.local_florist,
-          'iconColor': const Color(0xFFE91E63),
+          'iconColor': Cartoon.onSurface(const Color(0xFFE91E63)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFCE4EC)),
             const Color(0xFFF8BBD0),
@@ -2220,7 +2228,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner_mint':
         return {
           'icon': Icons.spa,
-          'iconColor': const Color(0xFF26A69A),
+          'iconColor': Cartoon.onSurface(const Color(0xFF26A69A)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F2F1)),
             const Color(0xFFB2DFDB),
@@ -2230,7 +2238,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner_sunset_7d':
         return {
           'icon': Icons.wb_twilight,
-          'iconColor': const Color(0xFFFF6F00),
+          'iconColor': Cartoon.onSurface(const Color(0xFFFF6F00)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFE0B2)),
             const Color(0xFFFFCC80),
@@ -2250,7 +2258,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner_season_silver':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF78909C),
+          'iconColor': Cartoon.onSurface(const Color(0xFF78909C)),
           'gradient': [
             Cartoon.surface(const Color(0xFFECEFF1)),
             const Color(0xFFCFD8DC),
@@ -2260,7 +2268,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner_season_bronze':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF8D6E63),
+          'iconColor': Cartoon.onSurface(const Color(0xFF8D6E63)),
           'gradient': [
             Cartoon.surface(const Color(0xFFEFEBE9)),
             const Color(0xFFD7CCC8),
@@ -2271,7 +2279,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_sweet':
         return {
           'icon': Icons.cake,
-          'iconColor': const Color(0xFFEC407A),
+          'iconColor': Cartoon.onSurface(const Color(0xFFEC407A)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFCE4EC)),
             const Color(0xFFF8BBD0),
@@ -2281,7 +2289,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_steady':
         return {
           'icon': Icons.shield,
-          'iconColor': const Color(0xFF5C6BC0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF5C6BC0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8EAF6)),
             const Color(0xFFC5CAE9),
@@ -2301,7 +2309,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_dragon':
         return {
           'icon': Icons.local_fire_department,
-          'iconColor': const Color(0xFFD32F2F),
+          'iconColor': Cartoon.onSurface(const Color(0xFFD32F2F)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFEBEE)),
             const Color(0xFFFFCDD2),
@@ -2311,7 +2319,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_phoenix':
         return {
           'icon': Icons.local_fire_department,
-          'iconColor': const Color(0xFFFF6F00),
+          'iconColor': Cartoon.onSurface(const Color(0xFFFF6F00)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFF3E0)),
             Cartoon.surface(const Color(0xFFFFE0B2)),
@@ -2321,7 +2329,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_pirate':
         return {
           'icon': Icons.anchor,
-          'iconColor': const Color(0xFF37474F),
+          'iconColor': Cartoon.onSurface(const Color(0xFF37474F)),
           'gradient': [
             Cartoon.surface(const Color(0xFFECEFF1)),
             const Color(0xFFCFD8DC),
@@ -2331,7 +2339,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_tactician':
         return {
           'icon': Icons.psychology,
-          'iconColor': const Color(0xFF00695C),
+          'iconColor': Cartoon.onSurface(const Color(0xFF00695C)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F2F1)),
             const Color(0xFFB2DFDB),
@@ -2351,7 +2359,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_bluffer':
         return {
           'icon': Icons.theater_comedy,
-          'iconColor': const Color(0xFF6A1B9A),
+          'iconColor': Cartoon.onSurface(const Color(0xFF6A1B9A)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF3E5F5)),
             const Color(0xFFE1BEE7),
@@ -2361,7 +2369,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_ace':
         return {
           'icon': Icons.military_tech,
-          'iconColor': const Color(0xFFC62828),
+          'iconColor': Cartoon.onSurface(const Color(0xFFC62828)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFEBEE)),
             const Color(0xFFFFCDD2),
@@ -2391,7 +2399,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_veteran':
         return {
           'icon': Icons.security,
-          'iconColor': const Color(0xFF1565C0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF1565C0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE3F2FD)),
             const Color(0xFFBBDEFB),
@@ -2401,7 +2409,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_sensitive':
         return {
           'icon': Icons.sentiment_very_dissatisfied,
-          'iconColor': const Color(0xFFE91E63),
+          'iconColor': Cartoon.onSurface(const Color(0xFFE91E63)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFCE4EC)),
             const Color(0xFFF8BBD0),
@@ -2411,7 +2419,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_shadow':
         return {
           'icon': Icons.visibility_off,
-          'iconColor': const Color(0xFF424242),
+          'iconColor': Cartoon.onSurface(const Color(0xFF424242)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF5F5F5)),
             Cartoon.surface(const Color(0xFFE0E0E0)),
@@ -2421,7 +2429,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_flame':
         return {
           'icon': Icons.whatshot,
-          'iconColor': const Color(0xFFFF5722),
+          'iconColor': Cartoon.onSurface(const Color(0xFFFF5722)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFBE9E7)),
             const Color(0xFFFFCCBC),
@@ -2431,7 +2439,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_ice':
         return {
           'icon': Icons.ac_unit,
-          'iconColor': const Color(0xFF0288D1),
+          'iconColor': Cartoon.onSurface(const Color(0xFF0288D1)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE1F5FE)),
             Cartoon.surface(const Color(0xFFB3E5FC)),
@@ -2441,7 +2449,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_crown':
         return {
           'icon': Icons.diamond,
-          'iconColor': const Color(0xFFE65100),
+          'iconColor': Cartoon.onSurface(const Color(0xFFE65100)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFF3E0)),
             Cartoon.surface(const Color(0xFFFFE0B2)),
@@ -2461,7 +2469,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_ghost':
         return {
           'icon': Icons.blur_on,
-          'iconColor': const Color(0xFF78909C),
+          'iconColor': Cartoon.onSurface(const Color(0xFF78909C)),
           'gradient': [
             Cartoon.surface(const Color(0xFFECEFF1)),
             const Color(0xFFCFD8DC),
@@ -2481,7 +2489,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_topcard':
         return {
           'icon': Icons.style,
-          'iconColor': const Color(0xFF00897B),
+          'iconColor': Cartoon.onSurface(const Color(0xFF00897B)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F2F1)),
             const Color(0xFFB2DFDB),
@@ -2491,7 +2499,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_legend':
         return {
           'icon': Icons.auto_awesome,
-          'iconColor': const Color(0xFFFF6D00),
+          'iconColor': Cartoon.onSurface(const Color(0xFFFF6D00)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFF3E0)),
             Cartoon.surface(const Color(0xFFFFE0B2)),
@@ -2501,7 +2509,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title_boomer':
         return {
           'icon': Icons.elderly,
-          'iconColor': const Color(0xFF795548),
+          'iconColor': Cartoon.onSurface(const Color(0xFF795548)),
           'gradient': [
             Cartoon.surface(const Color(0xFFEFEBE9)),
             const Color(0xFFD7CCC8),
@@ -2522,7 +2530,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_sky':
         return {
           'icon': Icons.wb_sunny,
-          'iconColor': const Color(0xFF42A5F5),
+          'iconColor': Cartoon.onSurface(const Color(0xFF42A5F5)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE3F2FD)),
             const Color(0xFFBBDEFB),
@@ -2532,7 +2540,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_mocha_30d':
         return {
           'icon': Icons.coffee,
-          'iconColor': const Color(0xFF6D4C41),
+          'iconColor': Cartoon.onSurface(const Color(0xFF6D4C41)),
           'gradient': [
             Cartoon.surface(const Color(0xFFEFEBE9)),
             const Color(0xFFD7CCC8),
@@ -2542,7 +2550,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_lavender':
         return {
           'icon': Icons.local_florist,
-          'iconColor': const Color(0xFF9C27B0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF9C27B0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF3E5F5)),
             const Color(0xFFE1BEE7),
@@ -2552,7 +2560,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_cherry':
         return {
           'icon': Icons.filter_vintage,
-          'iconColor': const Color(0xFFE91E63),
+          'iconColor': Cartoon.onSurface(const Color(0xFFE91E63)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFCE4EC)),
             const Color(0xFFF8BBD0),
@@ -2562,7 +2570,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_midnight':
         return {
           'icon': Icons.nights_stay,
-          'iconColor': const Color(0xFF303F9F),
+          'iconColor': Cartoon.onSurface(const Color(0xFF303F9F)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8EAF6)),
             const Color(0xFFC5CAE9),
@@ -2572,7 +2580,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_sunset':
         return {
           'icon': Icons.wb_twilight,
-          'iconColor': const Color(0xFFF57C00),
+          'iconColor': Cartoon.onSurface(const Color(0xFFF57C00)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFF3E0)),
             Cartoon.surface(const Color(0xFFFFE0B2)),
@@ -2582,7 +2590,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_forest':
         return {
           'icon': Icons.park,
-          'iconColor': const Color(0xFF2E7D32),
+          'iconColor': Cartoon.onSurface(const Color(0xFF2E7D32)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8F5E9)),
             Cartoon.surface(const Color(0xFFC8E6C9)),
@@ -2602,7 +2610,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_ocean':
         return {
           'icon': Icons.waves,
-          'iconColor': const Color(0xFF0097A7),
+          'iconColor': Cartoon.onSurface(const Color(0xFF0097A7)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F7FA)),
             Cartoon.surface(const Color(0xFFB2EBF2)),
@@ -2612,7 +2620,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_aurora':
         return {
           'icon': Icons.auto_awesome,
-          'iconColor': const Color(0xFF26A69A),
+          'iconColor': Cartoon.onSurface(const Color(0xFF26A69A)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F7FA)),
             Cartoon.surface(const Color(0xFFE8F5E9)),
@@ -2622,7 +2630,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme_mintchoco_30d':
         return {
           'icon': Icons.icecream,
-          'iconColor': const Color(0xFF00897B),
+          'iconColor': Cartoon.onSurface(const Color(0xFF00897B)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0F2F1)),
             const Color(0xFFB2DFDB),
@@ -2653,7 +2661,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'top_card_counter_7d':
         return {
           'icon': Icons.analytics,
-          'iconColor': const Color(0xFF5C6BC0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF5C6BC0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8EAF6)),
             const Color(0xFFC5CAE9),
@@ -2663,7 +2671,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'leave_reduce_3':
         return {
           'icon': Icons.local_hospital,
-          'iconColor': const Color(0xFF43A047),
+          'iconColor': Cartoon.onSurface(const Color(0xFF43A047)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8F5E9)),
             const Color(0xFFA5D6A7),
@@ -2673,7 +2681,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'stats_reset':
         return {
           'icon': Icons.restart_alt,
-          'iconColor': const Color(0xFF757575),
+          'iconColor': Cartoon.onSurface(const Color(0xFF757575)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF5F5F5)),
             Cartoon.surface(const Color(0xFFE0E0E0)),
@@ -2683,17 +2691,17 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'season_stats_reset':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF7B1FA2),
+          'iconColor': Cartoon.onSurface(const Color(0xFF7B1FA2)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF3E5F5)),
             const Color(0xFFCE93D8),
           ],
-          'borderColor': const Color(0xFFBA68C8),
+          'borderColor': Cartoon.onSurface(const Color(0xFFBA68C8)),
         };
       case 'tichu_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF355D89),
+          'iconColor': Cartoon.onSurface(const Color(0xFF355D89)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE3F2FD)),
             const Color(0xFFBBDEFB),
@@ -2703,7 +2711,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'sk_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF424242),
+          'iconColor': Cartoon.onSurface(const Color(0xFF424242)),
           'gradient': [
             Cartoon.surface(const Color(0xFFECEFF1)),
             const Color(0xFFB0BEC5),
@@ -2713,7 +2721,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'mighty_season_stats_reset':
         return {
           'icon': Icons.emoji_events,
-          'iconColor': const Color(0xFF1565C0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF1565C0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE1F5FE)),
             Cartoon.surface(const Color(0xFFB3E5FC)),
@@ -2727,7 +2735,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'profile_photo_30d':
         return {
           'icon': Icons.account_circle,
-          'iconColor': const Color(0xFF5C6BC0),
+          'iconColor': Cartoon.onSurface(const Color(0xFF5C6BC0)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE8EAF6)),
             const Color(0xFFC5CAE9),
@@ -2737,7 +2745,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'custom_title_7d':
         return {
           'icon': Icons.drive_file_rename_outline,
-          'iconColor': const Color(0xFFC2185B),
+          'iconColor': Cartoon.onSurface(const Color(0xFFC2185B)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFCE4EC)),
             const Color(0xFFF8BBD0),
@@ -2748,7 +2756,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'profile_private_30d':
         return {
           'icon': Icons.lock_rounded,
-          'iconColor': const Color(0xFF7E57C2),
+          'iconColor': Cartoon.onSurface(const Color(0xFF7E57C2)),
           'gradient': [
             Cartoon.surface(const Color(0xFFF3E5F5)),
             const Color(0xFFD1C4E9),
@@ -2762,7 +2770,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'banner':
         return {
           'icon': Icons.flag,
-          'iconColor': const Color(0xFFB24B5A),
+          'iconColor': Cartoon.onSurface(const Color(0xFFB24B5A)),
           'gradient': [
             const Color(0xFFF6C1C9),
             Cartoon.surface(const Color(0xFFF3E7EA)),
@@ -2772,7 +2780,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'title':
         return {
           'icon': Icons.badge,
-          'iconColor': const Color(0xFF6B5CA5),
+          'iconColor': Cartoon.onSurface(const Color(0xFF6B5CA5)),
           'gradient': [
             const Color(0xFFD9D0F2),
             Cartoon.surface(const Color(0xFFF1ECFA)),
@@ -2782,7 +2790,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'theme':
         return {
           'icon': Icons.palette,
-          'iconColor': const Color(0xFF3A7D5C),
+          'iconColor': Cartoon.onSurface(const Color(0xFF3A7D5C)),
           'gradient': [
             Cartoon.surface(const Color(0xFFCDEBD8)),
             Cartoon.surface(const Color(0xFFEFF8F2)),
@@ -2792,7 +2800,7 @@ class _ShopScreenState extends State<ShopScreen> {
       case 'utility':
         return {
           'icon': Icons.handyman,
-          'iconColor': const Color(0xFFB46B00),
+          'iconColor': Cartoon.onSurface(const Color(0xFFB46B00)),
           'gradient': [
             Cartoon.surface(const Color(0xFFFFD79E)),
             Cartoon.surface(const Color(0xFFFFF2DF)),
@@ -2802,7 +2810,7 @@ class _ShopScreenState extends State<ShopScreen> {
       default:
         return {
           'icon': Icons.category,
-          'iconColor': const Color(0xFF7A7A7A),
+          'iconColor': Cartoon.onSurface(const Color(0xFF7A7A7A)),
           'gradient': [
             Cartoon.surface(const Color(0xFFE0E0E0)),
             Cartoon.surface(const Color(0xFFF5F5F5)),
@@ -3015,7 +3023,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                       if (isSeason)
                                         _badge(
                                           l10n.shopTagSeason,
-                                          const Color(0xFF1565C0),
+                                          Cartoon.onSurface(
+                                            const Color(0xFF1565C0),
+                                          ),
                                           Cartoon.surface(
                                             const Color(0xFFE3F2FD),
                                           ),
@@ -3023,7 +3033,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                       else if (owned)
                                         _badge(
                                           l10n.shopItemOwned,
-                                          const Color(0xFF7E57C2),
+                                          Cartoon.onSurface(
+                                            const Color(0xFF7E57C2),
+                                          ),
                                           Cartoon.surface(
                                             const Color(0xFFEDE7F6),
                                           ),
@@ -3031,7 +3043,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                       else if (onSale)
                                         _badge(
                                           l10n.shopTagLimited,
-                                          const Color(0xFFD32F2F),
+                                          Cartoon.onSurface(
+                                            const Color(0xFFD32F2F),
+                                          ),
                                           Cartoon.surface(
                                             const Color(0xFFFFEBEE),
                                           ),
@@ -3095,7 +3109,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 Icons.schedule_rounded,
                                 size: 15,
                                 color: Cartoon.onSurface(
-                                  const Color(0xFF7E57C2),
+                                  Cartoon.onSurface(const Color(0xFF7E57C2)),
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -3104,7 +3118,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                 style: Cartoon.userText(
                                   size: 13,
                                   color: Cartoon.onSurface(
-                                    const Color(0xFF7E57C2),
+                                    Cartoon.onSurface(const Color(0xFF7E57C2)),
                                   ),
                                 ),
                               ),
@@ -3131,8 +3145,10 @@ class _ShopScreenState extends State<ShopScreen> {
                                 Icons.schedule,
                                 size: 14,
                                 color: onSale
-                                    ? const Color(0xFFD32F2F)
-                                    : const Color(0xFF9A8E8A),
+                                    ? Cartoon.onSurface(const Color(0xFFD32F2F))
+                                    : Cartoon.onSurface(
+                                        const Color(0xFF9A8E8A),
+                                      ),
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -3142,7 +3158,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                 style: Cartoon.userText(
                                   size: 12.5,
                                   color: onSale
-                                      ? const Color(0xFFD32F2F)
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFFD32F2F),
+                                        )
                                       : Cartoon.ink.withValues(alpha: 0.5),
                                 ),
                               ),
@@ -3725,7 +3743,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             fontWeight: FontWeight.bold,
                             color:
                                 PlayingCard.suitColors[card.$1] ??
-                                const Color(0xFF2E2E2E),
+                                Cartoon.onSurface(const Color(0xFF2E2E2E)),
                           ),
                         ),
                         const SizedBox(height: 1),
@@ -4083,7 +4101,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Cartoon.onSurface(
-                                      const Color(0xFF5A4038),
+                                      Cartoon.onSurface(
+                                        const Color(0xFF5A4038),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -4120,7 +4140,9 @@ class _ShopScreenState extends State<ShopScreen> {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: colorId == entry.key
-                                      ? const Color(0xFF4A3A33)
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFF4A3A33),
+                                        )
                                       : Colors.transparent,
                                   width: 2.5,
                                 ),
@@ -4225,8 +4247,8 @@ class _ShopScreenState extends State<ShopScreen> {
                   ? Cartoon.surface(const Color(0xFFF0DEDE))
                   : Cartoon.surface(const Color(0xFFC7E6D0)),
               foregroundColor: currentlyOn
-                  ? const Color(0xFFA33F3F)
-                  : const Color(0xFF2E5A3A),
+                  ? Cartoon.onSurface(const Color(0xFFA33F3F))
+                  : Cartoon.onSurface(const Color(0xFF2E5A3A)),
               elevation: 0,
             ),
             child: Text(
@@ -4994,7 +5016,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           _watchRewardedAd(game);
                         }
                       : null,
-                  color: const Color(0xFF7E57C2),
+                  color: Cartoon.onSurface(const Color(0xFF7E57C2)),
                   size: 16,
                   hPad: 14,
                 );

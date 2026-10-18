@@ -190,6 +190,15 @@ class Cartoon {
   /// 시간이 얼마 안 남았을 때의 바탕.
   static Color get myTurnUrgent => surface(const Color(0xFFFFC9C4));
 
+  /// 사진·그림 위에 덮는 어두운 막.
+  ///
+  /// ink 를 반투명으로 써서 막을 만들던 자리가 있었다(러브레터 탈락
+  /// 표시). ink 는 어두운 한 벌에서 밝아지므로 막이 밝아지고, 그 위의
+  /// 흰 글자가 사라진다. 막은 글자가 아니라 바탕이라 팔레트를 따라가면
+  /// 안 된다.
+  static Color scrim([double alpha = 0.75]) =>
+      _outlineDark.withValues(alpha: alpha);
+
   /// 이 바탕 위에 올릴 글자색.
   ///
   /// 바탕이 '팔레트가 아닌 곳' 에서 올 때 쓴다 — 테마 그라데이션에서

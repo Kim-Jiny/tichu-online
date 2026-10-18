@@ -29,8 +29,8 @@ class NoticeBody extends StatelessWidget {
   /// 본문 글자색. 안 주면 공지 화면의 기본 갈색.
   final Color? color;
 
-  static const _text = Color(0xFF5A4038);
-  static const _accent = Color(0xFFE0812A);
+  static final _text = Cartoon.onSurface(const Color(0xFF5A4038));
+  static final _accent = Cartoon.onSurface(const Color(0xFFE0812A));
 
   @override
   Widget build(BuildContext context) {
@@ -320,15 +320,15 @@ List<InlinePiece> parseInline(String raw) {
 /// 서버는 id 만 내려보낸다. 모르는 id 가 오면(팔레트가 서버에서만 늘어난 경우)
 /// null 을 돌려주고 화면은 기본색을 쓴다 — 색 하나 때문에 제목이 안 보이는
 /// 것보다 낫다.
-const Map<String, Color> noticeTitleColors = {
-  'rose': Color(0xFFD64550),
-  'amber': Color(0xFFC97A0B),
-  'green': Color(0xFF2E7D32),
-  'teal': Color(0xFF00796B),
-  'blue': Color(0xFF1565C0),
-  'violet': Color(0xFF6A3FB5),
-  'pink': Color(0xFFC2185B),
-  'slate': Color(0xFF455A64),
+Map<String, Color> noticeTitleColors = {
+  'rose': Cartoon.onSurface(Color(0xFFD64550)),
+  'amber': Cartoon.onSurface(Color(0xFFC97A0B)),
+  'green': Cartoon.onSurface(Color(0xFF2E7D32)),
+  'teal': Cartoon.onSurface(Color(0xFF00796B)),
+  'blue': Cartoon.onSurface(Color(0xFF1565C0)),
+  'violet': Cartoon.onSurface(Color(0xFF6A3FB5)),
+  'pink': Cartoon.onSurface(Color(0xFFC2185B)),
+  'slate': Cartoon.onSurface(const Color(0xFF455A64)),
 };
 
 Color? noticeTitleColor(Object? id) {

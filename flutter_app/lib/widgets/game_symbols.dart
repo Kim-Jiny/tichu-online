@@ -26,7 +26,7 @@ class _SymbolPainter extends CustomPainter {
 
   final String gameType;
 
-  static const _red = Color(0xFFE53935);
+  static final _red = Cartoon.onSurface(const Color(0xFFE53935));
   static const _yellow = Color(0xFFFFD84D);
   static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
   static final _bone = Cartoon.surface(const Color(0xFFFFF4DC));
@@ -74,7 +74,7 @@ class _SymbolPainter extends CustomPainter {
     void Function(Path, Color) shape,
   ) {
     // 앱 심볼처럼: 초록 용 얼굴 + 황금 갈기·뿔 + 큰 갈색 눈 + 흰 수염.
-    const green = Color(0xFF4CAF3F);
+    final green = Cartoon.onSurface(const Color(0xFF4CAF3F));
     const greenLight = Color(0xFF9BD66B);
     const gold = Color(0xFFFFC928);
     const pink = Color(0xFFFF8A80);
@@ -169,7 +169,11 @@ class _SymbolPainter extends CustomPainter {
     for (final cx in [0.34, 0.66]) {
       canvas.drawCircle(p(cx, 0.47), s * 0.105, fill(_paper));
       canvas.drawCircle(p(cx, 0.47), s * 0.105, line);
-      canvas.drawCircle(p(cx, 0.48), s * 0.075, fill(const Color(0xFF7B4A1E)));
+      canvas.drawCircle(
+        p(cx, 0.48),
+        s * 0.075,
+        fill(Cartoon.onSurface(const Color(0xFF7B4A1E))),
+      );
       canvas.drawCircle(p(cx, 0.48), s * 0.04, fill(Cartoon.ink));
       canvas.drawCircle(p(cx + 0.03, 0.44), s * 0.026, fill(Colors.white));
     }
@@ -323,7 +327,7 @@ class _SymbolPainter extends CustomPainter {
         hc.dy + hs * 0.9,
       )
       ..close();
-    canvas.drawPath(heart, fill(const Color(0xFFFF4D79)));
+    canvas.drawPath(heart, fill(Cartoon.onSurface(const Color(0xFFFF4D79))));
     canvas.drawPath(heart, line);
     canvas.restore();
   }

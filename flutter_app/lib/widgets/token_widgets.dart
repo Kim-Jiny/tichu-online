@@ -186,7 +186,7 @@ class _TokenHistorySheet extends StatelessWidget {
                 expand: false,
                 height: 38,
                 radius: 13,
-                color: const Color(0xFF4DA3FF),
+                color: Cartoon.onSurface(const Color(0xFF4DA3FF)),
                 onPressed: game.tokenHistoryLoading
                     ? null
                     : game.requestMoreTokenHistory,
@@ -206,8 +206,14 @@ class _TokenHistorySheet extends StatelessWidget {
     final (IconData icon, Color color) = switch (e.reason) {
       'mission' => (Icons.task_alt_rounded, const Color(0xFF3DBE6A)),
       'streak' => (Icons.local_fire_department_rounded, Cartoon.orangeDeep),
-      'shop' => (Icons.storefront_rounded, const Color(0xFF4DA3FF)),
-      _ => (Icons.admin_panel_settings_rounded, const Color(0xFF8E7CC3)),
+      'shop' => (
+        Icons.storefront_rounded,
+        Cartoon.onSurface(const Color(0xFF4DA3FF)),
+      ),
+      _ => (
+        Icons.admin_panel_settings_rounded,
+        Cartoon.onSurface(const Color(0xFF8E7CC3)),
+      ),
     };
     final title = switch (e.reason) {
       'mission' => missionTitle(l10n, e.ref ?? ''),
@@ -260,7 +266,7 @@ class _TokenHistorySheet extends StatelessWidget {
               size: 18,
               color: gain
                   ? Cartoon.onSurface(const Color(0xFF2E8B57))
-                  : const Color(0xFFD64550),
+                  : Cartoon.onSurface(const Color(0xFFD64550)),
             ),
           ),
         ],

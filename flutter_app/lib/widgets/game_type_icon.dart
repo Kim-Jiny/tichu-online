@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import 'game_symbols.dart';
+import '../theme/cartoon.dart';
 
 /// The colour that stands for each game.
 ///
@@ -12,11 +13,11 @@ import 'game_symbols.dart';
 Color gameTypeColor(String gameType) {
   switch (gameType) {
     case 'skull_king':
-      return const Color(0xFF21455F);
+      return Cartoon.onSurface(const Color(0xFF21455F));
     case 'love_letter':
-      return const Color(0xFFE91E63);
+      return Cartoon.onSurface(const Color(0xFFE91E63));
     case 'mighty':
-      return const Color(0xFF5C6BC0);
+      return Cartoon.onSurface(const Color(0xFF5C6BC0));
     default:
       return const Color(0xFF64B5F6);
   }
@@ -77,6 +78,6 @@ String gameTypeLabel(L10n l10n, String gameType) {
 /// dark text while the other three take white.
 Color gameTypeOnColor(String gameType) {
   return gameTypeColor(gameType).computeLuminance() > 0.42
-      ? const Color(0xFF1B3A50)
+      ? Cartoon.onSurface(const Color(0xFF1B3A50))
       : Colors.white;
 }

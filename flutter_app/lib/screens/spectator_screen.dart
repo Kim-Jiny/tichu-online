@@ -1350,11 +1350,11 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
   Color _spectatorAccentColor(String? gameType) {
     switch (gameType) {
       case 'love_letter':
-        return const Color(0xFFE91E63);
+        return Cartoon.onSurface(const Color(0xFFE91E63));
       case 'mighty':
-        return const Color(0xFF1565C0);
+        return Cartoon.onSurface(const Color(0xFF1565C0));
       case 'skull_king':
-        return const Color(0xFF21455F);
+        return Cartoon.onSurface(const Color(0xFF21455F));
       default:
         return const Color(0xFF64B5F6);
     }

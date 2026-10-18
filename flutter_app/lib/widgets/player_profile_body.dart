@@ -22,7 +22,7 @@ enum _MatchOutcome { win, loss, draw, desertion, midLeave }
 ///
 /// Dark enough to read at 13px on white — a paler sky blue is the colour of a
 /// disabled control, which is the opposite of what this marks.
-const Color _kMineColor = Color(0xFF0288D1);
+Color _kMineColor = Cartoon.onSurface(const Color(0xFF0288D1));
 
 /// One game's line in the combined view.
 class _GameTally {
@@ -653,7 +653,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           accent: Cartoon.onSurface(const Color(0xFF4A3A32)),
           background: Cartoon.surface(Cartoon.surface(const Color(0xFFF7F2EF))),
           icon: Icons.leaderboard_rounded,
-          iconColor: const Color(0xFF8D6E63),
+          iconColor: Cartoon.onSurface(const Color(0xFF8D6E63)),
           // The rate is the headline, so it is not repeated as a chip beside
           // the record the way the per-game cards do it.
           mainText: total.games == 0 ? '' : '${total.winRate}%',
@@ -771,9 +771,9 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
   }
 
   static Color _mannerColor(int score) {
-    if (score >= 800) return const Color(0xFF4CAF50);
+    if (score >= 800) return Cartoon.onSurface(const Color(0xFF4CAF50));
     if (score >= 500) return const Color(0xFFFF9800);
-    return const Color(0xFFE53935);
+    return Cartoon.onSurface(const Color(0xFFE53935));
   }
 
   static IconData _mannerIcon(int score) {
@@ -995,7 +995,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
       case _MatchOutcome.win:
         return const Color(0xFF81C784);
       case _MatchOutcome.loss:
-        return const Color(0xFFE57373);
+        return Cartoon.onSurface(const Color(0xFFE57373));
     }
   }
 
@@ -1180,8 +1180,8 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
                             color: isRanked
-                                ? const Color(0xFFE65100)
-                                : const Color(0xFF9E9E9E),
+                                ? Cartoon.onSurface(const Color(0xFFE65100))
+                                : Cartoon.onSurface(const Color(0xFF9E9E9E)),
                           ),
                         ),
                       ),
@@ -1210,8 +1210,10 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               // and walk-outs keep the neutral ink: there is nothing to win.
               color: switch (outcome) {
                 _MatchOutcome.win => _kMineColor,
-                _MatchOutcome.loss => const Color(0xFFE53935),
-                _ => const Color(0xFF5A4038),
+                _MatchOutcome.loss => Cartoon.onSurface(
+                  const Color(0xFFE53935),
+                ),
+                _ => Cartoon.onSurface(const Color(0xFF5A4038)),
               },
             ),
           ),
@@ -1309,7 +1311,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           const Spacer(),
           Switch(
             value: game.profilePrivateHidePhoto,
-            activeThumbColor: const Color(0xFF7E57C2),
+            activeThumbColor: Cartoon.onSurface(const Color(0xFF7E57C2)),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: (v) => game.setProfilePrivateHidePhoto(v),
           ),

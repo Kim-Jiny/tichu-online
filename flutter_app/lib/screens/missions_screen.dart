@@ -16,9 +16,9 @@ const _games = ['tichu', 'mighty', 'skull_king', 'love_letter'];
 Color _tierColor(int tier) {
   switch (tier) {
     case 3:
-      return const Color(0xFFE5484D);
+      return Cartoon.onSurface(const Color(0xFFE5484D));
     case 2:
-      return const Color(0xFF3E8EF7);
+      return Cartoon.onSurface(const Color(0xFF3E8EF7));
     default:
       return const Color(0xFF3DBE6A);
   }
@@ -652,7 +652,9 @@ class _MissionsScreenState extends State<MissionsScreen> {
         expand: false,
         height: 38,
         radius: 13,
-        color: left > 0 ? const Color(0xFF4DA3FF) : const Color(0xFF9AA5B1),
+        color: left > 0
+            ? Cartoon.onSurface(const Color(0xFF4DA3FF))
+            : const Color(0xFF9AA5B1),
         onPressed: left > 0 ? () => game.rerollMissions(_game) : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -697,7 +699,7 @@ class MissionsHelpDialog extends StatelessWidget {
       ),
       (
         Icons.groups_rounded,
-        const Color(0xFF4DA3FF),
+        Cartoon.onSurface(const Color(0xFF4DA3FF)),
         l10n.missionsHelpHumansTitle(minHumans.toString()),
         l10n.missionsHelpHumansBody,
       ),
@@ -709,13 +711,13 @@ class MissionsHelpDialog extends StatelessWidget {
       ),
       (
         Icons.speed_rounded,
-        const Color(0xFFE5484D),
+        Cartoon.onSurface(const Color(0xFFE5484D)),
         l10n.missionsHelpCapTitle,
         l10n.missionsHelpCapBody(dailyPicks.toString()),
       ),
       (
         Icons.local_fire_department_rounded,
-        const Color(0xFFE0720A),
+        Cartoon.onSurface(const Color(0xFFE0720A)),
         l10n.missionsHelpStreakTitle,
         l10n.missionsHelpStreakBody(
           streakTarget.toString(),

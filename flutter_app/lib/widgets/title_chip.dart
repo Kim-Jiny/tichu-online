@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 /// Compact icon + name chip for player titles (칭호). Used in waiting room
 /// slots and elsewhere so the title styling stays consistent across screens.
@@ -116,15 +117,15 @@ bool isCustomTitleKey(String? titleKey) =>
 
 /// The palette the server accepts. Ids, not free colour: a free colour can be
 /// the background colour, and an invisible title is not a title.
-const Map<String, Color> customTitleColors = {
-  'rose': Color(0xFFD64550),
-  'amber': Color(0xFFC97A0B),
-  'green': Color(0xFF2E7D32),
-  'teal': Color(0xFF00796B),
-  'blue': Color(0xFF1565C0),
-  'violet': Color(0xFF6A3FB5),
-  'pink': Color(0xFFC2185B),
-  'slate': Color(0xFF455A64),
+Map<String, Color> customTitleColors = {
+  'rose': Cartoon.onSurface(Color(0xFFD64550)),
+  'amber': Cartoon.onSurface(Color(0xFFC97A0B)),
+  'green': Cartoon.onSurface(Color(0xFF2E7D32)),
+  'teal': Cartoon.onSurface(Color(0xFF00796B)),
+  'blue': Cartoon.onSurface(Color(0xFF1565C0)),
+  'violet': Cartoon.onSurface(Color(0xFF6A3FB5)),
+  'pink': Cartoon.onSurface(Color(0xFFC2185B)),
+  'slate': Cartoon.onSurface(const Color(0xFF455A64)),
 };
 
 /// The colour a title is drawn in.
@@ -178,58 +179,58 @@ const double _minLuminanceOnDark = 0.35;
 Color _titleBaseColor(String? titleKey) {
   if (isCustomTitleKey(titleKey)) {
     return customTitleColors[titleKey!.substring('custom:'.length)] ??
-        const Color(0xFF5A4038);
+        Cartoon.onSurface(const Color(0xFF5A4038));
   }
   switch (titleKey) {
     case 'title_sweet':
-      return const Color(0xFFEC407A);
+      return Cartoon.onSurface(const Color(0xFFEC407A));
     case 'title_steady':
-      return const Color(0xFF5C6BC0);
+      return Cartoon.onSurface(const Color(0xFF5C6BC0));
     case 'title_flash_30d':
       return const Color(0xFFFFA000);
     case 'title_dragon':
-      return const Color(0xFFD32F2F);
+      return Cartoon.onSurface(const Color(0xFFD32F2F));
     case 'title_phoenix':
-      return const Color(0xFFFF6F00);
+      return Cartoon.onSurface(const Color(0xFFFF6F00));
     case 'title_pirate':
-      return const Color(0xFF37474F);
+      return Cartoon.onSurface(const Color(0xFF37474F));
     case 'title_tactician':
-      return const Color(0xFF00695C);
+      return Cartoon.onSurface(const Color(0xFF00695C));
     case 'title_lucky':
       return const Color(0xFFFFD600);
     case 'title_bluffer':
-      return const Color(0xFF6A1B9A);
+      return Cartoon.onSurface(const Color(0xFF6A1B9A));
     case 'title_ace':
-      return const Color(0xFFC62828);
+      return Cartoon.onSurface(const Color(0xFFC62828));
     case 'title_king':
       return const Color(0xFFFF8F00);
     case 'title_rookie':
       return const Color(0xFF66BB6A);
     case 'title_veteran':
-      return const Color(0xFF1565C0);
+      return Cartoon.onSurface(const Color(0xFF1565C0));
     case 'title_sensitive':
-      return const Color(0xFFE91E63);
+      return Cartoon.onSurface(const Color(0xFFE91E63));
     case 'title_shadow':
-      return const Color(0xFF424242);
+      return Cartoon.onSurface(const Color(0xFF424242));
     case 'title_flame':
-      return const Color(0xFFFF5722);
+      return Cartoon.onSurface(const Color(0xFFFF5722));
     case 'title_ice':
-      return const Color(0xFF0288D1);
+      return Cartoon.onSurface(const Color(0xFF0288D1));
     case 'title_crown':
-      return const Color(0xFFE65100);
+      return Cartoon.onSurface(const Color(0xFFE65100));
     case 'title_diamond':
       return const Color(0xFF00BCD4);
     case 'title_ghost':
-      return const Color(0xFF78909C);
+      return Cartoon.onSurface(const Color(0xFF78909C));
     case 'title_thunder':
       return const Color(0xFFFFAB00);
     case 'title_topcard':
-      return const Color(0xFF00897B);
+      return Cartoon.onSurface(const Color(0xFF00897B));
     case 'title_legend':
-      return const Color(0xFFFF6D00);
+      return Cartoon.onSurface(const Color(0xFFFF6D00));
     case 'title_boomer':
-      return const Color(0xFF795548);
+      return Cartoon.onSurface(const Color(0xFF795548));
     default:
-      return const Color(0xFF7E57C2);
+      return Cartoon.onSurface(const Color(0xFF7E57C2));
   }
 }

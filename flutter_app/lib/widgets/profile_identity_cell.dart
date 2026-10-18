@@ -220,7 +220,9 @@ class ProfileIdentityCell extends StatelessWidget {
                                 color: textColor != null
                                     ? textColor.withValues(alpha: 0.85)
                                     : (subtitleColor ??
-                                          const Color(0xFF9A8E8A)),
+                                          Cartoon.onSurface(
+                                            const Color(0xFF9A8E8A),
+                                          )),
                               ),
                             ),
                           ),

@@ -350,7 +350,7 @@ class _RulebookPainter extends CustomPainter {
       y(0.84),
       Radius.circular(s * 0.09),
     );
-    canvas.drawRRect(cover, _fill(const Color(0xFFFF5A5F)));
+    canvas.drawRRect(cover, _fill(Cartoon.onSurface(const Color(0xFFFF5A5F))));
     canvas.drawRRect(cover, line);
     // 책등
     canvas.drawLine(Offset(x(0.20), y(0.08)), Offset(x(0.20), y(0.82)), line);
@@ -421,10 +421,10 @@ class _RuleGlyphPainter extends CustomPainter {
 
   final RuleGlyphKind kind;
 
-  static const _red = Color(0xFFFF5A5F);
+  static final _red = Cartoon.onSurface(const Color(0xFFFF5A5F));
   static const _yellow = Color(0xFFFFD84D);
-  static const _blue = Color(0xFF4A90D9);
-  static const _green = Color(0xFF4CAF50);
+  static final _blue = Cartoon.onSurface(const Color(0xFF4A90D9));
+  static final _green = Cartoon.onSurface(const Color(0xFF4CAF50));
   static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
   static const _orange = Color(0xFFFF9F43);
 
@@ -552,7 +552,7 @@ class _RuleGlyphPainter extends CustomPainter {
         canvas.drawCircle(
           p(0.46, 0.60),
           s * 0.34,
-          _fill(const Color(0xFF3B3B4F)),
+          _fill(Cartoon.onSurface(const Color(0xFF3B3B4F))),
         );
         canvas.drawCircle(p(0.46, 0.60), s * 0.34, line);
         canvas.drawCircle(
@@ -562,7 +562,7 @@ class _RuleGlyphPainter extends CustomPainter {
         );
         shape(
           Path()..addRRect(rr(0.38, 0.16, 0.56, 0.30, 0.03)),
-          const Color(0xFF6B6B7F),
+          Cartoon.onSurface(const Color(0xFF6B6B7F)),
         );
         final fuse = Path()
           ..moveTo(x(0.50), y(0.16))
@@ -622,7 +622,7 @@ class _RuleGlyphPainter extends CustomPainter {
         canvas.drawCircle(
           p(0.5, 0.5),
           s * 0.08,
-          _fill(const Color(0xFF2B2B3A)),
+          _fill(Cartoon.onSurface(const Color(0xFF2B2B3A))),
         );
         canvas.drawCircle(p(0.56, 0.44), s * 0.04, _fill(Colors.white));
       case RuleGlyphKind.gavel:
@@ -643,7 +643,10 @@ class _RuleGlyphPainter extends CustomPainter {
           s * 0.52,
           Radius.circular(s * 0.04),
         );
-        canvas.drawRRect(handle, _fill(const Color(0xFFB9783A)));
+        canvas.drawRRect(
+          handle,
+          _fill(Cartoon.onSurface(const Color(0xFFB9783A))),
+        );
         canvas.drawRRect(handle, line);
         canvas.drawRRect(head, _fill(_orange));
         canvas.drawRRect(head, line);

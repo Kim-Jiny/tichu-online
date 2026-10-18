@@ -280,7 +280,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
               child: _statChip(
                 label: l10n.goldFilterGain,
                 value: '+${formatGold(gain)}',
-                color: const Color(0xFF2E9E4F),
+                color: Cartoon.onSurface(const Color(0xFF2E9E4F)),
               ),
             ),
             const SizedBox(width: 10),
@@ -288,7 +288,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
               child: _statChip(
                 label: l10n.goldFilterSpend,
                 value: '-${formatGold(spend)}',
-                color: const Color(0xFFE5791A),
+                color: Cartoon.onSurface(const Color(0xFFE5791A)),
               ),
             ),
           ],
@@ -400,7 +400,9 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
   ) {
     final delta = _delta(item);
     final positive = delta >= 0;
-    final tone = positive ? const Color(0xFF2E9E4F) : const Color(0xFFE5791A);
+    final tone = positive
+        ? Cartoon.onSurface(const Color(0xFF2E9E4F))
+        : Cartoon.onSurface(const Color(0xFFE5791A));
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),

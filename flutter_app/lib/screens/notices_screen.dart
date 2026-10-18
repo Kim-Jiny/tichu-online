@@ -132,7 +132,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
                                 ),
                                 style: TextStyle(
                                   color: Cartoon.onSurface(
-                                    const Color(0xFFCC6666),
+                                    Cartoon.onSurface(const Color(0xFFCC6666)),
                                   ),
                                 ),
                                 textAlign: TextAlign.center,
@@ -474,13 +474,13 @@ class _NoticesScreenState extends State<NoticesScreen> {
   Color _categoryTextColor(String value) {
     switch (value) {
       case 'release':
-        return const Color(0xFF1565C0);
+        return Cartoon.onSurface(const Color(0xFF1565C0));
       case 'update':
-        return const Color(0xFF2E7D32);
+        return Cartoon.onSurface(const Color(0xFF2E7D32));
       case 'preview':
-        return const Color(0xFFE65100);
+        return Cartoon.onSurface(const Color(0xFFE65100));
       default:
-        return const Color(0xFF546E7A);
+        return Cartoon.onSurface(const Color(0xFF546E7A));
     }
   }
 }
@@ -516,19 +516,19 @@ class _NoticeDetailPage extends StatelessWidget {
       case 'release':
         categoryLabel = l10n.noticeCategoryRelease;
         categoryBg = Cartoon.surface(const Color(0xFFE3F2FD));
-        categoryText = const Color(0xFF1565C0);
+        categoryText = Cartoon.onSurface(const Color(0xFF1565C0));
       case 'update':
         categoryLabel = l10n.noticeCategoryUpdate;
         categoryBg = Cartoon.surface(const Color(0xFFE8F5E9));
-        categoryText = const Color(0xFF2E7D32);
+        categoryText = Cartoon.onSurface(const Color(0xFF2E7D32));
       case 'preview':
         categoryLabel = l10n.noticeCategoryPreview;
         categoryBg = Cartoon.surface(const Color(0xFFFFF3E0));
-        categoryText = const Color(0xFFE65100);
+        categoryText = Cartoon.onSurface(const Color(0xFFE65100));
       default:
         categoryLabel = l10n.noticeCategoryGeneral;
         categoryBg = Cartoon.surface(const Color(0xFFECEFF1));
-        categoryText = const Color(0xFF546E7A);
+        categoryText = Cartoon.onSurface(const Color(0xFF546E7A));
     }
 
     return Theme(

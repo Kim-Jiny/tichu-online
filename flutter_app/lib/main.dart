@@ -517,7 +517,31 @@ class TichuApp extends StatelessWidget {
                   ? _WebMinHeight(child: scaled)
                   : scaled;
               // 미션을 깨면 어느 화면에서든 알림이 내려온다.
-              return MissionToastHost(child: sized);
+              final host = MissionToastHost(child: sized);
+              // 상태바 글자·아이콘. 지금까지 아무 설정도 하지 않아
+              // 기본값(어두운 아이콘)을 썼는데, 어두운 테마에서는 그게
+              // 안 보인다.
+              //
+              // 이름이 헷갈린다: Brightness.dark 는 '아이콘을 어둡게' 가
+              // 아니라 '바탕이 밝으니 어두운 아이콘' 이라는 뜻이다. 그래서
+              // 밝은 한 벌에 dark, 어두운 한 벌에 light 가 맞다.
+              final darkPalette = Cartoon.palette.dark;
+              return AnnotatedRegion<SystemUiOverlayStyle>(
+                value: SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: darkPalette
+                      ? Brightness.light
+                      : Brightness.dark,
+                  statusBarBrightness: darkPalette
+                      ? Brightness.dark
+                      : Brightness.light,
+                  systemNavigationBarColor: Cartoon.skyBottom,
+                  systemNavigationBarIconBrightness: darkPalette
+                      ? Brightness.light
+                      : Brightness.dark,
+                ),
+                child: host,
+              );
             },
             // 앱 전체 기본을 카툰으로: 화면마다 따로 씌우지 않은 다이얼로그·시트·
             // 버튼·입력칸도 같은 모양이 된다.

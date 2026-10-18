@@ -405,7 +405,7 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
             gameButton(
               l10n.skAbilityRascalNone,
               _sent ? null : () => _send(wager: 0),
-              color: const Color(0xFF9E9E9E),
+              color: Cartoon.onSurface(const Color(0xFF9E9E9E)),
               height: 44,
               size: 16,
             ),
@@ -448,7 +448,7 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
             gameButton(
               l10n.skAbilityHarryKeep,
               _sent ? null : () => _send(delta: 0),
-              color: const Color(0xFF9E9E9E),
+              color: Cartoon.onSurface(const Color(0xFF9E9E9E)),
               height: 44,
               size: 16,
             ),

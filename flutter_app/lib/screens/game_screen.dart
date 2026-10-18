@@ -718,7 +718,7 @@ class _GameScreenState extends State<GameScreen> {
     return SpectatorActionButton(
       icon: Icons.exit_to_app,
       active: false,
-      iconColor: const Color(0xFFE53935),
+      iconColor: Cartoon.onSurface(const Color(0xFFE53935)),
       onTap: () => _showLeaveGameDialog(game),
     );
   }
@@ -1091,7 +1091,7 @@ class _GameScreenState extends State<GameScreen> {
       badgeCount: game.cardViewers.length,
       // Blue while someone can see the hand — the same signal Skull King's
       // gives, and what the green corner dot on the spectator button used to.
-      iconColor: hasViewers ? const Color(0xFF6A9BD1) : null,
+      iconColor: hasViewers ? Cartoon.onSurface(const Color(0xFF6A9BD1)) : null,
       onTap: () => setState(() => _viewersOpen = !_viewersOpen),
     );
   }
@@ -1583,7 +1583,7 @@ class _GameScreenState extends State<GameScreen> {
                                 Icons.check_circle,
                                 size: 12,
                                 color: Cartoon.onSurface(
-                                  const Color(0xFF3A8F52),
+                                  Cartoon.onSurface(const Color(0xFF3A8F52)),
                                 ),
                               ),
                             ),
@@ -2426,8 +2426,8 @@ class _GameScreenState extends State<GameScreen> {
             style: Cartoon.userText(
               size: i == 0 ? 14 : 12,
               color: reversedMine[i]
-                  ? const Color(0xFF2F6FC4)
-                  : const Color(0xFFB23A3A),
+                  ? Cartoon.onSurface(const Color(0xFF2F6FC4))
+                  : Cartoon.onSurface(const Color(0xFFB23A3A)),
               weight: i == 0 ? FontWeight.w800 : FontWeight.w700,
             ),
           ),
@@ -3135,7 +3135,7 @@ class _GameScreenState extends State<GameScreen> {
       case _RankTier.bronze:
         return _rankPill(
           l10n.gameRankBronze,
-          const Color(0xFFC58B6B),
+          Cartoon.onSurface(const Color(0xFFC58B6B)),
           Icons.emoji_events,
         );
     }

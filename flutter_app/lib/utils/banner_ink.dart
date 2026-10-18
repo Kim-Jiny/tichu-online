@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/cartoon.dart';
 
 /// What colour of text will read on top of an equipped banner.
 ///
@@ -13,7 +14,7 @@ import 'package:flutter/material.dart';
 /// that runs dark-to-light has no single answer, and the header spans all of
 /// it; the average is the colour most of the text sits on.
 /// 밝은 배너 위에 쓰는 글자색.
-const Color bannerInkDark = Color(0xFF3E312A);
+Color bannerInkDark = Cartoon.onSurface(const Color(0xFF3E312A));
 
 /// 어두운 배너인가.
 ///

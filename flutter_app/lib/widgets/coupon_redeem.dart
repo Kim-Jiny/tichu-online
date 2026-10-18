@@ -401,7 +401,9 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                                           size: 13,
                                           weight: FontWeight.w700,
                                           color: Cartoon.onSurface(
-                                            const Color(0xFFD64550),
+                                            Cartoon.onSurface(
+                                              const Color(0xFFD64550),
+                                            ),
                                           ),
                                           height: 1.3,
                                         ),

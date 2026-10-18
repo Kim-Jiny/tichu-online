@@ -82,14 +82,18 @@ _LevelTier _tierFor(int level) {
     // was reading as porcelain (바둑알 느낌) so we drop it for a coppery
     // amber and tighten the contrast band closer to the edge to keep the
     // 3D feel without the bead vibe.
-    return const _LevelTier(
+    return _LevelTier(
       gradient: RadialGradient(
         center: Alignment(-0.35, -0.45),
         radius: 1.05,
-        colors: [Color(0xFFF2A86A), Color(0xFFB05A22), Color(0xFF4C1F06)],
+        colors: [
+          Color(0xFFF2A86A),
+          Cartoon.onSurface(const Color(0xFFB05A22)),
+          Cartoon.onSurface(const Color(0xFF4C1F06)),
+        ],
         stops: [0.0, 0.5, 1.0],
       ),
-      borderColor: Color(0xFF2E1303),
+      borderColor: Cartoon.onSurface(const Color(0xFF2E1303)),
       textColor: Colors.white,
       shadowColor: Color(0x55000000),
       textShadows: [
@@ -107,12 +111,12 @@ _LevelTier _tierFor(int level) {
         colors: [
           Cartoon.surface(const Color(0xFFFFFFFF)),
           Color(0xFFC2C7CC),
-          Color(0xFF5E646A),
+          Cartoon.onSurface(const Color(0xFF5E646A)),
         ],
         stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Color(0xFF2F3338),
-      textColor: Color(0xFF1A1A1A),
+      borderColor: Cartoon.onSurface(const Color(0xFF2F3338)),
+      textColor: Cartoon.onSurface(const Color(0xFF1A1A1A)),
       shadowColor: Color(0x55000000),
       textShadows: [
         Shadow(color: Color(0x55FFFFFF), offset: Offset(0, 1), blurRadius: 1),
@@ -128,12 +132,12 @@ _LevelTier _tierFor(int level) {
         colors: [
           Cartoon.surface(const Color(0xFFFFF6C2)),
           Color(0xFFE8B948),
-          Color(0xFF8A5E00),
+          Cartoon.onSurface(const Color(0xFF8A5E00)),
         ],
         stops: [0.0, 0.55, 1.0],
       ),
-      borderColor: Color(0xFF4A3000),
-      textColor: Color(0xFF2E1F00),
+      borderColor: Cartoon.onSurface(const Color(0xFF4A3000)),
+      textColor: Cartoon.onSurface(const Color(0xFF2E1F00)),
       shadowColor: Color(0x55A47000),
       textShadows: [
         Shadow(color: Color(0x66FFFFFF), offset: Offset(0, 1), blurRadius: 1),
@@ -142,13 +146,16 @@ _LevelTier _tierFor(int level) {
   }
   if (level <= 40) {
     // Black
-    return const _LevelTier(
+    return _LevelTier(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF3A3A3A), Color(0xFF0A0A0A)],
+        colors: [
+          Cartoon.onSurface(const Color(0xFF3A3A3A)),
+          Cartoon.onSurface(const Color(0xFF0A0A0A)),
+        ],
       ),
-      borderColor: Color(0xFF000000),
+      borderColor: Cartoon.onSurface(const Color(0xFF000000)),
       textColor: Color(0xFFFFD700),
       shadowColor: Color(0x55000000),
       textShadows: [
@@ -160,17 +167,17 @@ _LevelTier _tierFor(int level) {
   return _LevelTier(
     gradient: SweepGradient(
       colors: [
-        Color(0xFFFF4D4D),
+        Cartoon.onSurface(const Color(0xFFFF4D4D)),
         Color(0xFFFFAA33),
         Cartoon.surface(const Color(0xFFFFE93D)),
         Color(0xFF59D85B),
         Color(0xFF3DB8FF),
-        Color(0xFF7A5CFF),
+        Cartoon.onSurface(const Color(0xFF7A5CFF)),
         Color(0xFFEF6BFF),
-        Color(0xFFFF4D4D),
+        Cartoon.onSurface(const Color(0xFFFF4D4D)),
       ],
     ),
-    borderColor: Color(0xFF6A3F9E),
+    borderColor: Cartoon.onSurface(const Color(0xFF6A3F9E)),
     textColor: Colors.white,
     shadowColor: Color(0x55000000),
     textShadows: [

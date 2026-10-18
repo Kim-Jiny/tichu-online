@@ -606,7 +606,7 @@ void showLLScoreHistoryDialog(
   required List<LLPlayer> players,
   required int targetTokens,
 }) {
-  const accent = Color(0xFFE0457B);
+  final accent = Cartoon.onSurface(const Color(0xFFE0457B));
   final l10n = L10n.of(context);
   final sorted = [...players]..sort((a, b) => b.tokens.compareTo(a.tokens));
   final topTokens = sorted.isNotEmpty ? sorted.first.tokens : 0;
@@ -620,7 +620,7 @@ void showLLScoreHistoryDialog(
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.favorite_rounded, size: 18, color: accent),
+          Icon(Icons.favorite_rounded, size: 18, color: accent),
           const SizedBox(width: 3),
           Text('$targetTokens', style: Cartoon.text(size: 17, color: accent)),
         ],
@@ -689,11 +689,7 @@ void showLLScoreHistoryDialog(
                           ),
                         ),
                       ),
-                      const Icon(
-                        Icons.favorite_rounded,
-                        size: 16,
-                        color: accent,
-                      ),
+                      Icon(Icons.favorite_rounded, size: 16, color: accent),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(

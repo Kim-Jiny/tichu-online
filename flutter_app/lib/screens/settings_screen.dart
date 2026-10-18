@@ -189,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (dialogCtx) => SimpleDialog(
         title: _dialogTitle(
           Icons.language_rounded,
-          const Color(0xFF42A5F5),
+          Cartoon.onSurface(const Color(0xFF42A5F5)),
           l10n.settingsLanguage,
         ),
         children: [
@@ -290,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return AlertDialog(
             title: _dialogTitle(
               Icons.warning_amber_rounded,
-              const Color(0xFFC62828),
+              Cartoon.onSurface(const Color(0xFFC62828)),
               l10n.settingsDeleteAccount,
             ),
             content: SingleChildScrollView(
@@ -344,7 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               CartoonButton(
                 expand: false,
                 height: 46,
-                color: const Color(0xFFE5484D),
+                color: Cartoon.onSurface(const Color(0xFFE5484D)),
                 onPressed: matches
                     ? () {
                         Navigator.pop(dialogCtx);
@@ -431,7 +431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
           title: _dialogTitle(
             Icons.help_rounded,
-            const Color(0xFFBA68C8),
+            Cartoon.onSurface(const Color(0xFFBA68C8)),
             l10n.inquiryTitle,
           ),
           content: SizedBox(
@@ -525,7 +525,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: _dialogTitle(
           Icons.mark_email_read_rounded,
-          const Color(0xFF1E88E5),
+          Cartoon.onSurface(const Color(0xFF1E88E5)),
           l10n.inquiryHistoryTitle,
         ),
         content: SizedBox(
@@ -630,8 +630,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 style: Cartoon.text(
                                   size: 12.5,
                                   color: isResolved
-                                      ? const Color(0xFF2E8B57)
-                                      : const Color(0xFFE5791A),
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFF2E8B57),
+                                        )
+                                      : Cartoon.onSurface(
+                                          const Color(0xFFE5791A),
+                                        ),
                                 ),
                               ),
                             ),
@@ -871,7 +875,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     _dialogTitle(
                       Icons.visibility_rounded,
-                      const Color(0xFF6A6090),
+                      Cartoon.onSurface(const Color(0xFF6A6090)),
                       l10n.settingsCardViewPolicy,
                     ),
                     const SizedBox(height: 8),
@@ -889,19 +893,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       value: 'ask',
                       label: l10n.gameCardViewPolicyAsk,
                       icon: Icons.help_outline,
-                      color: const Color(0xFF6A6090),
+                      color: Cartoon.onSurface(const Color(0xFF6A6090)),
                     ),
                     option(
                       value: 'always_allow',
                       label: l10n.gameCardViewPolicyAllow,
                       icon: Icons.check_circle,
-                      color: const Color(0xFF4CAF50),
+                      color: Cartoon.onSurface(const Color(0xFF4CAF50)),
                     ),
                     option(
                       value: 'always_deny',
                       label: l10n.gameCardViewPolicyDeny,
                       icon: Icons.block,
-                      color: const Color(0xFFE53935),
+                      color: Cartoon.onSurface(const Color(0xFFE53935)),
                     ),
                   ],
                 ),
@@ -1022,7 +1026,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: _dialogTitle(
           Icons.link_rounded,
-          const Color(0xFF7E57C2),
+          Cartoon.onSurface(const Color(0xFF7E57C2)),
           l10n.linkDialogTitle,
         ),
         content: SingleChildScrollView(
@@ -1056,7 +1060,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   name: 'Kakao',
                   key: 'kakao',
                   bg: const Color(0xFFFEE500),
-                  fg: const Color(0xFF3C1E1E),
+                  fg: Cartoon.onSurface(const Color(0xFF3C1E1E)),
                   logo: const KakaoLogo(size: 26),
                 ),
             ],
@@ -1388,7 +1392,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               _buildRow(
                                 icon: Icons.link,
-                                iconColor: const Color(0xFF7E57C2),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFF7E57C2),
+                                ),
                                 title: l10n.settingsSocialLink,
                                 subtitle: game.authProvider != 'local'
                                     ? l10n.settingsSocialLinked(
@@ -1414,7 +1420,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                             size: 12,
                                             weight: FontWeight.w500,
                                             color: Cartoon.onSurface(
-                                              const Color(0xFF7E57C2),
+                                              Cartoon.onSurface(
+                                                const Color(0xFF7E57C2),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -1426,7 +1434,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _buildSection(L10n.of(context).settingsNotices, [
                               _buildRow(
                                 icon: Icons.campaign,
-                                iconColor: const Color(0xFF42A5F5),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFF42A5F5),
+                                ),
                                 title: L10n.of(context).settingsNotices,
                                 onTap: _openNoticesPage,
                                 trailing: Row(
@@ -1439,8 +1449,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           horizontal: 7,
                                           vertical: 2,
                                         ),
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFFE53935),
+                                        decoration: BoxDecoration(
+                                          color: Cartoon.onSurface(
+                                            const Color(0xFFE53935),
+                                          ),
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(999),
                                           ),
@@ -1478,7 +1490,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               // "did they get back to me" checks the same place.
                               _buildRow(
                                 icon: Icons.mark_email_unread,
-                                iconColor: const Color(0xFFEF6C00),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFFEF6C00),
+                                ),
                                 title: L10n.of(context).mailboxTitle,
                                 onTap: _openMailbox,
                                 trailing: Row(
@@ -1491,8 +1505,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           horizontal: 7,
                                           vertical: 2,
                                         ),
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFFE53935),
+                                        decoration: BoxDecoration(
+                                          color: Cartoon.onSurface(
+                                            const Color(0xFFE53935),
+                                          ),
                                           borderRadius: BorderRadius.all(
                                             Radius.circular(999),
                                           ),
@@ -1561,7 +1577,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(
                                   icon: Icons.campaign_outlined,
                                   iconColor: game.pushEnabled
-                                      ? const Color(0xFFE08A1E)
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFFE08A1E),
+                                        )
                                       : const Color(0xFFC9BFB9),
                                   title: l10n.settingsMarketingPush,
                                   subtitle: game.pushEnabled
@@ -1593,7 +1611,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildRow(
                                   icon: Icons.event_available_outlined,
                                   iconColor: attendancePushActive
-                                      ? const Color(0xFF66A15E)
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFF66A15E),
+                                        )
                                       : const Color(0xFFC9BFB9),
                                   title: l10n.settingsAttendancePush,
                                   subtitle: attendancePushActive
@@ -1619,7 +1639,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   _buildRow(
                                     icon: Icons.support_agent,
-                                    iconColor: const Color(0xFFAB47BC),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFFAB47BC),
+                                    ),
                                     title: l10n.settingsInquiryNotifications,
                                     subtitle:
                                         l10n.settingsInquiryNotificationsDesc,
@@ -1637,7 +1659,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   _buildRow(
                                     icon: Icons.report_gmailerrorred,
-                                    iconColor: const Color(0xFFEF5350),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFFEF5350),
+                                    ),
                                     title: l10n.settingsReportNotifications,
                                     subtitle:
                                         l10n.settingsReportNotificationsDesc,
@@ -1655,7 +1679,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   _buildRow(
                                     icon: Icons.payments_outlined,
-                                    iconColor: const Color(0xFF26A69A),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFF26A69A),
+                                    ),
                                     title: l10n.settingsPaymentNotifications,
                                     subtitle:
                                         l10n.settingsPaymentNotificationsDesc,
@@ -1672,7 +1698,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _buildSection(l10n.settingsCardViewPolicy, [
                               _buildRow(
                                 icon: Icons.visibility_outlined,
-                                iconColor: const Color(0xFF6A6090),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFF6A6090),
+                                ),
                                 title: l10n.settingsCardViewPolicy,
                                 subtitle: _cardViewPrefLabel(
                                   l10n,
@@ -1706,7 +1734,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 return _buildSection(l10n.settingsLanguage, [
                                   _buildRow(
                                     icon: Icons.language,
-                                    iconColor: const Color(0xFF42A5F5),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFF42A5F5),
+                                    ),
                                     title: l10n.settingsLanguage,
                                     subtitle: currentLabel,
                                     onTap: () => _showLanguageDialog(
@@ -1756,7 +1786,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               if (couponRedeemAllowed) ...[
                                 _buildRow(
                                   icon: Icons.confirmation_number_outlined,
-                                  iconColor: const Color(0xFFB07B2E),
+                                  iconColor: Cartoon.onSurface(
+                                    const Color(0xFFB07B2E),
+                                  ),
                                   leading: couponIcon(size: 22),
                                   title: l10n.couponRedeemTitle,
                                   onTap: () => showCouponRedeemDialog(context),
@@ -1775,7 +1807,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ],
                               _buildRow(
                                 icon: Icons.help_outline,
-                                iconColor: const Color(0xFFBA68C8),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFFBA68C8),
+                                ),
                                 title: l10n.settingsSubmitInquiry,
                                 onTap: _showInquiryDialog,
                                 trailing: Icon(
@@ -1790,7 +1824,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               _buildRow(
                                 icon: Icons.mark_email_read,
-                                iconColor: const Color(0xFF1E88E5),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFF1E88E5),
+                                ),
                                 title: l10n.settingsInquiryHistory,
                                 onTap: _showInquiryHistoryDialog,
                                 trailing: Consumer<GameService>(
@@ -1804,8 +1840,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           margin: const EdgeInsets.only(
                                             right: 6,
                                           ),
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFFE53935),
+                                          decoration: BoxDecoration(
+                                            color: Cartoon.onSurface(
+                                              const Color(0xFFE53935),
+                                            ),
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -1832,8 +1870,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       return _buildRow(
                                         icon: Icons.info_outline,
                                         iconColor: outdated
-                                            ? const Color(0xFFE53935)
-                                            : const Color(0xFF7E57C2),
+                                            ? Cartoon.onSurface(
+                                                const Color(0xFFE53935),
+                                              )
+                                            : Cartoon.onSurface(
+                                                const Color(0xFF7E57C2),
+                                              ),
                                         // "앱 버전" is wrong in a browser — there
                                         // is no app to have a version, just the
                                         // build being served.
@@ -1890,7 +1932,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   _buildRow(
                                     icon: Icons.description_outlined,
-                                    iconColor: const Color(0xFF8A7A72),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFF8A7A72),
+                                    ),
                                     title: l10n.settingsTermsOfService,
                                     onTap: () => _showTextViewDialog(
                                       l10n.settingsTermsOfService,
@@ -1911,7 +1955,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   _buildRow(
                                     icon: Icons.privacy_tip_outlined,
-                                    iconColor: const Color(0xFF8A7A72),
+                                    iconColor: Cartoon.onSurface(
+                                      const Color(0xFF8A7A72),
+                                    ),
                                     title: l10n.settingsPrivacyPolicy,
                                     onTap: () => _showTextViewDialog(
                                       l10n.settingsPrivacyPolicy,
@@ -1931,7 +1977,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _buildSection(l10n.settingsAdminSection, [
                                 _buildRow(
                                   icon: Icons.admin_panel_settings_outlined,
-                                  iconColor: const Color(0xFF7E57C2),
+                                  iconColor: Cartoon.onSurface(
+                                    const Color(0xFF7E57C2),
+                                  ),
                                   title: l10n.settingsAdminCenter,
                                   subtitle: l10n.settingsAdminCenterDesc,
                                   onTap: () {
@@ -1950,7 +1998,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _buildSection(l10n.settingsAccountManagement, [
                               _buildRow(
                                 icon: Icons.logout,
-                                iconColor: const Color(0xFF8A7A72),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFF8A7A72),
+                                ),
                                 title: l10n.settingsLogout,
                                 onTap: _logout,
                                 trailing: Icon(
@@ -1965,7 +2015,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               _buildRow(
                                 icon: Icons.delete_forever,
-                                iconColor: const Color(0xFFC62828),
+                                iconColor: Cartoon.onSurface(
+                                  const Color(0xFFC62828),
+                                ),
                                 title: l10n.settingsDeleteAccount,
                                 onTap: _showDeleteAccountDialog,
                                 trailing: Icon(

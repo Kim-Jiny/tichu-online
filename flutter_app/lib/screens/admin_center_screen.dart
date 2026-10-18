@@ -44,8 +44,8 @@ String _formatTimestamp(dynamic v) {
 
 class _AdminCenterScreenState extends State<AdminCenterScreen> {
   final TextEditingController _searchController = TextEditingController();
-  static const _inkColor = Color(0xFF5A4038);
-  static const _mutedColor = Color(0xFF8A7A72);
+  static final _inkColor = Cartoon.onSurface(const Color(0xFF5A4038));
+  static final _mutedColor = Cartoon.onSurface(const Color(0xFF8A7A72));
   String _selectedCard = 'active';
   static const _userCardIds = {
     'active',
@@ -225,14 +225,14 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             id: 'active',
             label: l.adminActiveUsers,
             value: '$activeUsers',
-            color: const Color(0xFF42A5F5),
+            color: Cartoon.onSurface(const Color(0xFF42A5F5)),
             icon: Icons.wifi_tethering,
           ),
           (
             id: 'newToday',
             label: l.adminNewUsersToday,
             value: '$newUsersToday',
-            color: const Color(0xFF26A69A),
+            color: Cartoon.onSurface(const Color(0xFF26A69A)),
             icon: Icons.person_add_alt_1_outlined,
           ),
           (
@@ -253,28 +253,28 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
             id: 'pendingInquiries',
             label: l.adminPendingInquiries,
             value: '$pendingInquiries / $totalInquiries',
-            color: const Color(0xFFAB47BC),
+            color: Cartoon.onSurface(const Color(0xFFAB47BC)),
             icon: Icons.mail_outline,
           ),
           (
             id: 'pendingReports',
             label: l.adminPendingReports,
             value: '$pendingReports / $totalReports',
-            color: const Color(0xFFEF5350),
+            color: Cartoon.onSurface(const Color(0xFFEF5350)),
             icon: Icons.report_outlined,
           ),
           (
             id: 'casualGames',
             label: l.adminCasualGames,
             value: '$todayCasualGames / $todayGames',
-            color: const Color(0xFF5C6BC0),
+            color: Cartoon.onSurface(const Color(0xFF5C6BC0)),
             icon: Icons.sports_esports_outlined,
           ),
           (
             id: 'rankedGames',
             label: l.adminRankedGames,
             value: '$todayRankedGames / $todayGames',
-            color: const Color(0xFFFF7043),
+            color: Cartoon.onSurface(const Color(0xFFFF7043)),
             icon: Icons.emoji_events_outlined,
           ),
         ];
@@ -547,10 +547,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: l.adminSearchHint,
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: _mutedColor,
-                        ),
+                        prefixIcon: Icon(Icons.search, color: _mutedColor),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.94),
                         border: OutlineInputBorder(
@@ -588,10 +585,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: l.adminSearchHint,
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: _mutedColor,
-                          ),
+                          prefixIcon: Icon(Icons.search, color: _mutedColor),
                           filled: true,
                           fillColor: Colors.white.withValues(alpha: 0.94),
                           border: OutlineInputBorder(
@@ -631,7 +625,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       return Center(
                         child: Text(
                           l.adminNoUsers,
-                          style: const TextStyle(color: _mutedColor),
+                          style: TextStyle(color: _mutedColor),
                         ),
                       );
                     }
@@ -691,7 +685,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                                 style: Cartoon.text(
                                                   size: 12,
                                                   color: Cartoon.onSurface(
-                                                    const Color(0xFF1565C0),
+                                                    Cartoon.onSurface(
+                                                      const Color(0xFF1565C0),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -711,7 +707,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                                                 child: Icon(
                                                   Icons.verified,
                                                   color: Cartoon.onSurface(
-                                                    const Color(0xFF7E57C2),
+                                                    Cartoon.onSurface(
+                                                      const Color(0xFF7E57C2),
+                                                    ),
                                                   ),
                                                   size: 18,
                                                 ),
@@ -824,7 +822,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       return Center(
         child: Text(
           rankedOnly ? l.adminRankedGames : l.adminCasualGames,
-          style: const TextStyle(color: _mutedColor),
+          style: TextStyle(color: _mutedColor),
         ),
       );
     }
@@ -919,7 +917,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     }
     final rows = game.adminTodayPayments;
     if (rows.isEmpty) {
-      return const Center(
+      return Center(
         child: Text('오늘 결제 내역이 없습니다', style: TextStyle(color: _mutedColor)),
       );
     }
@@ -1023,7 +1021,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               refunded ? Icons.undo : Icons.payments_outlined,
               color: refunded
                   ? const Color(0xFFFB8C00)
-                  : const Color(0xFF43A047),
+                  : Cartoon.onSurface(const Color(0xFF43A047)),
               size: 20,
             ),
           ),
@@ -1045,15 +1043,21 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                     const SizedBox(width: 6),
                     _payBadge(
                       platform == 'ios' ? 'iOS' : 'AOS',
-                      const Color(0xFF5C6BC0),
+                      Cartoon.onSurface(const Color(0xFF5C6BC0)),
                     ),
                     if (sandbox) ...[
                       const SizedBox(width: 4),
-                      _payBadge('SANDBOX', const Color(0xFF9E9E9E)),
+                      _payBadge(
+                        'SANDBOX',
+                        Cartoon.onSurface(const Color(0xFF9E9E9E)),
+                      ),
                     ],
                     if (refunded) ...[
                       const SizedBox(width: 4),
-                      _payBadge('환불', const Color(0xFFC62828)),
+                      _payBadge(
+                        '환불',
+                        Cartoon.onSurface(const Color(0xFFC62828)),
+                      ),
                     ],
                   ],
                 ),
@@ -1087,7 +1091,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               fontWeight: FontWeight.w900,
               color: refunded
                   ? const Color(0xFFB0A39E)
-                  : const Color(0xFF2E7D32),
+                  : Cartoon.onSurface(const Color(0xFF2E7D32)),
               decoration: refunded ? TextDecoration.lineThrough : null,
             ),
           ),
@@ -1162,7 +1166,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF7043).withValues(alpha: 0.14),
+                      color: Cartoon.onSurface(
+                        const Color(0xFFFF7043),
+                      ).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1255,7 +1261,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   }
 
   Widget _buildTichuTeamRow(String players, int score, bool isWinner) {
-    final color = isWinner ? const Color(0xFF2E7D32) : _inkColor;
+    final color = isWinner
+        ? Cartoon.onSurface(const Color(0xFF2E7D32))
+        : _inkColor;
     return Row(
       children: [
         if (isWinner) ...[
@@ -1288,7 +1296,9 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFF8A7A72).withValues(alpha: 0.12),
+              color: Cartoon.onSurface(
+                const Color(0xFF8A7A72),
+              ).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -1320,19 +1330,19 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
       case 'tichu':
         return (
           label: 'TICHU',
-          color: const Color(0xFF42A5F5),
+          color: Cartoon.onSurface(const Color(0xFF42A5F5)),
           icon: Icons.style_outlined,
         );
       case 'skull_king':
         return (
           label: 'SK',
-          color: const Color(0xFFAB47BC),
+          color: Cartoon.onSurface(const Color(0xFFAB47BC)),
           icon: Icons.sailing_outlined,
         );
       case 'love_letter':
         return (
           label: 'LL',
-          color: const Color(0xFFEF5350),
+          color: Cartoon.onSurface(const Color(0xFFEF5350)),
           icon: Icons.mail_outlined,
         );
       case 'mighty':
@@ -1620,13 +1630,13 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
     switch (status) {
       case 'resolved':
       case 'online':
-        return const Color(0xFF2E7D32);
+        return Cartoon.onSurface(const Color(0xFF2E7D32));
       case 'reviewed':
-        return const Color(0xFFEF6C00);
+        return Cartoon.onSurface(const Color(0xFFEF6C00));
       case 'pending':
-        return const Color(0xFF6D4C41);
+        return Cartoon.onSurface(const Color(0xFF6D4C41));
       default:
-        return const Color(0xFF8A7A72);
+        return Cartoon.onSurface(const Color(0xFF8A7A72));
     }
   }
 }

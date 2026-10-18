@@ -113,9 +113,9 @@ class BotAvatar extends StatelessWidget {
 
     final badge = size * 0.42;
     final badgeColor = switch (speed) {
-      'slow' => const Color(0xFF2E7D32),
-      'fast' => const Color(0xFFC62828),
-      _ => const Color(0xFF1565C0),
+      'slow' => Cartoon.onSurface(const Color(0xFF2E7D32)),
+      'fast' => Cartoon.onSurface(const Color(0xFFC62828)),
+      _ => Cartoon.onSurface(const Color(0xFF1565C0)),
     };
     return SizedBox(
       width: size,

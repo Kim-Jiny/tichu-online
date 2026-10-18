@@ -708,7 +708,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             _buildTopActionButton(
               icon: Icons.exit_to_app,
               active: false,
-              iconColor: const Color(0xFFE53935),
+              iconColor: Cartoon.onSurface(const Color(0xFFE53935)),
               onTap: () {
                 setState(() {
                   _moreOpen = false;
@@ -1985,7 +1985,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                                   Icons.wifi_off,
                                   size: offlineIconSize,
                                   color: Cartoon.onSurface(
-                                    const Color(0xFFE53935),
+                                    Cartoon.onSurface(const Color(0xFFE53935)),
                                   ),
                                 ),
                               ),
@@ -2090,7 +2090,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: 20,
             height: 20,
             decoration: BoxDecoration(
-              color: const Color(0xFF7E57C2),
+              color: Cartoon.onSurface(const Color(0xFF7E57C2)),
               shape: BoxShape.circle,
               border: Border.all(color: Cartoon.ink, width: 1.6),
             ),
@@ -2339,11 +2339,11 @@ class _SKGameScreenState extends State<SKGameScreen> {
     }
 
     return DraggableChatPanel(
-      accentColor: const Color(0xFF21455F),
+      accentColor: Cartoon.onSurface(const Color(0xFF21455F)),
       // Skull King's own navy, not Tichu's blue — this panel sits on the SK
       // board and the send icon was the one thing on it wearing another game's
       // colour.
-      sendIconColor: const Color(0xFF21455F),
+      sendIconColor: Cartoon.onSurface(const Color(0xFF21455F)),
       title: L10n.of(context).skGameChat,
       hintText: L10n.of(context).skGameMessageHint,
       controller: _chatController,
@@ -2555,7 +2555,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
       onTap: sender.isEmpty
           ? null
           : () => _showPlayerProfileDialog(sender, game),
-      mineColor: const Color(0xFF21455F),
+      mineColor: Cartoon.onSurface(const Color(0xFF21455F)),
     );
   }
 
@@ -3869,10 +3869,10 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     final rankColor = rank == 1
                         ? const Color(0xFFD4A24A)
                         : rank == 2
-                        ? const Color(0xFF9A9A9A)
+                        ? Cartoon.onSurface(const Color(0xFF9A9A9A))
                         : rank == 3
-                        ? const Color(0xFFB07A4A)
-                        : const Color(0xFFA89A92);
+                        ? Cartoon.onSurface(const Color(0xFFB07A4A))
+                        : Cartoon.onSurface(const Color(0xFFA89A92));
                     return Container(
                       padding: EdgeInsets.symmetric(
                         vertical: isLandscape ? 3 : 4,
@@ -4177,15 +4177,15 @@ class _SKGameScreenState extends State<SKGameScreen> {
   static Color get _handPaper => Cartoon.paper;
   static Color get _handMyTurn => Cartoon.myTurn;
 
-  static const _specialBgColors = {
-    'skull_king': Color(0xFF1A1A1A),
-    'pirate': Color(0xFF8B1A1A),
-    'mermaid': Color(0xFF0D5E7A),
-    'escape': Color(0xFF757575),
-    'tigress': Color(0xFF5E35B1),
-    'kraken': Color(0xFF2B1E3F),
-    'white_whale': Color(0xFF3A6B8F),
-    'loot': Color(0xFF8B6F22),
+  static final _specialBgColors = {
+    'skull_king': Cartoon.onSurface(Color(0xFF1A1A1A)),
+    'pirate': Cartoon.onSurface(Color(0xFF8B1A1A)),
+    'mermaid': Cartoon.onSurface(Color(0xFF0D5E7A)),
+    'escape': Cartoon.onSurface(Color(0xFF757575)),
+    'tigress': Cartoon.onSurface(Color(0xFF5E35B1)),
+    'kraken': Cartoon.onSurface(Color(0xFF2B1E3F)),
+    'white_whale': Cartoon.onSurface(Color(0xFF3A6B8F)),
+    'loot': Cartoon.onSurface(const Color(0xFF8B6F22)),
   };
 
   /// 특수 카드 그림에는 글자가 없어서, 어떤 카드인지 이름표를 카드 아래쪽에 살짝 걸쳐 단다.
@@ -4245,7 +4245,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     final badge = size * 0.34;
     // 이긴 카드는 노랑, 가져온 카드는 초록. 뜻이 다른 두 표식이라 색과
     // 그림을 모두 다르게 둔다 — 모양만 다르면 작은 화면에서 구분이 안 된다.
-    final badgeFill = isWin ? const Color(0xFFFFC21A) : const Color(0xFF4CAF50);
+    final badgeFill = isWin
+        ? const Color(0xFFFFC21A)
+        : Cartoon.onSurface(const Color(0xFF4CAF50));
     final marker = Container(
       width: badge,
       height: badge,
@@ -4376,18 +4378,18 @@ class _SKGameScreenState extends State<SKGameScreen> {
     // 크림)에 묻혀 눈에 띄지 않는다 — 강조는 카드 위에 얹는 표식과
     // 움직임이 맡는다(_withCardHighlight).
     final border = Border.all(
-      color: const Color(0xFF3B2A20).withValues(alpha: 0.7),
+      color: Cartoon.onSurface(const Color(0xFF3B2A20)).withValues(alpha: 0.7),
       width: 1.5,
     );
     final shadow = [
       BoxShadow(
         color: isWinner
-            ? const Color(0xFFB07A00)
+            ? Cartoon.onSurface(const Color(0xFFB07A00))
             : isPicked
-            ? const Color(0xFFB0470A)
+            ? Cartoon.onSurface(const Color(0xFFB0470A))
             : isDrawn
-            ? const Color(0xFF2E7D32)
-            : const Color(0xFF8C7B6C),
+            ? Cartoon.onSurface(const Color(0xFF2E7D32))
+            : Cartoon.onSurface(const Color(0xFF8C7B6C)),
         offset: Offset(0, isWinner || isPicked || isDrawn ? 4.5 : 2.5),
       ),
     ];
@@ -4408,7 +4410,9 @@ class _SKGameScreenState extends State<SKGameScreen> {
     }
 
     // ── Special card: image with fallback ──
-    final bgColor = _specialBgColors[info.type] ?? const Color(0xFF424242);
+    final bgColor =
+        _specialBgColors[info.type] ??
+        Cartoon.onSurface(const Color(0xFF424242));
     // Pirates use per-card artwork (sk_pirate1..4.png) so each of the 4
     // pirates looks distinct. Non-pirate specials (and pirate with no number)
     // fall back to the default asset from _specialAssets.

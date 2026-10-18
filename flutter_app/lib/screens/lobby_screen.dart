@@ -1032,7 +1032,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: enabled
-                                    ? const Color(0xFF7E7069)
+                                    ? Cartoon.onSurface(const Color(0xFF7E7069))
                                     : const Color(0xFFAAA09C),
                               ),
                             ),
@@ -1257,15 +1257,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                               emoji,
                                             ) = switch (entry[0]) {
                                               'kraken' => (
-                                                const Color(0xFF7B3FC4),
+                                                Cartoon.onSurface(
+                                                  const Color(0xFF7B3FC4),
+                                                ),
                                                 '🐙',
                                               ),
                                               'white_whale' => (
-                                                const Color(0xFF1E88D6),
+                                                Cartoon.onSurface(
+                                                  const Color(0xFF1E88D6),
+                                                ),
                                                 '🐳',
                                               ),
                                               'pirate_abilities' => (
-                                                const Color(0xFFC0392B),
+                                                Cartoon.onSurface(
+                                                  const Color(0xFFC0392B),
+                                                ),
                                                 '🏴‍☠️',
                                               ),
                                               _ => (
@@ -1408,7 +1414,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                           Icons.casino,
                                           size: 20,
                                           color: Cartoon.onSurface(
-                                            const Color(0xFF6A5A52),
+                                            Cartoon.onSurface(
+                                              const Color(0xFF6A5A52),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1489,7 +1497,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       const SizedBox(height: 8),
                                       optionCard(
                                         iconAsset: 'assets/icons/private.webp',
-                                        iconColor: const Color(0xFF7A6A62),
+                                        iconColor: Cartoon.onSurface(
+                                          const Color(0xFF7A6A62),
+                                        ),
                                         title: l10n.lobbyPrivateRoom,
                                         description: isRanked
                                             ? l10n.lobbyPrivateRoomDescRanked
@@ -1527,7 +1537,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       optionCard(
                                         iconAsset:
                                             'assets/icons/allowBotReplacement.webp',
-                                        iconColor: const Color(0xFF4A4080),
+                                        iconColor: Cartoon.onSurface(
+                                          const Color(0xFF4A4080),
+                                        ),
                                         title: l10n.midJoinCreateOption,
                                         description: isRanked
                                             ? null
@@ -1697,7 +1709,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Cartoon.onSurface(
-                                        const Color(0xFFB54A4A),
+                                        Cartoon.onSurface(
+                                          const Color(0xFFB54A4A),
+                                        ),
                                       ),
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -2366,7 +2380,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE53935),
+                  color: Cartoon.onSurface(const Color(0xFFE53935)),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Cartoon.surface(Colors.white),
@@ -2381,7 +2395,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           _buildIconButton(
             icon: Icons.people,
-            color: const Color(0xFF7E57C2),
+            color: Cartoon.onSurface(const Color(0xFF7E57C2)),
             onTap: () {
               Navigator.push(
                 context,
@@ -2396,8 +2410,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               top: 0,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE53935),
+                decoration: BoxDecoration(
+                  color: Cartoon.onSurface(const Color(0xFFE53935)),
                   shape: BoxShape.circle,
                 ),
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -2454,7 +2468,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE53935),
+                    color: Cartoon.onSurface(const Color(0xFFE53935)),
                     borderRadius: const BorderRadius.all(Radius.circular(999)),
                     border: Border.all(
                       color: Cartoon.surface(Colors.white),
@@ -2486,7 +2500,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE53935),
+                    color: Cartoon.onSurface(const Color(0xFFE53935)),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Cartoon.surface(Colors.white),
@@ -2509,7 +2523,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         children: [
           _buildIconButton(
             icon: Icons.settings,
-            color: const Color(0xFF9E9E9E),
+            color: Cartoon.onSurface(const Color(0xFF9E9E9E)),
             onTap: () {
               Navigator.push(
                 context,
@@ -2541,8 +2555,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               top: -4,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE53935),
+                decoration: BoxDecoration(
+                  color: Cartoon.onSurface(const Color(0xFFE53935)),
                   borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -2811,9 +2825,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   Widget _buildRoomListLoading() {
     return _fillScrollable(
-      const Padding(
+      Padding(
         padding: EdgeInsets.all(24),
-        child: CircularProgressIndicator(color: Color(0xFF8A7A72)),
+        child: CircularProgressIndicator(
+          color: Cartoon.onSurface(const Color(0xFF8A7A72)),
+        ),
       ),
     );
   }
@@ -2866,11 +2882,23 @@ class _LobbyScreenState extends State<LobbyScreen> {
     // 전체 carries the app's own brown rather than any game's colour, so it
     // never looks like a fifth game.
     final chips = <(String?, String, Color)>[
-      (null, l10n.lobbyFilterAll, const Color(0xFF7A6A62)),
+      (null, l10n.lobbyFilterAll, Cartoon.onSurface(const Color(0xFF7A6A62))),
       ('tichu', l10n.lobbyTichu, const Color(0xFF64B5F6)),
-      ('mighty', l10n.rankingMighty, const Color(0xFF5C6BC0)),
-      ('skull_king', l10n.lobbySkullKing, const Color(0xFF21455F)),
-      ('love_letter', l10n.lobbyLoveLetter, const Color(0xFFE91E63)),
+      (
+        'mighty',
+        l10n.rankingMighty,
+        Cartoon.onSurface(const Color(0xFF5C6BC0)),
+      ),
+      (
+        'skull_king',
+        l10n.lobbySkullKing,
+        Cartoon.onSurface(const Color(0xFF21455F)),
+      ),
+      (
+        'love_letter',
+        l10n.lobbyLoveLetter,
+        Cartoon.onSurface(const Color(0xFFE91E63)),
+      ),
     ];
     return [
       for (final (type, label, color) in chips)
@@ -2968,15 +2996,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Color _skExpansionStrongColor(String expansionId) {
     switch (expansionId) {
       case 'kraken':
-        return const Color(0xFF7B3FC4);
+        return Cartoon.onSurface(const Color(0xFF7B3FC4));
       case 'white_whale':
-        return const Color(0xFF1E88D6);
+        return Cartoon.onSurface(const Color(0xFF1E88D6));
       case 'loot':
         return const Color(0xFFE29A00);
       case 'pirate_abilities':
-        return const Color(0xFFC0392B);
+        return Cartoon.onSurface(const Color(0xFFC0392B));
       default:
-        return const Color(0xFF6A5A52);
+        return Cartoon.onSurface(const Color(0xFF6A5A52));
     }
   }
 
@@ -3286,7 +3314,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       color: Cartoon.onSurface(
-                                                        const Color(0xFF7A6A62),
+                                                        Cartoon.onSurface(
+                                                          const Color(
+                                                            0xFF7A6A62,
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
@@ -3982,8 +4014,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   color: full
-                                      ? const Color(0xFF2E9E4F)
-                                      : const Color(0xFFE5791A),
+                                      ? Cartoon.onSurface(
+                                          const Color(0xFF2E9E4F),
+                                        )
+                                      : Cartoon.onSurface(
+                                          const Color(0xFFE5791A),
+                                        ),
                                 ),
                               ),
                             ],
@@ -4691,21 +4727,21 @@ class _LobbyScreenState extends State<LobbyScreen> {
           speedBtn(
             'fast',
             Icons.fast_forward,
-            const Color(0xFFE65100),
+            Cartoon.onSurface(const Color(0xFFE65100)),
             l10n.lobbyBotSpeedFast,
           ),
           const SizedBox(width: 6),
           speedBtn(
             'normal',
             Icons.play_arrow,
-            const Color(0xFF3949AB),
+            Cartoon.onSurface(const Color(0xFF3949AB)),
             l10n.lobbyBotSpeedNormal,
           ),
           const SizedBox(width: 6),
           speedBtn(
             'slow',
             Icons.slow_motion_video,
-            const Color(0xFF558B2F),
+            Cartoon.onSurface(const Color(0xFF558B2F)),
             l10n.lobbyBotSpeedSlow,
           ),
         ],
@@ -5177,7 +5213,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: Cartoon.onSurface(
-                                    const Color(0xFF6A1B9A),
+                                    Cartoon.onSurface(const Color(0xFF6A1B9A)),
                                   ),
                                 ),
                               ),
@@ -5259,16 +5295,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                             )
                                           : null;
                                       final defaultColor = isBot
-                                          ? const Color(0xFF3949AB)
+                                          ? Cartoon.onSurface(
+                                              const Color(0xFF3949AB),
+                                            )
                                           : isBlockedPlayer
-                                          ? const Color(0xFFBB8888)
+                                          ? Cartoon.onSurface(
+                                              const Color(0xFFBB8888),
+                                            )
                                           : (player != null &&
                                                 !player.connected)
                                           ? const Color(0xFFBBAAAA)
                                           : player != null
                                           ? Cartoon.ink
                                           : isSlotBlocked
-                                          ? const Color(0xFF8A7A72)
+                                          ? Cartoon.onSurface(
+                                              const Color(0xFF8A7A72),
+                                            )
                                           : Cartoon.ink.withValues(alpha: 0.4);
                                       return Text(
                                         player?.name ??
@@ -5360,7 +5402,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.fast_forward,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        const Color(0xFFE65100),
+                                        Cartoon.onSurface(
+                                          const Color(0xFFE65100),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5382,7 +5426,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.play_arrow,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        const Color(0xFF3949AB),
+                                        Cartoon.onSurface(
+                                          const Color(0xFF3949AB),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5404,7 +5450,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                       Icons.slow_motion_video,
                                       size: 16,
                                       color: Cartoon.onSurface(
-                                        const Color(0xFF558B2F),
+                                        Cartoon.onSurface(
+                                          const Color(0xFF558B2F),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -5444,7 +5492,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                   Icons.smart_toy_rounded,
                                   size: 16,
                                   color: Cartoon.onSurface(
-                                    const Color(0xFF3949AB),
+                                    Cartoon.onSurface(const Color(0xFF3949AB)),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -5454,7 +5502,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     size: 12.5,
                                     weight: FontWeight.w900,
                                     color: Cartoon.onSurface(
-                                      const Color(0xFF3949AB),
+                                      Cartoon.onSurface(
+                                        const Color(0xFF3949AB),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -5490,7 +5540,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               style: Cartoon.text(
                                 size: 14,
                                 color: Cartoon.onSurface(
-                                  const Color(0xFFB45309),
+                                  Cartoon.onSurface(const Color(0xFFB45309)),
                                 ),
                               ),
                             ),
@@ -5528,7 +5578,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 Icons.close_rounded,
                                 size: 18,
                                 color: Cartoon.onSurface(
-                                  const Color(0xFFC62828),
+                                  Cartoon.onSurface(const Color(0xFFC62828)),
                                 ),
                               ),
                             ),
@@ -5561,9 +5611,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       ? onBannerAccent(
                           slotBanner,
                           slotBannerOverride,
-                          light: const Color(0xFF43A047),
+                          light: Cartoon.onSurface(const Color(0xFF43A047)),
                         )
-                      : const Color(0xFF43A047);
+                      : Cartoon.onSurface(const Color(0xFF43A047));
                   final readyAlpha = onDarkBanner ? 0.3 : 0.4;
                   return Positioned.fill(
                     child: IgnorePointer(

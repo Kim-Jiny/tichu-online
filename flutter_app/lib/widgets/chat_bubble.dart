@@ -147,7 +147,7 @@ class ChatBubble extends StatelessWidget {
                     style: Cartoon.userText(
                       size: senderFontSize + 1,
                       weight: FontWeight.w800,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ),

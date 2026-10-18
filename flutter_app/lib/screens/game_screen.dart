@@ -1134,7 +1134,7 @@ class _GameScreenState extends State<GameScreen> {
                 L10n.of(context).gameNoViewers,
                 style: Cartoon.text(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               )
             else
@@ -1671,7 +1671,7 @@ class _GameScreenState extends State<GameScreen> {
                         size: 18 * _ts,
                         color: _remainingSeconds <= 10
                             ? Cartoon.red
-                            : Cartoon.ink.withValues(alpha: 0.7),
+                            : Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ],
@@ -1959,7 +1959,7 @@ class _GameScreenState extends State<GameScreen> {
                 : L10n.of(context).gameDogPlayed,
             style: Cartoon.userText(
               size: 12.5 * _ts,
-              color: Cartoon.ink.withValues(alpha: 0.7),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -2013,7 +2013,7 @@ class _GameScreenState extends State<GameScreen> {
                   text: L10n.of(context).gamePlayedCards,
                   style: Cartoon.text(
                     size: 14 * _ts,
-                    color: Cartoon.ink.withValues(alpha: 0.65),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -3000,7 +3000,7 @@ class _GameScreenState extends State<GameScreen> {
                     l10n.gameThisRound.replaceAll(RegExp(r'[:\s]+$'), ''),
                     style: Cartoon.text(
                       size: 16,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ),
@@ -3034,7 +3034,7 @@ class _GameScreenState extends State<GameScreen> {
             textAlign: TextAlign.center,
             style: Cartoon.text(
               size: 14,
-              color: Cartoon.ink.withValues(alpha: 0.55),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
         ],
@@ -3050,7 +3050,7 @@ class _GameScreenState extends State<GameScreen> {
           label,
           style: Cartoon.text(
             size: 15,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
         const SizedBox(height: 2),
@@ -3343,7 +3343,7 @@ class _GameScreenState extends State<GameScreen> {
                     L10n.of(dialogCtx).gameTapToClose,
                     style: Cartoon.text(
                       size: 13 * _ts,
-                      color: Cartoon.ink.withValues(alpha: 0.5),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ],
@@ -3377,7 +3377,7 @@ class _GameScreenState extends State<GameScreen> {
                       : item.name,
                   style: Cartoon.userText(
                     size: 13 * _ts,
-                    color: Cartoon.ink.withValues(alpha: 0.65),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
                 SizedBox(height: 4 * _s),

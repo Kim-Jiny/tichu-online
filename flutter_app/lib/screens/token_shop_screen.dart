@@ -191,7 +191,7 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
               l10n.tokenShopHint,
               style: Cartoon.userText(
                 size: 12.5,
-                color: Cartoon.ink.withValues(alpha: 0.7),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ),
@@ -214,7 +214,7 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                   tokenCategoryDesc(l10n, current),
                   style: Cartoon.userText(
                     size: 12,
-                    color: Cartoon.ink.withValues(alpha: 0.6),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ),
@@ -340,7 +340,7 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                 l10n.tokenShopDays(p.days.toString()),
                 style: Cartoon.userText(
                   size: 11.5,
-                  color: Cartoon.ink.withValues(alpha: 0.55),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -353,7 +353,7 @@ class _TokenShopScreenState extends State<TokenShopScreen> {
                     l10n.tokenShopOwnedUntil(_date(p.ownedUntil!)),
                     style: Cartoon.userText(
                       size: 11,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   )
                 : null,

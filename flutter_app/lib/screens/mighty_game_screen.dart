@@ -642,7 +642,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   l10n.spectatorTargetScore(game.roomTargetScore),
                   style: Cartoon.text(
                     size: 12,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
                 // Same slot Tichu uses for its tappable score chips.
@@ -837,7 +837,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 L10n.of(context).skGameNoViewers,
                 style: Cartoon.text(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               )
             else
@@ -1213,7 +1213,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     '${friendSpecialText ?? ''}$friendSuffixText',
                     style: Cartoon.text(
                       size: 14,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1346,7 +1346,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               L10n.of(context).lobbySpectatorLabel,
               style: Cartoon.text(
                 size: 12.5,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ).copyWith(height: 1.35),
             ),
           ),
@@ -1359,7 +1359,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 '${shown[i]}${i < shown.length - 1 || hidden > 0 ? ', ' : ''}',
                 style: Cartoon.userText(
                   size: 12.5,
-                  color: Cartoon.ink.withValues(alpha: 0.65),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                   height: 1.35,
                 ),
               ),
@@ -2895,7 +2895,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         L10n.of(context).mtNoPointCards,
                         style: Cartoon.text(
                           size: 15,
-                          color: Cartoon.ink.withValues(alpha: 0.55),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
@@ -2964,7 +2964,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   size: 14,
                   color: _remainingSeconds <= 5
                       ? Cartoon.red
-                      : Cartoon.ink.withValues(alpha: 0.6),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ),
@@ -3010,7 +3010,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   size: 14,
                   color: _remainingSeconds <= 5
                       ? Cartoon.red
-                      : Cartoon.ink.withValues(alpha: 0.6),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ),
@@ -3061,7 +3061,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     size: 14,
                     color: _remainingSeconds <= 5
                         ? Cartoon.red
-                        : Cartoon.ink.withValues(alpha: 0.6),
+                        : Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ),
@@ -3147,7 +3147,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         size: 14,
                         color: _remainingSeconds <= 5
                             ? Cartoon.red
-                            : Cartoon.ink.withValues(alpha: 0.6),
+                            : Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -3208,7 +3208,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         l10n.mtFriendCardSolo,
         style: Cartoon.text(
           size: fontSize + 1,
-          color: Cartoon.ink.withValues(alpha: 0.6),
+          color: Cartoon.ink.withValues(alpha: 0.78),
         ),
       );
     }
@@ -3440,7 +3440,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   size: 15,
                   color: _remainingSeconds <= 5
                       ? Cartoon.red
-                      : Cartoon.ink.withValues(alpha: 0.6),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -3891,7 +3891,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             l10n.mtRaiseBidConfirmTitle,
             style: Cartoon.text(
               size: 14,
-              color: Cartoon.ink.withValues(alpha: 0.6),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
           const SizedBox(height: 6),
@@ -3925,7 +3925,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               l10n.mtChangeTrump,
               style: Cartoon.text(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             const SizedBox(width: 8),
@@ -4139,7 +4139,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     textAlign: TextAlign.center,
     style: Cartoon.userText(
       size: 14,
-      color: Cartoon.ink.withValues(alpha: 0.6),
+      color: Cartoon.ink.withValues(alpha: 0.78),
     ),
   );
 
@@ -4232,7 +4232,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 L10n.of(context).skGameNoCards,
                 style: Cartoon.text(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.55),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             )
@@ -4340,7 +4340,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 L10n.of(context).mtWaiting,
                 style: Cartoon.text(
                   size: 15,
-                  color: Cartoon.ink.withValues(alpha: 0.55),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ),
@@ -4429,7 +4429,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           size: 14,
                           color: _remainingSeconds <= 5
                               ? Cartoon.red
-                              : Cartoon.ink.withValues(alpha: 0.6),
+                              : Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ],
@@ -4553,7 +4553,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                         size: 15,
                         color: _remainingSeconds <= 5
                             ? Cartoon.red
-                            : Cartoon.ink.withValues(alpha: 0.6),
+                            : Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ],
@@ -4698,7 +4698,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     size: 14,
                     color: _remainingSeconds <= 5
                         ? Cartoon.red
-                        : Cartoon.ink.withValues(alpha: 0.6),
+                        : Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
             ],
@@ -4726,7 +4726,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
             l10n.mtWaitingFor(waitingName),
             style: Cartoon.text(
               size: 14,
-              color: Cartoon.ink.withValues(alpha: 0.6),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
           if (state.canReservePass) ...[
@@ -4962,7 +4962,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   size: 14,
                   color: _remainingSeconds <= 5
                       ? Cartoon.red
-                      : Cartoon.ink.withValues(alpha: 0.6),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -4995,7 +4995,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     size: 14,
                     color: _remainingSeconds <= 5
                         ? Cartoon.red
-                        : Cartoon.ink.withValues(alpha: 0.6),
+                        : Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
             ],
@@ -5394,7 +5394,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         overflow: TextOverflow.ellipsis,
         style: Cartoon.text(
           size: 12,
-          color: Cartoon.ink.withValues(alpha: 0.5),
+          color: Cartoon.ink.withValues(alpha: 0.78),
         ),
       ),
     );
@@ -5525,7 +5525,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               L10n.of(context).mtNextRound,
               style: Cartoon.text(
                 size: 13,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -5810,7 +5810,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     text,
     style: Cartoon.text(
       size: 12 * ts,
-      color: Cartoon.ink.withValues(alpha: 0.5),
+      color: Cartoon.ink.withValues(alpha: 0.78),
     ),
   );
 
@@ -6025,7 +6025,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               '${info.oldBid}',
               style: Cartoon.text(
                 size: 15,
-                color: Cartoon.ink.withValues(alpha: 0.5),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             const SizedBox(width: 6),
@@ -6649,7 +6649,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                     L10n.of(context).spectatorTargetScore(game.roomTargetScore),
                     style: Cartoon.text(
                       size: 14,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ],
@@ -6659,7 +6659,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
               '${state.scoreHistory.length}R',
               style: Cartoon.text(
                 size: 15,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -6672,7 +6672,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                   textAlign: TextAlign.center,
                   style: Cartoon.text(
                     size: 16,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               )

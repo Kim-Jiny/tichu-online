@@ -1488,7 +1488,7 @@ class _SocialNicknameDialogState extends State<SocialNicknameDialog> {
           style: Cartoon.text(
             size: 15.5,
             height: 1.4,
-            color: Cartoon.ink.withValues(alpha: 0.65),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
         const SizedBox(height: 16),

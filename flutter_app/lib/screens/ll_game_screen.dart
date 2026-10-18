@@ -331,7 +331,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               '${state.drawPileCount}',
               style: Cartoon.text(
                 size: 13,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             const SizedBox(width: 8),
@@ -647,7 +647,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 L10n.of(context).skGameNoViewers,
                 style: Cartoon.text(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               )
             else
@@ -1050,7 +1050,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               L10n.of(context).llSetAsideFaceUp,
               style: Cartoon.text(
                 size: 12,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             const SizedBox(height: 5),
@@ -1799,7 +1799,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                       reasonText,
                       style: Cartoon.userText(
                         size: 13,
-                        color: Cartoon.ink.withValues(alpha: 0.65),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                         weight: FontWeight.w600,
                         height: 1.3,
                       ),
@@ -2139,7 +2139,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     size: 13,
                     color: isSelected
                         ? selectedTextColor
-                        : Cartoon.ink.withValues(alpha: 0.55),
+                        : Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
                 const SizedBox(height: 1),
@@ -2306,7 +2306,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   'vs',
                   style: Cartoon.text(
                     size: 15,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ),
@@ -2429,7 +2429,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         l10n.llSetAsideHidden,
                         style: Cartoon.text(
                           size: 13,
-                          color: Cartoon.ink.withValues(alpha: 0.6),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
@@ -2457,7 +2457,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         l10n.llSetAsideFaceUp,
                         style: Cartoon.text(
                           size: 13,
-                          color: Cartoon.ink.withValues(alpha: 0.6),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
@@ -2504,7 +2504,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                         size: 14,
                         color: p.eliminated
                             ? Cartoon.ink.withValues(alpha: 0.35)
-                            : Cartoon.ink.withValues(alpha: 0.75),
+                            : Cartoon.ink.withValues(alpha: 0.78),
                       ).copyWith(
                         decoration: p.eliminated
                             ? TextDecoration.lineThrough
@@ -2619,7 +2619,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             p.name,
                             style: Cartoon.userText(
                               size: 14,
-                              color: Cartoon.ink.withValues(alpha: 0.75),
+                              color: Cartoon.ink.withValues(alpha: 0.78),
                             ),
                           ),
                         ),
@@ -2645,7 +2645,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                   l10n.llNextRoundAuto,
                   style: Cartoon.text(
                     size: 12,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -2761,7 +2761,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                             size: 16,
                             color: i == 0
                                 ? Cartoon.orangeDeep
-                                : Cartoon.ink.withValues(alpha: 0.55),
+                                : Cartoon.ink.withValues(alpha: 0.78),
                           ),
                         ),
                         SizedBox(
@@ -2794,7 +2794,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                     '${l10n.llReturnIn} $_gameEndCountdown...',
                     style: Cartoon.text(
                       size: 13,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
               ],
@@ -3136,7 +3136,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                                   L10n.of(context).llPlayed,
                                   style: Cartoon.text(
                                     size: 11,
-                                    color: Cartoon.ink.withValues(alpha: 0.6),
+                                    color: Cartoon.ink.withValues(alpha: 0.78),
                                   ),
                                 ),
                               ),
@@ -3253,7 +3253,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
           textAlign: TextAlign.center,
           style: Cartoon.userText(
             size: 14,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );
@@ -3283,7 +3283,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
               L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
               style: Cartoon.userText(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],

@@ -1177,7 +1177,7 @@ class _SpecialRule extends StatelessWidget {
                         style: Cartoon.userText(
                           size: 11,
                           weight: FontWeight.w500,
-                          color: Cartoon.ink.withValues(alpha: 0.6),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                           height: 1.2,
                         ),
                       ),
@@ -2098,7 +2098,7 @@ class _CardGuide extends StatelessWidget {
                     style: Cartoon.userText(
                       size: 14,
                       weight: FontWeight.w600,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                       height: 1.4,
                     ),
                   ),

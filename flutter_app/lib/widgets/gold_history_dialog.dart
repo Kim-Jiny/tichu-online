@@ -41,7 +41,7 @@ Widget _goldDialogHeader(
                 subtitle,
                 style: Cartoon.text(
                   size: 15,
-                  color: Cartoon.ink.withValues(alpha: 0.65),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -226,7 +226,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             textAlign: TextAlign.center,
             style: Cartoon.userText(
               size: 15,
-              color: Cartoon.ink.withValues(alpha: 0.7),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
         ],
@@ -299,7 +299,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
           style: Cartoon.userText(
             size: 11.5,
             weight: FontWeight.w500,
-            color: Cartoon.ink.withValues(alpha: 0.5),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
         const SizedBox(height: 10),
@@ -453,7 +453,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
                   style: Cartoon.userText(
                     size: 11.5,
                     weight: FontWeight.w500,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -540,7 +540,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
             style: Cartoon.userText(
               size: 13,
               weight: FontWeight.w500,
-              color: Cartoon.ink.withValues(alpha: 0.65),
+              color: Cartoon.ink.withValues(alpha: 0.78),
               height: 1.45,
             ),
           ),
@@ -609,7 +609,7 @@ Widget _buildGoldGuideItem({
                 style: Cartoon.userText(
                   size: 11.5,
                   weight: FontWeight.w500,
-                  color: Cartoon.ink.withValues(alpha: 0.65),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                   height: 1.3,
                 ),
               ),

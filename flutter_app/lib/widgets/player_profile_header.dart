@@ -1159,7 +1159,7 @@ Widget privateProfileNotice(L10n l10n) {
           style: Cartoon.userText(
             size: 12.5,
             weight: FontWeight.w500,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       ],
@@ -1275,7 +1275,7 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
           weight: FontWeight.w500,
           color:
               ink?.withValues(alpha: 0.75) ??
-              Cartoon.ink.withValues(alpha: 0.6),
+              Cartoon.ink.withValues(alpha: 0.78),
         ),
       ),
     ],

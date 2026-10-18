@@ -438,7 +438,7 @@ class _RankingScreenState extends State<RankingScreen> {
               l10n.rankingNoData,
               style: Cartoon.userText(
                 size: 15,
-                color: Cartoon.ink.withValues(alpha: 0.7),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -688,7 +688,7 @@ class _RankingScreenState extends State<RankingScreen> {
                       style: Cartoon.userText(
                         size: 12,
                         weight: FontWeight.w600,
-                        color: Cartoon.ink.withValues(alpha: 0.65),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ],
@@ -702,7 +702,7 @@ class _RankingScreenState extends State<RankingScreen> {
                     style: Cartoon.userText(
                       size: 11,
                       weight: FontWeight.w600,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                   Text('$rating', style: Cartoon.text(size: 24)),

@@ -866,7 +866,7 @@ class _ShopScreenState extends State<ShopScreen> {
               style: Cartoon.userText(
                 size: 15,
                 color: (color ?? Cartoon.ink) == Cartoon.ink
-                    ? Cartoon.ink.withValues(alpha: 0.6)
+                    ? Cartoon.ink.withValues(alpha: 0.78)
                     : color,
               ),
             ),
@@ -1213,7 +1213,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           style: Cartoon.userText(
                             size: 11.5,
                             weight: FontWeight.w500,
-                            color: Cartoon.ink.withValues(alpha: 0.6),
+                            color: Cartoon.ink.withValues(alpha: 0.78),
                           ),
                         ),
                       ),
@@ -1238,7 +1238,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         size: 10.5,
                         color: onSale
                             ? Cartoon.onSurface(const Color(0xFFD32F2F))
-                            : Cartoon.ink.withValues(alpha: 0.5),
+                            : Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                 ],
@@ -1352,7 +1352,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       style: Cartoon.userText(
                         size: 13.5,
                         weight: FontWeight.w500,
-                        color: Cartoon.ink.withValues(alpha: 0.7),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                         height: 1.45,
                       ),
                     ),
@@ -1959,7 +1959,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         style: Cartoon.userText(
                           size: 11.5,
                           weight: FontWeight.w500,
-                          color: Cartoon.ink.withValues(alpha: 0.6),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                           height: 1.3,
                         ),
                       ),
@@ -3078,7 +3078,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             l10n.shopPreviewLabel,
                             style: Cartoon.text(
                               size: 14,
-                              color: Cartoon.ink.withValues(alpha: 0.6),
+                              color: Cartoon.ink.withValues(alpha: 0.78),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -3161,7 +3161,7 @@ class _ShopScreenState extends State<ShopScreen> {
                                       ? Cartoon.onSurface(
                                           const Color(0xFFD32F2F),
                                         )
-                                      : Cartoon.ink.withValues(alpha: 0.5),
+                                      : Cartoon.ink.withValues(alpha: 0.78),
                                 ),
                               ),
                             ],
@@ -4416,7 +4416,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   size: 14,
                   color: selected
                       ? Colors.white
-                      : Cartoon.ink.withValues(alpha: 0.65),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
               if (badge) ...[const SizedBox(width: 5), _newDot()],
@@ -4663,7 +4663,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         style: Cartoon.userText(
                           size: 12.5,
                           weight: FontWeight.w600,
-                          color: Cartoon.ink.withValues(alpha: 0.6),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                       const SizedBox(height: 12),

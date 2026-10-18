@@ -545,7 +545,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         l10n.lobbyNoOnlineFriends,
                         style: Cartoon.text(
                           size: 16,
-                          color: Cartoon.ink.withValues(alpha: 0.55),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
@@ -637,7 +637,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _settingsSectionLabel(String text) {
     return Text(
       text,
-      style: Cartoon.text(size: 14, color: Cartoon.ink.withValues(alpha: 0.6)),
+      style: Cartoon.text(size: 14, color: Cartoon.ink.withValues(alpha: 0.78)),
     );
   }
 
@@ -2689,7 +2689,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     subText,
                     style: Cartoon.text(
                       size: 13,
-                      color: Cartoon.ink.withValues(alpha: 0.6),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
               ],
@@ -3934,7 +3934,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 style: Cartoon.userText(
                   size: 10,
                   weight: FontWeight.w800,
-                  color: Cartoon.ink.withValues(alpha: 0.75),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],
@@ -4008,7 +4008,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             style: Cartoon.userText(
                               size: 12.5,
                               weight: FontWeight.w700,
-                              color: Cartoon.ink.withValues(alpha: 0.62),
+                              color: Cartoon.ink.withValues(alpha: 0.78),
                             ),
                             children: [
                               TextSpan(text: '$info · '),

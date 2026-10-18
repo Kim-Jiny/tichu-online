@@ -305,7 +305,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                                 l10n.couponCodeLabel,
                                 style: Cartoon.text(
                                   size: 13,
-                                  color: Cartoon.ink.withValues(alpha: 0.6),
+                                  color: Cartoon.ink.withValues(alpha: 0.78),
                                 ),
                               ),
                               Row(
@@ -420,7 +420,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                         style: Cartoon.userText(
                           size: 12,
                           weight: FontWeight.w600,
-                          color: Cartoon.ink.withValues(alpha: 0.55),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                           height: 1.35,
                         ),
                       ),

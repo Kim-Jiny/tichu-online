@@ -219,7 +219,7 @@ void showSpectatorListDialog(BuildContext context, GameService game) {
                         l10n.spectatorNoSpectators,
                         style: Cartoon.text(
                           size: 16,
-                          color: Cartoon.ink.withValues(alpha: 0.55),
+                          color: Cartoon.ink.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
@@ -416,7 +416,7 @@ Widget _historyEmpty(String text) => Padding(
   child: Text(
     text,
     textAlign: TextAlign.center,
-    style: Cartoon.text(size: 16, color: Cartoon.ink.withValues(alpha: 0.55)),
+    style: Cartoon.text(size: 16, color: Cartoon.ink.withValues(alpha: 0.78)),
   ),
 );
 
@@ -486,7 +486,7 @@ void showTichuScoreHistoryDialog(
               l10n.spectatorTargetScore(targetScore),
               style: Cartoon.text(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
       children: [
@@ -560,7 +560,7 @@ void showTichuScoreHistoryDialog(
                           'R$round',
                           style: Cartoon.text(
                             size: 15,
-                            color: Cartoon.ink.withValues(alpha: 0.55),
+                            color: Cartoon.ink.withValues(alpha: 0.78),
                           ),
                         ),
                       ),
@@ -685,7 +685,7 @@ void showLLScoreHistoryDialog(
                           'R${r.round}',
                           style: Cartoon.text(
                             size: 15,
-                            color: Cartoon.ink.withValues(alpha: 0.55),
+                            color: Cartoon.ink.withValues(alpha: 0.78),
                           ),
                         ),
                       ),
@@ -828,7 +828,7 @@ class SpectatorHeader extends StatelessWidget {
                   style: Cartoon.userText(
                     size: 13,
                     weight: FontWeight.w600,
-                    color: Cartoon.ink.withValues(alpha: 0.6),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ),

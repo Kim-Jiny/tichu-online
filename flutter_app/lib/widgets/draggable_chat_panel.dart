@@ -506,7 +506,7 @@ class _DraggableChatPanelState extends State<DraggableChatPanel> {
               textAlign: TextAlign.end,
               style: Cartoon.text(
                 size: 12,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ),

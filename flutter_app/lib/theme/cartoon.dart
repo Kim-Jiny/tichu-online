@@ -1093,7 +1093,7 @@ class CartoonLoadingCard extends StatelessWidget {
                 style: Cartoon.userText(
                   size: 13,
                   weight: FontWeight.w500,
-                  color: Cartoon.ink.withValues(alpha: 0.65),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                   height: 1.4,
                 ),
               ),

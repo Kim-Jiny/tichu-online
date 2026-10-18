@@ -118,7 +118,7 @@ class ForceUpdateScreen extends StatelessWidget {
                       style: Cartoon.userText(
                         size: 12.5,
                         weight: FontWeight.w700,
-                        color: Cartoon.ink.withValues(alpha: 0.55),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ],

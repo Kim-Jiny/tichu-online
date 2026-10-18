@@ -207,7 +207,7 @@ class _SkAbilityPanelState extends State<SkAbilityPanel> {
                           style: Cartoon.userText(
                             size: 12.5,
                             weight: FontWeight.w600,
-                            color: Cartoon.ink.withValues(alpha: 0.72),
+                            color: Cartoon.ink.withValues(alpha: 0.78),
                             height: 1.35,
                           ),
                         ),

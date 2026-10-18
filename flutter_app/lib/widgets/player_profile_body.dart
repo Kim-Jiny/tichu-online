@@ -482,7 +482,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               style: Cartoon.userText(
                 size: 12,
                 weight: FontWeight.w800,
-                color: Cartoon.ink.withValues(alpha: 0.7),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             Text(
@@ -492,7 +492,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
               style: Cartoon.userText(
                 size: 10.5,
                 weight: FontWeight.w500,
-                color: Cartoon.ink.withValues(alpha: 0.5),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -854,7 +854,7 @@ class _PlayerProfileBodyState extends State<PlayerProfileBody> {
           style: Cartoon.userText(
             size: 12.5,
             weight: FontWeight.w600,
-            color: Cartoon.ink.withValues(alpha: 0.55),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
         const SizedBox(width: 6),
@@ -1595,7 +1595,7 @@ class _MatchHistoryDialogState extends State<_MatchHistoryDialog> {
                                 l10n.lobbyNoRecentMatches,
                                 style: Cartoon.userText(
                                   size: 14,
-                                  color: Cartoon.ink.withValues(alpha: 0.6),
+                                  color: Cartoon.ink.withValues(alpha: 0.78),
                                 ),
                               ),
                       )

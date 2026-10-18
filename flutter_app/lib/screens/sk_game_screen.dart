@@ -937,7 +937,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
           textAlign: TextAlign.center,
           style: Cartoon.userText(
             size: 14,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );
@@ -968,7 +968,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               L10n.of(context).skGameRequestingCardView(viewingPlayer.name),
               style: Cartoon.userText(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -998,7 +998,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                     L10n.of(context).skGameNoCards,
                     style: Cartoon.text(
                       size: 13,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 )
@@ -1029,7 +1029,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
         textAlign: TextAlign.center,
         style: Cartoon.userText(
           size: 14,
-          color: Cartoon.ink.withValues(alpha: 0.6),
+          color: Cartoon.ink.withValues(alpha: 0.78),
         ),
       ),
     );
@@ -1078,7 +1078,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   size: 13,
                   color: urgent
                       ? Cartoon.red
-                      : Cartoon.ink.withValues(alpha: 0.6),
+                      : Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
               const SizedBox(height: 2),
@@ -2405,7 +2405,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 L10n.of(context).skGameNoViewers,
                 style: Cartoon.text(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               )
             else
@@ -2609,7 +2609,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               '${state.scoreHistory.length}R',
               style: Cartoon.text(
                 size: 15,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -2810,7 +2810,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                   : L10n.of(context).skGamePlayCard,
               style: Cartoon.text(
                 size: 17,
-                color: Cartoon.ink.withValues(alpha: 0.7),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             _buildCenterTimerBadge(state),
@@ -2910,7 +2910,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               L10n.of(context).skGameCheckingCards,
               style: Cartoon.text(
                 size: 16,
-                color: Cartoon.ink.withValues(alpha: 0.7),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           // 선 무늬 — 따라 내야 하는 무늬를 가운데에 늘 보여 준다.
@@ -3170,7 +3170,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
               L10n.of(context).skGameWaitingOthers,
               style: Cartoon.text(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             SizedBox(height: isLandscape ? 8 : 12),
@@ -3789,7 +3789,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       textAlign: TextAlign.center,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -3801,7 +3801,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       textAlign: TextAlign.center,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -3812,7 +3812,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       textAlign: TextAlign.center,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -3825,7 +3825,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       softWrap: false,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -3838,7 +3838,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       softWrap: false,
                       style: Cartoon.userText(
                         size: isLandscape ? 11 : 12,
-                        color: Cartoon.ink.withValues(alpha: 0.6),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                   ),
@@ -4011,7 +4011,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                 L10n.of(context).skGameNextRoundPreparing,
                 style: Cartoon.userText(
                   size: isLandscape ? 13 : 14,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ],

@@ -269,7 +269,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
                     style: Cartoon.userText(
                       size: 13.5,
                       weight: FontWeight.w600,
-                      color: Cartoon.ink.withValues(alpha: 0.75),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ),

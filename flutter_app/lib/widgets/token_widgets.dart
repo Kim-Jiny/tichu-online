@@ -160,7 +160,7 @@ class _TokenHistorySheet extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Cartoon.userText(
                   size: 13.5,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
       );
@@ -253,7 +253,7 @@ class _TokenHistorySheet extends StatelessWidget {
                     style: Cartoon.userText(
                       size: 11.5,
                       weight: FontWeight.w600,
-                      color: Cartoon.ink.withValues(alpha: 0.5),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
               ],

@@ -152,7 +152,7 @@ class _LegalBodyState extends State<_LegalBody> {
           l10n.textViewLoadFailed,
           style: Cartoon.userText(
             size: 15,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );

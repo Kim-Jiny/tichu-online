@@ -420,7 +420,7 @@ class _FriendsScreenState extends State<FriendsScreen>
             textAlign: TextAlign.center,
             style: Cartoon.userText(
               size: 15,
-              color: Cartoon.ink.withValues(alpha: 0.7),
+              color: Cartoon.ink.withValues(alpha: 0.78),
               height: 1.4,
             ),
           ),
@@ -1587,7 +1587,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 timeStr,
                 style: TextStyle(
                   fontSize: 10.5,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ),
@@ -1627,7 +1627,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 timeStr,
                 style: TextStyle(
                   fontSize: 10.5,
-                  color: Cartoon.ink.withValues(alpha: 0.5),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             ),

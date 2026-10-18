@@ -282,7 +282,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
                 textAlign: TextAlign.center,
                 style: Cartoon.userText(
                   size: 13,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
             )
@@ -306,7 +306,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
             textAlign: TextAlign.center,
             style: Cartoon.userText(
               size: 12,
-              color: Cartoon.ink.withValues(alpha: 0.55),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
         ],
@@ -390,7 +390,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
             ),
             style: Cartoon.userText(
               size: 12,
-              color: Cartoon.ink.withValues(alpha: 0.65),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
           const SizedBox(height: 4),
@@ -401,7 +401,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
             ),
             style: Cartoon.userText(
               size: 12,
-              color: Cartoon.ink.withValues(alpha: 0.65),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
         ],
@@ -522,7 +522,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
                       : l10n.missionsExpiresOn(_shortDate(m.expiresDay!)),
                   style: Cartoon.userText(
                     size: 11.5,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               const Spacer(),

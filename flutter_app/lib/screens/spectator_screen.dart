@@ -324,7 +324,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
           textAlign: TextAlign.center,
           style: Cartoon.userText(
             size: 14,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );
@@ -363,7 +363,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               L10n.of(context).skGameRequestingCardView(name),
               style: Cartoon.userText(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ],
@@ -389,7 +389,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     L10n.of(context).skGameNoCards,
                     style: Cartoon.text(
                       size: 13,
-                      color: Cartoon.ink.withValues(alpha: 0.55),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 )
@@ -416,7 +416,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               textAlign: TextAlign.center,
               style: Cartoon.userText(
                 size: 14,
-                color: Cartoon.ink.withValues(alpha: 0.6),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
           ),
@@ -716,7 +716,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   textAlign: TextAlign.center,
                   style: Cartoon.text(
                     size: 14,
-                    color: Cartoon.ink.withValues(alpha: 0.55),
+                    color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -825,7 +825,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               l10n.spectatorTargetScore(targetScore),
               style: Cartoon.text(
                 size: 12,
-                color: Cartoon.ink.withValues(alpha: 0.5),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             const SizedBox(width: 8),
@@ -1175,7 +1175,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                     L10n.of(context).spectatorFinished,
                     style: Cartoon.text(
                       size: compact ? 10 : 11,
-                      color: Cartoon.ink.withValues(alpha: 0.5),
+                      color: Cartoon.ink.withValues(alpha: 0.78),
                     ),
                   ),
                 ),
@@ -1473,7 +1473,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
               L10n.of(context).spectatorNewTrick,
               style: Cartoon.text(
                 size: compact ? 14 : 16,
-                color: Cartoon.ink.withValues(alpha: 0.55),
+                color: Cartoon.ink.withValues(alpha: 0.78),
               ),
             ),
             if (hasCall) ...[SizedBox(height: compact ? 4 : 6), callBadge()],

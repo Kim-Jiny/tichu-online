@@ -333,7 +333,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
             textAlign: TextAlign.center,
             style: Cartoon.userText(
               size: 14,
-              color: Cartoon.ink.withValues(alpha: 0.6),
+              color: Cartoon.ink.withValues(alpha: 0.78),
             ),
           ),
         ),
@@ -349,7 +349,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           L10n.of(context).goldNoProducts,
           style: Cartoon.userText(
             size: 14,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );
@@ -431,7 +431,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
           style: Cartoon.userText(
             size: 12.5,
             weight: FontWeight.w500,
-            color: Cartoon.ink.withValues(alpha: 0.6),
+            color: Cartoon.ink.withValues(alpha: 0.78),
           ),
         ),
       );
@@ -746,7 +746,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                       style: Cartoon.userText(
                         size: 12,
                         weight: FontWeight.w600,
-                        color: Cartoon.ink.withValues(alpha: 0.5),
+                        color: Cartoon.ink.withValues(alpha: 0.78),
                       ),
                     ),
                     if (bonus > 0) ...[
@@ -881,7 +881,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
     final muted = Cartoon.userText(
       size: 11.5,
       weight: FontWeight.w500,
-      color: Cartoon.ink.withValues(alpha: 0.55),
+      color: Cartoon.ink.withValues(alpha: 0.78),
       height: 1.5,
     );
     return Container(
@@ -917,7 +917,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                 style: Cartoon.userText(
                   size: 12,
                   weight: FontWeight.w600,
-                  color: Cartoon.ink.withValues(alpha: 0.6),
+                  color: Cartoon.ink.withValues(alpha: 0.78),
                 ),
               ),
               children: [

@@ -44,8 +44,8 @@ String _formatTimestamp(dynamic v) {
 
 class _AdminCenterScreenState extends State<AdminCenterScreen> {
   final TextEditingController _searchController = TextEditingController();
-  static final _inkColor = Cartoon.onSurface(const Color(0xFF5A4038));
-  static final _mutedColor = Cartoon.onSurface(const Color(0xFF8A7A72));
+  static Color get _inkColor => Cartoon.onSurface(const Color(0xFF5A4038));
+  static Color get _mutedColor => Cartoon.onSurface(const Color(0xFF8A7A72));
   String _selectedCard = 'active';
   static const _userCardIds = {
     'active',

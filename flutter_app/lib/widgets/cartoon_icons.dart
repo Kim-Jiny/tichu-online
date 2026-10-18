@@ -421,11 +421,11 @@ class _RuleGlyphPainter extends CustomPainter {
 
   final RuleGlyphKind kind;
 
-  static final _red = Cartoon.onSurface(const Color(0xFFFF5A5F));
+  static Color get _red => Cartoon.onSurface(const Color(0xFFFF5A5F));
   static const _yellow = Color(0xFFFFD84D);
-  static final _blue = Cartoon.onSurface(const Color(0xFF4A90D9));
-  static final _green = Cartoon.onSurface(const Color(0xFF4CAF50));
-  static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
+  static Color get _blue => Cartoon.onSurface(const Color(0xFF4A90D9));
+  static Color get _green => Cartoon.onSurface(const Color(0xFF4CAF50));
+  static Color get _paper => Cartoon.surface(const Color(0xFFFFFBF2));
   static const _orange = Color(0xFFFF9F43);
 
   @override

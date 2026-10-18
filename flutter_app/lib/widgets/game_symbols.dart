@@ -26,10 +26,10 @@ class _SymbolPainter extends CustomPainter {
 
   final String gameType;
 
-  static final _red = Cartoon.onSurface(const Color(0xFFE53935));
+  static Color get _red => Cartoon.onSurface(const Color(0xFFE53935));
   static const _yellow = Color(0xFFFFD84D);
-  static final _paper = Cartoon.surface(const Color(0xFFFFFBF2));
-  static final _bone = Cartoon.surface(const Color(0xFFFFF4DC));
+  static Color get _paper => Cartoon.surface(const Color(0xFFFFFBF2));
+  static Color get _bone => Cartoon.surface(const Color(0xFFFFF4DC));
 
   @override
   void paint(Canvas canvas, Size size) {

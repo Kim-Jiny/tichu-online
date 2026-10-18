@@ -29,8 +29,8 @@ class NoticeBody extends StatelessWidget {
   /// 본문 글자색. 안 주면 공지 화면의 기본 갈색.
   final Color? color;
 
-  static final _text = Cartoon.onSurface(const Color(0xFF5A4038));
-  static final _accent = Cartoon.onSurface(const Color(0xFFE0812A));
+  static Color get _text => Cartoon.onSurface(const Color(0xFF5A4038));
+  static Color get _accent => Cartoon.onSurface(const Color(0xFFE0812A));
 
   @override
   Widget build(BuildContext context) {

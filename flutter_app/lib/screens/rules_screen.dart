@@ -1049,7 +1049,7 @@ class _RulesScreenState extends State<RulesScreen> {
     );
   }
 
-  static final _bodyStyle = Cartoon.userText(
+  static TextStyle get _bodyStyle => Cartoon.userText(
     size: 15,
     weight: FontWeight.w500,
     height: 1.6,
@@ -1511,8 +1511,8 @@ class _RuleText extends StatelessWidget {
 
   final String text;
 
-  static final _ink = Cartoon.onSurface(const Color(0xFF5A4038));
-  static final _strong = Cartoon.onSurface(const Color(0xFF3E312A));
+  static Color get _ink => Cartoon.onSurface(const Color(0xFF5A4038));
+  static Color get _strong => Cartoon.onSurface(const Color(0xFF3E312A));
 
   @override
   Widget build(BuildContext context) {

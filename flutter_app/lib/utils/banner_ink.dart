@@ -14,7 +14,12 @@ import '../theme/cartoon.dart';
 /// that runs dark-to-light has no single answer, and the header spans all of
 /// it; the average is the colour most of the text sits on.
 /// 밝은 배너 위에 쓰는 글자색.
-Color bannerInkDark = Cartoon.onSurface(const Color(0xFF3E312A));
+///
+/// 팔레트를 거치지 않는다. 배너는 산 물건이라 어느 한 벌에서나 제 색
+/// 그대로이고, 이 값은 [isDarkBanner] 가 거짓일 때 — 즉 밝은 배너
+/// 위에서만 쓰인다. 변환을 태우면 어두운 한 벌에서 밝아져, 밝은 배너에
+/// 밝은 글자가 올라간다.
+const Color bannerInkDark = Color(0xFF3E312A);
 
 /// 어두운 배너인가.
 ///

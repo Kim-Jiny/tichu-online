@@ -4173,7 +4173,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
   static Color get _handPaper => Cartoon.paper;
   static Color get _handMyTurn => Cartoon.myTurn;
 
-  static final _specialBgColors = {
+  static Map<String, Color> get _specialBgColors => {
     'skull_king': Cartoon.onSurface(Color(0xFF1A1A1A)),
     'pirate': Cartoon.onSurface(Color(0xFF8B1A1A)),
     'mermaid': Cartoon.onSurface(Color(0xFF0D5E7A)),

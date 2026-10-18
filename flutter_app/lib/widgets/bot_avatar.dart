@@ -53,7 +53,7 @@ class BotAvatar extends StatelessWidget {
 
   /// Fallback colours, used only if an asset fails to load. Distinct hues so
   /// two bots at one table never look the same.
-  static final _palette = [
+  static List<(Color, Color)> get _palette => [
     (Cartoon.surface(Color(0xFFE3F2FD)), Color(0xFF1565C0)),
     (Cartoon.surface(Color(0xFFE8F5E9)), Color(0xFF2E7D32)),
     (Cartoon.surface(Color(0xFFFFF3E0)), Color(0xFFE65100)),

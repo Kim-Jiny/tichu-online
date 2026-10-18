@@ -22,7 +22,9 @@ enum _MatchOutcome { win, loss, draw, desertion, midLeave }
 ///
 /// Dark enough to read at 13px on white — a paler sky blue is the colour of a
 /// disabled control, which is the opposite of what this marks.
-Color _kMineColor = Cartoon.onSurface(const Color(0xFF0288D1));
+// 팔레트가 바뀌면 같이 바뀌어야 하므로 getter 다. 최상위 변수는
+// 처음 읽힐 때 한 번 계산되고 그대로 굳는다.
+Color get _kMineColor => Cartoon.onSurface(const Color(0xFF0288D1));
 
 /// One game's line in the combined view.
 class _GameTally {

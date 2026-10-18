@@ -19,19 +19,34 @@
 
 ```sh
 cd flutter_app && python3 - <<'EOF'
-import glob, json, io
+import glob, json, io, re
 from fontTools.ttLib import TTFont
 have = set()
 for t in TTFont('assets/fonts/Jua-sub.ttf')['cmap'].tables:
     have |= {chr(c) for c in t.cmap}
 need = set()
+# ARB 값 — UI 문구의 출처
 for p in glob.glob('lib/l10n/app_*.arb'):
     for k, v in json.load(io.open(p, encoding='utf-8')).items():
         if not k.startswith('@') and isinstance(v, str): need |= set(v)
+# Dart 문자열 리터럴 — l10n 을 거치지 않고 박아 둔 문구.
+# 주석 줄은 뺀다. 주석의 한글은 화면에 나가지 않으므로, 넣으면 쫓을 필요
+# 없는 글자가 섞여 나온다(그걸 글리프로 채우면 폰트만 커진다).
+# 따옴표 두 종류를 따로 찾는다. 하나의 정규식에 양쪽 따옴표를 넣으면
+# 그 정규식을 감싸는 문자열에서 끝 따옴표가 붙어 버린다.
+dq = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
+sq = re.compile(r"'((?:[^'\\\n]|\\.)*)'")
 for p in glob.glob('lib/**/*.dart', recursive=True):
-    need |= {c for c in io.open(p, encoding='utf-8').read() if ord(c) > 127}
+    src = io.open(p, encoding='utf-8').read()
+    src = '\n'.join(l for l in src.split('\n')
+                     if not l.lstrip().startswith(('//', '///', '*')))
+    for pat in (dq, sq):
+        for m in pat.finditer(src):
+            need |= set(m.group(1))
 need |= set(chr(c) for c in range(32, 127))
-print(''.join(sorted(c for c in need if c not in have and c.strip())))
+miss = sorted(c for c in need if c not in have and c.strip())
+print('빠진 한글:', ''.join(c for c in miss if '가' <= c <= '힣') or '없음')
+print('그 외:', ''.join(c for c in miss if not ('가' <= c <= '힣')))
 EOF
 ```
 

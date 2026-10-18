@@ -80,6 +80,31 @@ reap_orphans() {
   done
 }
 
+# 포트를 쥐지 않은 채 매달린 테스트 프로세스.
+#
+# reap_orphans 는 포트로만 찾는다. 그런데 테스트가 서버가 아니라 붙는
+# 쪽이면(test_bots 처럼) 포트를 쥐지 않아서 그 그물에 걸리지 않는다. 한
+# 번 매달리면 몇 시간씩 남아 CPU·DB 연결을 조금씩 먹고, 그 뒤의 실행이
+# 왜 느려졌는지 알 수 없게 만든다 — 실제로 11시간 된 test_bots 두 개가
+# 남은 채로 다른 테스트가 판 중간에 멈췄다.
+#
+# 부모가 없는 것(PPID 1)만 죽인다. 다른 터미널에서 일부러 돌리고 있는
+# 테스트는 그 셸이 부모이므로 여기 걸리지 않는다. 죽일 때는 무엇을
+# 죽였는지 찍는다 — 조용히 죽이면 이번과 같은 추적이 또 필요해진다.
+reap_stale_tests() {
+  local rows
+  rows=$(ps -eo pid,etime,command \
+    | awk '$1 != '"$$"' && /node test_[a-z_]*\.(js|mjs)/ {print}' \
+    | while read -r pid rest; do
+        [ "$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')" = "1" ] \
+          && echo "$pid $rest"
+      done)
+  [ -z "$rows" ] && return
+  echo "→ 매달린 테스트 프로세스를 정리합니다(부모 없음):"
+  echo "$rows" | sed 's/^/    /'
+  echo "$rows" | awk '{print $1}' | xargs -r kill -9 2>/dev/null
+}
+
 run_one() {
   local n="$1"
   printf "  %-32s " "$n"
@@ -104,6 +129,8 @@ for f in test_*.js; do
   elif is_in "$n" "${INTEGRATION[@]}"; then INTEG_LIST+=("$n")
   else SELF_LIST+=("$n"); fi
 done
+
+reap_stale_tests
 
 pass=0; fail=0; failed=""
 run_group() {

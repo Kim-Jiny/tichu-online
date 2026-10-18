@@ -57,12 +57,21 @@ async function give(itemKey, daysFromNow) {
     [`ext_${run}`, NICK],
   );
 
+  // ORDER BY 없는 LIMIT 1 은 실행마다 다른 아이템을 준다. 그래서 이
+  // 테스트는 어떤 날은 통과하고 어떤 날은 아래 '골드 내역' 에서 실패했다.
+  //
+  // price > 0 도 함께 거른다. 시즌 보상 배너(banner_mighty_season_*)는
+  // 0원이고, 0원 아이템은 회수해도 환불할 것이 없어 골드 내역을 남기지
+  // 않는다(adminRevokeUserItem 의 `if (price > 0)` — 의도된 동작이다).
+  // 그 아이템이 뽑히면 제품이 옳은데 테스트가 깨진다.
   const tempItem = (await db.pool.query(
     `SELECT item_key FROM tc_shop_items
-     WHERE is_permanent = FALSE AND duration_days IS NOT NULL LIMIT 1`)).rows[0]?.item_key;
+     WHERE is_permanent = FALSE AND duration_days IS NOT NULL AND price > 0
+     ORDER BY item_key LIMIT 1`)).rows[0]?.item_key;
   const permItem = (await db.pool.query(
-    `SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE LIMIT 1`)).rows[0]?.item_key;
-  if (!tempItem) throw new Error('no time-limited shop item in this database');
+    `SELECT item_key FROM tc_shop_items WHERE is_permanent = TRUE
+     ORDER BY item_key LIMIT 1`)).rows[0]?.item_key;
+  if (!tempItem) throw new Error('no priced time-limited shop item in this database');
 
   console.log(`\n[a live pass — TZ=${process.env.TZ || '(host default)'}]`);
   await give(tempItem, 3);
@@ -183,6 +192,35 @@ async function give(itemKey, daysFromNow) {
   check('골드 내역에 사유가 남는다',
     ledger && Number(ledger.gold_delta) === price && ledger.title === 'item_revoke_refund',
     JSON.stringify(ledger));
+
+  // 0원 아이템을 환불 옵션으로 회수하면, 줄 골드가 없으니 골드 내역도
+  // 남지 않아야 한다. 시즌 보상 배너가 그렇다 — 돈을 내고 산 것이 아니다.
+  //
+  // 이 경계는 원래 아무도 보지 않았고, 대신 위 '골드 내역' 검사가 그
+  // 아이템을 우연히 뽑는 날에만 깨지는 식으로 드러났다.
+  const freeItem = (await db.pool.query(
+    `SELECT item_key FROM tc_shop_items
+     WHERE is_permanent = FALSE AND duration_days IS NOT NULL AND price = 0
+     ORDER BY item_key LIMIT 1`)).rows[0]?.item_key;
+  if (freeItem) {
+    console.log(`\n[0원 아이템(${freeItem})을 환불 옵션으로 회수하면]`);
+    await db.pool.query('UPDATE tc_users SET gold = 500 WHERE nickname = $1', [NICK]);
+    await give(freeItem, 10);
+    const ledgerBefore = Number((await db.pool.query(
+      'SELECT COUNT(*)::int AS n FROM tc_gold_history WHERE nickname = $1', [NICK])).rows[0].n);
+    const free = await db.adminRevokeUserItem(NICK, freeItem, { refundGold: true, adminActor: 'tester' });
+    const goldAfter = Number((await db.pool.query(
+      'SELECT gold FROM tc_users WHERE nickname = $1', [NICK])).rows[0].gold);
+    const ledgerAfter = Number((await db.pool.query(
+      'SELECT COUNT(*)::int AS n FROM tc_gold_history WHERE nickname = $1', [NICK])).rows[0].n);
+    check('회수는 되지만 환불액은 0', free.success === true && free.refunded === 0,
+      JSON.stringify(free));
+    check('골드가 그대로다', goldAfter === 500, `gold=${goldAfter}`);
+    check('골드 내역도 늘지 않는다', ledgerAfter === ledgerBefore,
+      `${ledgerBefore} -> ${ledgerAfter}`);
+  } else {
+    console.log('  skip  0원 기간제 아이템이 이 DB 에 없다');
+  }
 
   console.log('\n[환불을 선택하지 않으면]');
   await give(tempItem, 10);

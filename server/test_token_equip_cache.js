@@ -81,6 +81,7 @@ vm.runInContext([
   extract('revalidateTokenEquips'),
   extract('cachedTokenEquips'),
   extract('equippedBubble'),
+  extract('tokenEquipLatest', 'const'),
   extract('refreshTokenEquips'),
   `module.exports = { tokenEquipsByNick, tokenEquipAt, tokenEquipGen,
      cachedTokenEquips, equippedBubble, forgetTokenEquips, refreshTokenEquips };`,
@@ -148,6 +149,35 @@ const M = ctx.module.exports;
     eq('늦게 끝난 조회가 덮지 않았다',
       M.cachedTokenEquips('늦참')?.roomHighlight, 'new');
     eq('말풍선도 최신 그대로', M.equippedBubble(ws), 'bubble_new');
+  }
+
+  console.log('\n[직접 갱신끼리 겹쳐도 나중에 시작한 것이 이긴다]');
+  {
+    // 구매 직후와 장착 직후처럼 refreshTokenEquips 가 연달아 불린다.
+    // 두 질의가 함께 떠 있고 먼저 시작한 쪽이 늦게 끝나면, 방금 바꾼
+    // 장착이 옛것으로 되돌아간다.
+    //
+    // 백그라운드 재조회를 막던 '그 사이 쓰기가 있었나' 검사로는 못
+    // 잡는다 — 둘 다 아직 쓰기 전이라 번호가 같기 때문이다.
+    const ws = { nickname: '겹침' };
+    equipped = { roomHighlight: 'old', bubble: 'bubble_old' };
+    hold = {};
+    const first = M.refreshTokenEquips(ws);   // 느린 쪽: 'old' 를 들고 간다
+    await sleep(5);
+    const slow = hold;
+    chk('먼저 시작한 갱신이 떠 있다', typeof slow.release === 'function');
+
+    equipped = { roomHighlight: 'new', bubble: 'bubble_new' };
+    hold = null;                               // 두 번째는 바로 답한다
+    await M.refreshTokenEquips(ws);            // 나중에 시작, 먼저 끝난다
+    eq('나중 갱신이 담겼다', M.cachedTokenEquips('겹침')?.roomHighlight, 'new');
+
+    slow.release();                            // 이제 느린 쪽이 끝난다
+    await first;
+    await sleep(10);
+    eq('늦게 끝난 옛 갱신이 덮지 않았다',
+      M.cachedTokenEquips('겹침')?.roomHighlight, 'new');
+    eq('소켓에 붙은 값도 최신', ws.tokenEquips?.roomHighlight, 'new');
   }
 
   console.log('\n[접속이 끊긴 사람은 되살리지 않는다]');

@@ -9408,6 +9408,7 @@ function forgetTokenEquips(nickname) {
   tokenEquipsByNick.delete(nickname);
   tokenEquipAt.delete(nickname);
   tokenEquipGen.delete(nickname);
+  tokenEquipLatest.delete(nickname);
 }
 
 /// 갱신 중인 닉네임. 로비 목록은 자주 다시 그려지므로, 식은 캐시를 본
@@ -9485,12 +9486,30 @@ lobby.setHighlightResolver((nickname) => {
   return eq ? eq.roomHighlight : null;
 });
 
+/// 가장 최근에 '시작한' 갱신의 번호. 늦게 끝난 옛 갱신을 가려낸다.
+const tokenEquipLatest = new Map();
+
 async function refreshTokenEquips(ws) {
   if (!ws || !ws.nickname) return null;
+  const nick = ws.nickname;
+  // 이 함수끼리 겹치는 경우도 막아야 한다. 구매 직후와 장착 직후처럼
+  // 연달아 부르면 두 질의가 함께 떠 있고, 먼저 시작한 쪽이 늦게 끝나면
+  // 방금 바꾼 장착이 옛것으로 되돌아간다.
+  //
+  // 백그라운드 재조회(revalidateTokenEquips)는 '그 사이 쓰기가 있었나' 로
+  // 걸렀는데, 여기서는 그걸로 부족하다. 두 갱신 모두 아직 쓰기 전이라
+  // 번호가 같기 때문이다. 그래서 '시작한 순서' 를 따로 들고, 나중에
+  // 시작한 것이 이긴다.
+  const ticket = ++tokenEquipSeq;
+  tokenEquipLatest.set(nick, ticket);
   try {
-    const eq = await missions.getEquippedKeys(ws.nickname);
+    const eq = await missions.getEquippedKeys(nick);
+    // 내가 시작한 뒤에 더 새 갱신이 시작됐다면 내 결과는 이미 지난 것이다.
+    // 접속이 끊겨 캐시를 비웠을 때도(forgetTokenEquips 가 번호를 지운다)
+    // 여기서 걸러져 되살아나지 않는다.
+    if (tokenEquipLatest.get(nick) !== ticket) return eq;
     ws.tokenEquips = eq;
-    putTokenEquips(ws.nickname, eq);
+    putTokenEquips(nick, eq);
     return eq;
   } catch (e) {
     console.error('[missions] equip refresh failed:', e.message);

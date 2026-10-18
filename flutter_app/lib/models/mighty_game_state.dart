@@ -92,7 +92,8 @@ class MightyCompletedTrick {
     return MightyCompletedTrick(
       leader: json['leader'] ?? '',
       winner: json['winner'] ?? '',
-      cards: (json['cards'] as List?)
+      cards:
+          (json['cards'] as List?)
               ?.map((c) => MightyTrickPlay.fromJson(c))
               .toList() ??
           [],
@@ -252,6 +253,7 @@ class MightyGameStateData {
   final String? mightyCard;
   final String? jokerCallCard;
   final bool jokerCallActive;
+
   /// 이 트릭에서 조커가 힘을 갖는가.
   ///
   /// 기본 옵션에서 1트릭·막 트릭의 조커는 힘이 없다. 그런 조커는 무늬도
@@ -418,12 +420,19 @@ class MightyGameStateData {
       kittyCards: List<String>.from(json['kittyCards'] ?? []),
       lastTrickCards: lastTrickList,
       lastTrickWinner: json['lastTrickWinner'],
-      tricks: (json['tricks'] as List?)
-              ?.map((t) => MightyCompletedTrick.fromJson(t as Map<String, dynamic>))
+      tricks:
+          (json['tricks'] as List?)
+              ?.map(
+                (t) => MightyCompletedTrick.fromJson(t as Map<String, dynamic>),
+              )
               .toList() ??
           [],
-      scoreHistory: (json['scoreHistory'] as List?)
-              ?.map((e) => MightyScoreHistoryEntry.fromJson(e as Map<String, dynamic>))
+      scoreHistory:
+          (json['scoreHistory'] as List?)
+              ?.map(
+                (e) =>
+                    MightyScoreHistoryEntry.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       remainingTrumps: json['remainingTrumps'] != null
@@ -435,17 +444,25 @@ class MightyGameStateData {
       reservedPass: json['reservedPass'] == true,
       lastDealMissEvent: json['lastDealMissEvent'] == null
           ? null
-          : MightyDealMissEvent.fromJson(Map<String, dynamic>.from(json['lastDealMissEvent'])),
+          : MightyDealMissEvent.fromJson(
+              Map<String, dynamic>.from(json['lastDealMissEvent']),
+            ),
       canDeclareSetting: json['canDeclareSetting'] == true,
       lastSettingEvent: json['lastSettingEvent'] == null
           ? null
-          : MightySettingEvent.fromJson(Map<String, dynamic>.from(json['lastSettingEvent'])),
+          : MightySettingEvent.fromJson(
+              Map<String, dynamic>.from(json['lastSettingEvent']),
+            ),
       mode: json['mode']?.toString() ?? '5p',
       excludedPlayers: List<String>.from(json['excludedPlayers'] ?? const []),
       lastKillEvent: json['lastKillEvent'] == null
           ? null
-          : MightyKillEvent.fromJson(Map<String, dynamic>.from(json['lastKillEvent'])),
-      newlyReceivedCards: List<String>.from(json['newlyReceivedCards'] ?? const []),
+          : MightyKillEvent.fromJson(
+              Map<String, dynamic>.from(json['lastKillEvent']),
+            ),
+      newlyReceivedCards: List<String>.from(
+        json['newlyReceivedCards'] ?? const [],
+      ),
     );
   }
 }

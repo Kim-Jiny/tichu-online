@@ -10,6 +10,7 @@ import 'game_service.dart';
 import 'network_service.dart';
 
 enum SessionAuthStatus { success, needsNickname, failed, cancelled }
+
 enum RestorePhase {
   idle,
   refreshingSocialToken,
@@ -27,10 +28,11 @@ class SessionAuthResult {
   const SessionAuthResult._(this.status, [this.error]);
 
   const SessionAuthResult.success() : this._(SessionAuthStatus.success);
-  const SessionAuthResult.needsNickname() : this._(SessionAuthStatus.needsNickname);
+  const SessionAuthResult.needsNickname()
+    : this._(SessionAuthStatus.needsNickname);
   const SessionAuthResult.cancelled() : this._(SessionAuthStatus.cancelled);
   const SessionAuthResult.failed([String? error])
-      : this._(SessionAuthStatus.failed, error);
+    : this._(SessionAuthStatus.failed, error);
 }
 
 class SessionService extends ChangeNotifier {
@@ -48,6 +50,7 @@ class SessionService extends ChangeNotifier {
   RestorePhase get restorePhase => _restorePhase;
   String? get restoreError => _restoreError;
   bool get hasRestoreError => _restoreError != null;
+
   /// Returns the raw restore error string (may be a server message or a key).
   /// Widgets should prefer mapping [restorePhase] via l10n.
   String? get restoreErrorRaw => _restoreError;
@@ -125,7 +128,10 @@ class SessionService extends ChangeNotifier {
     _prepareForLogin();
     _game.loginSocial(provider, token, deviceInfo: deviceInfo);
 
-    return _waitForSocialLoginResult(provider, persistProvider: persistProvider);
+    return _waitForSocialLoginResult(
+      provider,
+      persistProvider: persistProvider,
+    );
   }
 
   Future<SessionAuthResult> completeSocialRegistration(
@@ -180,11 +186,15 @@ class SessionService extends ChangeNotifier {
           if (result.status == SessionAuthStatus.success) {
             final tPost = DateTime.now();
             await _refreshPostLoginData();
-            debugPrint('[Reconnect] token ${tokenMs}ms, login ${loginMs}ms, '
-                'postLogin ${DateTime.now().difference(tPost).inMilliseconds}ms');
+            debugPrint(
+              '[Reconnect] token ${tokenMs}ms, login ${loginMs}ms, '
+              'postLogin ${DateTime.now().difference(tPost).inMilliseconds}ms',
+            );
             return true;
           }
-          debugPrint('[Reconnect] token ${tokenMs}ms, login ${loginMs}ms (failed)');
+          debugPrint(
+            '[Reconnect] token ${tokenMs}ms, login ${loginMs}ms (failed)',
+          );
           if (result.status == SessionAuthStatus.needsNickname) {
             _setRestoreFailure('needs_nickname');
             return false;
@@ -236,8 +246,10 @@ class SessionService extends ChangeNotifier {
     }
     final t1 = DateTime.now();
     final restored = await restoreSavedSession();
-    debugPrint('[Reconnect] socket ${socketMs}ms, '
-        'login+restore ${DateTime.now().difference(t1).inMilliseconds}ms');
+    debugPrint(
+      '[Reconnect] socket ${socketMs}ms, '
+      'login+restore ${DateTime.now().difference(t1).inMilliseconds}ms',
+    );
     return restored;
   }
 
@@ -275,8 +287,12 @@ class SessionService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedLocale = prefs.getString('user_selected_locale');
-      final locale = savedLocale ?? PlatformDispatcher.instance.locale.languageCode;
-      return await DeviceInfoService.collectDeviceInfo(includeFcmToken: false, locale: locale);
+      final locale =
+          savedLocale ?? PlatformDispatcher.instance.locale.languageCode;
+      return await DeviceInfoService.collectDeviceInfo(
+        includeFcmToken: false,
+        locale: locale,
+      );
     } catch (_) {
       return null;
     }
@@ -330,7 +346,9 @@ class SessionService extends ChangeNotifier {
 
     _game.addListener(listener);
     try {
-      final result = await completer.future.timeout(const Duration(seconds: 15));
+      final result = await completer.future.timeout(
+        const Duration(seconds: 15),
+      );
       if (result.status == SessionAuthStatus.success && persistProvider) {
         await AuthService.saveAuthInfo(provider);
       }
@@ -357,8 +375,10 @@ class SessionService extends ChangeNotifier {
         break;
       }
     }
-    debugPrint('[Reconnect] checkRoom ${DateTime.now().difference(tRoom).inMilliseconds}ms '
-        '(restored=$restored)');
+    debugPrint(
+      '[Reconnect] checkRoom ${DateTime.now().difference(tRoom).inMilliseconds}ms '
+      '(restored=$restored)',
+    );
     if (!restored) {
       _game.fallbackToLobbyAfterRestoreFailure();
     }

@@ -3629,7 +3629,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Cartoon.paper,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Cartoon.ink, width: 2),
                         ),
@@ -3661,7 +3661,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFE3E0),
+                          color: Cartoon.surface(const Color(0xFFFFE3E0)),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Cartoon.ink, width: 2),
                         ),
@@ -4054,7 +4054,7 @@ class _SKGameScreenState extends State<SKGameScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFD6EAFF),
+              color: Cartoon.surface(const Color(0xFFD6EAFF)),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(

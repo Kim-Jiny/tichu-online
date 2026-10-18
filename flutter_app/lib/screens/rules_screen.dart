@@ -1509,8 +1509,8 @@ class _RuleText extends StatelessWidget {
                   height: 22,
                   margin: const EdgeInsets.only(top: 1, right: 10),
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEDE7F6),
+                  decoration: BoxDecoration(
+                    color: Cartoon.surface(const Color(0xFFEDE7F6)),
                     shape: BoxShape.circle,
                   ),
                   child: Text(num.group(1)!, style: Cartoon.text(size: 13)),
@@ -2027,7 +2027,7 @@ class _CardGuide extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Cartoon.paper,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: const Color(0xFFE0D8D4)),
                       ),
@@ -2046,7 +2046,7 @@ class _CardGuide extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFE0B2),
+                      color: Cartoon.surface(const Color(0xFFFFE0B2)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

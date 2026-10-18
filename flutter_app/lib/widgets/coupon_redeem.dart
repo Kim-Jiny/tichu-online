@@ -235,7 +235,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF1C9),
+                          color: Cartoon.surface(const Color(0xFFFFF1C9)),
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: Cartoon.ink, width: 1.8),
                         ),
@@ -287,7 +287,7 @@ class _CouponRedeemDialogState extends State<_CouponRedeemDialog>
                         child: Container(
                           padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E6),
+                            color: Cartoon.surface(const Color(0xFFFFF8E6)),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: _error != null ? Cartoon.red : Cartoon.ink,
@@ -649,7 +649,7 @@ class NoticeCouponBlock extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Cartoon.paper,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Cartoon.ink, width: 1.6),
                         ),

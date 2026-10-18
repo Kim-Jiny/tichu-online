@@ -72,7 +72,7 @@ InputDecoration formFieldDecoration(String hint, {int? maxLines}) {
       color: Cartoon.ink.withValues(alpha: 0.4),
     ),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: Cartoon.paper,
     counterText: '',
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
     border: b(Cartoon.ink, 2.5),

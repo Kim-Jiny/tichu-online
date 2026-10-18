@@ -547,7 +547,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
+                    color: Cartoon.surface(const Color(0xFFFFF3E0)),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFFFB74D)),
                   ),
@@ -621,7 +621,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (SocialConfig.googleEnabled)
                     _buildSocialButton(
                       onTap: () => _handleSocialSignIn('google'),
-                      backgroundColor: Colors.white,
+                      backgroundColor: Cartoon.paper,
                       borderColor: const Color(0xFFDADADA),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
@@ -757,7 +757,7 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
+        color: Cartoon.surface(const Color(0xFFFFF7ED)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF2C185)),
       ),

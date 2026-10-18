@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../theme/cartoon.dart';
+
 /// Corner radius for an avatar drawn at [size].
 ///
 /// Avatars are rounded squares, not circles. The shape was settled on the
@@ -41,7 +43,7 @@ class DefaultAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFF0E7E3),
+        color: Cartoon.surface(const Color(0xFFF0E7E3)),
         borderRadius: BorderRadius.circular(avatarCornerRadius(size)),
       ),
       alignment: Alignment.center,

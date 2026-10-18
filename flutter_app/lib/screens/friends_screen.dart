@@ -593,7 +593,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFE9B8),
+                                color: Cartoon.surface(const Color(0xFFFFE9B8)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,

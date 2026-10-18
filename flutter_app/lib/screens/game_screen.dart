@@ -1684,7 +1684,7 @@ class _GameScreenState extends State<GameScreen> {
                   vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD9D6),
+                  color: Cartoon.surface(const Color(0xFFFFD9D6)),
                   borderRadius: BorderRadius.circular(99),
                   border: Border.all(color: Cartoon.ink, width: 1.8),
                 ),
@@ -2820,7 +2820,7 @@ class _GameScreenState extends State<GameScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFD9F3E0),
+        color: Cartoon.surface(const Color(0xFFD9F3E0)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 1.8),
       ),

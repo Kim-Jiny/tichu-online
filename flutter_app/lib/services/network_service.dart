@@ -6,7 +6,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class NetworkService extends ChangeNotifier {
-  static const _debugIp = String.fromEnvironment('DEBUG_SERVER_IP', defaultValue: '127.0.0.1');
+  static const _debugIp = String.fromEnvironment(
+    'DEBUG_SERVER_IP',
+    defaultValue: '127.0.0.1',
+  );
+
   /// Explicit override, e.g. `--dart-define=WS_URL=ws://localhost:8080` when
   /// serving a release web build against a local server.
   static const _wsUrlOverride = String.fromEnvironment('WS_URL');
@@ -85,10 +89,10 @@ class NetworkService extends ChangeNotifier {
     );
   }
 
-  Future<void> connect(
-    [String? url,
-    Duration handshakeTimeout = const Duration(seconds: 8)]
-  ) async {
+  Future<void> connect([
+    String? url,
+    Duration handshakeTimeout = const Duration(seconds: 8),
+  ]) async {
     if (_isConnected) return;
     if (_isConnecting) {
       await waitForConnection();
@@ -169,7 +173,9 @@ class NetworkService extends ChangeNotifier {
     }
   }
 
-  Future<void> waitForConnection({Duration timeout = const Duration(seconds: 15)}) async {
+  Future<void> waitForConnection({
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     if (_isConnected) return;
     if (!_isConnecting) {
       throw Exception('Not connecting');
@@ -194,7 +200,10 @@ class NetworkService extends ChangeNotifier {
     _heartbeatTimer?.cancel();
     _lastPongAt = DateTime.now();
     _lastHeartbeatTickAt = DateTime.now();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) => _heartbeatTick());
+    _heartbeatTimer = Timer.periodic(
+      _heartbeatInterval,
+      (_) => _heartbeatTick(),
+    );
   }
 
   void _stopHeartbeat() {
@@ -268,13 +277,17 @@ class NetworkService extends ChangeNotifier {
   /// socket. On the web we always probe and let the answer decide.
   static const Duration assumeDeadAfter = Duration(seconds: 10);
 
-  static bool shouldAssumeDeadAfterResume(Duration pausedFor, {required bool isWeb}) =>
-      !isWeb && pausedFor >= assumeDeadAfter;
+  static bool shouldAssumeDeadAfterResume(
+    Duration pausedFor, {
+    required bool isWeb,
+  }) => !isWeb && pausedFor >= assumeDeadAfter;
 
   void checkAliveAfterResume(Duration pausedFor) {
     if (!_isConnected || _channel == null) return;
     if (shouldAssumeDeadAfterResume(pausedFor, isWeb: kIsWeb)) {
-      debugPrint('[Network] Resumed after ${pausedFor.inSeconds}s — assuming the socket is dead');
+      debugPrint(
+        '[Network] Resumed after ${pausedFor.inSeconds}s — assuming the socket is dead',
+      );
       disconnect(intentional: false);
       return;
     }
@@ -297,7 +310,9 @@ class NetworkService extends ChangeNotifier {
       if (!_isConnected) return;
       final last = _lastPongAt;
       if (last == null || last.isBefore(probeAt)) {
-        debugPrint('[Network] Connectivity-change probe got no pong — reconnecting');
+        debugPrint(
+          '[Network] Connectivity-change probe got no pong — reconnecting',
+        );
         disconnect(intentional: false);
       }
     });
@@ -315,7 +330,9 @@ class NetworkService extends ChangeNotifier {
     }
     _connectCompleter = null;
     if (wasConnected) {
-      debugPrint('[Network] _handleDisconnect (was connected, id=$_connectionId)');
+      debugPrint(
+        '[Network] _handleDisconnect (was connected, id=$_connectionId)',
+      );
     }
     notifyListeners();
   }
@@ -358,22 +375,25 @@ class NetworkService extends ChangeNotifier {
 
   // Persists a single retryable message. Caps the queue so a stuck client
   // can't grow it unbounded.
-  Future<void> _queueRetryable(Map<String, dynamic> data) => _withQueueLock(() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getStringList(_kRetryQueueKey) ?? <String>[];
-      raw.add(jsonEncode({
-        'ts': DateTime.now().millisecondsSinceEpoch,
-        'msg': data,
-      }));
-      while (raw.length > _retryMaxEntries) {
-        raw.removeAt(0);
-      }
-      await prefs.setStringList(_kRetryQueueKey, raw);
-    } catch (e) {
-      debugPrint('[Network] Queue persist failed: $e');
-    }
-  });
+  Future<void> _queueRetryable(Map<String, dynamic> data) =>
+      _withQueueLock(() async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final raw = prefs.getStringList(_kRetryQueueKey) ?? <String>[];
+          raw.add(
+            jsonEncode({
+              'ts': DateTime.now().millisecondsSinceEpoch,
+              'msg': data,
+            }),
+          );
+          while (raw.length > _retryMaxEntries) {
+            raw.removeAt(0);
+          }
+          await prefs.setStringList(_kRetryQueueKey, raw);
+        } catch (e) {
+          debugPrint('[Network] Queue persist failed: $e');
+        }
+      });
 
   // Replays survivors of the IAP/attendance retry queue. PUBLIC because the
   // safe place to call this is AFTER login_success (server requires
@@ -436,8 +456,10 @@ class NetworkService extends ChangeNotifier {
         await prefs.setStringList(_kRetryQueueKey, survivors);
       }
       if (sent > 0 || expired > 0 || malformed > 0 || survivors.isNotEmpty) {
-        debugPrint('[Network] Retry queue flushed: sent=$sent expired=$expired '
-            'malformed=$malformed kept=${survivors.length}');
+        debugPrint(
+          '[Network] Retry queue flushed: sent=$sent expired=$expired '
+          'malformed=$malformed kept=${survivors.length}',
+        );
       }
     } catch (e) {
       debugPrint('[Network] Flush retry queue failed: $e');

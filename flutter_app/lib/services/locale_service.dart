@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Supported locales for the app.
-const supportedLocales = [
-  Locale('en'),
-  Locale('ko'),
-  Locale('de'),
-];
+const supportedLocales = [Locale('en'), Locale('ko'), Locale('de')];
 
 /// Manages the user's locale preference.
 ///

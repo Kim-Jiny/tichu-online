@@ -262,7 +262,7 @@ class _LegalBodyState extends State<_LegalBody> {
           Container(
             height: 12,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Cartoon.paper,
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: Cartoon.ink, width: 1.5),
             ),

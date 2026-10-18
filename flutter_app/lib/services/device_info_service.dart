@@ -16,7 +16,10 @@ class DeviceInfoService {
   static String tzOffsetMinutes() =>
       DateTime.now().timeZoneOffset.inMinutes.toString();
 
-  static Future<Map<String, String?>> collectDeviceInfo({bool includeFcmToken = true, String? locale}) async {
+  static Future<Map<String, String?>> collectDeviceInfo({
+    bool includeFcmToken = true,
+    String? locale,
+  }) async {
     String? fcmToken;
     String? devicePlatform;
     String? deviceModel;
@@ -55,14 +58,16 @@ class DeviceInfoService {
           String? apnsToken;
           for (int i = 0; i < 20; i++) {
             apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-            debugPrint('[FCM][DeviceInfo] APNs attempt $i: ${apnsToken != null ? "OK" : "null"}');
+            debugPrint(
+              '[FCM][DeviceInfo] APNs attempt $i: ${apnsToken != null ? "OK" : "null"}',
+            );
             if (apnsToken != null) break;
             await Future.delayed(const Duration(milliseconds: 500));
           }
         }
-        fcmToken = await FirebaseMessaging.instance
-            .getToken()
-            .timeout(const Duration(seconds: 10));
+        fcmToken = await FirebaseMessaging.instance.getToken().timeout(
+          const Duration(seconds: 10),
+        );
         final preview = fcmToken != null
             ? fcmToken.substring(0, fcmToken.length.clamp(0, 20))
             : 'null';

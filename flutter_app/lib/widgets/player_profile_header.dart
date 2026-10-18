@@ -1230,7 +1230,7 @@ Widget profileLevelStrip(int level, int expTotal, {Color? ink}) {
         child: Container(
           height: 12,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Cartoon.paper,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Cartoon.ink, width: 1.5),
           ),

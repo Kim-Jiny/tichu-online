@@ -22,7 +22,7 @@ class TokenBalanceChip extends StatelessWidget {
         height: 44,
         padding: const EdgeInsets.only(left: 12, right: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFE9A8),
+          color: Cartoon.surface(const Color(0xFFFFE9A8)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Cartoon.ink, width: 2),
           boxShadow: [BoxShadow(color: Cartoon.ink, offset: Offset(0, 2))],

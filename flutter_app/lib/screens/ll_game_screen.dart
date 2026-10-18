@@ -1774,11 +1774,7 @@ class _LLGameScreenState extends State<LLGameScreen> {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: Cartoon.ink, width: 1.8),
               ),
-              child: const Icon(
-                Icons.shield_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
+              child: Icon(Icons.shield_rounded, color: Cartoon.paper, size: 26),
             ),
             const SizedBox(width: 12),
             Expanded(

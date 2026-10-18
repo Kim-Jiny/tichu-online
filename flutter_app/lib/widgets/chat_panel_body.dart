@@ -107,7 +107,7 @@ class _ChatPanelBodyState extends State<ChatPanelBody> {
                     hintText: widget.hintText,
                     isDense: true,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Cartoon.paper,
                     hintStyle: TextStyle(
                       color: Cartoon.ink.withValues(alpha: 0.4),
                     ),

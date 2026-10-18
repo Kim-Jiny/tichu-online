@@ -752,7 +752,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
+                          color: Cartoon.surface(const Color(0xFFE8F5E9)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -786,7 +786,7 @@ class _GoldShopScreenState extends State<GoldShopScreen> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E0),
+                            color: Cartoon.surface(const Color(0xFFFFF3E0)),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

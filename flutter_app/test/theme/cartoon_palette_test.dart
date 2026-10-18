@@ -11,6 +11,7 @@ import 'package:tichu_online/theme/cartoon.dart';
 /// 한다. 그걸 확인하는 것이 이 파일의 첫 번째 일이다.
 void main() {
   const other = CartoonPalette(
+    dark: true,
     ink: Color(0xFFEEEEEE),
     cream: Color(0xFF222222),
     paper: Color(0xFF111111),
@@ -101,6 +102,70 @@ void main() {
         Cartoon.outlinedText('가', fill: Colors.white, stroke: Cartoon.red),
       );
       expect(c.toARGB32(), Cartoon.red.toARGB32());
+    });
+  });
+
+  group('손으로 고른 연한 면(surface)', () {
+    // 화면 곳곳에 "연녹색 칩", "연주황 뱃지" 처럼 손으로 고른 색이 있다.
+    // 그 위에는 ink 로 글자를 쓰므로, 어두운 한 벌에서 면만 밝게 남으면
+    // 밝은 면에 밝은 글자가 된다.
+    const samples = [
+      Color(0xFFE8F5E9), // 연녹색 — 골드샵 보너스 뱃지
+      Color(0xFFFFF3E0), // 연주황 — 최고가 뱃지
+      Color(0xFFFFE9B8), // 연노랑 — 친구 목록 칩
+      Color(0xFFEDE7F6), // 연보라 — 룰북 번호 (팔레트에 대응색이 없다)
+      Colors.white,
+    ];
+
+    test('밝은 한 벌에서는 받은 값 그대로 — 지금 화면이 안 바뀐다', () {
+      Cartoon.usePalette(cartoonLight);
+      for (final c in samples) {
+        expect(
+          Cartoon.surface(c).toARGB32(),
+          c.toARGB32(),
+          reason: '$c 가 밝은 한 벌에서 바뀐다',
+        );
+      }
+    });
+
+    test('어두운 한 벌에서는 어두워진다', () {
+      Cartoon.usePalette(cartoonDark);
+      for (final c in samples) {
+        final got = Cartoon.surface(c);
+        expect(
+          got.computeLuminance(),
+          lessThan(0.12),
+          reason: '$c 가 어두운 한 벌에서도 밝다',
+        );
+      }
+    });
+
+    test('어두워져도 글자가 읽힌다', () {
+      Cartoon.usePalette(cartoonDark);
+      double ratio(Color a, Color b) {
+        final v = [a.computeLuminance(), b.computeLuminance()]..sort();
+        return (v[1] + 0.05) / (v[0] + 0.05);
+      }
+
+      for (final c in samples) {
+        expect(
+          ratio(cartoonDark.ink, Cartoon.surface(c)),
+          greaterThanOrEqualTo(7.0),
+          reason: '$c 위에서 글자가 안 읽힌다',
+        );
+      }
+    });
+
+    test('색조는 남는다 — 연녹색은 어두운 녹색이 된다', () {
+      Cartoon.usePalette(cartoonDark);
+      final green = HSLColor.fromColor(
+        Cartoon.surface(const Color(0xFFE8F5E9)),
+      );
+      final orange = HSLColor.fromColor(
+        Cartoon.surface(const Color(0xFFFFF3E0)),
+      );
+      expect((green.hue - 123).abs(), lessThan(30), reason: '녹색 기가 사라졌다');
+      expect((orange.hue - 33).abs(), lessThan(30), reason: '주황 기가 사라졌다');
     });
   });
 

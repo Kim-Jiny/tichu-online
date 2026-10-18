@@ -22,12 +22,19 @@ import 'package:flutter/material.dart';
 /// 같은 값을 쓴다(Cartoon 의 상수로 둔다).
 class CartoonPalette {
   const CartoonPalette({
+    required this.dark,
     required this.ink,
     required this.cream,
     required this.paper,
     required this.skyTop,
     required this.skyBottom,
   });
+
+  /// 어두운 바탕용 한 벌인가.
+  ///
+  /// 색을 하나하나 비교해 짐작하지 않는다. 팔레트를 만들 때 정해 두면
+  /// 경계에 걸친 색이 생겨도 판정이 흔들리지 않는다.
+  final bool dark;
 
   /// 글자·테두리·단색 그림자.
   final Color ink;
@@ -45,6 +52,7 @@ class CartoonPalette {
 
 /// 지금까지 쓰던 색. 이 한 벌만 쓰는 동안 화면은 전과 똑같다.
 const CartoonPalette cartoonLight = CartoonPalette(
+  dark: false,
   ink: Color(0xFF3B2A20),
   cream: Color(0xFFFFF4DC),
   paper: Color(0xFFFFFBF2),
@@ -61,6 +69,7 @@ const CartoonPalette cartoonLight = CartoonPalette(
 /// 대비는 글자(ink)와 패널(paper) 사이에서 가장 중요하다. 글자가 패널
 /// 위에 놓이기 때문이다 — 그 둘의 대비는 테스트가 지킨다.
 const CartoonPalette cartoonDark = CartoonPalette(
+  dark: true,
   // 글자·테두리·그림자. 순백(#FFFFFF)이 아니라 살짝 따뜻한 쪽.
   ink: Color(0xFFF0EADC),
   // 한 단계 낮은 바탕(칩, 카드 안쪽). 패널보다 밝아야 층이 보인다.
@@ -143,6 +152,30 @@ class Cartoon {
   /// 외곽선은 획 '가운데' 에 그려지므로 절반이 안쪽을 먹는다. 36~42 에서는
   /// 10~12px 이 되어 Jua 의 획보다 두꺼워지고, 속이 남지 않아 글자가
   /// 뭉개진다. 큰 글자를 쓸 때는 [strokeWidth] 로 직접 주면 된다.
+  /// 밝은 바탕을 전제로 고른 연한 면.
+  ///
+  /// 화면 곳곳에 "연녹색 칩", "연주황 뱃지" 처럼 손으로 고른 색이 있다.
+  /// 그 위에는 ink 로 글자를 쓰므로, 어두운 한 벌에서 면만 밝게 남으면
+  /// 밝은 면에 밝은 글자가 된다.
+  ///
+  /// 강조색으로 환산해 다시 만들지 않는다. 보라·하늘색처럼 이 팔레트에
+  /// 대응색이 없는 것들은 환산하면 밝은 한 벌에서도 색이 변한다. 대신
+  /// 밝은 한 벌에서는 받은 값을 **그대로** 돌려주고, 어두울 때만 색조와
+  /// 채도를 지킨 채 밝기를 낮춘다 — 지금 화면은 한 픽셀도 바뀌지 않는다.
+  ///
+  /// 브랜드 색(카카오 노랑 등)에는 쓰지 않는다. 그건 어두워지면 안 된다.
+  static Color surface(Color light) {
+    if (!_palette.dark) return light;
+    final h = HSLColor.fromColor(light);
+    // 아주 밝은 면일수록 더 낮춘다. 0.90 짜리 연한 칩은 0.16 쯤으로,
+    // 0.78 짜리 진한 면은 0.24 쯤으로 — 원래의 층 순서가 남는다.
+    final l = (0.34 - h.lightness * 0.20).clamp(0.12, 0.30);
+    return h
+        .withLightness(l.toDouble())
+        .withSaturation((h.saturation * 0.55).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   /// 강조색을 바탕색 쪽으로 섞어 만든 연한 면.
   ///
   /// 탭 아이콘 바탕처럼 "주황을 옅게 깔아 둔" 자리에 쓴다. 전에는

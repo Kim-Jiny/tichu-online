@@ -934,7 +934,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               suffixText: suffixText,
               suffixStyle: Cartoon.text(size: 14),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Cartoon.paper,
               border: b(Cartoon.ink, 2.5),
               enabledBorder: b(Cartoon.ink, 2.5),
               focusedBorder: b(Cartoon.orange, 3),
@@ -1670,7 +1670,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     vertical: 10,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFFECEC),
+                                    color: Cartoon.surface(
+                                      const Color(0xFFFFECEC),
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: const Color(0xFFF2B3B3),
@@ -4091,7 +4093,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE9B8),
+                color: Cartoon.surface(const Color(0xFFFFE9B8)),
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(color: Cartoon.ink, width: 1.6),
               ),
@@ -4722,7 +4724,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8E0F8),
+        color: Cartoon.surface(const Color(0xFFE8E0F8)),
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: Cartoon.ink, width: 1.5),
       ),
@@ -4991,7 +4993,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             margin: const EdgeInsets.only(right: 8),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFE0E0),
+                              color: Cartoon.surface(const Color(0xFFFFE0E0)),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
@@ -5069,7 +5071,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                  color: Colors.white,
+                                                  color: Cartoon.paper,
                                                   width: 1.2,
                                                 ),
                                               ),
@@ -5376,7 +5378,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE9EEFF),
+                              color: Cartoon.surface(const Color(0xFFE9EEFF)),
                               borderRadius: BorderRadius.circular(11),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5418,7 +5420,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFE9B8),
+                              color: Cartoon.surface(const Color(0xFFFFE9B8)),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: Cartoon.ink,
@@ -5453,7 +5455,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFFE3E3),
+                                color: Cartoon.surface(const Color(0xFFFFE3E3)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: Cartoon.ink,

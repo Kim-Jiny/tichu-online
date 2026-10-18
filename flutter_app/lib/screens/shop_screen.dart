@@ -1250,7 +1250,7 @@ class _ShopScreenState extends State<ShopScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE3E3),
+        color: Cartoon.surface(const Color(0xFFFFE3E3)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 2),
       ),
@@ -3186,7 +3186,7 @@ class _ShopScreenState extends State<ShopScreen> {
         height: 46,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: const Color(0xFFEDE7F6),
+          color: Cartoon.surface(const Color(0xFFEDE7F6)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -3379,7 +3379,7 @@ class _ShopScreenState extends State<ShopScreen> {
       height: 64,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF4EFEA),
+        color: Cartoon.surface(const Color(0xFFF4EFEA)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE6DDD8)),
       ),
@@ -3393,7 +3393,7 @@ class _ShopScreenState extends State<ShopScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8F4F0),
+              color: Cartoon.surface(const Color(0xFFF8F4F0)),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFE6DCE8)),
             ),
@@ -3499,7 +3499,7 @@ class _ShopScreenState extends State<ShopScreen> {
                     width: 28,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Cartoon.paper,
                       borderRadius: BorderRadius.circular(5),
                       border: Border.all(color: const Color(0xFFD8CEC8)),
                     ),
@@ -3776,7 +3776,7 @@ class _ShopScreenState extends State<ShopScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            backgroundColor: const Color(0xFFFDFBFA),
+            backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
             title: Text(
               l10n.customTitleEditTitle,
               style: const TextStyle(
@@ -3960,7 +3960,7 @@ class _ShopScreenState extends State<ShopScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFFFDFBFA),
+        backgroundColor: Cartoon.surface(const Color(0xFFFDFBFA)),
         titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
         contentPadding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
         title: Text(
@@ -4425,7 +4425,7 @@ class _ShopScreenState extends State<ShopScreen> {
                               child: Container(
                                 height: 18,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: Cartoon.paper,
                                   borderRadius: BorderRadius.circular(9),
                                   border: Border.all(
                                     color: Cartoon.ink,
@@ -4483,7 +4483,7 @@ class _ShopScreenState extends State<ShopScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD8F5DF),
+                            color: Cartoon.surface(const Color(0xFFD8F5DF)),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: Cartoon.ink, width: 2),
                           ),

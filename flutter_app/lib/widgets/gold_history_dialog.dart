@@ -405,7 +405,7 @@ class _GoldDialogBodyState extends State<_GoldDialogBody> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Cartoon.paper,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Cartoon.ink, width: 1.6),
       ),
@@ -581,7 +581,7 @@ Widget _buildGoldGuideItem({
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Cartoon.paper,
             shape: BoxShape.circle,
             border: Border.all(color: Cartoon.ink, width: 1.5),
           ),

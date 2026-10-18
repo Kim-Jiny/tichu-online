@@ -406,7 +406,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
   Widget _tokenReward(int tokens, {double size = 14}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     decoration: BoxDecoration(
-      color: const Color(0xFFFFE9A8),
+      color: Cartoon.surface(const Color(0xFFFFE9A8)),
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: Cartoon.ink, width: 1.4),
     ),

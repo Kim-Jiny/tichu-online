@@ -68,6 +68,13 @@ InputDecoration formFieldDecoration(String hint, {int? maxLines}) {
     borderSide: BorderSide(color: c, width: w),
   );
   return InputDecoration(
+    // maxLength 가 붙은 입력칸은 '0/N' 표시가 따라붙는데, 그 글자는 테마
+    // 기본 색이라 어두운 한 벌에서 사라진다. 꾸밈을 만드는 이곳에 두면
+    // 모든 호출처가 함께 해결된다 — 문의 제목·내용, 신고 사유.
+    counterStyle: Cartoon.text(
+      size: 12,
+      color: Cartoon.ink.withValues(alpha: 0.78),
+    ),
     hintText: hint,
     hintStyle: TextStyle(
       fontSize: 13.5,

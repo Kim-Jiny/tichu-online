@@ -19,9 +19,21 @@ void main() {
 
   test('팔레트 값을 변수에 굳혀 두지 않는다', () {
     final offenders = <String>[];
+    // 타입을 늘어놓는 대신 '선언처럼 생긴 줄' 을 전부 본다. 처음에는
+    // Color/TextStyle 만 봤다가 Map<String, Color> 로 선언된 칭호 색표를
+    // 통째로 놓쳤다 — 담는 그릇이 무엇이든 한 번 계산되면 굳는 건 같다.
+    // 한 번만 계산되고 굳는 것은 둘뿐이다 — 최상위 선언과 static 필드.
+    // 메서드 안의 지역 변수는 빌드마다 다시 계산되므로 보지 않는다.
+    //
+    // 타입을 늘어놓는 대신 '선언처럼 생긴 줄' 을 본다. 처음에는
+    // Color/TextStyle 만 봤다가 Map<String, Color> 로 선언된 칭호 색표를
+    // 통째로 놓쳤다 — 담는 그릇이 무엇이든 굳는 건 같다.
     final decl = RegExp(
-      r'^(?:[ \t]*static[ \t]+final\b'
-      r'|(?:final[ \t]+)?(?:Color|TextStyle|LinearGradient|BoxDecoration)[ \t]+\w+[ \t]*=)',
+      // `=(?!>)` — 화살표 getter 는 선언이 아니라 매번 계산되는 식이다.
+      // '(' 가 끼면 메서드다 — scrim([double alpha = 0.75]) 의 '=' 는
+      // 기본값이지 선언이 아니다.
+      r'^(?:[ \t]*static[ \t]+(?!.*\bget\b)[^;=\n(]*=(?!>)'
+      r'|(?:final[ \t]+)?[A-Z]\w*(?:<[^>=\n]*>)?[ \t]+\w+[ \t]*=(?!>))',
       multiLine: true,
     );
     for (final file in Directory('lib').listSync(recursive: true)) {
@@ -30,6 +42,7 @@ void main() {
       for (final m in decl.allMatches(src)) {
         final body = _statement(src, m.end);
         if (!body.contains('Cartoon.')) continue;
+        if (m.group(0)!.contains('const ')) continue;
         offenders.add(
           '${file.path}:${src.substring(0, m.start).split('\n').length}',
         );

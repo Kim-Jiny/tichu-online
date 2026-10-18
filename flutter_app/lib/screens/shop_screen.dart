@@ -4131,7 +4131,10 @@ class _ShopScreenState extends State<ShopScreen> {
                               width: 30,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: entry.value,
+                                // 견본은 그 색으로 칭호가 실제로 그려질
+                                // 모습이어야 한다 — 원래 값이 아니라
+                                // 팔레트를 거친 값.
+                                color: titleColorFor('custom:${entry.key}'),
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: colorId == entry.key
@@ -4276,6 +4279,12 @@ class _ShopScreenState extends State<ShopScreen> {
               controller: controller,
               maxLength: 10,
               decoration: InputDecoration(
+                // maxLength 가 붙으면 '0/10' 표시가 따라붙는데, 그 글자는
+                // 테마 기본 색이라 어두운 한 벌에서 사라진다.
+                counterStyle: Cartoon.text(
+                  size: 12,
+                  color: Cartoon.ink.withValues(alpha: 0.78),
+                ),
                 hintText: L10n.of(context).shopNicknameChangeHint,
                 border: const OutlineInputBorder(),
                 contentPadding: const EdgeInsets.symmetric(

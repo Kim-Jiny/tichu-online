@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/cartoon.dart';
+import 'title_chip.dart';
 
 /// 공지 본문을 읽기 좋게 그린다.
 ///
@@ -323,15 +324,9 @@ List<InlinePiece> parseInline(String raw) {
 /// 서버는 id 만 내려보낸다. 모르는 id 가 오면(팔레트가 서버에서만 늘어난 경우)
 /// null 을 돌려주고 화면은 기본색을 쓴다 — 색 하나 때문에 제목이 안 보이는
 /// 것보다 낫다.
-Map<String, Color> noticeTitleColors = {
-  'rose': Cartoon.onSurface(Color(0xFFD64550)),
-  'amber': Cartoon.onSurface(Color(0xFFC97A0B)),
-  'green': Cartoon.onSurface(Color(0xFF2E7D32)),
-  'teal': Cartoon.onSurface(Color(0xFF00796B)),
-  'blue': Cartoon.onSurface(Color(0xFF1565C0)),
-  'violet': Cartoon.onSurface(Color(0xFF6A3FB5)),
-  'pink': Cartoon.onSurface(Color(0xFFC2185B)),
-  'slate': Cartoon.onSurface(const Color(0xFF455A64)),
+Map<String, Color> get noticeTitleColors => {
+  for (final e in customTitleColors.entries)
+    e.key: titleColorFor('custom:${e.key}'),
 };
 
 Color? noticeTitleColor(Object? id) {

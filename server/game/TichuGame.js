@@ -54,6 +54,7 @@ class TichuGame {
     this.lastTrick = [];      // last completed trick (for round_end display)
     this.currentPlayer = null;
     this.passCount = 0;
+    this.passLog = [];       // [{ playerId, winner, type, length, value }] bot-side hand inference only
     this.lastPlayedBy = null;
     this.trickStarter = null;
     this.finishOrder = [];
@@ -635,6 +636,16 @@ class TichuGame {
     }
 
     this.passCount++;
+    const top = this.currentTrick[this.currentTrick.length - 1];
+    if (top && top.combo) {
+      this.passLog.push({
+        playerId,
+        winner: top.playerId,
+        type: top.combo.type,
+        length: top.combo.length,
+        value: top.combo.value,
+      });
+    }
 
     const result = {
       success: true,
@@ -1406,6 +1417,7 @@ class TichuGame {
 
     c.currentPlayer = this.currentPlayer;
     c.passCount = this.passCount;
+    c.passLog = this.passLog.map((e) => ({ ...e }));
     c.lastPlayedBy = this.lastPlayedBy;
     c.trickStarter = this.trickStarter;
     c.finishOrder = this.finishOrder.slice();

@@ -368,17 +368,30 @@ function evaluateHand(cards) {
 
 // ========== TICHU DECLARATION ==========
 
+// 임계값은 셀프플레이로 잰 "그 손패가 1등으로 나간 비율"에서 잡았다(5000라운드,
+// 손익분기 50%). 소티츄: 교환 후 14장 evaluateHand 점수 ≥100 이면 53~59%,
+// 90대는 47%. 라지: 첫 8장이 용+봉황+A 를 다 가질 때만 54%, 나머지는 45% 이하.
+// BOT_TICHU=0 이면 자연 콜을 끄고 어드민 botTichuMode 만 남긴다.
+function naturalTichuEnabled() {
+  return process.env.BOT_TICHU !== '0';
+}
+
 function decideLargeTichu(cards, game) {
-  // 봇은 스스로는 라지티츄를 부르지 않는다. 어드민 봇방에서 티츄 흐름을
-  // 시험하려고 켜둔 방(botTichuMode)에서만 부른다 — 사람 상대로는 예전과
-  // 똑같이 조용하다.
-  return game?.botTichuMode === 'large';
+  // 어드민 봇방에서 티츄 흐름을 시험하려고 켜둔 방(botTichuMode)은 강제로 부른다.
+  if (game?.botTichuMode === 'large') return true;
+  if (!naturalTichuEnabled() || (cards || []).length !== 8) return false;
+  const aces = cards.filter(c => getRankFromCard(c) === 'A').length;
+  return cards.includes('special_dragon') && cards.includes('special_phoenix') && aces >= 1;
 }
 
 function decideSmallTichu(cards, state, game) {
-  // 같은 이유. 라지로 켜둔 방에서는 이미 라지를 불렀으니 스몰은 건드리지
-  // 않는다(규칙상 둘 다는 안 된다).
-  return game?.botTichuMode === 'small';
+  // 라지로 켜둔 방에서는 이미 라지를 불렀으니 스몰은 건드리지 않는다(규칙상 둘 다는 안 된다).
+  if (game?.botTichuMode === 'small') return true;
+  if (!naturalTichuEnabled() || state?.phase !== 'playing' || (cards || []).length !== 14) return false;
+  if (game?.botTichuMode === 'large') return false;
+  const partner = getPartner(state);
+  if (partner && (partner.hasSmallTichu || partner.hasLargeTichu)) return false;
+  return evaluateHand(cards).score >= 100;
 }
 
 
@@ -2141,17 +2154,72 @@ function determinizeGameForBot(game, botId) {
   const unseenCards = createDeck()
     .map(card => card.id)
     .filter(cardId => !knownCards.has(cardId));
-  const shuffled = shuffleArray(unseenCards);
 
-  let cursor = 0;
+  // Cards this bot handed over in the exchange are known to sit with the
+  // recipient until played; pin them instead of re-dealing them at random.
+  // Seating: (i+1)%4 = right, (i+2)%4 = partner, (i+3)%4 = left.
+  const pinned = {};
+  const given = game.exchangeCards && game.exchangeCards[botId];
+  const myIdx = world.playerIds.indexOf(botId);
+  if (given && myIdx >= 0) {
+    const unseenSet = new Set(unseenCards);
+    const give = [[given.right, 1], [given.partner, 2], [given.left, 3]];
+    for (const [card, off] of give) {
+      if (!card || !unseenSet.has(card)) continue;
+      const pid = world.playerIds[(myIdx + off) % 4];
+      (pinned[pid] = pinned[pid] || []).push(card);
+    }
+  }
+  const pinnedAll = new Set(Object.values(pinned).flat());
+  const shuffled = shuffleArray(unseenCards.filter(c => !pinnedAll.has(c)));
+
+  // Hand inference as soft weights (a pass can be a deliberate hold, a Tichu
+  // call can be bluff-ish, so nothing is excluded outright).
+  const others = world.playerIds.filter(pid => pid !== botId);
+  const partnerOf = pid => world.playerIds[(world.playerIds.indexOf(pid) + 2) % 4];
+  const passCeil = {};  // pid -> lowest single value they passed over an opponent's play
+  for (const e of (game.passLog || [])) {
+    if (e.type !== COMBO.SINGLE || !(e.value >= 2 && e.value <= 14)) continue;
+    if (e.winner === partnerOf(e.playerId)) continue;  // passing under a partner proves nothing
+    passCeil[e.playerId] = Math.min(passCeil[e.playerId] ?? Infinity, e.value);
+  }
+  const callers = new Set([...(game.largeTichuDeclarations || []), ...(game.smallTichuDeclarations || [])]);
+  const cardWeight = (pid, card) => {
+    let w = 1;
+    const v = getCardValue(card);
+    if (passCeil[pid] !== undefined && v > passCeil[pid] && v <= 14 && card !== 'special_phoenix') w *= 0.25;
+    if (callers.has(pid)) {
+      if (v >= 14) w *= 2;        // A, Phoenix, Dragon
+      else if (v === 13) w *= 1.4;
+    }
+    return w;
+  };
+
+  const room = {};
+  for (const pid of others) {
+    room[pid] = (game.hands[pid] || []).length - (pinned[pid] || []).length;
+  }
   for (const pid of world.playerIds) {
     if (pid === botId) {
       world.hands[pid] = (game.hands[pid] || []).slice();
-      continue;
+    } else {
+      world.hands[pid] = (pinned[pid] || []).slice(0, (game.hands[pid] || []).length);
     }
-    const need = (game.hands[pid] || []).length;
-    world.hands[pid] = shuffled.slice(cursor, cursor + need);
-    cursor += need;
+  }
+  for (const card of shuffled) {
+    let total = 0;
+    const ws = others.map(pid => {
+      const w = room[pid] > 0 ? room[pid] * cardWeight(pid, card) : 0;
+      total += w;
+      return w;
+    });
+    if (total <= 0) break;
+    let r = Math.random() * total;
+    let idx = 0;
+    while (idx < ws.length - 1 && r >= ws[idx]) { r -= ws[idx]; idx++; }
+    const pid = others[idx];
+    world.hands[pid].push(card);
+    room[pid]--;
   }
 
   return world;
@@ -2881,4 +2949,8 @@ module.exports = {
   // hand -> three cards function, and the alternative is standing up a
   // whole game to see which card the partner gets.
   selectExchangeCards,
+  // Exported for the same reason: hand-inference weighting is checkable
+  // without running the whole search.
+  determinizeGameForBot,
+  evaluateHand,
 };

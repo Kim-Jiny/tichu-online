@@ -1996,6 +1996,29 @@ function buildWinrateCandidates(game, botId, state = game.getStateForPlayer(botI
       return (heldByValue[v] || 0) <= playCards.length;
     });
 
+    // High-combo burn guard: the same shallow rollout also likes to lead an
+    // A/K pair (or bigger) because it wins the trick, then strands the cheap
+    // cards that are left (AA out of AA 22 5 8 leaves three losing leads).
+    // The heuristic keeps a high combo unless the rest of the hand can still
+    // chain out behind it (canChainOut). Mirror that: drop such leads while
+    // another lead remains. Finishing plays and bombs are exempt.
+    {
+      const burns = a => {
+        if (a.type !== 'play_cards') return false;
+        const pc = a.cards || [];
+        if (pc.length < 2 || pc.length === cards.length) return false;
+        if (pc.some(c => c.startsWith('special_'))) return false;
+        const combo = getComboType(pc);
+        if (combo.type !== COMBO.PAIR && combo.type !== COMBO.TRIPLE) return false;
+        if (getHighestValue(pc) < 13) return false;
+        return !canChainOut(pc, cards);
+      };
+      const keepers = legalActions.filter(a => !burns(a));
+      if (keepers.length > 0 && keepers.length < legalActions.length) {
+        legalActions = keepers;
+      }
+    }
+
     // Lead low-single bias: a shallow rollout over-values winning the current
     // trick, so it leads a HIGH single (K/A) instead of dumping a low one —
     // burning a stopper. The heuristic always leads its LOWEST single. Match

@@ -5,17 +5,27 @@
 /// 이 파일과 호출부는 screenshots 브랜치에만 있다.
 const bool shotsDisguise = bool.fromEnvironment('SHOTS_DISGUISE');
 
-const _aliases = <String>[
+const _lang = String.fromEnvironment('SHOTS_LANG', defaultValue: 'ko');
+const _aliasesKo = <String>[
   '별빛토끼', '딸기라떼', '카드마스터', '초코우유', '구름위에서', '용의후예', '해적왕루피',
 ];
+const _aliasesEn = <String>[
+  'StarBunny', 'BerryLatte', 'CardMaster', 'ChocoMilk', 'OnACloud', 'DragonHeir', 'PirateKing',
+];
+const _aliases = _lang == 'en' ? _aliasesEn : _aliasesKo;
 const _photoBase = 'http://127.0.0.1:8191';
-const _myName = '티츄왕';
+const _myName = _lang == 'en' ? 'TichuKing' : '티츄왕';
 // 시드한 유저 닉네임 → 프로필 사진 번호(1~6).
-const _seeded = <String, int>{
+const _seededKo = <String, int>{
   '별빛토끼': 1, '달콤한곰': 2, '용의후예': 3, '카드마스터': 4, '초코우유': 5, '구름위에서': 6,
   '해적왕루피': 2, '마이티냥': 3, '하늘정원': 4, '딸기라떼': 5, '번개손': 6, '푸른여우': 1,
 };
-final _botName = RegExp(r'봇 ?(\d+)');
+const _seededEn = <String, int>{
+  'StarBunny': 1, 'SweetBear': 2, 'DragonHeir': 3, 'CardMaster': 4, 'ChocoMilk': 5, 'OnACloud': 6,
+  'PirateKing': 2, 'MightyCat': 3, 'SkyGarden': 4, 'BerryLatte': 5, 'QuickHands': 6, 'BlueFox': 1,
+};
+const _seeded = _lang == 'en' ? _seededEn : _seededKo;
+final _botName = RegExp(r'(?:봇|Bot) ?(\d+)');
 
 String _alias(int n) => _aliases[(n - 1).abs() % _aliases.length];
 int _botNumber(String s) {

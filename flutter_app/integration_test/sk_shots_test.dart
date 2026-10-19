@@ -8,7 +8,7 @@ void main() {
   testWidgets('skull king shots', (tester) async {
     final s = Shots(binding, tester);
     final gs = await s.boot();
-    gs.createRoom('스컬킹 한 판', gameType: 'skull_king', maxPlayers: 4,
+    gs.createRoom(T.of('roomSk'), gameType: 'skull_king', maxPlayers: 4,
         skExpansions: const ['kraken', 'white_whale', 'loot', 'pirate_abilities']);
     await s.wait(3);
     for (var i = 0; i < 3; i++) { gs.addBot(speed: 'fast'); await s.wait(0.6); }
@@ -38,6 +38,7 @@ void main() {
       await s.snap('12_sk_ability', settle: 2);
       await s.until(playReady, timeout: 400, tick: tick);
     }
+    await s.wait(7); // 능력 알림이 걷힐 때까지(내 차례라 상태는 그대로)
     gotPlay = playReady();
     await s.snap(gotPlay ? '11_sk_play' : '11_sk_fail', settle: 2);
     gs.leaveRoom();

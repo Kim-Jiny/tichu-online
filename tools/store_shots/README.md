@@ -10,3 +10,8 @@
 6. `compose.py <출력폴더> ko` 로 설명 이미지를 합친다 (문구는 `captions_ko.json`).
 
 `--dart-define=HIDE_BANNERS=true` 는 광고 배너를, `SHOTS_DISGUISE=true` 는 봇을 유저처럼 보이게 하고 시스템 권한 창을 막는다.
+
+## 영어판
+시뮬레이터 언어를 en 으로 바꾸고(`simctl spawn <udid> defaults write -g AppleLanguages -array en` 후 재부팅),
+시드 유저 닉네임을 영어로 바꾼 뒤(`rooms_en.js`), `--dart-define=SHOTS_LANG=en` 으로 돌린다(`shoot_en.sh`).
+`compose.py <출력폴더> en` 이 `build/shots_en` 을 `captions_en.json` 문구로 합성한다.

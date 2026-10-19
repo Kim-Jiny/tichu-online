@@ -1,3 +1,4 @@
+import '../services/shots_disguise.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -2908,7 +2909,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return [
       for (final (type, label, color) in chips)
         Padding(
-          padding: const EdgeInsets.only(right: 6),
+          padding: EdgeInsets.only(right: shotsDisguise ? 3 : 6),
           child: CartoonPressable(
             // Tapping the selected game again goes back to 전체, so getting out
             // of a filter never needs you to find the 전체 chip.
@@ -2921,8 +2922,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
               curve: Curves.elasticOut,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                padding: EdgeInsets.symmetric(
+                  horizontal: shotsDisguise ? 7 : 12,
                   vertical: 6,
                 ),
                 margin: const EdgeInsets.only(bottom: 3),

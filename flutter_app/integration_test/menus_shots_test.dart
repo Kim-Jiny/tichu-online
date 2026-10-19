@@ -19,14 +19,14 @@ void main() {
       await s.wait(1.5);
     }
     Future<void> dismissCoach() async {
-      for (final t in ['오늘의 출석', '알겠어요']) {
+      for (final t in [T.of('checkinCoach'), T.of('gotit')]) {
         final f = find.textContaining(t);
         if (f.evaluate().isNotEmpty) {
           await tester.tap(f.first, warnIfMissed: false);
           await s.wait(1.2);
         }
       }
-      if (find.text('출석 체크').evaluate().isNotEmpty) {
+      if (find.text(T.of('checkin')).evaluate().isNotEmpty) {
         for (final ic in [Icons.close_rounded, Icons.close]) {
           final f = find.byIcon(ic);
           if (f.evaluate().isNotEmpty) {
@@ -38,18 +38,18 @@ void main() {
       }
     }
 
-    await open('상점');
+    await open(T.of('shop'));
     await dismissCoach();
     await s.snap('40_shop');
     await back();
 
-    await open('랭킹');
+    await open(T.of('ranking'));
     await s.snap('41_ranking');
     await back();
 
-    await open('미션');
+    await open(T.of('missions'));
     await dismissCoach();
-    final pick = find.text('받기');
+    final pick = find.text(T.of('pick'));
     for (var i = 0; i < 2 && pick.evaluate().isNotEmpty; i++) {
       await tester.tap(pick.first);
       await s.wait(1.5);
@@ -57,12 +57,12 @@ void main() {
     await s.snap('42_missions');
     await back();
 
-    await open('내 프로필');
+    await open(T.of('profile'));
     await s.snap('43_profile');
     Navigator.of(s.ctx).maybePop();
     await s.wait(1.5);
 
-    await open('친구');
+    await open(T.of('friends'));
     await s.snap('44_friends');
   });
 }

@@ -7,6 +7,29 @@ import 'package:provider/provider.dart';
 import 'package:tichu_online/main.dart' as app;
 import 'package:tichu_online/services/game_service.dart';
 
+const shotsLang = String.fromEnvironment('SHOTS_LANG', defaultValue: 'ko');
+
+/// 화면에 보이는 글자(촬영 언어별). 위젯을 글자로 찾기 때문에 필요하다.
+class T {
+  static const _ko = {
+    'agree': '이용약관에 동의합니다', 'start': '시작하기', 'login': '로그인', 'decline': '괜찮아요',
+    'create': '새 방 만들기', 'shop': '상점', 'friends': '친구', 'ranking': '랭킹', 'missions': '미션',
+    'profile': '내 프로필', 'pick': '받기', 'gotit': '알겠어요', 'checkin': '출석 체크',
+    'checkinCoach': '오늘의 출석', 'missionCoach': '미션을 선택',
+    'me': '티츄왕', 'roomTichu': '티츄 한 판', 'roomSk': '스컬킹 한 판', 'roomMighty': '마이티 한 판',
+    'roomLl': '러브레터 한 판', 'dismiss': '화면을 탭하면 닫힙니다',
+  };
+  static const _en = {
+    'agree': 'I agree to the Terms of Service', 'start': 'Get Started', 'login': 'Login', 'decline': 'No thanks',
+    'create': 'Create Room', 'shop': 'Shop', 'friends': 'Friends', 'ranking': 'Rankings', 'missions': 'Missions',
+    'profile': 'My Profile', 'pick': 'Accept', 'gotit': 'Got it', 'checkin': 'Daily check-in',
+    'checkinCoach': 'Check-in', 'missionCoach': 'Pick today',
+    'me': 'TichuKing', 'roomTichu': 'Tichu Match', 'roomSk': 'Skull King Match', 'roomMighty': 'Mighty Match',
+    'roomLl': 'Love Letter Match', 'dismiss': 'Tap anywhere to dismiss',
+  };
+  static String of(String k) => (shotsLang == 'en' ? _en : _ko)[k]!;
+}
+
 /// 스토어 스크린샷 촬영 도우미. 실제 앱을 띄워 두고 탭·대기·촬영만 한다.
 class Shots {
   Shots(this.binding, this.tester);
@@ -60,8 +83,8 @@ class Shots {
   Future<GameService> boot() async {
     app.main();
     await wait(5);
-    await tapText('이용약관에 동의합니다');
-    await tapText('시작하기');
+    await tapText(T.of('agree'));
+    await tapText(T.of('start'));
     await wait(2);
     await snap('00_login');
     final fields = find.byType(TextField);
@@ -69,11 +92,11 @@ class Shots {
     await tester.enterText(fields.at(1), 'shots1234!');
     FocusManager.instance.primaryFocus?.unfocus();
     await wait(1.2);
-    await tapText('로그인');
+    await tapText(T.of('login'));
     await wait(14);
-    if (find.text('괜찮아요').evaluate().isNotEmpty) await tapText('괜찮아요');
+    if (find.text(T.of('decline')).evaluate().isNotEmpty) await tapText(T.of('decline'));
     await wait(2);
-    final coach = find.textContaining('미션을 선택');
+    final coach = find.textContaining(T.of('missionCoach'));
     if (coach.evaluate().isNotEmpty) {
       await tester.tap(coach.first, warnIfMissed: false);
       await wait(1);

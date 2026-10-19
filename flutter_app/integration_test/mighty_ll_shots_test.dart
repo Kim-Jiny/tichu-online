@@ -10,7 +10,7 @@ void main() {
     final gs = await s.boot();
 
     // ---- 마이티 ----
-    gs.createRoom('마이티 한 판', gameType: 'mighty', maxPlayers: 5);
+    gs.createRoom(T.of('roomMighty'), gameType: 'mighty', maxPlayers: 5);
     await s.wait(3);
     for (var i = 0; i < 4; i++) { gs.addBot(speed: 'fast'); await s.wait(0.6); }
     await s.snap('20_mighty_room');
@@ -35,7 +35,7 @@ void main() {
     await s.wait(4);
 
     // ---- 러브레터 ----
-    gs.createRoom('러브레터 한 판', gameType: 'love_letter', maxPlayers: 4);
+    gs.createRoom(T.of('roomLl'), gameType: 'love_letter', maxPlayers: 4);
     await s.wait(3);
     for (var i = 0; i < 3; i++) { gs.addBot(speed: 'fast'); await s.wait(0.6); }
     await s.snap('30_ll_room');

@@ -15,7 +15,7 @@ void main() {
     await s.snap('01_lobby');
 
     // ---- 티츄 ----
-    gs.createRoom('티츄 한 판', gameType: 'tichu');
+    gs.createRoom(T.of('roomTichu'), gameType: 'tichu');
     await s.wait(3);
     for (var i = 0; i < 3; i++) {
       gs.addBot(speed: 'fast');
@@ -36,8 +36,8 @@ void main() {
       } else if (st.phase == 'card_exchange' && st.myCards.length >= 3 && !st.exchangeDone) {
         final c = st.myCards;
         gs.exchangeCards(c[0], c[1], c[2]);
-      } else if (find.text('화면을 탭하면 닫힙니다').evaluate().isNotEmpty) {
-        await tester.tap(find.text('화면을 탭하면 닫힙니다'));
+      } else if (find.text(T.of('dismiss')).evaluate().isNotEmpty) {
+        await tester.tap(find.text(T.of('dismiss')));
       } else if (st.phase == 'playing' && st.isMyTurn && st.currentTrick.isNotEmpty && st.myCards.length >= 11) {
         gotPlay = true;
         await s.snap('04_tichu_play', settle: 2);

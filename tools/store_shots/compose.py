@@ -2,7 +2,7 @@
 import sys, os, json
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 S='/private/tmp/claude-501/-Users-jiny-Documents-Jiny-godot-tichu/de966dec-3887-41ce-9d7c-648aff6928e5/scratchpad'
-SHOTS='/Users/jiny/Documents/Jiny/godot/tichu/flutter_app/build/shots'
+SHOTS='/Users/jiny/Documents/Jiny/godot/tichu/flutter_app/build/'+('shots_en' if (len(sys.argv)>2 and sys.argv[2]=='en') else 'shots')
 OUT=sys.argv[1] if len(sys.argv)>1 else '/Users/jiny/Documents/Jiny/godot/tichu/store_shots/ko'
 LANG=sys.argv[2] if len(sys.argv)>2 else 'ko'
 os.makedirs(OUT,exist_ok=True)
@@ -58,8 +58,11 @@ def shadow(im,off=(0,26),blur=30,alpha=110):
 def make(name,shot,title,sub,bg,accent,dot=(255,255,255),mascot=True,crop_top=0,phone_top=610,flip=False):
     base=dots(grad(*bg),dot).convert('RGBA')
     d=ImageDraw.Draw(base)
-    f1=ImageFont.truetype(FONT,128); f2=ImageFont.truetype(FONT,58)
     lines=title.split('\n')
+    size=128
+    while size>70 and max(d.textlength(l,font=ImageFont.truetype(FONT,size)) for l in lines)>1080: size-=4
+    f1=ImageFont.truetype(FONT,size); f2=ImageFont.truetype(FONT,58)
+    while f2.size>34 and d.textlength(sub,font=f2)>1090: f2=ImageFont.truetype(FONT,f2.size-3)
     y=190
     for ln in lines:
         outlined(d,(W//2,y),ln,f1,(255,255,255) if accent is None else accent,stroke=16)

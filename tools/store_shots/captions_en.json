@@ -1,0 +1,34 @@
+{
+ "01_lobby": {
+  "title": "All Your Favorite\nCard Games in One",
+  "sub": "Tichu / Mighty / Skull King / Love Letter"
+ },
+ "02_tichu": {
+  "title": "Thrilling Comebacks\nin Tichu",
+  "sub": "Team up with Phoenix and Dragon!"
+ },
+ "03_skullking": {
+  "title": "Call Your Tricks\nin Skull King",
+  "sub": "Pirate abilities and expansions"
+ },
+ "04_mighty": {
+  "title": "Bid and Befriend\nin Mighty",
+  "sub": "Strategic 5-player showdowns"
+ },
+ "05_loveletter": {
+  "title": "Quick Rounds of\nLove Letter",
+  "sub": "Short, tense deduction duels"
+ },
+ "06_friends": {
+  "title": "Join Your Friends\nin One Tap!",
+  "sub": "Jump straight into their room"
+ },
+ "07_shop": {
+  "title": "Make It\nYour Own",
+  "sub": "Banners / Titles / Themes / Profile"
+ },
+ "08_missions": {
+  "title": "New Missions\nEvery Day",
+  "sub": "Collect tokens for special rewards"
+ }
+}

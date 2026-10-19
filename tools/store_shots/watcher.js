@@ -4,5 +4,6 @@ const U=fs.readFileSync(process.argv[2],'utf8').trim(),OUT=process.argv[3],D='/p
 fs.mkdirSync(OUT,{recursive:true});
 setInterval(()=>{for(const f of fs.readdirSync(D)){if(!f.endsWith('.req'))continue;
   const name=f.slice(0,-4);fs.unlinkSync(`${D}/${f}`);
+  fs.mkdirSync(OUT,{recursive:true});
   const r=cp.spawnSync('xcrun',['simctl','io',U,'screenshot','--type=png',`${OUT}/${name}.png`]);
   fs.writeFileSync(`${D}/${name}.ack`,String(r.status));}},80);

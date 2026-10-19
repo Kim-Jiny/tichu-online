@@ -1,3 +1,4 @@
+import 'services/shots_disguise.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -813,8 +814,8 @@ class _EntryScreenState extends State<_EntryScreen> {
   }
 
   Future<void> _requestATT() async {
-    // Neither ATT nor FCM exists in a browser.
-    if (kIsWeb) return;
+    // Neither ATT nor FCM exists in a browser. (스크린샷 촬영 중엔 시스템 권한 창을 띄우지 않는다.)
+    if (kIsWeb || shotsDisguise) return;
     final status = await AppTrackingTransparency.trackingAuthorizationStatus;
     debugPrint('[ATT] current status: $status');
     if (status == TrackingStatus.notDetermined) {

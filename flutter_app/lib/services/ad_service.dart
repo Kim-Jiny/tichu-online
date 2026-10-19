@@ -10,6 +10,10 @@ class AdService {
   // 디버그 빌드면 테스트 광고, 릴리스면 실제 광고
   static const bool _useTestAds = kDebugMode;
 
+  // [스토어 스크린샷 촬영용] --dart-define=HIDE_BANNERS=true 면 배너가 로드돼도
+  // 화면에 전달하지 않아 어떤 화면에도 배너가 뜨지 않는다.
+  static const bool hideBanners = bool.fromEnvironment('HIDE_BANNERS');
+
   // --- 배너 광고 ID ---
   static String get lobbyBannerId => _useTestAds
       ? _testBannerId
@@ -77,6 +81,7 @@ class AdService {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          if (hideBanners) return;
           debugPrint('[AdService] Banner loaded: $adUnitId');
           onAdLoaded?.call(ad as BannerAd);
         },

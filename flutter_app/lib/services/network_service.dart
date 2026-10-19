@@ -1,3 +1,4 @@
+import 'shots_disguise.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -141,7 +142,7 @@ class NetworkService extends ChangeNotifier {
               _lastPongAt = DateTime.now();
               return;
             }
-            _messageController.add(json);
+            _messageController.add(disguiseMessage(json));
           } catch (e) {
             debugPrint('[Network] Failed to parse message: $e');
           }

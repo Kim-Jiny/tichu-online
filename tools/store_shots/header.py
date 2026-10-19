@@ -81,7 +81,8 @@ def banner(W,H,lang,shots):
     d=ImageDraw.Draw(base)
     u=H/2950
     # --- 오른쪽: 카드 부채 + 폰 세 대
-    right=0.745*W
+    tight=(W/H)<2.2 and wide
+    right=(0.775 if tight else 0.745)*W
     ph_w=int(H*(0.36 if not wide else 0.52))
     fan=[('phoenix.webp',-24,-0.42),('sk_skull_king.webp',-9,-0.24),('dragon.webp',10,0.0+0.0),('ll_Princess.webp',26,0.30)]
     # 카드는 폰 뒤 위쪽에 부채꼴
@@ -98,12 +99,12 @@ def banner(W,H,lang,shots):
     t=TXT[lang]
     tsz=H*(0.150 if not wide else 0.19)
     title=t['title']
-    while d.textlength(title,font=F(tsz))>0.36*W and tsz>40: tsz-=4
+    while d.textlength(title,font=F(tsz))>(0.32 if tight else 0.36)*W and tsz>40: tsz-=4
     outlined(d,(x0,H*0.20),title,F(tsz),(255,214,70),int(tsz*0.085))
     ty=H*0.20+tsz*0.95
     for i,ln in enumerate(t['tag'].split('\n')):
         sz=tsz*0.34
-        while d.textlength(ln,font=F(sz))>0.36*W and sz>20: sz-=2
+        while d.textlength(ln,font=F(sz))>(0.32 if tight else 0.36)*W and sz>20: sz-=2
         outlined(d,(x0,ty+i*sz*1.25),ln,F(sz),(255,255,255),int(sz*0.12))
     cy=ty+2*tsz*0.34*1.25+tsz*0.22
     fs=tsz*0.27

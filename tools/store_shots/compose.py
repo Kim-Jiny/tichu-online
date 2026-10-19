@@ -6,7 +6,9 @@ SHOTS='/Users/jiny/Documents/Jiny/godot/tichu/flutter_app/build/'+('shots_en' if
 OUT=sys.argv[1] if len(sys.argv)>1 else '/Users/jiny/Documents/Jiny/godot/tichu/store_shots/ko'
 LANG=sys.argv[2] if len(sys.argv)>2 else 'ko'
 os.makedirs(OUT,exist_ok=True)
-W,H=1206,2622
+import os as _os
+W,H=[int(x) for x in _os.environ.get('CANVAS','1206x2622').split('x')]
+sc=W/1206
 INK=(59,42,32)
 FONT=S+'/fontwork/Jua-Regular.ttf'
 dragon=Image.open('/Users/jiny/Documents/Jiny/godot/tichu/flutter_app/assets/dragon_head.webp').convert('RGBA')
@@ -33,41 +35,45 @@ def outlined(d,xy,text,font,fill,stroke=14,anchor='mm'):
     d.text(xy,text,font=font,fill=INK,anchor=anchor,stroke_width=stroke,stroke_fill=INK)
     d.text(xy,text,font=font,fill=fill,anchor=anchor)
 
-def phone(shot,width=900):
+PW=int(os.environ.get('PHONE_W','900'))
+def phone(shot,width=None):
+    width=int((width or PW)*sc)
     sh=Image.open(shot).convert('RGB')
     sw,shh=sh.size
     scale=width/sw
     sh=sh.resize((width,int(shh*scale)),Image.LANCZOS)
-    pad=22
+    pad=int(22*sc)
     fw,fh=sh.size[0]+pad*2,sh.size[1]+pad*2
     frame=Image.new('RGBA',(fw,fh),(0,0,0,0))
-    mask=Image.new('L',(fw,fh),0);ImageDraw.Draw(mask).rounded_rectangle([0,0,fw-1,fh-1],radius=130,fill=255)
+    mask=Image.new('L',(fw,fh),0);ImageDraw.Draw(mask).rounded_rectangle([0,0,fw-1,fh-1],radius=int(130*sc),fill=255)
     body=Image.new('RGBA',(fw,fh),INK+(255,))
     frame.paste(body,(0,0),mask)
-    inner=Image.new('L',(fw,fh),0);ImageDraw.Draw(inner).rounded_rectangle([pad,pad,fw-pad-1,fh-pad-1],radius=108,fill=255)
+    inner=Image.new('L',(fw,fh),0);ImageDraw.Draw(inner).rounded_rectangle([pad,pad,fw-pad-1,fh-pad-1],radius=int(108*sc),fill=255)
     layer=Image.new('RGBA',(fw,fh),(0,0,0,0));layer.paste(sh.convert('RGBA'),(pad,pad))
     frame.paste(layer,(0,0),inner)
     return frame
 
 def shadow(im,off=(0,26),blur=30,alpha=110):
+    off=(0,int(off[1]*sc));blur=int(blur*sc)
     sh=Image.new('RGBA',(im.size[0]+200,im.size[1]+200),(0,0,0,0))
     a=im.getchannel('A').point(lambda v:alpha if v>0 else 0)
     sh.paste((59,42,32,255),(100+off[0],100+off[1]),a)
     return sh.filter(ImageFilter.GaussianBlur(blur))
 
-def make(name,shot,title,sub,bg,accent,dot=(255,255,255),mascot=True,crop_top=0,phone_top=610,flip=False):
+PT_K=1.0
+def make(name,shot,title,sub,bg,accent,dot=(255,255,255),mascot=True,crop_top=0,phone_top=int(int(os.environ.get('PHONE_TOP','610'))*sc),flip=False):
     base=dots(grad(*bg),dot).convert('RGBA')
     d=ImageDraw.Draw(base)
     lines=title.split('\n')
-    size=128
-    while size>70 and max(d.textlength(l,font=ImageFont.truetype(FONT,size)) for l in lines)>1080: size-=4
-    f1=ImageFont.truetype(FONT,size); f2=ImageFont.truetype(FONT,58)
-    while f2.size>34 and d.textlength(sub,font=f2)>1090: f2=ImageFont.truetype(FONT,f2.size-3)
-    y=190
+    size=int(128*sc)
+    while size>int(70*sc) and max(d.textlength(l,font=ImageFont.truetype(FONT,size)) for l in lines)>1080*sc: size-=4
+    f1=ImageFont.truetype(FONT,size); f2=ImageFont.truetype(FONT,int(58*sc))
+    while f2.size>34*sc and d.textlength(sub,font=f2)>1090*sc: f2=ImageFont.truetype(FONT,f2.size-3)
+    y=int(190*sc*PT_K)
     for ln in lines:
-        outlined(d,(W//2,y),ln,f1,(255,255,255) if accent is None else accent,stroke=16)
-        y+=150
-    outlined(d,(W//2,y+30),sub,f2,(255,246,214),stroke=9)
+        outlined(d,(W//2,y),ln,f1,(255,255,255) if accent is None else accent,stroke=int(16*sc))
+        y+=int(150*sc)
+    outlined(d,(W//2,y+int(30*sc)),sub,f2,(255,246,214),stroke=int(9*sc))
     ph=phone(SHOTS+'/'+shot)
     if crop_top: pass
     px=(W-ph.size[0])//2

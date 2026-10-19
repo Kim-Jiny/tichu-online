@@ -110,7 +110,7 @@ flutter_launcher_icons:
   # 72 of 108dp, so the full-bleed art lost the wordmark entirely; the
   # foreground here is that art scaled into the safe zone, over the sky colour
   # sampled from it. Regenerate with:  dart run flutter_launcher_icons
-  adaptive_icon_background: "#2F6FD0"
+  adaptive_icon_background: "#2A9BF5"
   adaptive_icon_foreground: "assets_src/icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sky-blue base for launch splash, sampled to roughly match the top
-         portion of assets/splash.png so the centered bitmap blends into
+    <!-- Warm sunset base for launch splash, averaged from the side edges
+         of the splash art so the centered bitmap blends into
          margin space on tall phones. -->
-    <color name="splash_bg">#AEDDF1</color>
-	<color name="ic_launcher_background">#2F6FD0</color>
+    <color name="splash_bg">#B5805F</color>
+	<color name="ic_launcher_background">#2A9BF5</color>
 </resources>

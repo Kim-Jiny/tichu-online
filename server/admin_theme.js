@@ -935,7 +935,11 @@ code, .mono { cursor: copy; }
 @media (max-width: 768px) {
   .sidebar { width: min(86vw, 330px); padding-top: 0; }
   .menu-toggle { display: flex; align-items: center; justify-content: center; padding: 0; }
-  .main { padding: 14px 12px 60px; padding-top: 66px; }
+  /* 위쪽 .main { margin-left: 264px } 가 앞쪽 모바일 규칙의 margin-left: 0 을
+     뒤에서 덮어써서 폰에서도 사이드바 폭만큼 오른쪽으로 밀렸다. 여기서 다시
+     0 으로 되돌리고, 그 규칙들이 박아 둔 100vw(= 마진 + 폭이 화면을 넘음)도
+     100% 로 푼다. */
+  .main { margin-left: 0; width: 100%; max-width: 100%; padding: 14px 12px 60px; padding-top: 66px; }
   .page-title { font-size: 24px; }
   @supports (paint-order: stroke fill) { .page-title { -webkit-text-stroke: 5px var(--ink); } }
   .pt-icon { width: 38px; height: 38px; border-radius: 12px; }

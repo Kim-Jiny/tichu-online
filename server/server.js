@@ -10987,7 +10987,7 @@ async function handleSubmitInquiry(ws, data) {
     sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_fill_all') });
     return;
   }
-  if (!['bug', 'suggestion', 'other'].includes(category)) {
+  if (!['bug', 'suggestion', 'payment', 'other'].includes(category)) {
     sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_invalid_category') });
     return;
   }

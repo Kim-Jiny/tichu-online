@@ -10,6 +10,7 @@ import '../theme/cartoon.dart';
 import 'rules_screen.dart';
 import '../l10n/l10n_helpers.dart';
 import '../services/game_service.dart';
+import '../services/inquiry_photo_service.dart';
 import '../widgets/coupon_redeem.dart';
 import '../widgets/choice_pill.dart';
 import '../widgets/legal_text_dialog.dart';
@@ -422,6 +423,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _inquiryTitleController.clear();
     _inquiryContentController.clear();
     String selectedCategory = 'bug';
+    // Pictures already uploaded for this form. The server only learns their
+    // keys on submit, so closing the dialog just abandons them.
+    final photos = <InquiryAttachment>[];
+    final photoSession = InquiryPhotoSession();
+    var photoUploading = false;
+    const maxPhotos = 3;
 
     showDialog(
       context: context,
@@ -483,6 +490,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       l10n.inquiryFieldContentHint,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  formFieldLabel(l10n.inquiryPhotoLabel),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (var i = 0; i < photos.length; i++)
+                        _inquiryPhotoThumb(
+                          photos[i],
+                          onRemove: photoUploading
+                              ? null
+                              : () => setState(() => photos.removeAt(i)),
+                        ),
+                      if (photos.length < maxPhotos)
+                        _inquiryPhotoAddTile(
+                          label: l10n.inquiryPhotoAdd,
+                          busy: photoUploading,
+                          onTap: photoUploading
+                              ? null
+                              : () async {
+                                  final game = dialogCtx.read<GameService>();
+                                  setState(() => photoUploading = true);
+                                  final r = await photoSession.pickAndUpload(
+                                    game,
+                                  );
+                                  if (!dialogCtx.mounted) return;
+                                  setState(() {
+                                    photoUploading = false;
+                                    if (r.attachment != null) {
+                                      photos.add(r.attachment!);
+                                    }
+                                  });
+                                  if (r.error != null) {
+                                    ScaffoldMessenger.of(
+                                      dialogCtx,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          _inquiryPhotoError(l10n, r.error!),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -497,8 +551,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final title = _inquiryTitleController.text.trim();
                 final content = _inquiryContentController.text.trim();
                 if (title.isEmpty || content.isEmpty) return;
+                if (photoUploading) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.inquiryPhotoUploading)),
+                  );
+                  return;
+                }
                 final game = dialogCtx.read<GameService>();
-                game.submitInquiry(selectedCategory, title, content);
+                game.submitInquiry(
+                  selectedCategory,
+                  title,
+                  content,
+                  photoKeys: [for (final p in photos) p.key],
+                );
                 Navigator.pop(dialogCtx);
                 ScaffoldMessenger.of(
                   context,
@@ -512,6 +577,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _inquiryPhotoError(L10n l10n, String reason) {
+    switch (reason) {
+      case 'photo_denied':
+        return l10n.profilePhotoPhotoDeniedBody;
+      case 'storage_unavailable':
+        return l10n.inquiryPhotoUnavailable;
+      case 'daily_limit':
+        return l10n.inquiryPhotoDailyLimit;
+      default:
+        return l10n.inquiryPhotoFailed;
+    }
+  }
+
+  Widget _inquiryPhotoThumb(
+    InquiryAttachment photo, {
+    required VoidCallback? onRemove,
+  }) {
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(photo.bytes, fit: BoxFit.cover),
+            ),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Cartoon.ink,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: const Icon(Icons.close, size: 14, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _inquiryPhotoAddTile({
+    required String label,
+    required bool busy,
+    required VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          color: Cartoon.ink.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Cartoon.ink.withValues(alpha: 0.35)),
+        ),
+        child: busy
+            ? const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                ),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_rounded, color: Cartoon.ink),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Cartoon.userText(size: 10, weight: FontWeight.w500),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -700,6 +857,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final category = _inquiryCategoryLabel(l10n, item['category']);
     final createdAt = _formatShortDate(item['created_at']);
     final resolvedAt = _formatShortDate(item['resolved_at']);
+    final game = context.read<GameService>();
+    final photoUrls = [
+      for (final u in (item['photoUrls'] as List? ?? const []))
+        game.resolvePhotoUrl(u?.toString()),
+    ].whereType<String>().toList();
 
     showDialog(
       context: context,
@@ -725,6 +887,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 content,
                 style: Cartoon.userText(size: 13, weight: FontWeight.w500),
               ),
+              if (photoUrls.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final url in photoUrls)
+                      GestureDetector(
+                        onTap: () => showDialog(
+                          context: ctx,
+                          builder: (_) => Dialog(
+                            child: InteractiveViewer(
+                              child: Image.network(url, fit: BoxFit.contain),
+                            ),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            url,
+                            width: 72,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              width: 72,
+                              height: 72,
+                              color: Cartoon.ink.withValues(alpha: 0.08),
+                              child: const Icon(Icons.broken_image_outlined),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               if (status == 'resolved' && adminNote.isNotEmpty) ...[
                 Text(

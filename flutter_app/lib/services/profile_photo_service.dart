@@ -45,6 +45,9 @@ class ProfilePhotoService {
   /// document browser instead of the picker every Android 13+ user knows. The
   /// plugin manifest already ships the Play Services backport module, so older
   /// devices get it too. Costs no permission either way.
+  /// For other photo flows (inquiry attachments) that open the same picker.
+  static void configurePicker() => _configureAndroidPicker();
+
   static bool _androidPickerConfigured = false;
   static void _configureAndroidPicker() {
     if (_androidPickerConfigured || kIsWeb || !Platform.isAndroid) return;

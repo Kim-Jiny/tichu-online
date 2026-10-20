@@ -1415,6 +1415,28 @@ async function handleDeleteProfilePhoto(ws) {
   console.log(`[profile-photo] self-deleted by ${ws.nickname}`);
 }
 
+// Inquiry-photo tokens live in their own store (see inquiryPhotos.js) so opening
+// an inquiry can't cancel a pending profile-photo upload.
+const inquiryPhotos = require('./inquiryPhotos');
+const INQUIRY_MAX_PHOTOS = inquiryPhotos.MAX_PHOTOS;
+const inquiryPhotoStore = inquiryPhotos.createInquiryPhotoStore();
+setInterval(() => inquiryPhotoStore.sweep(), 60000).unref();
+
+async function handleRequestInquiryUploadToken(ws) {
+  if (ws.userId == null || !ws.nickname) { sendTo(ws, { type: 'inquiry_upload_token_error', reason: 'not_logged_in' }); return; }
+  if (!minioClient.isEnabled()) { sendTo(ws, { type: 'inquiry_upload_token_error', reason: 'storage_unavailable' }); return; }
+  if (inquiryPhotoStore.uploadsToday(ws.userId) >= inquiryPhotos.DAILY_PHOTO_CAP) {
+    sendTo(ws, { type: 'inquiry_upload_token_error', reason: 'daily_limit' });
+    return;
+  }
+  sendTo(ws, {
+    type: 'inquiry_upload_token',
+    token: inquiryPhotoStore.issue(ws.userId),
+    maxPhotos: INQUIRY_MAX_PHOTOS,
+    expiresIn: Math.floor(inquiryPhotos.TOKEN_TTL_MS / 1000),
+  });
+}
+
 async function handleRequestUploadToken(ws) {
   if (ws.userId == null) { sendTo(ws, { type: 'upload_token_error', reason: 'not_logged_in' }); return; }
   if (!minioClient.isEnabled()) { sendTo(ws, { type: 'upload_token_error', reason: 'storage_unavailable' }); return; }
@@ -1493,6 +1515,44 @@ const server = http.createServer(async (req, res) => {
   // App Store Server Notifications V2 (public — Apple calls this). Auth is
   // the JWS signature chain verified inside parseAppleNotification, NOT the
   // network, so this must stay reachable through the public edge.
+  // Support-inquiry photo (multipart). Auth = WS-issued Bearer token with a few
+  // uses. Not screened by SafeSearch: the only viewers are admins reading the
+  // user's own inquiry — nothing here reaches other players.
+  if (pathname === '/upload/inquiry-photo' && req.method === 'POST') {
+    try {
+      const auth = req.headers['authorization'] || '';
+      const userId = inquiryPhotoStore.consume(auth.startsWith('Bearer ') ? auth.slice(7) : '');
+      if (userId == null) throw httpErr(401, 'invalid_or_expired_token');
+      if (!minioClient.isEnabled()) throw httpErr(503, 'storage_unavailable');
+      if (inquiryPhotoStore.uploadsToday(userId) >= inquiryPhotos.DAILY_PHOTO_CAP) throw httpErr(429, 'daily_limit');
+
+      const { buffer } = await parseUploadedImage(req);
+      // Screenshots must stay legible, so unlike the avatar this keeps the
+      // aspect ratio and only caps the long edge. rotate() honours EXIF
+      // orientation; re-encoding drops the metadata (GPS etc.).
+      let processed;
+      try {
+        processed = await sharp(buffer)
+          .rotate()
+          .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 82 })
+          .toBuffer();
+      } catch (_) {
+        throw httpErr(400, 'invalid_image');
+      }
+      const { key, url } = await minioClient.uploadInquiryPhoto(userId, processed);
+      inquiryPhotoStore.noteUpload(userId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, key, url }));
+    } catch (e) {
+      const code = e.statusCode || 500;
+      if (code >= 500) console.error('[inquiry-photo] upload error:', e);
+      res.writeHead(code, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message || 'upload_failed' }));
+    }
+    return;
+  }
+
   // Profile photo upload (multipart). Auth = one-time WS-issued Bearer token.
   if (pathname === '/upload/profile-photo' && req.method === 'POST') {
     try {
@@ -3582,6 +3642,9 @@ async function handleMessage(ws, data) {
       break;
     case 'login':
       await handleLogin(ws, data);
+      break;
+    case 'request_inquiry_upload_token':
+      await handleRequestInquiryUploadToken(ws);
       break;
     case 'request_upload_token':
       await handleRequestUploadToken(ws);
@@ -10928,7 +10991,10 @@ async function handleSubmitInquiry(ws, data) {
     sendTo(ws, { type: 'inquiry_result', success: false, message: t(ws.locale, 'inquiry_invalid_category') });
     return;
   }
-  const result = await submitInquiry(ws.nickname, category, title, content);
+  // Only keys this user's own upload produced are accepted — a client can't
+  // attach someone else's object by guessing a path.
+  const photoKeys = inquiryPhotos.pickOwnKeys(ws.userId, data.photoKeys);
+  const result = await submitInquiry(ws.nickname, category, title, content, photoKeys);
   sendTo(ws, { type: 'inquiry_result', ...result });
   if (result.success) {
     await notifyAdminUsers(
@@ -10940,20 +11006,32 @@ async function handleSubmitInquiry(ws, data) {
   }
 }
 
+// The DB stores object keys; the client wants URLs.
+function withInquiryPhotoUrls(result) {
+  if (!result || !Array.isArray(result.inquiries)) return result;
+  return {
+    ...result,
+    inquiries: result.inquiries.map(({ photo_keys, ...rest }) => ({
+      ...rest,
+      photoUrls: (photo_keys || []).map(k => minioClient.publicUrl(k)),
+    })),
+  };
+}
+
 async function handleGetInquiries(ws) {
   if (!ws.nickname) {
     sendTo(ws, { type: 'inquiries_result', success: false, message: t(ws.locale, 'login_required'), inquiries: [] });
     return;
   }
   const result = await getUserInquiries(ws.nickname);
-  sendTo(ws, { type: 'inquiries_result', ...result });
+  sendTo(ws, { type: 'inquiries_result', ...withInquiryPhotoUrls(result) });
 }
 
 async function handleMarkInquiriesRead(ws) {
   if (!ws.nickname) return;
   await markInquiriesRead(ws.nickname);
   const result = await getUserInquiries(ws.nickname);
-  sendTo(ws, { type: 'inquiries_result', ...result });
+  sendTo(ws, { type: 'inquiries_result', ...withInquiryPhotoUrls(result) });
 }
 
 /// Yes or no to marketing pushes, from the first-run popup or from settings.

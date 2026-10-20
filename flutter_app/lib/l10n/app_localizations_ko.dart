@@ -255,6 +255,24 @@ class L10nKo extends L10n {
   String get inquiryFieldContentHint => '내용을 입력해주세요';
 
   @override
+  String get inquiryPhotoLabel => '사진 첨부 (선택, 최대 3장)';
+
+  @override
+  String get inquiryPhotoAdd => '사진 추가';
+
+  @override
+  String get inquiryPhotoUploading => '사진을 올리는 중입니다. 잠시만 기다려 주세요';
+
+  @override
+  String get inquiryPhotoFailed => '사진을 올리지 못했습니다. 다시 시도해 주세요';
+
+  @override
+  String get inquiryPhotoUnavailable => '지금은 사진을 첨부할 수 없습니다';
+
+  @override
+  String get inquiryPhotoDailyLimit => '오늘 올릴 수 있는 사진 수를 넘었습니다';
+
+  @override
   String get inquirySubmit => '제출';
 
   @override

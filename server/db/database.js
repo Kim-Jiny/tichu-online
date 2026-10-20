@@ -191,6 +191,11 @@ async function runMigrations() {
       ALTER TABLE tc_inquiries ADD COLUMN IF NOT EXISTS user_read BOOLEAN DEFAULT FALSE
     `);
 
+    // MinIO object keys of attached photos (see storage/minioClient.js).
+    await client.query(`
+      ALTER TABLE tc_inquiries ADD COLUMN IF NOT EXISTS photo_keys TEXT[] NOT NULL DEFAULT '{}'
+    `);
+
     // Friends table
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_friends (
@@ -7814,12 +7819,12 @@ async function grantSeasonRewards(seasonId) {
 }
 
 // Submit inquiry
-async function submitInquiry(nickname, category, title, content) {
+async function submitInquiry(nickname, category, title, content, photoKeys = []) {
   const client = await pool.connect();
   try {
     await client.query(
-      'INSERT INTO tc_inquiries (user_nickname, category, title, content) VALUES ($1, $2, $3, $4)',
-      [nickname, category, title, content]
+      'INSERT INTO tc_inquiries (user_nickname, category, title, content, photo_keys) VALUES ($1, $2, $3, $4, $5)',
+      [nickname, category, title, content, photoKeys]
     );
     return { success: true, messageKey: 'db_inquiry_submitted' };
   } catch (err) {
@@ -7835,7 +7840,7 @@ async function getUserInquiries(nickname, limit = 30) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT id, category, status, title, content, admin_note, user_read, created_at, resolved_at
+      `SELECT id, category, status, title, content, admin_note, user_read, photo_keys, created_at, resolved_at
        FROM tc_inquiries
        WHERE user_nickname = $1
        ORDER BY created_at DESC

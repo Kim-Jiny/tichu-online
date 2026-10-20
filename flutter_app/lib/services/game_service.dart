@@ -433,6 +433,32 @@ class GameService extends ChangeNotifier {
     return c.future;
   }
 
+  // Inquiry-photo token bridge: request_inquiry_upload_token (WS) ->
+  // inquiry_upload_token / inquiry_upload_token_error. Kept apart from the
+  // profile-photo bridge above because the server keeps the two token kinds
+  // independent (a pending avatar upload must survive opening an inquiry).
+  Completer<({String? token, int maxPhotos, String? error})>?
+  _inquiryTokenCompleter;
+
+  /// Ask for a token good for a few inquiry-photo uploads. Resolves with the
+  /// token, or an error reason (not_logged_in / storage_unavailable /
+  /// daily_limit / timeout). Coalesces concurrent requests.
+  Future<({String? token, int maxPhotos, String? error})>
+  requestInquiryUploadToken() {
+    final existing = _inquiryTokenCompleter;
+    if (existing != null && !existing.isCompleted) return existing.future;
+    final c = Completer<({String? token, int maxPhotos, String? error})>();
+    _inquiryTokenCompleter = c;
+    _network.send({'type': 'request_inquiry_upload_token'});
+    Future.delayed(const Duration(seconds: 12), () {
+      if (!c.isCompleted) {
+        c.complete((token: null, maxPhotos: 0, error: 'timeout'));
+      }
+      if (identical(_inquiryTokenCompleter, c)) _inquiryTokenCompleter = null;
+    });
+    return c.future;
+  }
+
   // Report result
   String? reportResultMessage;
   bool? reportResultSuccess;
@@ -1138,6 +1164,34 @@ class GameService extends ChangeNotifier {
           _uploadTokenCompleter = null;
           if (c != null && !c.isCompleted) {
             c.complete((token: data['token'] as String?, error: null));
+          }
+        }
+        break;
+
+      case 'inquiry_upload_token':
+        {
+          final c = _inquiryTokenCompleter;
+          _inquiryTokenCompleter = null;
+          if (c != null && !c.isCompleted) {
+            c.complete((
+              token: data['token'] as String?,
+              maxPhotos: (data['maxPhotos'] as num?)?.toInt() ?? 3,
+              error: null,
+            ));
+          }
+        }
+        break;
+
+      case 'inquiry_upload_token_error':
+        {
+          final c = _inquiryTokenCompleter;
+          _inquiryTokenCompleter = null;
+          if (c != null && !c.isCompleted) {
+            c.complete((
+              token: null,
+              maxPhotos: 0,
+              error: data['reason'] as String? ?? 'error',
+            ));
           }
         }
         break;
@@ -5311,7 +5365,12 @@ class GameService extends ChangeNotifier {
   }
 
   // Inquiry
-  void submitInquiry(String category, String title, String content) {
+  void submitInquiry(
+    String category,
+    String title,
+    String content, {
+    List<String> photoKeys = const [],
+  }) {
     inquiryResultSuccess = null;
     inquiryResultMessage = null;
     _network.send({
@@ -5319,6 +5378,7 @@ class GameService extends ChangeNotifier {
       'category': category,
       'title': title,
       'content': content,
+      if (photoKeys.isNotEmpty) 'photoKeys': photoKeys,
     });
   }
 

@@ -573,6 +573,42 @@ abstract class L10n {
   /// **'Enter the details'**
   String get inquiryFieldContentHint;
 
+  /// No description provided for @inquiryPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach photos (optional, up to 3)'**
+  String get inquiryPhotoLabel;
+
+  /// No description provided for @inquiryPhotoAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add photo'**
+  String get inquiryPhotoAdd;
+
+  /// No description provided for @inquiryPhotoUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading the photo. Please wait a moment'**
+  String get inquiryPhotoUploading;
+
+  /// No description provided for @inquiryPhotoFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not upload the photo. Please try again'**
+  String get inquiryPhotoFailed;
+
+  /// No description provided for @inquiryPhotoUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo attachments are unavailable right now'**
+  String get inquiryPhotoUnavailable;
+
+  /// No description provided for @inquiryPhotoDailyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached today\'s photo upload limit'**
+  String get inquiryPhotoDailyLimit;
+
   /// No description provided for @inquirySubmit.
   ///
   /// In en, this message translates to:

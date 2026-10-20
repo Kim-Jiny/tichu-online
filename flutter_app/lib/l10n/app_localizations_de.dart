@@ -264,6 +264,28 @@ class L10nDe extends L10n {
   String get inquiryFieldContentHint => 'Details eingeben';
 
   @override
+  String get inquiryPhotoLabel => 'Fotos anhängen (optional, bis zu 3)';
+
+  @override
+  String get inquiryPhotoAdd => 'Foto hinzufügen';
+
+  @override
+  String get inquiryPhotoUploading =>
+      'Das Foto wird hochgeladen. Bitte einen Moment warten';
+
+  @override
+  String get inquiryPhotoFailed =>
+      'Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut';
+
+  @override
+  String get inquiryPhotoUnavailable =>
+      'Foto-Anhänge sind derzeit nicht verfügbar';
+
+  @override
+  String get inquiryPhotoDailyLimit =>
+      'Das heutige Limit für Foto-Uploads ist erreicht';
+
+  @override
   String get inquirySubmit => 'Absenden';
 
   @override

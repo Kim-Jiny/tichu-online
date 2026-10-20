@@ -264,6 +264,28 @@ class L10nEn extends L10n {
   String get inquiryFieldContentHint => 'Enter the details';
 
   @override
+  String get inquiryPhotoLabel => 'Attach photos (optional, up to 3)';
+
+  @override
+  String get inquiryPhotoAdd => 'Add photo';
+
+  @override
+  String get inquiryPhotoUploading =>
+      'Uploading the photo. Please wait a moment';
+
+  @override
+  String get inquiryPhotoFailed =>
+      'Could not upload the photo. Please try again';
+
+  @override
+  String get inquiryPhotoUnavailable =>
+      'Photo attachments are unavailable right now';
+
+  @override
+  String get inquiryPhotoDailyLimit =>
+      'You have reached today\'s photo upload limit';
+
+  @override
   String get inquirySubmit => 'Submit';
 
   @override

@@ -75,6 +75,20 @@ async function uploadRejectedPhoto(userId, buffer, mimeType) {
   return { key, url: publicUrl(key) };
 }
 
+// Support-inquiry attachments live under `inquiries/<userId>/` in the same
+// bucket, so publicUrl() and the nginx /media/profile-photos/ route serve them
+// unchanged. The bucket allows anonymous download, so the key carries 16 random
+// bytes: only someone holding the URL (the uploader, and admins via the
+// tc-backstage inquiry page) can ever fetch it. Always JPEG — the upload path
+// re-encodes everything through sharp.
+async function uploadInquiryPhoto(userId, buffer) {
+  if (!client) throw new Error('minio not configured');
+  const rand = require('crypto').randomBytes(16).toString('hex');
+  const key = `inquiries/${userId}/${Date.now()}-${rand}.jpg`;
+  await client.putObject(BUCKET, key, buffer, buffer.length, { 'Content-Type': 'image/jpeg' });
+  return { key, url: publicUrl(key) };
+}
+
 module.exports = {
-  isEnabled, uploadProfilePhoto, uploadRejectedPhoto, deleteProfilePhoto, publicUrl, BUCKET,
+  isEnabled, uploadProfilePhoto, uploadRejectedPhoto, uploadInquiryPhoto, deleteProfilePhoto, publicUrl, BUCKET,
 };

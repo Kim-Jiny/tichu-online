@@ -3908,7 +3908,7 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <td>${r.id}</td>
           <td>${escapeHtml(r.user_nickname)}</td>
           <td>${categoryBadge(r.category)}</td>
-          <td>${escapeHtml(r.title)}</td>
+          <td>${escapeHtml(r.title)}${(r.photo_keys || []).length ? ` <span title="사진 ${r.photo_keys.length}장">📷${r.photo_keys.length}</span>` : ''}</td>
           <td>${statusBadge(r.status)}</td>
           <td>${formatDate(r.created_at)}</td>
           <td><a href="/tc-backstage/inquiries/${r.id}" class="btn btn-secondary">보기</a></td>
@@ -3947,6 +3947,10 @@ async function handleAdminRoute(req, res, url, pathname, method, lobby, wss, mai
           <div class="label">상태</div><div class="value">${statusBadge(inquiry.status)}</div>
           <div class="label">제목</div><div class="value">${escapeHtml(inquiry.title)}</div>
           <div class="label">내용</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.content)}</div>
+          ${(inquiry.photo_keys || []).length ? `<div class="label">첨부 사진</div><div class="value" style="display:flex;flex-wrap:wrap;gap:10px">${inquiry.photo_keys.map((k) => {
+            const u = escapeHtml(minioClient.publicUrl(k));
+            return `<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="" loading="lazy" style="width:160px;max-width:100%;height:160px;object-fit:cover;border-radius:12px;border:2.5px solid var(--ink)"></a>`;
+          }).join('')}</div>` : ''}
           <div class="label">작성일</div><div class="value">${formatDate(inquiry.created_at)}</div>
           ${inquiry.resolved_at ? `<div class="label">처리일</div><div class="value">${formatDate(inquiry.resolved_at)}</div>` : ''}
           ${inquiry.admin_note ? `<div class="label">관리자 메모</div><div class="value" style="white-space:pre-wrap">${escapeHtml(inquiry.admin_note)}</div>` : ''}

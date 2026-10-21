@@ -3192,156 +3192,176 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 3),
-                                  Wrap(
-                                    spacing: 4,
-                                    runSpacing: 2,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 2,
-                                        ),
-                                        child: Text(
-                                          (isSK || isLL)
-                                              ? l10n.lobbyRoomTimeSec(
-                                                  room.turnTimeLimit,
-                                                )
-                                              : l10n.lobbyRoomTimeAndScore(
-                                                  room.turnTimeLimit,
-                                                  room.targetScore,
-                                                ),
-                                          style: Cartoon.text(
-                                            size: 13,
-                                            // 강조 아이템을 쓴 방은 바탕이 그
-                                            // 상품 색이다. 팔레트 잉크를 쓰면
-                                            // 어두운 한 벌에서 밝은 바탕 위에
-                                            // 밝은 글자가 된다.
-                                            color:
-                                                (highlight?.inkOn ??
-                                                        Cartoon.ink)
-                                                    .withValues(alpha: 0.78),
-                                          ),
-                                        ),
-                                      ),
-                                      if (isSK && room.skExpansions.isNotEmpty)
-                                        for (final exp in room.skExpansions)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _skExpansionStrongColor(
-                                                exp,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: Cartoon.ink,
-                                                width: 1.4,
-                                              ),
+                                  // 관전 눈 아이콘(탭 영역 30px)이 있는 방과 없는 방의
+                                  // 셀 높이가 달랐다. 이 줄에 최소 높이를 줘서 같게 한다.
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minHeight: 30,
+                                    ),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Wrap(
+                                        spacing: 4,
+                                        runSpacing: 2,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 2,
                                             ),
                                             child: Text(
-                                              _skExpansionEmoji(exp).isEmpty
-                                                  ? _skExpansionShortLabel(
-                                                      exp,
-                                                      l10n,
+                                              (isSK || isLL)
+                                                  ? l10n.lobbyRoomTimeSec(
+                                                      room.turnTimeLimit,
                                                     )
-                                                  : _skExpansionEmoji(exp),
-                                              style: Cartoon.userText(
-                                                size: 12,
-                                                color: Colors.white,
-                                                weight: FontWeight.w800,
-                                                height: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                      if (room.allowMidGameJoin)
-                                        Tooltip(
-                                          message: l10n.midJoinRoomBadge,
-                                          // Geometry copied from the spectate button beside
-                                          // it (8/7 padding, 16px glyph, radius 10) so the
-                                          // two read as one pair of room actions rather than
-                                          // two unrelated marks. Only the colour differs, and
-                                          // that difference is the whole message: purple =
-                                          // you can get in, not just watch.
-                                          child: Container(
-                                            // Tighter than the eye button's 8/7 because this
-                                            // glyph is wider than tall: same outer box, more
-                                            // of it spent on the artwork.
-                                            // Bare artwork — no plate, no border. Four
-                                            // boxed chips in a row read as a toolbar; the
-                                            // icons alone read as what the room is.
-                                            padding: const EdgeInsets.only(
-                                              left: 4,
-                                            ),
-                                            // Availability rides on opacity, since artwork
-                                            // can't be recoloured and a second symbol would
-                                            // undo the point of using this one: full when a
-                                            // seat is free right now, faded when it is only
-                                            // the room's rule.
-                                            child: Opacity(
-                                              opacity: room.canJoinInProgress
-                                                  ? 1.0
-                                                  : 0.4,
-                                              child: BotSwapIcon(
-                                                width: 28,
-                                                height: 23,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      if (room.allowSpectators)
-                                        GestureDetector(
-                                          onTap: () =>
-                                              _spectateWithPasswordCheck(room),
-                                          child: Container(
-                                            // Still the tap target that opens spectating —
-                                            // the padding keeps it thumb-sized without a
-                                            // border drawing a button around it.
-                                            padding: const EdgeInsets.fromLTRB(
-                                              2,
-                                              4,
-                                              8,
-                                              4,
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const EyeIcon(
-                                                  width: 28,
-                                                  height: 22,
-                                                ),
-                                                if (room.spectatorCount >
-                                                    0) ...[
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${room.spectatorCount}',
-                                                    style: TextStyle(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      // 관전자 수도 같은 바탕
-                                                      // 위에 있다.
-                                                      color:
-                                                          highlight?.inkOn
-                                                              .withValues(
-                                                                alpha: 0.75,
-                                                              ) ??
-                                                          Cartoon.onSurface(
-                                                            const Color(
-                                                              0xFF7A6A62,
-                                                            ),
-                                                          ),
+                                                  : l10n.lobbyRoomTimeAndScore(
+                                                      room.turnTimeLimit,
+                                                      room.targetScore,
                                                     ),
-                                                  ),
-                                                ],
-                                              ],
+                                              style: Cartoon.text(
+                                                size: 13,
+                                                // 강조 아이템을 쓴 방은 바탕이 그
+                                                // 상품 색이다. 팔레트 잉크를 쓰면
+                                                // 어두운 한 벌에서 밝은 바탕 위에
+                                                // 밝은 글자가 된다.
+                                                color:
+                                                    (highlight?.inkOn ??
+                                                            Cartoon.ink)
+                                                        .withValues(
+                                                          alpha: 0.78,
+                                                        ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                          if (isSK &&
+                                              room.skExpansions.isNotEmpty)
+                                            for (final exp in room.skExpansions)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      _skExpansionStrongColor(
+                                                        exp,
+                                                      ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: Cartoon.ink,
+                                                    width: 1.4,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  _skExpansionEmoji(exp).isEmpty
+                                                      ? _skExpansionShortLabel(
+                                                          exp,
+                                                          l10n,
+                                                        )
+                                                      : _skExpansionEmoji(exp),
+                                                  style: Cartoon.userText(
+                                                    size: 12,
+                                                    color: Colors.white,
+                                                    weight: FontWeight.w800,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                              ),
+                                          if (room.allowMidGameJoin)
+                                            Tooltip(
+                                              message: l10n.midJoinRoomBadge,
+                                              // Geometry copied from the spectate button beside
+                                              // it (8/7 padding, 16px glyph, radius 10) so the
+                                              // two read as one pair of room actions rather than
+                                              // two unrelated marks. Only the colour differs, and
+                                              // that difference is the whole message: purple =
+                                              // you can get in, not just watch.
+                                              child: Container(
+                                                // Tighter than the eye button's 8/7 because this
+                                                // glyph is wider than tall: same outer box, more
+                                                // of it spent on the artwork.
+                                                // Bare artwork — no plate, no border. Four
+                                                // boxed chips in a row read as a toolbar; the
+                                                // icons alone read as what the room is.
+                                                padding: const EdgeInsets.only(
+                                                  left: 4,
+                                                ),
+                                                // Availability rides on opacity, since artwork
+                                                // can't be recoloured and a second symbol would
+                                                // undo the point of using this one: full when a
+                                                // seat is free right now, faded when it is only
+                                                // the room's rule.
+                                                child: Opacity(
+                                                  opacity:
+                                                      room.canJoinInProgress
+                                                      ? 1.0
+                                                      : 0.4,
+                                                  child: BotSwapIcon(
+                                                    width: 28,
+                                                    height: 23,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          if (room.allowSpectators)
+                                            GestureDetector(
+                                              onTap: () =>
+                                                  _spectateWithPasswordCheck(
+                                                    room,
+                                                  ),
+                                              child: Container(
+                                                // Still the tap target that opens spectating —
+                                                // the padding keeps it thumb-sized without a
+                                                // border drawing a button around it.
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                      2,
+                                                      4,
+                                                      8,
+                                                      4,
+                                                    ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const EyeIcon(
+                                                      width: 28,
+                                                      height: 22,
+                                                    ),
+                                                    if (room.spectatorCount >
+                                                        0) ...[
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        '${room.spectatorCount}',
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          // 관전자 수도 같은 바탕
+                                                          // 위에 있다.
+                                                          color:
+                                                              highlight?.inkOn
+                                                                  .withValues(
+                                                                    alpha: 0.75,
+                                                                  ) ??
+                                                              Cartoon.onSurface(
+                                                                const Color(
+                                                                  0xFF7A6A62,
+                                                                ),
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),

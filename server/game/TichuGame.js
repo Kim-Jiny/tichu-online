@@ -1469,6 +1469,9 @@ class TichuGame {
       lastTrick: this.lastTrick,
       currentPlayer: this.currentPlayer,
       passCount: this.passCount,
+      // clone() 이 passLog.map 을 부른다 — 빠지면 워커에서 reconstruct 한 게임을
+      // clone 할 때 undefined.map 으로 터져 승률 탐색이 기본 전략으로 떨어진다.
+      passLog: this.passLog,
       lastPlayedBy: this.lastPlayedBy,
       trickStarter: this.trickStarter,
       finishOrder: this.finishOrder,

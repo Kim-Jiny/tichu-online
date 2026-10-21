@@ -2357,7 +2357,15 @@ class GameService extends ChangeNotifier {
           final newMsgs = parsed
               .where((m) => !existingIds.contains(m['id']))
               .toList();
-          dmMessages[nickname] = [...newMsgs, ...existing];
+          // 앞에 붙이기만 하면, 이미 들고 있던 옛 메시지 뒤에 그 사이 놓친
+          // 메시지가 끼어 순서가 뒤섞인다. 합친 뒤 id(시간순)로 정렬한다.
+          final merged = [...newMsgs, ...existing];
+          merged.sort((a, b) {
+            final ai = a['id'] is num ? (a['id'] as num).toInt() : 0;
+            final bi = b['id'] is num ? (b['id'] as num).toInt() : 0;
+            return ai.compareTo(bi);
+          });
+          dmMessages[nickname] = merged;
         }
         notifyListeners();
         break;

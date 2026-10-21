@@ -613,6 +613,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     if (mounted) setState(() {});
   });
 
+  /// 손패에서 기루다 카드 바탕에 까는 연한 형광 노랑(문양과 무관).
+  static const Color _trumpCardTint = Color(0xFFF2FF4D);
+
   // ── Top Bar (SK-style) ──
   Widget _buildTopBar(MightyGameStateData state, GameService game) {
     final hasCurrentBidder = state.currentBid['bidder'] != null;
@@ -1273,14 +1276,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     final suit = trumps['suit']?.toString() ?? '';
     final isZero = count == 0;
     final tone = isZero ? Cartoon.red : _bidAccentColor(suit);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SuitIcon(suit: suit, size: 14, color: tone),
-        const SizedBox(width: 3),
-        Text('$count', style: Cartoon.text(size: 15, color: tone)),
-      ],
+    // 아이콘+숫자만 있으면 상단 바에 묻혀서, 알약 바탕을 깔아 눈에 띄게 한다.
+    // 0장이면 빨간 바탕으로 바뀌어 기루다가 다 나갔음을 바로 알린다.
+    final fill = isZero ? const Color(0xFFFFE3DC) : const Color(0xFFFFF6B8);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: gamePillDecoration(radius: 12, color: Cartoon.surface(fill)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SuitIcon(suit: suit, size: 17, color: tone),
+          const SizedBox(width: 4),
+          Text('$count', style: Cartoon.text(size: 18, color: tone)),
+        ],
+      ),
     );
   }
 
@@ -2107,7 +2117,12 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                   SizedBox(
                                     height: roleLabelHeight,
                                     child: Center(
-                                      child: overlayOn ? roleLabel : null,
+                                      // 탈락 알약은 사진 층에 둔다. 위 좌석의 먹은 패
+                                      // 줄이 이 자리까지 내려오는데, 같은 오버레이
+                                      // 층이면 알약이 그 줄을 가렸다.
+                                      child: (isExcluded ? photoOn : overlayOn)
+                                          ? roleLabel
+                                          : null,
                                     ),
                                   ),
                                   // 프로필 사진에 뱃지(관전 눈 / 먹은 패 수)를 바로
@@ -2423,39 +2438,65 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
         'pc-${state.round}-${trickPlay.playerId}-${trickPlay.cardId}',
       ),
       from: Offset(0, special ? -36 : -16),
-      child: Container(
-        decoration: isWinner
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: const [
-                  BoxShadow(color: Cartoon.green, offset: Offset(0, 4)),
-                ],
-              )
-            : null,
-        child: PlayingCard(
-          cardId: _displayCardId(trickPlay.cardId),
-          width: width,
-          height: height,
-          isInteractive: false,
-          borderColor:
-              (state.trumpSuit != null &&
-                  state.trumpSuit != 'no_trump' &&
-                  _getCardSuit(trickPlay.cardId) == state.trumpSuit)
-              ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
-              : null,
-          badgeIcon: trickPlay.cardId == state.mightyCard
-              ? Icons.star
-              : (state.jokerCallActive &&
-                    trickPlay.cardId == state.jokerCallCard)
-              ? Icons.gps_fixed
-              : null,
-          badgeColor: trickPlay.cardId == state.mightyCard
-              ? const Color(0xFFFFB300)
-              : (state.jokerCallActive &&
-                    trickPlay.cardId == state.jokerCallCard)
-              ? Cartoon.onSurface(const Color(0xFFE53935))
-              : null,
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          PlayingCard(
+            cardId: _displayCardId(trickPlay.cardId),
+            width: width,
+            height: height,
+            isInteractive: false,
+            borderColor: isWinner
+                ? Cartoon.orange
+                : (state.trumpSuit != null &&
+                      state.trumpSuit != 'no_trump' &&
+                      _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+                ? PlayingCard.suitColors[_getCardSuit(trickPlay.cardId)]
+                : null,
+            tintColor:
+                (state.trumpSuit != null &&
+                    state.trumpSuit != 'no_trump' &&
+                    _getCardSuit(trickPlay.cardId) == state.trumpSuit)
+                ? _trumpCardTint
+                : null,
+            badgeIcon: trickPlay.cardId == state.mightyCard
+                ? Icons.star
+                : (state.jokerCallActive &&
+                      trickPlay.cardId == state.jokerCallCard)
+                ? Icons.gps_fixed
+                : null,
+            badgeColor: trickPlay.cardId == state.mightyCard
+                ? const Color(0xFFFFB300)
+                : (state.jokerCallActive &&
+                      trickPlay.cardId == state.jokerCallCard)
+                ? Cartoon.onSurface(const Color(0xFFE53935))
+                : null,
+          ),
+          // 이긴 카드: 주황 테두리 + 왼쪽 위 트로피 뱃지. (오른쪽 위는 마이티·
+          // 조커콜 뱃지 자리라 겹치지 않게 반대쪽에 둔다.)
+          if (isWinner)
+            Positioned(
+              left: -4,
+              top: -4,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Cartoon.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF3B2A20),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.emoji_events_rounded,
+                  size: 11,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -4280,6 +4321,21 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                                 width: w,
                                 height: h,
                                 isInteractive: false,
+                                // 내 손패와 같은 기루다 테두리.
+                                borderColor:
+                                    (state.trumpSuit != null &&
+                                        state.trumpSuit != 'no_trump' &&
+                                        _getCardSuit(cards[i]) ==
+                                            state.trumpSuit)
+                                    ? PlayingCard.suitColors[state.trumpSuit]
+                                    : null,
+                                tintColor:
+                                    (state.trumpSuit != null &&
+                                        state.trumpSuit != 'no_trump' &&
+                                        _getCardSuit(cards[i]) ==
+                                            state.trumpSuit)
+                                    ? _trumpCardTint
+                                    : null,
                               ),
                             ),
                         ],
@@ -5295,6 +5351,7 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                           ? Cartoon.onSurface(const Color(0xFF7B1FA2))
                           : null,
                       borderColor: trumpBorder,
+                      tintColor: trumpBorder == null ? null : _trumpCardTint,
                     ),
                   ),
                 ),
@@ -6135,6 +6192,17 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
     );
   }
 
+  Widget _prevTrickDot(Color color, IconData icon) => Container(
+    width: 18,
+    height: 18,
+    decoration: BoxDecoration(
+      color: color,
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0xFF3B2A20), width: 1.5),
+    ),
+    child: Icon(icon, size: 11, color: Colors.white),
+  );
+
   Future<void> _showPrevTrickDialog(MightyGameStateData state) async {
     if (state.tricks.isEmpty) return;
     final prev = state.tricks.last;
@@ -6175,63 +6243,163 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i = 0; i < prev.cards.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 3),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          decoration: prev.cards[i].playerId == prev.winner
-                              ? BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Cartoon.orange,
-                                    width: 2.5,
+              // 5장이면 폭이 다이얼로그 안쪽(244px)에 빠듯해 1px 넘쳤다.
+              // 모자랄 때만 줄어들게 한다.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < prev.cards.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 3),
+                      Builder(
+                        builder: (_) {
+                          final play = prev.cards[i];
+                          final isWinner = play.playerId == prev.winner;
+                          final isMighty = play.cardId == state.mightyCard;
+                          final isCallLead =
+                              i == 0 &&
+                              state.jokerCallCard != null &&
+                              play.cardId == state.jokerCallCard;
+                          final isTrumpCard =
+                              state.trumpSuit != null &&
+                              state.trumpSuit != 'no_trump' &&
+                              _getCardSuit(play.cardId) == state.trumpSuit;
+                          final name = state.players
+                              .firstWhere(
+                                (p) => p.id == play.playerId,
+                                orElse: () => MightyPlayer(
+                                  id: play.playerId,
+                                  name: play.playerId,
+                                ),
+                              )
+                              .name;
+                          // 이긴 카드: 카드 자체 테두리를 주황으로 + 왕관 뱃지,
+                          // 이름은 주황 알약. 진 카드는 살짝 흐리게.
+                          return Opacity(
+                            opacity: isWinner ? 1.0 : 0.72,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    4,
+                                    4,
+                                    4,
+                                    0,
                                   ),
-                                )
-                              : null,
-                          padding: const EdgeInsets.all(1),
-                          child: PlayingCard(
-                            cardId: _displayCardId(prev.cards[i].cardId),
-                            width: 42,
-                            height: 59,
-                            isInteractive: false,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        SizedBox(
-                          width: 46,
-                          child: Text(
-                            state.players
-                                .firstWhere(
-                                  (p) => p.id == prev.cards[i].playerId,
-                                  orElse: () => MightyPlayer(
-                                    id: prev.cards[i].playerId,
-                                    name: prev.cards[i].playerId,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      PlayingCard(
+                                        cardId: _displayCardId(play.cardId),
+                                        width: 38,
+                                        height: 54,
+                                        isInteractive: false,
+                                        // 이긴 카드는 주황, 아니면 기루다 카드만 문양색 테두리.
+                                        borderColor: isWinner
+                                            ? Cartoon.orange
+                                            : (isTrumpCard
+                                                  ? PlayingCard.suitColors[state
+                                                        .trumpSuit]
+                                                  : null),
+                                        tintColor: isTrumpCard
+                                            ? _trumpCardTint
+                                            : null,
+                                        // 낸 패 화면과 같은 특수 카드 뱃지(오른쪽 위):
+                                        // 마이티는 별, 조커콜 카드를 리드로 냈으면 조준.
+                                        badgeIcon: isMighty
+                                            ? Icons.star
+                                            : isCallLead
+                                            ? Icons.gps_fixed
+                                            : null,
+                                        badgeColor: isMighty
+                                            ? const Color(0xFFFFB300)
+                                            : isCallLead
+                                            ? Cartoon.onSurface(
+                                                const Color(0xFFE53935),
+                                              )
+                                            : null,
+                                      ),
+                                      // 이긴 카드: 왼쪽 위 트로피.
+                                      if (isWinner)
+                                        Positioned(
+                                          left: -4,
+                                          top: -4,
+                                          child: _prevTrickDot(
+                                            Cartoon.orange,
+                                            Icons.emoji_events_rounded,
+                                          ),
+                                        ),
+                                      // 리드(선) 표시: 왼쪽 아래 알약.
+                                      if (i == 0)
+                                        Positioned(
+                                          left: -4,
+                                          bottom: -3,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Cartoon.blue,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: const Color(0xFF3B2A20),
+                                                width: 1.2,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              l10n.mtLead,
+                                              style: Cartoon.text(
+                                                size: 8,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                )
-                                .name,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: Cartoon.userText(
-                              size: 10,
-                              weight: prev.cards[i].playerId == prev.winner
-                                  ? FontWeight.w800
-                                  : FontWeight.w500,
-                              color: prev.cards[i].playerId == prev.winner
-                                  ? Cartoon.orangeDeep
-                                  : Cartoon.ink,
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  width: 46,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 1,
+                                  ),
+                                  decoration: isWinner
+                                      ? BoxDecoration(
+                                          color: Cartoon.orange,
+                                          borderRadius: BorderRadius.circular(
+                                            99,
+                                          ),
+                                        )
+                                      : null,
+                                  child: Text(
+                                    name,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Cartoon.userText(
+                                      size: 10,
+                                      weight: isWinner
+                                          ? FontWeight.w800
+                                          : FontWeight.w500,
+                                      color: isWinner
+                                          ? Cartoon.inkOn(Cartoon.orange)
+                                          : Cartoon.ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
+                          );
+                        },
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -6274,6 +6442,9 @@ class _MightyGameScreenState extends State<MightyGameScreen> {
           width: 38 * _webScale,
           height: 54 * _webScale,
           isInteractive: false,
+          tintColor: highlightTrump && _getCardSuit(id) == trumpSuit
+              ? _trumpCardTint
+              : null,
         );
         // Frame trump-suit cards so the 기루다 holdings stand out. Match the
         // PlayingCard corner radius ((w/48*14).clamp(4,14); w=38 → ~11) so the

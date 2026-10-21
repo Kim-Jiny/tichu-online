@@ -16,6 +16,10 @@ class PlayingCard extends StatelessWidget {
   final Color? badgeColor;
   final Color? borderColor;
 
+  /// 앞면 바탕에 섞을 색. 마이티의 기루다 카드가 테두리만으로는 눈에 안 띄어
+  /// 바탕을 물들인다. 뒷면에는 쓰지 않는다.
+  final Color? tintColor;
+
   const PlayingCard({
     super.key,
     required this.cardId,
@@ -28,6 +32,7 @@ class PlayingCard extends StatelessWidget {
     this.badgeIcon,
     this.badgeColor,
     this.borderColor,
+    this.tintColor,
   });
 
   static const Map<String, Color> suitColors = {
@@ -79,6 +84,13 @@ class PlayingCard extends StatelessWidget {
         : (borderColor != null || specialBorder != null
               ? 2.4
               : (width < 40 ? 1.2 : 1.5));
+    final tint = isFaceUp ? tintColor : null;
+    final faceTop = tint == null
+        ? const Color(0xFFFFFFFF)
+        : Color.lerp(const Color(0xFFFFFFFF), tint, 0.22)!;
+    final faceBottom = tint == null
+        ? const Color(0xFFF6EEE2)
+        : Color.lerp(const Color(0xFFF6EEE2), tint, 0.3)!;
     final lift = isSelected ? -12.0 : 0.0;
     final shadowY = isSelected ? 5.0 : 2.5;
     final radius = (width / 48 * 12).clamp(4.0, 13.0);
@@ -97,10 +109,10 @@ class PlayingCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isFaceUp ? Colors.white : backBg,
                 gradient: isFaceUp
-                    ? const LinearGradient(
+                    ? LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xFFFFFFFF), Color(0xFFF6EEE2)],
+                        colors: [faceTop, faceBottom],
                       )
                     : null,
                 borderRadius: BorderRadius.circular(radius),

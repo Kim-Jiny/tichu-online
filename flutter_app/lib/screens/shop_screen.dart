@@ -1892,7 +1892,13 @@ class _ShopScreenState extends State<ShopScreen> {
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () => _showItemDetailSheet(context, item),
+          onTap: () {
+            // 상점 카드는 7일·30일 묶음으로 시트를 여는데, 보관함은 내가 가진 한
+            // 줄(대개 7일)만 넘겨 연장이 그 기간 하나뿐이었다. 같은 묶음이 상점에
+            // 있으면 그걸로 연다.
+            final tiers = _sharedTiersFor(game, item);
+            _showItemDetailSheet(context, tiers?.first ?? item, tiers: tiers);
+          },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             child: Row(
@@ -3480,6 +3486,28 @@ class _ShopScreenState extends State<ShopScreen> {
     'custom_title',
     'profile_photo',
   };
+
+  /// 보관함 항목과 같은 기능의 기간별 상품 묶음(7일·30일…). 둘 이상일 때만
+  /// 돌려주고, 아니면 null — 그러면 시트는 단일 상품으로 열린다.
+  List<Map<String, dynamic>>? _sharedTiersFor(
+    GameService game,
+    Map<String, dynamic> item,
+  ) {
+    final effect = item['effect_type']?.toString() ?? '';
+    if (!_sharedFeatureEffects.contains(effect)) return null;
+    final tiers =
+        [
+          for (final t in game.shopItems)
+            if ((t['effect_type']?.toString() ?? '') == effect &&
+                ((t['duration_days'] as num?)?.toInt() ?? 0) > 0)
+              t,
+        ]..sort(
+          (a, b) => ((a['duration_days'] as num?)?.toInt() ?? 0).compareTo(
+            (b['duration_days'] as num?)?.toInt() ?? 0,
+          ),
+        );
+    return tiers.length > 1 ? tiers : null;
+  }
 
   /// The inventory row that makes this item "owned".
   Map<String, dynamic>? _ownedEntitlement(

@@ -612,6 +612,7 @@ class _GloomPainter extends CustomPainter {
         tri,
         Cartoon.cream.withValues(alpha: 1 - life),
         width: 1.6,
+        fade: 1 - life,
       );
       canvas.restore();
     }
@@ -699,75 +700,65 @@ class _LightningPainter extends CustomPainter {
   bool shouldRepaint(_LightningPainter old) => old.t != t;
 }
 
-/// 라지 티츄 선언: 뒤에서 톱니 폭발이 한 번 커지고, 두꺼운 살이 뻗는다.
+/// 라지 티츄 선언: 판 둘레 여러 곳에서 폭죽처럼 색 점이 터진다.
 ///
-/// 만화의 폭발 도형이다(전에는 불길을 그라데이션으로 그렸다).
+/// 톱니 폭발은 면이 커서 판 뒤에서 어수선해 보였다. 점은 면적이 작아 판과
+/// 글자를 가리지 않고, 잉크 테두리를 둘러 이 앱 그림체와 맞춘다.
 class _FlamePainter extends CustomPainter {
   _FlamePainter({required this.t, required this.seed, required this.accent});
 
   final double t;
   final int seed;
+  // 점 색 하나(주황)로 쓰고, 나머지는 팔레트의 노랑·빨강·크림.
   final Color accent;
+
+  // 터지는 자리(판 중심 기준, 가로는 폭·세로는 높이의 배수)와 터지는 때.
+  static const _bursts = [
+    (x: -0.38, y: -1.05, at: 0.00),
+    (x: 0.42, y: -0.95, at: 0.07),
+    (x: -0.72, y: 0.05, at: 0.14),
+    (x: 0.74, y: 0.15, at: 0.20),
+    (x: 0.02, y: -1.3, at: 0.27),
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = Offset(size.width / 2, size.height / 2);
     final base = math.min(size.width, size.height);
     final rnd = math.Random(seed);
+    final palette = [Cartoon.yellow, accent, Cartoon.red, Cartoon.cream];
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = Cartoon.ink;
+    final fill = Paint();
 
-    final hit = Curves.easeOutBack.transform((t / 0.24).clamp(0.0, 1.0));
-    final fade = 1 - ((t - 0.55) / 0.4).clamp(0.0, 1.0);
-
-    // 톱니 폭발 두 겹. 바깥은 주황, 안쪽은 빨강.
-    if (hit > 0 && fade > 0) {
-      for (var layer = 0; layer < 2; layer++) {
-        final r = base * (layer == 0 ? 0.52 : 0.4) * hit;
-        final path = Path();
-        const teeth = 11;
-        for (var i = 0; i < teeth * 2; i++) {
-          final far = i.isEven;
-          final rr = far ? r : r * (0.62 + rnd.nextDouble() * 0.1);
-          final a = -math.pi / 2 + i * math.pi / teeth + layer * 0.14;
-          final o = Offset(c.dx + rr * math.cos(a), c.dy + rr * math.sin(a));
-          if (i == 0) {
-            path.moveTo(o.dx, o.dy);
-          } else {
-            path.lineTo(o.dx, o.dy);
-          }
-        }
-        path.close();
-        _inked(
-          canvas,
-          path,
-          (layer == 0 ? accent : Cartoon.red).withValues(alpha: 0.9 * fade),
-          width: layer == 0 ? 3.0 : 2.4,
+    for (var bi = 0; bi < _bursts.length; bi++) {
+      final b = _bursts[bi];
+      final life = ((t - b.at) / 0.55).clamp(0.0, 1.0);
+      final origin = Offset(c.dx + b.x * size.width, c.dy + b.y * size.height);
+      // 같은 폭죽의 점들이 매 프레임 같은 방향으로 가도록 시드를 폭죽마다 고정한다.
+      const sparks = 16;
+      for (var i = 0; i < sparks; i++) {
+        final a = (i / sparks) * math.pi * 2 + (rnd.nextDouble() - 0.5) * 0.3;
+        final reach = base * (0.42 + 0.3 * rnd.nextDouble());
+        final size0 = base * (0.022 + 0.022 * rnd.nextDouble());
+        if (life <= 0 || life >= 1) continue;
+        // 빠르게 퍼졌다가 느려지고, 끝으로 갈수록 아래로 처진다.
+        final out = Curves.easeOutCubic.transform(life);
+        final p = Offset(
+          origin.dx + math.cos(a) * reach * out,
+          origin.dy + math.sin(a) * reach * out + base * 0.3 * life * life,
         );
+        // 작아지며 꺼진다(투명해지지 않는다).
+        final r = size0 * (1 - Curves.easeIn.transform(life));
+        canvas.drawCircle(
+          p,
+          r,
+          fill..color = palette[(i + bi) % palette.length],
+        );
+        canvas.drawCircle(p, r, edge);
       }
-    }
-
-    // 날아가는 불씨 — 납작한 둥근 조각.
-    for (var i = 0; i < 14; i++) {
-      final delay = rnd.nextDouble() * 0.2;
-      final life = ((t - delay) / 0.7).clamp(0.0, 1.0);
-      if (life <= 0 || life >= 1) continue;
-      final a = rnd.nextDouble() * math.pi * 2;
-      final dist =
-          base *
-          (0.3 + 0.3 * rnd.nextDouble()) *
-          Curves.easeOutCubic.transform(life);
-      final p = Offset(
-        c.dx + math.cos(a) * dist,
-        c.dy + math.sin(a) * dist - base * 0.18 * life,
-      );
-      final r = base * 0.026 * (1 - life);
-      _inked(
-        canvas,
-        Path()..addOval(Rect.fromCircle(center: p, radius: r)),
-        (i.isEven ? Cartoon.yellow : accent).withValues(
-          alpha: (1 - life).clamp(0.0, 1.0),
-        ),
-        width: 1.3,
-      );
     }
   }
 

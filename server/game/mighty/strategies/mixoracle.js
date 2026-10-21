@@ -1498,6 +1498,53 @@ function _declarerSpendJokerBeforeFriendLeadRule(game, botId) {
   return MightyBotInternals.makePlayAction('mighty_joker', game, botId);
 }
 
+/**
+ * 프렌드가 "리드 무늬의 현재 최상위 카드"를 쥐고 있고, 그 카드로 이기면 뒤에서
+ * 아무도 못 뒤집는데도 낮은 카드를 내서 상대에게 트릭을 넘기는 것을 막는다.
+ *
+ * `_friendSafeWinnerRule` 은 주공이 리드한 트릭만 본다. 주공이 아닌 사람이
+ * 리드해서 상대가 이기고 있는 트릭은 오라클에 맡겨져 있었고, 거기서 가끔
+ * 최상위 카드를 아끼다 상대에게 점수를 헌납했다.
+ *
+ * 아군이 이기고 있는 트릭은 건드리지 않는다(덮을 이유가 없다). 기루다·조커·
+ * 마이티 리드도 제외한다 — 그쪽은 아끼는 계산이 따로 있다.
+ */
+function _friendTopWinRule(game, botId) {
+  if (typeof global.__mightyFriendTopLegacy === 'function'
+      && global.__mightyFriendTopLegacy(botId)) {
+    return null;
+  }
+  if (!game.currentTrick || game.currentTrick.length === 0) return null;
+  if (botId === game.declarer) return null;
+  if (!MightyBotInternals.isFriend(game, botId)) return null;
+  if (game.currentTrick[0].pid === game.declarer) return null;
+
+  const lead = game.currentTrick[0].cardId;
+  if (!lead || lead === 'mighty_joker') return null;
+  const leadInfo = getCardInfo(lead);
+  if (!leadInfo || !leadInfo.suit) return null;
+  const trump = game.trumpSuit;
+  if (trump && leadInfo.suit === trump) return null;
+
+  const winner = MightyBotInternals.getCurrentTrickWinner(game);
+  if (!winner) return null;
+  if (MightyBotInternals.isGovernmentSelf(game, winner)
+      === MightyBotInternals.isGovernmentSelf(game, botId)) return null;
+
+  const mightyCard = game.getMightyCard();
+  const legal = game.getLegalCards(botId) || [];
+  const tops = legal.filter((c) => {
+    if (c === mightyCard || c === 'mighty_joker') return false;
+    const info = getCardInfo(c);
+    if (!info || info.suit !== leadInfo.suit) return false;
+    if (!MightyBotInternals.canBeatCurrentWinner(game, c)) return false;
+    if (!MightyBotInternals.isEffectiveTopOfSuit(c, game)) return false;
+    return MightyBotInternals.isSafeFriendWinner(c, game, botId);
+  });
+  if (tops.length === 0) return null;
+  return MightyBotInternals.makePlayAction(tops[0], game, botId);
+}
+
 // 하드 룰은 순서가 곧 우선순위다. 이름을 같이 들고 있는 이유는 어떤 룰이
 // 수를 냈는지 추적할 수 있어야 시뮬레이션에서 원인을 짚을 수 있어서다
 // (global.__mightyRuleTrace).
@@ -1510,6 +1557,7 @@ const HARD_RULES = [
   ['declarerSpendJokerBeforeFriendLead', _declarerSpendJokerBeforeFriendLeadRule],
   ['declarerSavesAllyWin', _declarerSavesAllyWinRule],
   ['friendSafeWinner', _friendSafeWinnerRule],
+  ['friendTopWin', _friendTopWinRule],
   ['friendJokerCall', _friendJokerCallRule],
   ['mightyFriendForceWin', _mightyFriendForceWinRule],
   ['friendConservePoints', _friendConservePointsRule],

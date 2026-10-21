@@ -1823,14 +1823,49 @@ class _GameScreenState extends State<GameScreen> {
     final spacing = compact ? 6.0 * _s : 9.0 * _s;
     final iconFont = compact ? 13.0 * _s : 14.0 * _s;
     final textFont = compact ? 13.0 * _s : 15.0 * _s;
-    final sub = Cartoon.ink.withValues(alpha: 0.55);
-    Widget mark(bool alive, Color on) => Text(
-      alive ? '\u25CB' : '\u2715',
-      style: TextStyle(
-        fontSize: 13 * _ts,
-        fontWeight: FontWeight.w900,
-        color: alive ? on : Cartoon.ink.withValues(alpha: 0.25),
-      ),
+    // 숫자가 흐린 회색이고 마커가 작아 한눈에 안 들어왔다. 마이티 기루다
+    // 카운터처럼 노란 바탕을 깔고, 남은 장수는 진하게 / 0장이면 빨갛게 한다.
+    Widget count(String label, int n) {
+      final gone = n == 0;
+      final tone = gone ? Cartoon.red : Cartoon.ink;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            label,
+            style: Cartoon.text(
+              size: textFont,
+              color: Cartoon.ink.withValues(alpha: gone ? 0.45 : 0.8),
+            ),
+          ),
+          SizedBox(width: 2 * _s),
+          Text(
+            '$n',
+            style: Cartoon.text(size: textFont + 4 * _s, color: tone),
+          ),
+        ],
+      );
+    }
+
+    // 죽은 카드: 이모지를 흐리게 + 빨간 ✕. 살아 있으면 또렷하게 + 색 ○.
+    Widget special(String emoji, bool alive, Color on) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Opacity(
+          opacity: alive ? 1.0 : 0.3,
+          child: Text(emoji, style: TextStyle(fontSize: iconFont + 2 * _s)),
+        ),
+        Text(
+          alive ? '\u25CF' : '\u2715',
+          style: TextStyle(
+            fontSize: 13 * _ts,
+            fontWeight: FontWeight.w900,
+            color: alive ? on : Cartoon.red,
+          ),
+        ),
+      ],
     );
     return Align(
       alignment: Alignment.centerLeft,
@@ -1840,27 +1875,20 @@ class _GameScreenState extends State<GameScreen> {
           horizontal: horizontal,
           vertical: vertical,
         ),
-        decoration: gamePillDecoration(radius: 14 * _s),
+        decoration: gamePillDecoration(
+          radius: 14 * _s,
+          color: Cartoon.surface(const Color(0xFFFFF6B8)),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('A', style: Cartoon.text(size: textFont)),
-            Text(
-              ':$aces',
-              style: Cartoon.text(size: textFont, color: sub),
-            ),
+            count('A', aces),
             SizedBox(width: spacing),
-            Text('K', style: Cartoon.text(size: textFont)),
-            Text(
-              ':$kings',
-              style: Cartoon.text(size: textFont, color: sub),
-            ),
+            count('K', kings),
             SizedBox(width: spacing),
-            Text('\u{1F409}', style: TextStyle(fontSize: iconFont)),
-            mark(dragon, Cartoon.blue),
+            special('\u{1F409}', dragon, Cartoon.blue),
             SizedBox(width: compact ? 4 * _s : 6 * _s),
-            Text('\u{1F426}', style: TextStyle(fontSize: iconFont)),
-            mark(phoenix, Cartoon.orangeDeep),
+            special('\u{1F426}', phoenix, Cartoon.orangeDeep),
           ],
         ),
       ),

@@ -863,78 +863,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
         game.resolvePhotoUrl(u?.toString()),
     ].whereType<String>().toList();
 
+    final isResolved = status == 'resolved';
+    final hasAnswer = isResolved && adminNote.isNotEmpty;
+
+    // 섹션 머리: 작은 색 알약 + 그 아래 상자. 문의·답변이 한눈에 갈리게.
+    Widget sectionLabel(String text, Color tone) => Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Cartoon.tint(tone, 0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text, style: Cartoon.text(size: 12)),
+    );
+    Widget box(Color fill, Widget child) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: child,
+    );
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(
-          title,
-          style: Cartoon.userText(size: 19, weight: FontWeight.w900),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$category · $createdAt',
-                style: Cartoon.userText(
-                  size: 12,
-                  weight: FontWeight.w500,
-                  color: Cartoon.ink.withValues(alpha: 0.78),
+        scrollable: true,
+        // 제목은 잘리지 않게 여러 줄로 두고, 상태·분류·날짜는 그 위 한 줄로.
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isResolved
+                        ? Cartoon.surface(const Color(0xFFD8F5DF))
+                        : Cartoon.surface(const Color(0xFFFFE9B8)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Cartoon.ink, width: 1.4),
+                  ),
+                  child: Text(
+                    isResolved
+                        ? l10n.inquiryStatusResolved
+                        : l10n.inquiryStatusPending,
+                    style: Cartoon.text(
+                      size: 12,
+                      color: isResolved
+                          ? Cartoon.onSurface(const Color(0xFF2E8B57))
+                          : Cartoon.onSurface(const Color(0xFFE5791A)),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '$category · $createdAt',
+                    style: Cartoon.userText(
+                      size: 12,
+                      weight: FontWeight.w500,
+                      color: Cartoon.ink.withValues(alpha: 0.78),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: Cartoon.userText(size: 19, weight: FontWeight.w900),
+            ),
+          ],
+        ),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            sectionLabel(l10n.inquiryFieldContent, Cartoon.blue),
+            box(
+              Cartoon.cream,
               Text(
                 content,
                 style: Cartoon.userText(size: 13, weight: FontWeight.w500),
               ),
-              if (photoUrls.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final url in photoUrls)
-                      GestureDetector(
-                        onTap: () => showDialog(
-                          context: ctx,
-                          builder: (_) => Dialog(
-                            child: InteractiveViewer(
-                              child: Image.network(url, fit: BoxFit.contain),
-                            ),
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            url,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Container(
-                              width: 72,
-                              height: 72,
-                              color: Cartoon.ink.withValues(alpha: 0.08),
-                              child: const Icon(Icons.broken_image_outlined),
-                            ),
+            ),
+            if (photoUrls.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final url in photoUrls)
+                    GestureDetector(
+                      onTap: () => showDialog(
+                        context: ctx,
+                        builder: (_) => Dialog(
+                          child: InteractiveViewer(
+                            child: Image.network(url, fit: BoxFit.contain),
                           ),
                         ),
                       ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              if (status == 'resolved' && adminNote.isNotEmpty) ...[
-                Text(
-                  l10n.inquiryAnswerLabel,
-                  style: Cartoon.text(
-                    size: 12,
-                    color: Cartoon.onSurface(const Color(0xFF4CAF50)),
-                  ),
-                ),
-                const SizedBox(height: 6),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          url,
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 72,
+                            height: 72,
+                            color: Cartoon.ink.withValues(alpha: 0.08),
+                            child: const Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            if (hasAnswer) ...[
+              sectionLabel(l10n.inquiryAnswerLabel, Cartoon.green),
+              box(
+                Cartoon.tint(Cartoon.green, 0.8),
                 NoticeBody(content: adminNote),
-                const SizedBox(height: 8),
-                Text(
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
                   l10n.inquiryAnswerDate(resolvedAt),
                   style: Cartoon.userText(
                     size: 11,
@@ -942,23 +1006,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Cartoon.ink.withValues(alpha: 0.78),
                   ),
                 ),
-              ] else if (status != 'resolved') ...[
-                Text(
-                  l10n.inquiryNoAnswer,
-                  style: Cartoon.userText(
-                    size: 12,
-                    weight: FontWeight.w500,
-                    color: Cartoon.ink.withValues(alpha: 0.78),
-                  ),
+              ),
+            ] else if (!isResolved)
+              box(
+                Cartoon.tint(Cartoon.orange, 0.85),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.hourglass_top_rounded,
+                      size: 18,
+                      color: Cartoon.ink.withValues(alpha: 0.78),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.inquiryNoAnswer,
+                        style: Cartoon.userText(
+                          size: 12.5,
+                          weight: FontWeight.w500,
+                          color: Cartoon.ink.withValues(alpha: 0.78),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ],
-          ),
+              ),
+          ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
+          CartoonButton(
+            expand: false,
+            height: 44,
+            color: Cartoon.orange,
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: CartoonButton.label(l10n.commonClose, size: 17),
+            ),
           ),
         ],
       ),

@@ -1242,6 +1242,7 @@
   "serviceAdLoadFailed": "Die Werbung konnte nicht geladen werden. Bitte versuche es gleich noch einmal",
   "serviceInquiryReply": "Antwort auf Anfrage erhalten: {title}",
   "serviceInquiryDefault": "Anfrage",
+  "serviceInquiryReplyHeadline": "Antwort auf Ihre Anfrage",
   "serviceChatBanned": "Chat eingeschränkt ({remaining} verbleibend)",
   "serviceChatBanHoursMinutes": "{hours}h {minutes}min",
   "serviceChatBanMinutes": "{minutes}min",

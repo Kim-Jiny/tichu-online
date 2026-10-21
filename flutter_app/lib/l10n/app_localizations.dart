@@ -7017,6 +7017,12 @@ abstract class L10n {
   /// **'Inquiry'**
   String get serviceInquiryDefault;
 
+  /// No description provided for @serviceInquiryReplyHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to your inquiry'**
+  String get serviceInquiryReplyHeadline;
+
   /// No description provided for @serviceChatBanned.
   ///
   /// In en, this message translates to:

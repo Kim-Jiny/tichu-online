@@ -3819,6 +3819,9 @@ class L10nKo extends L10n {
   String get serviceInquiryDefault => '문의';
 
   @override
+  String get serviceInquiryReplyHeadline => '문의 답변이 도착했어요';
+
+  @override
   String serviceChatBanned(String remaining) {
     return '채팅이 제한되었습니다 ($remaining 남음)';
   }

@@ -2120,6 +2120,7 @@
     }
   },
   "serviceInquiryDefault": "Inquiry",
+  "serviceInquiryReplyHeadline": "Reply to your inquiry",
   "serviceChatBanned": "Chat restricted ({remaining} remaining)",
   "@serviceChatBanned": {
     "placeholders": {

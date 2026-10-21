@@ -1232,6 +1232,7 @@
   "serviceAdLoadFailed": "광고를 불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요",
   "serviceInquiryReply": "문의 답변이 도착했어요: {title}",
   "serviceInquiryDefault": "문의",
+  "serviceInquiryReplyHeadline": "문의 답변이 도착했어요",
   "serviceChatBanned": "채팅이 제한되었습니다 ({remaining} 남음)",
   "serviceChatBanHoursMinutes": "{hours}시간 {minutes}분",
   "serviceChatBanMinutes": "{minutes}분",

@@ -365,52 +365,51 @@ class _LobbyScreenState extends State<LobbyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
+        scrollable: true,
+        // 문의 제목까지 제목에 넣으면 항상 길어서 잘렸다. 제목은 짧게 두고
+        // 문의 제목은 본문에서 여러 줄로 보여 준다.
+        title: _dialogTitle(
+          Icons.mark_email_read_rounded,
+          Cartoon.blue,
+          l10n.serviceInquiryReplyHeadline,
+        ),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.mark_email_read,
-              color: Cartoon.onSurface(const Color(0xFF1E88E5)),
+            Text(
+              title.isEmpty ? l10n.serviceInquiryDefault : title,
+              style: Cartoon.userText(size: 15),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                l10n.serviceInquiryReply(
-                  title.isEmpty ? l10n.serviceInquiryDefault : title,
-                ),
-                style: TextStyle(fontSize: 16, color: Cartoon.ink),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+            const SizedBox(height: 12),
+            // 방 초대 팝업과 같은 크림색 상자 안에 답변을 담는다.
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Cartoon.tint(Cartoon.green, 0.5),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Text(
+                l10n.inquiryAnswerLabel,
+                style: Cartoon.text(size: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Cartoon.cream,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              // The answer is written in markdown by the admin; a plain Text
+              // showed the asterisks and ran every paragraph together.
+              child: NoticeBody(content: adminNote),
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.inquiryAnswerLabel,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Cartoon.onSurface(const Color(0xFF4CAF50)),
-                ),
-              ),
-              const SizedBox(height: 6),
-              // The answer is written in markdown by the admin; a plain Text
-              // showed the asterisks and ran every paragraph together.
-              NoticeBody(content: adminNote),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.commonClose),
-          ),
-        ],
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [_dialogPrimary(l10n.commonClose, () => Navigator.pop(ctx))],
       ),
     ).then((_) {
       if (mounted) game.markInquiriesRead();

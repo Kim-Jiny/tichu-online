@@ -3957,6 +3957,9 @@ class L10nDe extends L10n {
   String get serviceInquiryDefault => 'Anfrage';
 
   @override
+  String get serviceInquiryReplyHeadline => 'Antwort auf Ihre Anfrage';
+
+  @override
   String serviceChatBanned(String remaining) {
     return 'Chat eingeschränkt ($remaining verbleibend)';
   }

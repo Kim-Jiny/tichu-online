@@ -409,7 +409,17 @@ class _FxBannerState extends State<_FxBanner>
 /// 이 앱에 없는 유일한 것이었다.
 
 /// 잉크 외곽선을 두른 면을 칠한다. 카툰 도형은 전부 이 한 쌍으로 그린다.
-void _inked(Canvas c, Path path, Color fill, {double width = 2.4}) {
+///
+/// [fade] 는 사라지는 도형용이다. 면만 투명해지고 외곽선이 그대로면, 면이
+/// 거의 다 사라진 뒤에도 잉크 선만 남았다가 한꺼번에 꺼진다 — 뒤에 깔린
+/// 배경이 '남아 보이는' 것처럼 보인다. 외곽선도 같이 흐리게 한다.
+void _inked(
+  Canvas c,
+  Path path,
+  Color fill, {
+  double width = 2.4,
+  double fade = 1.0,
+}) {
   c.drawPath(path, Paint()..color = fill);
   c.drawPath(
     path,
@@ -417,7 +427,7 @@ void _inked(Canvas c, Path path, Color fill, {double width = 2.4}) {
       ..style = PaintingStyle.stroke
       ..strokeWidth = width
       ..strokeJoin = StrokeJoin.round
-      ..color = Cartoon.ink,
+      ..color = Cartoon.ink.withValues(alpha: fade.clamp(0.0, 1.0)),
   );
 }
 
@@ -515,6 +525,7 @@ class _BurstPainter extends CustomPainter {
           alpha: (1 - life).clamp(0.0, 1.0),
         ),
         width: 1.4,
+        fade: 1 - life,
       );
       canvas.restore();
     }
@@ -657,6 +668,7 @@ class _LightningPainter extends CustomPainter {
           path,
           Cartoon.blue.withValues(alpha: 0.85 * fade),
           width: 1.8,
+          fade: fade,
         );
       }
     }
@@ -678,6 +690,7 @@ class _LightningPainter extends CustomPainter {
         _starPath(p, r, r * 0.4, 4, a),
         accent.withValues(alpha: (1 - life).clamp(0.0, 1.0)),
         width: 1.4,
+        fade: 1 - life,
       );
     }
   }

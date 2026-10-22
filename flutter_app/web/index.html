@@ -42,7 +42,7 @@
   <meta property="og:site_name" content="Tichu Online">
   <meta property="og:title" content="Tichu Online — 친구들과 카드 한 판">
   <meta property="og:description" content="티츄, 마이티, 스컬킹, 러브레터를 함께 즐기는 멀티플레이 카드게임. 설치 없이 브라우저에서 바로 시작하세요.">
-  <meta property="og:image" content="icons/Icon-512.png">
+  <meta property="og:image" content="https://tichu.kr/share-banner.jpg">
   <meta property="og:locale" content="ko_KR">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Tichu Online — 친구들과 카드 한 판">
@@ -173,7 +173,7 @@
     }
     #boot.done { opacity: 0; pointer-events: none; }
     #boot .mark {
-      font-size: 1.75rem;
+      font-size: 1.9rem;
       font-weight: 700;
       letter-spacing: .02em;
       color: #f28c26;
@@ -209,31 +209,44 @@
     @media (max-height: 560px) {
       #boot .about p { display: none; }
     }
-    #boot .bar {
+    /* 카드 네 장 — 게임 넷(티츄·마이티·스컬킹·러브레터)이 한 장씩이다.
+       이미지 없이 CSS 만으로 그려서 첫 바이트와 함께 뜬다. 진행률은 브라우저가
+       알려 주지 않으니 가짜 퍼센트 대신 계속 부채꼴로 펼쳐졌다 접히는 모양으로 둔다. */
+    #boot .fan {
       position: relative;
-      width: min(13rem, 55vw);
-      height: 3px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(20, 58, 87, .12);
+      width: 7.5rem;
+      height: 6.25rem;
+      margin-bottom: .25rem;
     }
-    /* 진행률을 알 수 없으니(브라우저가 안 알려 준다) 흐르는 막대로 둔다.
-       가짜 퍼센트를 그리는 것보다 정직하다. */
-    #boot .bar::after {
-      content: '';
+    #boot .fan i {
       position: absolute;
-      inset: 0 auto 0 0;
-      width: 40%;
-      border-radius: inherit;
-      background: #f28c26;
-      animation: boot-slide 1.1s ease-in-out infinite;
+      left: 50%;
+      bottom: 0;
+      width: 3.25rem;
+      height: 4.5rem;
+      margin-left: -1.625rem;
+      border-radius: .6rem;
+      background: #fff;
+      border: 2px solid #143a57;
+      box-shadow: 0 3px 0 #143a57;
+      font-style: normal;
+      font-size: 1.5rem;
+      line-height: 4.3rem;
+      text-align: center;
+      transform-origin: 50% 130%;
+      animation: boot-fan 1.8s cubic-bezier(.45, 0, .25, 1) infinite;
     }
-    @keyframes boot-slide {
-      0%   { transform: translateX(-105%); }
-      100% { transform: translateX(255%); }
+    #boot .fan i:nth-child(1) { color: #143a57; --a: -27deg; }
+    #boot .fan i:nth-child(2) { color: #e0453a; --a: -9deg;  animation-delay: .08s; }
+    #boot .fan i:nth-child(3) { color: #e0453a; --a: 9deg;   animation-delay: .16s; }
+    #boot .fan i:nth-child(4) { color: #f28c26; --a: 27deg;  animation-delay: .24s; }
+    @keyframes boot-fan {
+      0%, 12%  { transform: rotate(0deg) translateY(0); }
+      45%, 70% { transform: rotate(var(--a)) translateY(-.15rem); }
+      100%     { transform: rotate(0deg) translateY(0); }
     }
     @media (prefers-reduced-motion: reduce) {
-      #boot .bar::after { animation: none; width: 100%; opacity: .5; }
+      #boot .fan i { animation: none; transform: rotate(var(--a)); }
     }
   </style>
 </head>
@@ -252,9 +265,9 @@
     보여주는 것도 아니다.
   -->
   <div id="boot">
+    <div class="fan" aria-hidden="true"><i>♠</i><i>♥</i><i>♦</i><i>★</i></div>
     <h1 class="mark">티츄 온라인</h1>
     <p class="tagline">티츄 · 마이티 · 스컬킹 · 러브레터를 친구들과 온라인으로</p>
-    <div class="bar"></div>
     <p class="sub">불러오는 중…</p>
 
     <div class="about">

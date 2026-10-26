@@ -654,12 +654,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(11),
-                child: _rankAvatar(game, data, 40),
-              ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -779,11 +774,6 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: _rankAvatar(game, row, 36),
-            ),
-            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

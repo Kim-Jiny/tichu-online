@@ -9218,8 +9218,8 @@ async function handleReportUser(ws, data) {
 // hide/report/privacy rules exactly as it does for seats and chat.
 async function attachRankingPhotos(ws, result) {
   if (!result || !result.success) return;
-  const rows = [...(result.rankings || [])];
-  if (result.myRankData) rows.push(result.myRankData);
+  // Only the podium draws a photo; everyone else is one tap away in the profile.
+  const rows = (result.rankings || []).slice(0, 3);
   const names = [...new Set(rows.map((r) => r.nickname).filter(Boolean))];
   if (names.length === 0) return;
   try {

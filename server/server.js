@@ -9213,6 +9213,37 @@ async function handleReportUser(ws, data) {
 }
 
 // Rankings handler
+// Rankings carry each row's active profile photo so the client can draw it.
+// One batched lookup per response; visiblePhoto applies the viewer's own
+// hide/report/privacy rules exactly as it does for seats and chat.
+async function attachRankingPhotos(ws, result) {
+  if (!result || !result.success) return;
+  const rows = [...(result.rankings || [])];
+  if (result.myRankData) rows.push(result.myRankData);
+  const names = [...new Set(rows.map((r) => r.nickname).filter(Boolean))];
+  if (names.length === 0) return;
+  try {
+    const { pool } = require('./db/database');
+    const res = await pool.query(
+      `SELECT nickname, profile_photo_key, profile_photo_status, profile_photo_expires_at
+         FROM tc_users WHERE nickname = ANY($1)`,
+      [names],
+    );
+    const urlByName = new Map();
+    for (const u of res.rows) {
+      const url = profilePhotoUrlFrom({
+        profilePhotoKey: u.profile_photo_key,
+        profilePhotoStatus: u.profile_photo_status,
+        profilePhotoExpiresAt: u.profile_photo_expires_at,
+      });
+      urlByName.set(u.nickname, visiblePhoto(ws, u.nickname, url));
+    }
+    for (const r of rows) r.photoUrl = urlByName.get(r.nickname) || null;
+  } catch (err) {
+    console.error('Ranking photos error:', err);
+  }
+}
+
 async function handleGetRankings(ws, data) {
   const gameType = data?.gameType || 'tichu';
 
@@ -9292,6 +9323,7 @@ async function handleGetRankings(ws, data) {
         }
       } catch (_) {}
     }
+    await attachRankingPhotos(ws, result);
     sendTo(ws, { type: 'rankings_result', gameType: 'skull_king', ...result });
     return;
   }
@@ -9379,6 +9411,7 @@ async function handleGetRankings(ws, data) {
         }
       } catch (_) {}
     }
+    await attachRankingPhotos(ws, result);
     sendTo(ws, { type: 'rankings_result', gameType: 'mighty', ...result });
     return;
   }
@@ -9386,6 +9419,7 @@ async function handleGetRankings(ws, data) {
   const seasonId = data?.seasonId;
   if (seasonId) {
     const result = await getSeasonRankings(seasonId, 50);
+    await attachRankingPhotos(ws, result);
     sendTo(ws, { type: 'rankings_result', ...result });
     return;
   }
@@ -9420,6 +9454,7 @@ async function handleGetRankings(ws, data) {
       }
     } catch (_) {}
   }
+  await attachRankingPhotos(ws, result);
   sendTo(ws, { type: 'rankings_result', ...result });
 }
 

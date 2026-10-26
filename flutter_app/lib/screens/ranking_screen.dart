@@ -514,6 +514,17 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
+  /// 서버가 랭킹 행에 실어 보낸 프로필 사진. 사진이 없거나 차단했으면 기본 아바타.
+  Widget _rankAvatar(GameService game, Map<String, dynamic> row, double size) {
+    final nickname = row['nickname']?.toString() ?? '';
+    return ProfileAvatar(
+      photoUrl: game.resolvePhotoUrl(row['photoUrl'] as String?),
+      size: size,
+      blocked: game.blockedUsers.contains(nickname),
+      fallback: DefaultAvatar(size: size),
+    );
+  }
+
   Widget _podiumSlot({
     required int rank,
     required Map<String, dynamic> row,
@@ -556,7 +567,7 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(17),
-                child: DefaultAvatar(size: rank == 1 ? 62 : 52),
+                child: _rankAvatar(game, row, rank == 1 ? 62 : 52),
               ),
             ),
             const SizedBox(height: 6),
@@ -643,7 +654,12 @@ class _RankingScreenState extends State<RankingScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child: _rankAvatar(game, data, 40),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,6 +779,11 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
             ),
             const SizedBox(width: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _rankAvatar(game, row, 36),
+            ),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

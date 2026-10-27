@@ -1,10 +1,10 @@
 /**
- * Crawlable rule pages: /rules and /rules/<game>.
+ * Crawlable pages: /rules, /rules/<game>, /guide and /guide/<slug>.
  *
  * The game itself is a Flutter canvas, so a search engine sees one page with a
  * paragraph of text on it. These are the pages that carry real prose. The text
- * lives in content/rules/*.md (the source of truth, written against the game
- * engines) and is rendered here at request time into plain server HTML — no
+ * lives in content/rules/*.md and content/guide/*.md (the source of truth,
+ * written against the game engines) and is rendered here at request time into plain server HTML — no
  * JS needed to read it, which is the whole point.
  *
  * Each file ends with a "*메타 태그용*" block holding Title / Description; that
@@ -20,13 +20,24 @@ const path = require('path');
 // canonical/og:url that follows it would tell search engines the wrong site is
 // the original. The address to rank is tichu.kr.
 const BASE_URL = process.env.SEO_BASE_URL || 'https://tichu.kr';
-const DIR = path.join(__dirname, 'content', 'rules');
+const RULES_DIR = path.join(__dirname, 'content', 'rules');
+const GUIDE_DIR = path.join(__dirname, 'content', 'guide');
 
 const GAMES = [
   { slug: 'tichu', name: '티츄', blurb: '4인 2:2 팀전. 손패를 가장 먼저 비우는 경주' },
   { slug: 'mighty', name: '마이티', blurb: '5인 트릭테이킹. 숨은 프렌드와 경매(비딩)' },
   { slug: 'skullking', name: '스컬킹', blurb: '해적 테마 예측 트릭테이킹. 약속한 만큼만 따내기' },
   { slug: 'loveletter', name: '러브레터', blurb: '카드 16장으로 하는 추리·블러핑 게임' },
+];
+
+// Topic pages, one search intent each. `game` ties a guide to its rules page.
+const GUIDES = [
+  { slug: 'mighty-friend', game: 'mighty', name: '마이티 프렌드 지명 방법', blurb: '카드 지목·조커·초구·노프렌드, 언제 무엇을 고를까' },
+  { slug: 'mighty-joker', game: 'mighty', name: '마이티 조커와 조커콜', blurb: '조커가 힘을 못 쓰는 때와 조커콜을 막는 법' },
+  { slug: 'mighty-score', game: 'mighty', name: '마이티 점수 계산', blurb: '공식과 계산 예시 여섯 개' },
+  { slug: 'skullking-score', game: 'skullking', name: '스컬킹 점수 계산', blurb: '예측, 0 예측, 보너스 예시' },
+  { slug: 'loveletter-cards', game: 'loveletter', name: '러브레터 카드 16장 정리', blurb: '숫자·장수·효과를 한눈에' },
+  { slug: 'tichu-bomb', game: 'tichu', name: '티츄 특수 카드와 폭탄', blurb: '참새·개·봉황·용과 폭탄 순위' },
 ];
 
 function esc(s) {
@@ -94,13 +105,14 @@ function parse(md) {
 }
 
 const cache = new Map();
-function load(slug) {
-  if (cache.has(slug)) return cache.get(slug);
+function load(dir, slug) {
+  const key = `${dir}/${slug}`;
+  if (cache.has(key)) return cache.get(key);
   let page = null;
   try {
-    page = parse(fs.readFileSync(path.join(DIR, `${slug}.md`), 'utf8'));
+    page = parse(fs.readFileSync(path.join(dir, `${slug}.md`), 'utf8'));
   } catch (_) { /* missing file → 404 */ }
-  cache.set(slug, page);
+  cache.set(key, page);
   return page;
 }
 
@@ -130,7 +142,7 @@ function shell({ title, description, canonical, jsonld, inner }) {
     + `<link rel="icon" type="image/png" href="/favicon.png">`
     + (jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld).replaceAll('<', '\\u003c')}</script>` : '')
     + `<style>${CSS}</style></head><body><div class="wrap">`
-    + `<div class="nav"><a href="/">Tichu Online</a><a href="/rules">룰 가이드</a></div>`
+    + `<div class="nav"><a href="/">Tichu Online</a><a href="/rules">룰 가이드</a><a href="/guide">공략·계산</a></div>`
     + inner
     + `<p class="foot">© Tichu Online · <a href="/support?lang=ko">고객센터</a></p>`
     + `</div></body></html>`;
@@ -138,7 +150,7 @@ function shell({ title, description, canonical, jsonld, inner }) {
 
 function renderGame(slug) {
   const game = GAMES.find((g) => g.slug === slug);
-  const page = game && load(slug);
+  const page = game && load(RULES_DIR, slug);
   if (!page) return null;
   const canonical = `${BASE_URL}/rules/${slug}`;
   const title = page.meta.title || `${game.name} 룰 | Tichu Online`;
@@ -170,10 +182,68 @@ function renderGame(slug) {
   }
   const others = GAMES.filter((g) => g.slug !== slug)
     .map((g) => `<a href="/rules/${g.slug}">${esc(g.name)} 룰</a>`).join(' · ');
-  const inner = `<h1>${esc(page.h1)}</h1>${page.body}`
+  const related = GUIDES.filter((g) => g.game === slug);
+  const relatedHtml = related.length
+    ? `<h2>더 깊이 보기</h2><ul>${related.map((g) => `<li><a href="/guide/${g.slug}">${esc(g.name)}</a> — ${esc(g.blurb)}</li>`).join('')}</ul>`
+    : '';
+  const inner = `<h1>${esc(page.h1)}</h1>${page.body}${relatedHtml}`
     + `<a class="cta" href="/">${esc(game.name)} 지금 플레이하기</a>`
     + `<p>설치 없이 브라우저에서 바로 시작할 수 있어요. 다른 게임 룰: ${others}</p>`;
   return shell({ title, description, canonical, jsonld, inner });
+}
+
+function renderGuide(slug) {
+  const guide = GUIDES.find((g) => g.slug === slug);
+  const page = guide && load(GUIDE_DIR, slug);
+  if (!page) return null;
+  const game = GAMES.find((g) => g.slug === guide.game);
+  const canonical = `${BASE_URL}/guide/${slug}`;
+  const title = page.meta.title || `${guide.name} | Tichu Online`;
+  const description = page.meta.description || guide.blurb;
+  const jsonld = [
+    {
+      '@context': 'https://schema.org', '@type': 'Article',
+      headline: page.h1, description, inLanguage: 'ko', mainEntityOfPage: canonical,
+      image: `${BASE_URL}/share-banner.jpg`,
+      author: { '@type': 'Organization', name: 'Tichu Online', url: `${BASE_URL}/` },
+      publisher: { '@type': 'Organization', name: 'Tichu Online', url: `${BASE_URL}/` },
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Tichu Online', item: `${BASE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: '공략·계산', item: `${BASE_URL}/guide` },
+        { '@type': 'ListItem', position: 3, name: guide.name, item: canonical },
+      ],
+    },
+  ];
+  if (page.faq.length) {
+    jsonld.push({
+      '@context': 'https://schema.org', '@type': 'FAQPage',
+      mainEntity: page.faq.map((f) => ({
+        '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+  }
+  const siblings = GUIDES.filter((g) => g.game === guide.game && g.slug !== slug);
+  const more = siblings.length
+    ? `<p>같이 보면 좋은 글: ${siblings.map((g) => `<a href="/guide/${g.slug}">${esc(g.name)}</a>`).join(' · ')}</p>`
+    : '';
+  const inner = `<h1>${esc(page.h1)}</h1>${page.body}`
+    + `<p>${esc(game.name)} 전체 규칙은 <a href="/rules/${game.slug}">${esc(game.name)} 룰 완전 정리</a>에 있어요.</p>${more}`
+    + `<a class="cta" href="/">${esc(game.name)} 지금 플레이하기</a>`
+    + `<p>설치 없이 브라우저에서 바로 시작할 수 있어요.</p>`;
+  return shell({ title, description, canonical, jsonld, inner });
+}
+
+function renderGuideIndex() {
+  const items = GUIDES.map((g) => `<li><a href="/guide/${g.slug}">${esc(g.name)}</a><br>${esc(g.blurb)}</li>`).join('');
+  const title = '카드게임 공략·점수 계산 가이드 — 마이티 · 스컬킹 · 러브레터 · 티츄 | Tichu Online';
+  const description = '마이티 프렌드 지명, 조커콜, 점수 계산부터 스컬킹 점수, 러브레터 카드 정리, 티츄 폭탄까지 궁금한 부분만 골라 읽을 수 있는 가이드 모음이에요.';
+  const inner = `<h1>공략·점수 계산 가이드</h1>`
+    + `<p>규칙 전체를 읽기엔 부담스러울 때, 궁금한 부분만 골라 보세요. 전체 규칙은 <a href="/rules">룰 가이드</a>에 있어요.</p>`
+    + `<ul class="games">${items}</ul><a class="cta" href="/">지금 플레이하기</a>`;
+  return shell({ title, description, canonical: `${BASE_URL}/guide`, inner });
 }
 
 function renderIndex() {
@@ -182,7 +252,9 @@ function renderIndex() {
   const description = '티츄, 마이티, 스컬킹, 러브레터의 규칙을 이야기하듯 풀어 썼어요. 읽고 나서 바로 온라인으로 플레이해 보세요.';
   const inner = `<h1>카드게임 룰 가이드</h1>`
     + `<p>처음 보는 게임도 이야기처럼 읽다 보면 룰이 잡혀요. 네 가지 게임을 모두 Tichu Online에서 바로 해볼 수 있습니다.</p>`
-    + `<ul class="games">${items}</ul><a class="cta" href="/">지금 플레이하기</a>`;
+    + `<ul class="games">${items}</ul>`
+    + `<p>점수 계산이나 카드 효과처럼 궁금한 부분만 보고 싶다면 <a href="/guide">공략·점수 계산 가이드</a>를 보세요.</p>`
+    + `<a class="cta" href="/">지금 플레이하기</a>`;
   return shell({ title, description, canonical: `${BASE_URL}/rules`, inner });
 }
 
@@ -200,10 +272,19 @@ function serve(req, res, pathname) {
       return true;
     }
   }
+  else if (p === '/guide') html = renderGuideIndex();
+  else if (p.startsWith('/guide/')) {
+    html = renderGuide(p.slice('/guide/'.length));
+    if (!html) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not found');
+      return true;
+    }
+  }
   if (!html) return false;
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
   res.end(req.method === 'HEAD' ? undefined : html);
   return true;
 }
 
-module.exports = { serve, parse, GAMES, renderGame, renderIndex };
+module.exports = { serve, parse, GAMES, GUIDES, renderGame, renderIndex, renderGuide, renderGuideIndex };

@@ -74,6 +74,31 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://tichu.kr/guide/tichu-score</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/skullking-expansion</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/mighty-glossary</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/tichu-glossary</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/skullking-glossary</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://tichu.kr/support?lang=ko</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

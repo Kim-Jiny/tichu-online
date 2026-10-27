@@ -48,6 +48,11 @@ const GUIDES = [
   { slug: 'skullking-score', game: 'skullking', name: '스컬킹 점수 계산', blurb: '예측, 0 예측, 보너스 예시' },
   { slug: 'loveletter-cards', game: 'loveletter', name: '러브레터 카드 16장 정리', blurb: '숫자·장수·효과를 한눈에' },
   { slug: 'tichu-bomb', game: 'tichu', name: '티츄 특수 카드와 폭탄', blurb: '참새·개·봉황·용과 폭탄 순위' },
+  { slug: 'tichu-score', game: 'tichu', name: '티츄 점수 계산', blurb: '카드 점수·꼴찌 규칙·원투·티츄 선언 예시' },
+  { slug: 'skullking-expansion', game: 'skullking', name: '스컬킹 확장 카드와 해적 능력', blurb: '크라켄·흰고래·보물·해적 능력 모드' },
+  { slug: 'mighty-glossary', game: 'mighty', name: '마이티 용어 사전', blurb: '주공·프렌드·기루다·백런 뜻' },
+  { slug: 'tichu-glossary', game: 'tichu', name: '티츄 용어 사전', blurb: '선·폭탄·소원·그랜드 티츄·원투 뜻' },
+  { slug: 'skullking-glossary', game: 'skullking', name: '스컬킹 용어 사전', blurb: '예측·리드 무늬·도주·티그리스·크라켄 뜻' },
 ];
 
 function esc(s) {

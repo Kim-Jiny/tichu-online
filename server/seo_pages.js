@@ -3,9 +3,9 @@
  *
  * The game itself is a Flutter canvas, so a search engine sees one page with a
  * paragraph of text on it. These are the pages that carry real prose. The text
- * lives in content/rules/*.md (copied from docs/seo/prose, which is where it
- * gets written and reviewed) and is rendered here at request time into plain
- * server HTML — no JS needed to read it, which is the whole point.
+ * lives in content/rules/*.md (the source of truth, written against the game
+ * engines) and is rendered here at request time into plain server HTML — no
+ * JS needed to read it, which is the whole point.
  *
  * Each file ends with a "*메타 태그용*" block holding Title / Description; that
  * block feeds <title>/<meta> and is never rendered into the body. The FAQ

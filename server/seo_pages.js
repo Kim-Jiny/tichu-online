@@ -114,7 +114,10 @@ function shell({ title, description, canonical, jsonld, inner }) {
     + `<meta property="og:type" content="article"><meta property="og:site_name" content="Tichu Online">`
     + `<meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}">`
     + `<meta property="og:url" content="${esc(canonical)}"><meta property="og:image" content="${BASE_URL}/share-banner.jpg">`
+    + `<meta property="og:image:width" content="1200"><meta property="og:image:height" content="569">`
     + `<meta property="og:locale" content="ko_KR">`
+    + `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}">`
+    + `<meta name="twitter:description" content="${esc(description)}"><meta name="twitter:image" content="${BASE_URL}/share-banner.jpg">`
     + `<link rel="icon" type="image/png" href="/favicon.png">`
     + (jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld).replaceAll('<', '\\u003c')}</script>` : '')
     + `<style>${CSS}</style></head><body><div class="wrap">`

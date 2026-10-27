@@ -8,6 +8,12 @@
 const { deal, getCardInfo, sortCards, CARD_TYPE, CARD_VALUES, GUESSABLE_TYPES } = require('./LoveLetterDeck');
 const { mapKeys, mapId, mapIds } = require('../historyIds');
 
+const SERIALIZED_FIELDS = [
+  'playerIds', 'playerNames', 'playerCount', 'gameType', 'targetTokens', 'state', 'round', 'tokens',
+  'hands', 'discardPiles', 'drawPile', 'setAside', 'faceUpCards', 'eliminated', 'protected',
+  'currentPlayer', 'pendingEffect', 'hasDrawn', 'knowledge', 'notTypes',
+];
+
 class LoveLetterGame {
   constructor(playerIds, playerNames, options = {}) {
     this.playerIds = playerIds;
@@ -42,6 +48,11 @@ class LoveLetterGame {
     this.currentPlayer = null;
     this.pendingEffect = null;
     this.hasDrawn = false;
+    // 누가 누구의 손패를 아는가 — 봇이 쓴다(화면으로 나가는 상태에는 넣지 않는다).
+    //   knowledge[보는 사람][가진 사람] = 그 사람이 쥔 카드 id (사제·남작·왕으로 알게 된 것)
+    //   notTypes[가진 사람] = 가드가 빗나가서 모두가 아는, 그 사람이 쥐고 있지 않은 종류
+    this.knowledge = {};
+    this.notTypes = {};
 
     this.resultSaved = false;
     this.deserted = false;
@@ -68,6 +79,10 @@ class LoveLetterGame {
       this.protected[pid] = false;
     }
 
+    this.knowledge = {};
+    this.notTypes = {};
+    for (const pid of this.playerIds) { this.knowledge[pid] = {}; this.notTypes[pid] = []; }
+
     this.drawPile = result.drawPile.map(c => c.id);
     this.setAside = result.setAside.id;
     this.originalSetAside = this.setAside;
@@ -84,6 +99,19 @@ class LoveLetterGame {
     // Draw a card for the first player
     this._drawCard(this.currentPlayer);
     this.state = 'playing';
+  }
+
+  /** viewerId 가 holderId 의 손패(cardId)를 알게 됐다. */
+  _know(viewerId, holderId, cardId) {
+    if (viewerId === holderId || !cardId) return;
+    if (!this.knowledge) this.knowledge = {};
+    (this.knowledge[viewerId] ||= {})[holderId] = cardId;
+  }
+
+  /** holderId 의 손패가 바뀌었다(새로 뽑음·왕자·탈락) — 그 사람에 대해 알던 것은 무효. */
+  _forget(holderId) {
+    for (const viewer of Object.keys(this.knowledge || {})) delete this.knowledge[viewer][holderId];
+    if (this.notTypes) this.notTypes[holderId] = [];
   }
 
   _drawCard(playerId) {
@@ -154,6 +182,13 @@ class LoveLetterGame {
     // Remove card from hand
     this.hands[playerId] = hand.filter(c => c !== cardId);
     this.discardPiles[playerId].push(cardId);
+
+    // 이 사람이 알려진 카드를 냈다면 남은 건 방금 뽑은 모르는 카드다. 다른 카드를 냈다면
+    // 알던 카드를 그대로 쥐고 있다. 가드로 알아낸 '아닌 종류'는 새로 뽑은 카드에는 해당이 없다.
+    for (const viewer of Object.keys(this.knowledge || {})) {
+      if (this.knowledge[viewer][playerId] === cardId) delete this.knowledge[viewer][playerId];
+    }
+    if (this.notTypes) this.notTypes[playerId] = [];
 
     // Process card effect
     return this._processCardEffect(playerId, cardInfo, cardId);
@@ -403,6 +438,9 @@ class LoveLetterGame {
           targetCard: correct ? targetCard : null,
         };
 
+        if (!correct && this.notTypes) {
+          (this.notTypes[targetId] ||= []).push(effect.guess); // 빗나간 추측은 모두가 본다
+        }
         if (correct) {
           this._eliminatePlayer(targetId);
           this._pushMissionEvent({ playerId: effect.playerId, event: 'll.guard_hit', amount: 1 });
@@ -417,6 +455,7 @@ class LoveLetterGame {
         effect.result = {
           revealedCard: targetHand[0],
         };
+        this._know(effect.playerId, targetId, targetHand[0]);
         effect.resolved = true;
         return { success: true };
       }
@@ -442,6 +481,10 @@ class LoveLetterGame {
           targetCard,
           loser,
         };
+        if (!loser) { // 비기면 둘 다 살아서 서로의 카드를 안다
+          this._know(effect.playerId, targetId, targetCard);
+          this._know(targetId, effect.playerId, myCard);
+        }
 
         if (loser) {
           this._eliminatePlayer(loser);
@@ -488,6 +531,7 @@ class LoveLetterGame {
           // If no cards available (empty draw pile + no set-aside), player has 0 cards
           // but is still alive — round will end when _advanceTurnOrEndRound checks
           effect.result = { discardedCard, eliminated: false };
+          this._forget(targetId);
         }
         effect.resolved = true;
         return { success: true };
@@ -499,6 +543,24 @@ class LoveLetterGame {
         const targetHand = this.hands[targetId];
         this.hands[effect.playerId] = targetHand;
         this.hands[targetId] = myHand;
+
+        // 바뀐 건 모두가 본다: 구경꾼이 알던 두 사람의 카드는 자리를 바꾼다.
+        // 당사자 둘은 서로가 받은 카드를 안다(내가 쥐던 카드는 상대에게, 상대 카드는 나에게).
+        const a = effect.playerId;
+        for (const viewer of Object.keys(this.knowledge || {})) {
+          if (viewer === a || viewer === targetId) continue;
+          const k = this.knowledge[viewer];
+          const ka = k[a]; const kt = k[targetId];
+          if (kt !== undefined) k[a] = kt; else delete k[a];
+          if (ka !== undefined) k[targetId] = ka; else delete k[targetId];
+        }
+        if (this.notTypes) {
+          const na = this.notTypes[a] || []; const nt = this.notTypes[targetId] || [];
+          this.notTypes[a] = nt; this.notTypes[targetId] = na;
+        }
+        this._know(a, targetId, myHand[0]);
+        this._know(targetId, a, targetHand[0]);
+        if (this.knowledge[a]) delete this.knowledge[a][a];
 
         effect.result = { swapped: true };
         effect.resolved = true;
@@ -512,6 +574,7 @@ class LoveLetterGame {
 
   _eliminatePlayer(playerId) {
     this.eliminated[playerId] = true;
+    this._forget(playerId);
     // Discard their hand
     const hand = this.hands[playerId];
     if (hand && hand.length > 0) {
@@ -639,6 +702,21 @@ class LoveLetterGame {
     }
 
     return { success: true };
+  }
+
+  /** JSON-safe snapshot for worker-thread bot offload (see SkullKingGame.serialize). */
+  serialize() {
+    const snap = {};
+    for (const k of SERIALIZED_FIELDS) snap[k] = this[k];
+    return snap;
+  }
+
+  static reconstruct(s) {
+    const g = Object.create(LoveLetterGame.prototype);
+    Object.assign(g, s);
+    g.roundHistory = [];
+    g.missionEvents = [];
+    return g;
   }
 
   getStateForPlayer(playerId) {
@@ -909,6 +987,22 @@ class LoveLetterGame {
     if (this.tokens.hasOwnProperty(oldPlayerId)) {
       this.tokens[newPlayerId] = this.tokens[oldPlayerId];
       delete this.tokens[oldPlayerId];
+    }
+
+    // Update bot knowledge (both who is looking and whose card it is)
+    if (this.knowledge) {
+      if (this.knowledge[oldPlayerId] !== undefined) {
+        this.knowledge[newPlayerId] = this.knowledge[oldPlayerId];
+        delete this.knowledge[oldPlayerId];
+      }
+      for (const viewer of Object.keys(this.knowledge)) {
+        const k = this.knowledge[viewer];
+        if (k[oldPlayerId] !== undefined) { k[newPlayerId] = k[oldPlayerId]; delete k[oldPlayerId]; }
+      }
+    }
+    if (this.notTypes && this.notTypes[oldPlayerId] !== undefined) {
+      this.notTypes[newPlayerId] = this.notTypes[oldPlayerId];
+      delete this.notTypes[oldPlayerId];
     }
 
     // Update current player

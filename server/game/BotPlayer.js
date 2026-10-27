@@ -9,6 +9,16 @@ const { getComboType, COMBO } = require('./CardValidator');
 
 const VALID_BOT_STRATEGIES = ['heuristic', 'winrate', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax', 'mc'];
 
+/**
+ * What a client is told a bot's strategy is. 'mc' (the Skull King / Love Letter
+ * search bot) is internal: the app shows a chip for any strategy it does not
+ * know, so it sees the plain 'heuristic' it has always seen for those bots.
+ */
+function publicBotStrategy(strategy) {
+  if (!strategy) return null;
+  return strategy === 'mc' ? 'heuristic' : strategy;
+}
+
 class BotPlayer {
   constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {
     this.id = id;           // 'bot_1', 'bot_2', ...
@@ -2945,6 +2955,7 @@ module.exports = {
   BotPlayer,
   decideBotAction,
   VALID_BOT_STRATEGIES,
+  publicBotStrategy,
   // Exported so the exchange can be exercised on its own: it is a pure
   // hand -> three cards function, and the alternative is standing up a
   // whole game to see which card the partner gets.

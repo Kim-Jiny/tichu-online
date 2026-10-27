@@ -21,6 +21,8 @@ const TichuGame = require('../game/TichuGame');
 const { decideBotAction } = require('../game/BotPlayer');
 const SkullKingGame = require('../game/skull_king/SkullKingGame');
 const { decideSKBotAction } = require('../game/skull_king/SkullKingBot');
+const LoveLetterGame = require('../game/love_letter/LoveLetterGame');
+const { decideLLBotAction } = require('../game/love_letter/LoveLetterBot');
 
 function decide(gameType, state, botId, strat) {
   if (gameType === 'mighty') {
@@ -34,6 +36,10 @@ function decide(gameType, state, botId, strat) {
   if (gameType === 'skull_king') {
     const game = SkullKingGame.reconstruct(state);
     return decideSKBotAction(game, botId, strat);
+  }
+  if (gameType === 'love_letter') {
+    const game = LoveLetterGame.reconstruct(state);
+    return decideLLBotAction(game, botId, strat === 'mc' ? 'mc' : {});
   }
   throw new Error(`botWorker: unsupported gameType ${gameType}`);
 }

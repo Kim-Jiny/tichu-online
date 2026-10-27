@@ -12,7 +12,7 @@ const fillerRooms = require('./lobby/fillerRooms');
 const { freezeThresholdMs } = require('./game/freezeWatch');
 const { playerStillNeedsToAct } = require('./game/turnGuard');
 const GameRoom = require('./game/GameRoom');
-const { decideBotAction } = require('./game/BotPlayer');
+const { decideBotAction, publicBotStrategy } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
@@ -7300,20 +7300,13 @@ try {
   botPool = null;
 }
 
-// What the clients are told a bot's strategy is. 'mc' (Skull King's search bot)
-// is internal: the app shows a chip for any strategy it does not know, so it
-// sees the plain 'heuristic' it has always seen for Skull King bots.
-function publicBotStrategy(strategy) {
-  if (!strategy) return null;
-  return strategy === 'mc' ? 'heuristic' : strategy;
-}
-
 // Which (gameType, strategy) pairs are worth offloading. 'heuristic' is sub-ms;
-// love_letter bots are pure heuristics. Everything else on a supported game
-// type is an expensive search → worker (skull_king 'mc' included). New
+// Everything else on a supported game type is an expensive search → worker
+// (skull_king / love_letter 'mc' included). New
 // expensive strategies auto-qualify (anything != heuristic), so this needs no upkeep.
 function botStratIsExpensive(gameType, strat) {
-  if (gameType !== 'mighty' && gameType !== 'tichu' && gameType !== 'skull_king') return false;
+  if (gameType !== 'mighty' && gameType !== 'tichu' && gameType !== 'skull_king'
+      && gameType !== 'love_letter') return false;
   return !!strat && strat !== 'heuristic';
 }
 

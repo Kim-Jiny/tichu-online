@@ -71,7 +71,7 @@ const BOT_STRATEGY = {
   tichu: 'winrate',
   mighty: 'mixoracle',
   skull_king: 'mc',
-  love_letter: 'heuristic',
+  love_letter: 'mc',
 };
 
 function isFillerRoom(roomId) {

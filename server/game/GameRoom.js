@@ -1,5 +1,5 @@
 const TichuGame = require('./TichuGame');
-const { BotPlayer } = require('./BotPlayer');
+const { BotPlayer, publicBotStrategy } = require('./BotPlayer');
 const { logVerboseConnection } = require('../logger');
 let SkullKingGame; // Lazy-loaded to avoid circular dependency
 let LoveLetterGame; // Lazy-loaded
@@ -508,9 +508,9 @@ class GameRoom {
     if (this.gameType === 'mighty') {
       strategy = 'mixoracle';
     }
-    // Skull King's bot is the rule-based bot plus a Monte-Carlo search ('mc').
+    // Skull King's and Love Letter's bots are the rule-based bot plus a Monte-Carlo search ('mc').
     // The client never picks it, so it is forced here like mighty's.
-    if (this.gameType === 'skull_king') {
+    if (this.gameType === 'skull_king' || this.gameType === 'love_letter') {
       strategy = 'mc';
     }
     const botId = `bot_${nextBotNum++}`;
@@ -1078,7 +1078,7 @@ class GameRoom {
           bannerKey: p.isBot ? null : (p.bannerKey || null),
           photoUrl: p.isBot ? null : (p.photoUrl || null),
           botSpeed: p.botSpeed || null,
-          botStrategy: p.isBot ? this.bots.get(p.id)?.strategy || null : null,
+          botStrategy: p.isBot ? publicBotStrategy(this.bots.get(p.id)?.strategy) : null,
           level: p.isBot ? null : (p.level || null),
           seasonRating,
         };

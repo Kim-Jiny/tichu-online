@@ -1,4 +1,5 @@
-# Everything here is one page; there is nothing to keep out.
+# The app is one page; /rules, /guide and /en/rules are the server-rendered
+# pages that carry the text. Nothing here needs keeping out.
 User-agent: *
 Allow: /
 

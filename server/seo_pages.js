@@ -345,10 +345,22 @@ function renderIndex(lang = 'ko') {
   return shell({ title, description, canonical: `${BASE_URL}${base}`, inner, lang, alternates });
 }
 
+// The pictures are small (about 500KB all together) and never change while the
+// server runs, so keep them in memory instead of reading the disk per request —
+// a crawler walking every page pulls each one.
+const imageCache = new Map();
+
 function serveImage(req, res, name) {
-  const file = /^[a-z0-9_]+\.webp$/.test(name) ? path.join(IMG_DIR, name) : null;
   let data = null;
-  try { if (file) data = fs.readFileSync(file); } catch (_) { /* → 404 */ }
+  if (/^[a-z0-9_]+\.webp$/.test(name)) {
+    data = imageCache.get(name) || null;
+    if (!data) {
+      try {
+        data = fs.readFileSync(path.join(IMG_DIR, name));
+        imageCache.set(name, data);
+      } catch (_) { /* → 404 */ }
+    }
+  }
   if (!data) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');

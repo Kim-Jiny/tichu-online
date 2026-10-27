@@ -170,6 +170,14 @@ function playOut(sim) {
   return false;
 }
 
+/**
+ * Hard stop. The soft deadline lets a search finish its minimum number of
+ * samples, which is what makes the answer worth having; but a worker that runs
+ * past BotWorkerPool's timeout is killed and respawned, so on a loaded box the
+ * search gives up (returns null -> rule-based move) well before that.
+ */
+function hardMs(deadlineMs) { return deadlineMs * 4; }
+
 function handSizesOf(game, botId) {
   const sizes = {};
   for (const pid of game.playerIds) if (pid !== botId) sizes[pid] = game.hands[pid].length;
@@ -193,7 +201,7 @@ function searchBid(game, botId, candidates, { samples = 40, deadlineMs = 25 } = 
   const sum = candidates.map(() => 0);
   let done = 0;
   for (let s = 0; s < samples; s++) {
-    if (done >= 8 && Date.now() - t0 > deadlineMs) break;
+    if (Date.now() - t0 > hardMs(deadlineMs) || (done >= 8 && Date.now() - t0 > deadlineMs)) break;
     const deal = sampleDeal(pool, sizes, noVoids);
     const scores = [];
     let ok = true;
@@ -254,7 +262,7 @@ function searchPlay(game, botId, preferred, { samples = 30, deadlineMs = 25, mar
   const sum = options.map(() => 0);
   let done = 0;
   for (let s = 0; s < samples; s++) {
-    if (done >= 6 && Date.now() - t0 > deadlineMs) break;
+    if (Date.now() - t0 > hardMs(deadlineMs) || (done >= 6 && Date.now() - t0 > deadlineMs)) break;
     const deal = sampleDeal(pool, sizes, voids);
     const scores = [];
     let ok = true;

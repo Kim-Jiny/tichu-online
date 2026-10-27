@@ -190,7 +190,12 @@ class LobbyManager {
           const speed = ['fast', 'normal', 'slow'].includes(p.botSpeed) ? p.botSpeed : 'normal';
           // BotPlayer normalises strategy itself; pass through and let it
           // fall back to 'heuristic' on garbage input.
-          const bot = new BotPlayer(freshId, p.nickname, speed, p.botStrategy);
+          // Skull King / Love Letter bots always run the search strategy (see
+          // GameRoom._seatBot), whatever the peer that sent the room was using — an
+          // older server only knew 'heuristic'.
+          const strategy = (room.gameType === 'skull_king' || room.gameType === 'love_letter')
+            ? 'mc' : p.botStrategy;
+          const bot = new BotPlayer(freshId, p.nickname, speed, strategy);
           room.bots.set(freshId, bot);
           room.players[p.slot] = {
             id: freshId,

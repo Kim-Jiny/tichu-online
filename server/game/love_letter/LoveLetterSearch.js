@@ -153,7 +153,7 @@ function evaluate(game, botId, options, preferred, { samples = 40, deadlineMs = 
   const sum = options.map(() => 0);
   let done = 0;
   for (let s = 0; s < samples; s++) {
-    if (done >= 8 && Date.now() - t0 > deadlineMs) break;
+    if (Date.now() - t0 > deadlineMs * 4 || (done >= 8 && Date.now() - t0 > deadlineMs)) break;
     const world = sampleWorld(game, botId);
     if (!world) return null;
     const vals = [];

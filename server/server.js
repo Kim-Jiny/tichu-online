@@ -12,7 +12,7 @@ const fillerRooms = require('./lobby/fillerRooms');
 const { freezeThresholdMs } = require('./game/freezeWatch');
 const { playerStillNeedsToAct } = require('./game/turnGuard');
 const GameRoom = require('./game/GameRoom');
-const { decideBotAction, publicBotStrategy } = require('./game/BotPlayer');
+const { decideBotAction } = require('./game/BotPlayer');
 const { decideSKBotAction } = require('./game/skull_king/SkullKingBot');
 const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
@@ -2586,7 +2586,9 @@ function serializeRoom(room) {
         nickname: p.nickname,
         isBot: !!p.isBot,
         botSpeed: p.botSpeed || null,
-        botStrategy: p.isBot ? publicBotStrategy(room.bots.get(p.id)?.strategy) : null,
+        // The REAL strategy, not publicBotStrategy(): this goes to the peer server, which
+        // seats the bot with it. Only what is sent to apps hides 'mc'.
+        botStrategy: p.isBot ? room.bots.get(p.id)?.strategy || null : null,
         // Players pulled out of a live match are already committed to it,
         // so land them pre-readied on the peer — it resumes on its own
         // (maybeAutoResumeMatch), and a stale unready flag would only

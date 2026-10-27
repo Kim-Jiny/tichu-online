@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Ads are mobile-only: google_mobile_ads has no web implementation, and the
 /// `Platform` reads below throw outright in a browser. Guarding the ids keeps
@@ -61,9 +60,11 @@ class AdService {
       ? 'ca-app-pub-3940256099942544/1712485313'
       : 'ca-app-pub-3940256099942544/5224354917';
 
+  /// 하루에 받을 수 있는 광고 보상 횟수. 서버(claimAdReward)와 같은 값이어야 한다.
+  /// 오늘 몇 번 받았는지는 기기가 세지 않는다 — 서버가 알려 준 값(GameService.adRewardUsedToday)만 쓴다.
+  /// 기기 날짜와 서버 날짜(UTC)가 달라서, 기기가 세면 밤~오전에 어긋나고,
+  /// 서버가 거절해도 횟수만 줄었다.
   static const int maxDailyRewards = 5;
-  static const String _rewardCountKey = 'ad_reward_count';
-  static const String _rewardDateKey = 'ad_reward_date';
 
   /// 배너 광고 생성 (로드 성공/실패 콜백 포함)
   static BannerAd createBannerAd(
@@ -89,28 +90,6 @@ class AdService {
         },
       ),
     );
-  }
-
-  /// 오늘 보상 횟수 조회
-  static Future<int> getTodayRewardCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedDate = prefs.getString(_rewardDateKey) ?? '';
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    if (savedDate != today) return 0;
-    return prefs.getInt(_rewardCountKey) ?? 0;
-  }
-
-  /// 보상 횟수 증가
-  static Future<void> incrementRewardCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    final savedDate = prefs.getString(_rewardDateKey) ?? '';
-    int count = 0;
-    if (savedDate == today) {
-      count = prefs.getInt(_rewardCountKey) ?? 0;
-    }
-    await prefs.setString(_rewardDateKey, today);
-    await prefs.setInt(_rewardCountKey, count + 1);
   }
 
   /// 보상형 광고 로드 & 표시

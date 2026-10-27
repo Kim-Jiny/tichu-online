@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' show Random;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'ad_service.dart';
 import 'iap_service.dart';
 import '../models/player.dart';
 import '../utils/pending_keys.dart';
@@ -3196,15 +3198,37 @@ class GameService extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case 'ad_reward_status':
+        // 오늘 몇 번 받았는지는 서버가 센 값이 정답이다.
+        if (data['success'] == true) {
+          adRewardUsedToday = (data['used'] as num?)?.toInt();
+          notifyListeners();
+        }
+        break;
+
       case 'ad_reward_result':
+        _adClaimTimer?.cancel();
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
           walletLoaded = true;
           adRewardRemaining = (data['remaining'] as num?)?.toInt() ?? 0;
+          adRewardUsedToday = AdService.maxDailyRewards - adRewardRemaining;
           adRewardResult = 'ad_reward_success';
+          _adClaimId = null;
+        } else if (data['messageKey'] == 'db_ad_reward_exhausted') {
+          // 서버 기준으로 오늘 몫을 다 받았다 — 다시 보내 봐야 소용없다.
+          adRewardUsedToday = AdService.maxDailyRewards;
+          adRewardResult = 'ad_reward_exhausted';
+          _adClaimId = null;
+        } else if (_adClaimId != null && _adClaimTries < _adClaimMaxTries) {
+          // 서버의 일시 오류일 수 있다. 같은 claimId 로 잠시 뒤 다시 보낸다(서버가 한 번만 지급).
+          // 마지막 시도까지 실패했을 때만 사용자에게 알린다.
+          _adClaimTimer = Timer(const Duration(seconds: 2), _sendAdClaim);
+          return;
         } else {
-          adRewardResult = data['message'] as String? ?? 'reward_failed';
+          adRewardResult = 'reward_failed';
+          _adClaimId = null;
         }
         notifyListeners();
         break;
@@ -3688,6 +3712,7 @@ class GameService extends ChangeNotifier {
     myRankData = null;
     attendanceState = null;
     adRewardRemaining = 0;
+    adRewardUsedToday = null;
     gold = 0;
     walletLoaded = false;
     leaveCount = 0;
@@ -3762,6 +3787,7 @@ class GameService extends ChangeNotifier {
     attendanceError = null;
     attendanceClaiming = false;
     adRewardRemaining = 0;
+    adRewardUsedToday = null;
     iapBindingToken = null;
     currentRoomId = '';
     currentRoomName = '';
@@ -5023,8 +5049,39 @@ class GameService extends ChangeNotifier {
   bool? adRewardSuccess;
   int adRewardRemaining = 0;
 
+  /// 오늘 받은 광고 보상 횟수 — 서버가 센 값. 아직 모르면 null.
+  int? adRewardUsedToday;
+
+  // 지급을 요청 중인 광고 한 편의 id. 같은 id 로 다시 보내도 서버는 한 번만 지급한다.
+  String? _adClaimId;
+  int _adClaimTries = 0;
+  Timer? _adClaimTimer;
+  static const int _adClaimMaxTries = 3;
+
+  void requestAdRewardStatus() {
+    _network.send({'type': 'get_ad_reward_status'});
+  }
+
+  /// 광고를 끝까지 봤다 — 보상을 요청한다. 연결이 끊겨 있으면 NetworkService 의 재시도
+  /// 큐에 쌓였다가 다음 로그인 때 나가고, 응답이 안 오거나 서버가 일시 오류를 내면
+  /// 같은 id 로 다시 보낸다.
   void claimAdReward() {
-    _network.send({'type': 'ad_reward'});
+    _adClaimId =
+        '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 30)}';
+    _adClaimTries = 0;
+    _sendAdClaim();
+  }
+
+  void _sendAdClaim() {
+    final id = _adClaimId;
+    if (id == null) return;
+    _adClaimTries++;
+    _network.send({'type': 'ad_reward', 'claimId': id});
+    // 응답이 끝내 안 오면(연결이 끊긴 채로 보낸 경우 등) 다시 보낸다.
+    _adClaimTimer?.cancel();
+    _adClaimTimer = Timer(const Duration(seconds: 8), () {
+      if (_adClaimId == id && _adClaimTries < _adClaimMaxTries) _sendAdClaim();
+    });
   }
 
   void requestShopItems() {

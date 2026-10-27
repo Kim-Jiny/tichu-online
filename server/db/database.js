@@ -1369,6 +1369,12 @@ async function runMigrations() {
         claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // 광고 한 편에 대한 지급 요청 id. 앱이 응답을 못 받아 같은 요청을 다시 보내도 한 번만 지급한다.
+    await client.query(`ALTER TABLE tc_ad_rewards ADD COLUMN IF NOT EXISTS claim_id VARCHAR(64)`);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ad_rewards_claim
+        ON tc_ad_rewards (nickname, claim_id) WHERE claim_id IS NOT NULL
+    `);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS tc_gold_history (
@@ -5858,7 +5864,32 @@ async function getAdminPurchaseHistory(nickname, limit = 30, offset = 0) {
 }
 
 // Ad reward claim (max 5 per day, 50 gold each)
-async function claimAdReward(nickname) {
+const AD_REWARD_DAILY_MAX = 5;
+const AD_REWARD_GOLD = 50;
+
+/** 앱이 보낸 claimId 를 믿을 수 있는 모양으로. 이상하면 없는 것으로 본다. */
+function cleanClaimId(claimId) {
+  return typeof claimId === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(claimId) ? claimId : null;
+}
+
+/** 오늘(서버 날짜 기준) 받은 광고 보상 횟수와 남은 횟수. 앱은 이 값을 그대로 보여 준다. */
+async function getAdRewardStatus(nickname) {
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM tc_ad_rewards
+       WHERE nickname = $1 AND claimed_at::date = CURRENT_DATE`,
+      [nickname]
+    );
+    const used = Math.min(parseInt(r.rows[0].cnt, 10), AD_REWARD_DAILY_MAX);
+    return { success: true, used, remaining: AD_REWARD_DAILY_MAX - used, max: AD_REWARD_DAILY_MAX };
+  } catch (err) {
+    console.error('Get ad reward status error:', err);
+    return { success: false, messageKey: 'db_reward_grant_failed' };
+  }
+}
+
+async function claimAdReward(nickname, claimIdRaw) {
+  const claimId = cleanClaimId(claimIdRaw);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -5874,19 +5905,39 @@ async function claimAdReward(nickname) {
       [nickname]
     );
     const todayCount = parseInt(countResult.rows[0].cnt, 10);
-    if (todayCount >= 5) {
+
+    // 같은 광고의 요청이 다시 왔다 — 이미 지급했다면 또 주지 않고 그때의 성공을 돌려준다.
+    // (응답이 앱에 닿지 못해 앱이 다시 보냈을 때, 골드를 두 번 주지 않기 위해서)
+    if (claimId) {
+      const dup = await client.query(
+        `SELECT 1 FROM tc_ad_rewards WHERE nickname = $1 AND claim_id = $2`,
+        [nickname, claimId]
+      );
+      if (dup.rows.length > 0) {
+        await client.query('ROLLBACK');
+        const w = await pool.query(`SELECT gold FROM tc_users WHERE nickname = $1`, [nickname]);
+        return {
+          success: true,
+          repeat: true,
+          gold: w.rows[0]?.gold ?? 0,
+          remaining: Math.max(0, AD_REWARD_DAILY_MAX - todayCount),
+        };
+      }
+    }
+
+    if (todayCount >= AD_REWARD_DAILY_MAX) {
       await client.query('ROLLBACK');
       return { success: false, messageKey: 'db_ad_reward_exhausted', remaining: 0 };
     }
-    // Grant 50 gold
+    // Grant gold
     await client.query(
-      `UPDATE tc_users SET gold = gold + 50 WHERE nickname = $1`,
-      [nickname]
+      `UPDATE tc_users SET gold = gold + $2 WHERE nickname = $1`,
+      [nickname, AD_REWARD_GOLD]
     );
     // Record claim
     await client.query(
-      `INSERT INTO tc_ad_rewards (nickname) VALUES ($1)`,
-      [nickname]
+      `INSERT INTO tc_ad_rewards (nickname, claim_id) VALUES ($1, $2)`,
+      [nickname, claimId]
     );
     await client.query('COMMIT');
     // Get updated gold
@@ -5895,7 +5946,7 @@ async function claimAdReward(nickname) {
       [nickname]
     );
     const gold = walletResult.rows[0]?.gold ?? 0;
-    return { success: true, gold, remaining: 5 - todayCount - 1 };
+    return { success: true, gold, remaining: AD_REWARD_DAILY_MAX - todayCount - 1 };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Claim ad reward error:', err);
@@ -13803,6 +13854,7 @@ module.exports = {
   adminAdjustExp,
   getVisualCatalog,
   claimAdReward,
+  getAdRewardStatus,
   searchUsers,
   sendDm,
   getDmHistory,

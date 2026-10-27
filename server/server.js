@@ -49,6 +49,7 @@ const {
   setAdminAlertSettings,
   getAdminPushRecipients,
   claimAdReward,
+  getAdRewardStatus,
   searchUsers,
   sendDm,
   getDmHistory,
@@ -4050,11 +4051,16 @@ async function handleMessage(ws, data) {
     case 'ad_reward':
       if (ws.nickname) {
         try {
-          const adResult = await claimAdReward(ws.nickname);
+          const adResult = await claimAdReward(ws.nickname, data.claimId);
           sendTo(ws, { type: 'ad_reward_result', ...adResult });
         } catch (err) {
           sendTo(ws, { type: 'ad_reward_result', success: false, message: t(ws.locale, 'reward_failed') });
         }
+      }
+      break;
+    case 'get_ad_reward_status':
+      if (ws.nickname) {
+        sendTo(ws, { type: 'ad_reward_status', ...(await getAdRewardStatus(ws.nickname)) });
       }
       break;
     case 'get_maintenance_status':

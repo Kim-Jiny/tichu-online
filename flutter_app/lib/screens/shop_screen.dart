@@ -124,13 +124,13 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAdCount();
     _preloadRewardedAd();
     _preloadAttendanceAd();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final game = context.read<GameService>();
       game.requestWallet();
+      game.requestAdRewardStatus();
       game.requestShopItems();
       game.requestInventory();
       _loadNewTracker(game.playerName);
@@ -180,9 +180,12 @@ class _ShopScreenState extends State<ShopScreen> {
     if (changed && mounted) setState(() {});
   }
 
-  Future<void> _loadAdCount() async {
-    final count = await AdService.getTodayRewardCount();
-    if (mounted) setState(() => _todayAdCount = count);
+  /// 오늘 받은 광고 보상 횟수는 서버가 센 값을 따른다(기기 날짜로 세면 서버와 어긋난다).
+  void _syncAdCount(GameService game) {
+    final n = game.adRewardUsedToday;
+    if (n != null && n != _todayAdCount && mounted) {
+      setState(() => _todayAdCount = n);
+    }
   }
 
   void _preloadRewardedAd() {
@@ -400,6 +403,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       _maybeShowNicknameChangeResult(context, game);
                       _maybeShowCustomTitleResult(context, game);
                       _maybeShowAdRewardResult(context, game);
+                      _syncAdCount(game);
                       _syncInventoryNew(game);
                     });
                     // Header and wallet are one flat bar, the two reward actions
@@ -4982,6 +4986,7 @@ class _ShopScreenState extends State<ShopScreen> {
   /// 광고 칩을 누르면 먼저 무엇인지(50골드), 오늘 몇 번 남았는지를 보여 주고
   /// 거기서 시청한다. 아이콘만으로는 광고 보상인지도 얼마를 주는지도 알 수 없다.
   void _showAdRewardInfo(GameService game) {
+    game.requestAdRewardStatus(); // 열 때마다 서버의 오늘 횟수를 다시 받는다
     final l10n = L10n.of(context);
     final canWatch = _todayAdCount < AdService.maxDailyRewards;
     showDialog<void>(
@@ -5081,10 +5086,9 @@ class _ShopScreenState extends State<ShopScreen> {
       },
     );
     ad.show(
-      onUserEarnedReward: (ad, reward) async {
-        await AdService.incrementRewardCount();
+      onUserEarnedReward: (ad, reward) {
+        // 횟수는 여기서 올리지 않는다. 서버가 지급을 확인해 주면 그 값으로 바뀐다.
         game.claimAdReward();
-        await _loadAdCount();
         if (mounted) setState(() => _adLoading = false);
       },
     );
@@ -5099,7 +5103,9 @@ class _ShopScreenState extends State<ShopScreen> {
     final l10n = L10n.of(context);
     final displayMsg = (msg == 'ad_reward_success')
         ? localizeAdRewardSuccess(game.adRewardRemaining, l10n)
-        : localizeServiceMessage(msg, l10n);
+        : (msg == 'ad_reward_exhausted')
+            ? l10n.shopAdRewardDone
+            : localizeServiceMessage(msg, l10n);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(displayMsg),

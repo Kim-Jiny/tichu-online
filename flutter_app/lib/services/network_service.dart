@@ -35,12 +35,14 @@ class NetworkService extends ChangeNotifier {
 
   // Messages that we cannot afford to drop when WS is momentarily down
   // (the user paid real money for the IAP grant; the daily attendance grant
-  // is similarly per-day and the user already watched an ad). Both are
+  // is similarly per-day and the user already watched an ad). All are
   // server-side IDEMPOTENT so replaying is safe — verify_iap_purchase keys
-  // off transaction_id (UNIQUE), claim_attendance off last_claim_date.
+  // off transaction_id (UNIQUE), claim_attendance off last_claim_date,
+  // ad_reward off the claimId the client makes once per ad it watched.
   static const _retryableTypes = <String>{
     'verify_iap_purchase',
     'claim_attendance',
+    'ad_reward',
   };
   static const String _kRetryQueueKey = 'tc_ws_retry_queue_v1';
   // Drop entries older than this — Google voids unfinished purchases after a

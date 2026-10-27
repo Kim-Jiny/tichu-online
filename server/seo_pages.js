@@ -41,7 +41,7 @@ function inline(raw) {
 }
 
 /// The tiny markdown subset these files use: # / ## headings, paragraphs,
-/// "- " lists. Returns the rendered body and the parsed meta + FAQ.
+/// ### headings, "- " lists. Returns the rendered body and the parsed meta + FAQ.
 function parse(md) {
   const parts = md.split(/\n---\n/);
   const metaBlock = parts.length > 1 ? parts[parts.length - 1] : '';
@@ -63,6 +63,11 @@ function parse(md) {
     const t = line.trim();
     if (!t) { flush(); continue; }
     if (t.startsWith('# ')) { h1 = t.slice(2); continue; }
+    if (t.startsWith('### ')) {
+      flush();
+      out.push(`<h3>${inline(t.slice(4))}</h3>`);
+      continue;
+    }
     if (t.startsWith('## ')) {
       flush();
       inFaq = t.includes('자주 묻는');
@@ -99,7 +104,7 @@ const CSS = `body{margin:0;background:#fdf8f3;color:#143a57;`
   + `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR','Apple SD Gothic Neo',sans-serif;line-height:1.8}`
   + `.wrap{max-width:720px;margin:0 auto;padding:32px 22px 80px}`
   + `.nav{font-size:14px;margin:0 0 28px}.nav a{color:#f28c26;text-decoration:none;margin-right:14px;font-weight:700}`
-  + `h1{font-size:26px;line-height:1.4;margin:0 0 18px}h2{font-size:20px;margin:36px 0 8px;color:#143a57}`
+  + `h1{font-size:26px;line-height:1.4;margin:0 0 18px}h2{font-size:20px;margin:36px 0 8px;color:#143a57}h3{font-size:17px;margin:24px 0 6px}`
   + `p{margin:0 0 14px}strong{color:#143a57}a{color:#d9731a}ul{padding-left:20px}`
   + `.cta{display:inline-block;margin:28px 0 8px;padding:14px 26px;background:#f28c26;color:#fff;`
   + `border-radius:12px;text-decoration:none;font-weight:700}`

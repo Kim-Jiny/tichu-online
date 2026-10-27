@@ -5,9 +5,49 @@
 const { getCardInfo, CARD_TYPE } = require('./SkullKingDeck');
 
 /**
- * Main entry point: decide bot action based on game state
+ * Main entry point: decide bot action based on game state.
+ *
+ * strat 'mc' adds a determinized Monte-Carlo search on top of the rule-based
+ * choice (SkullKingSearch.js); anything else is the rule-based bot alone.
  */
-function decideSKBotAction(game, botId) {
+function decideSKBotAction(game, botId, strat) {
+  if (strat === 'mc') {
+    try {
+      const a = decideWithSearch(game, botId);
+      if (a) return a;
+    } catch (e) { /* a broken search must never stall a game — fall through */ }
+  }
+  return decideSKBotActionHeuristic(game, botId);
+}
+
+// Tunables, exposed so the A/B harness can sweep them.
+const MC = { bidSamples: 40, playSamples: 30, deadlineMs: 25, bidSpan: 2, playMargin: 0 };
+
+function decideWithSearch(game, botId) {
+  if (!game || !game.playerIds.includes(botId)) return null;
+  const { searchBid, searchPlay } = require('./SkullKingSearch');
+
+  if (game.state === 'bidding' && game.bids[botId] === null) {
+    const base = decideSKBotActionHeuristic(game, botId);
+    if (!base) return null;
+    const cand = new Set([0]);
+    for (let b = base.bid - MC.bidSpan; b <= base.bid + MC.bidSpan; b++) {
+      if (b >= 0 && b <= game.round) cand.add(b);
+    }
+    const r = searchBid(game, botId, [...cand].sort((a, b) => a - b),
+      { samples: MC.bidSamples, deadlineMs: MC.deadlineMs });
+    return r ? { type: 'submit_bid', bid: r.bid } : null;
+  }
+
+  if (game.state === 'playing' && game.currentPlayer === botId) {
+    const base = decideSKBotActionHeuristic(game, botId);
+    return searchPlay(game, botId, base,
+      { samples: MC.playSamples, deadlineMs: MC.deadlineMs, margin: MC.playMargin });
+  }
+  return null;
+}
+
+function decideSKBotActionHeuristic(game, botId) {
   if (!game || !game.playerIds.includes(botId)) return null;
 
   if (game.state === 'bidding' && game.bids[botId] === null) {
@@ -732,4 +772,4 @@ function isControlLeadNumber(info) {
   return info.value >= 13;
 }
 
-module.exports = { decideSKBotAction };
+module.exports = { decideSKBotAction, decideSKBotActionHeuristic, MC };

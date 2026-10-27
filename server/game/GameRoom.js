@@ -508,6 +508,11 @@ class GameRoom {
     if (this.gameType === 'mighty') {
       strategy = 'mixoracle';
     }
+    // Skull King's bot is the rule-based bot plus a Monte-Carlo search ('mc').
+    // The client never picks it, so it is forced here like mighty's.
+    if (this.gameType === 'skull_king') {
+      strategy = 'mc';
+    }
     const botId = `bot_${nextBotNum++}`;
     const { t } = require('../i18n');
     // Pick the smallest unused bot number for the nickname so deletions

@@ -2586,7 +2586,7 @@ function serializeRoom(room) {
         nickname: p.nickname,
         isBot: !!p.isBot,
         botSpeed: p.botSpeed || null,
-        botStrategy: p.isBot ? room.bots.get(p.id)?.strategy || null : null,
+        botStrategy: p.isBot ? publicBotStrategy(room.bots.get(p.id)?.strategy) : null,
         // Players pulled out of a live match are already committed to it,
         // so land them pre-readied on the peer — it resumes on its own
         // (maybeAutoResumeMatch), and a stale unready flag would only
@@ -7300,12 +7300,20 @@ try {
   botPool = null;
 }
 
+// What the clients are told a bot's strategy is. 'mc' (Skull King's search bot)
+// is internal: the app shows a chip for any strategy it does not know, so it
+// sees the plain 'heuristic' it has always seen for Skull King bots.
+function publicBotStrategy(strategy) {
+  if (!strategy) return null;
+  return strategy === 'mc' ? 'heuristic' : strategy;
+}
+
 // Which (gameType, strategy) pairs are worth offloading. 'heuristic' is sub-ms;
-// love_letter / skull_king bots are pure heuristics. Everything else on a
-// supported game type is an expensive search → worker. New expensive mighty
-// strategies auto-qualify (anything != heuristic), so this needs no upkeep.
+// love_letter bots are pure heuristics. Everything else on a supported game
+// type is an expensive search → worker (skull_king 'mc' included). New
+// expensive strategies auto-qualify (anything != heuristic), so this needs no upkeep.
 function botStratIsExpensive(gameType, strat) {
-  if (gameType !== 'mighty' && gameType !== 'tichu') return false;
+  if (gameType !== 'mighty' && gameType !== 'tichu' && gameType !== 'skull_king') return false;
   return !!strat && strat !== 'heuristic';
 }
 

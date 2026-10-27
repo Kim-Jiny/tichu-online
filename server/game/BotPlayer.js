@@ -7,7 +7,7 @@ const { performance } = require('perf_hooks');
 const { createDeck } = require('./Deck');
 const { getComboType, COMBO } = require('./CardValidator');
 
-const VALID_BOT_STRATEGIES = ['heuristic', 'winrate', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax'];
+const VALID_BOT_STRATEGIES = ['heuristic', 'winrate', 'oracle', 'mixoracle', 'pimc_play', 'pimc_full', 'expectimax', 'expectimax_smart', 'mixexpectimax', 'mc'];
 
 class BotPlayer {
   constructor(id, nickname, speed = 'normal', strategy = 'heuristic') {

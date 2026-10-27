@@ -16,6 +16,14 @@ const LOOT_BONUS_POINTS = 20;
 const RASCAL_WAGERS = [0, 10, 20];
 const BENDT_DRAW = 2;
 
+const SERIALIZED_FIELDS = [
+  'playerIds', 'playerNames', 'playerCount', 'gameType', 'initialDealerIndex', 'expansions',
+  'state', 'round', 'trickNumber', 'hands', 'bids', 'tricks', 'bonuses', 'lootAlliances',
+  'currentTrick', 'roundPlays', 'trickStarter', 'currentPlayer', 'totalScores', 'lastRoundScores',
+  'lastTrickWinner', 'nextPhaseAfterTrickEnd', 'pendingAbility', 'nextLeaderOverride',
+  'rascalWagers', 'undealt',
+];
+
 class SkullKingGame {
   constructor(playerIds, playerNames, options = {}) {
     this.playerIds = playerIds;
@@ -47,6 +55,9 @@ class SkullKingGame {
     this.bonuses = {};        // playerId -> accumulated bonus this round
     this.lootAlliances = [];  // [{winnerId, looterId}] — settled at round end
     this.currentTrick = [];   // [{playerId, cardId, tigressChoice?}]
+    // 이번 라운드에 나온 카드 전부(시간순). 봇이 남은 카드를 세고 누가 무늬가 없는지 추리하는 데 쓴다.
+    // 화면으로 나가는 상태(getStateForPlayer 등)에는 넣지 않는다.
+    this.roundPlays = [];
     this.trickStarter = null; // playerId who leads the trick
     this.currentPlayer = null;
 
@@ -100,6 +111,7 @@ class SkullKingGame {
     this.tricks = {};
     this.bonuses = {};
     this.lootAlliances = [];
+    this.roundPlays = [];
 
     for (let i = 0; i < this.playerCount; i++) {
       const pid = this.playerIds[i];
@@ -239,11 +251,13 @@ class SkullKingGame {
 
     // Play the card
     this.hands[playerId] = hand.filter(c => c !== cardId);
-    this.currentTrick.push({
+    const play = {
       playerId,
       cardId,
       tigressChoice: cardInfo.type === CARD_TYPE.TIGRESS ? tigressChoice : undefined,
-    });
+    };
+    this.currentTrick.push(play);
+    this.roundPlays.push({ ...play });
 
     // Check if trick is complete
     if (this.currentTrick.length === this.playerCount) {
@@ -651,6 +665,26 @@ class SkullKingGame {
   getNextPlayer(currentPlayerId) {
     const idx = this.playerIds.indexOf(currentPlayerId);
     return this.playerIds[(idx + 1) % this.playerCount];
+  }
+
+  /** JSON-safe snapshot for worker-thread bot offload. Everything a bot decision
+   *  reads: the table, the round so far (roundPlays) and the pirate-ability state.
+   *  Score history and mission events are left out — no bot looks at them. When a
+   *  new field starts to matter to a bot, add it here (test_serialize_roundtrip). */
+  serialize() {
+    const snap = {};
+    for (const k of SERIALIZED_FIELDS) snap[k] = this[k];
+    return snap;
+  }
+
+  /** Rebuild a working instance from serialize() output (called in the worker). */
+  static reconstruct(s) {
+    const g = Object.create(SkullKingGame.prototype);
+    Object.assign(g, s);
+    g.scoreHistory = [];
+    g.missionEvents = [];
+    g.lastAbility = null;
+    return g;
   }
 
   getStateForPlayer(playerId) {

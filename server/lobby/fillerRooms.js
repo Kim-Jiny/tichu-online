@@ -70,7 +70,7 @@ const DEFAULT_PLAYERS = {
 const BOT_STRATEGY = {
   tichu: 'winrate',
   mighty: 'mixoracle',
-  skull_king: 'heuristic',
+  skull_king: 'mc',
   love_letter: 'heuristic',
 };
 

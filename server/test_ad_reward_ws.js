@@ -80,10 +80,13 @@ async function main() {
 
     let r = await ask({ type: 'ad_reward', claimId: 'ws-1' }, 'ad_reward_result');
     ok(r && r.success && r.remaining === 4 && typeof r.gold === 'number', '지급된다', JSON.stringify(r));
+    ok(r && r.claimId === 'ws-1', '성공 응답은 요청 claimId 를 돌려준다', JSON.stringify(r));
     const gold = r && r.gold;
 
     r = await ask({ type: 'ad_reward', claimId: 'ws-1' }, 'ad_reward_result');
     ok(r && r.success && r.repeat === true && r.gold === gold, '같은 claimId 를 다시 보내면 골드가 그대로다', JSON.stringify(r));
+
+    ok(r && r.claimId === 'ws-1', '중복 지급 응답도 원래 claimId 를 돌려준다', JSON.stringify(r));
 
     st = await ask({ type: 'get_ad_reward_status' }, 'ad_reward_status');
     ok(st && st.used === 1 && st.remaining === 4, '서버가 센 횟수는 1', JSON.stringify(st));
@@ -91,6 +94,9 @@ async function main() {
     for (let i = 2; i <= 5; i++) await ask({ type: 'ad_reward', claimId: `ws-${i}` }, 'ad_reward_result');
     r = await ask({ type: 'ad_reward', claimId: 'ws-6' }, 'ad_reward_result');
     ok(r && !r.success && r.messageKey === 'db_ad_reward_exhausted', '여섯 번째는 거절 + 거절 사유가 messageKey 로 온다', JSON.stringify(r));
+    ok(r && r.claimId === 'ws-6', '거절 응답도 요청 claimId 를 돌려준다', JSON.stringify(r));
+    const legacy = await ask({ type: 'ad_reward' }, 'ad_reward_result');
+    ok(legacy && !legacy.success && legacy.claimId === null, 'id 없는 구형 앱도 정상 응답을 받는다', JSON.stringify(legacy));
     st = await ask({ type: 'get_ad_reward_status' }, 'ad_reward_status');
     ok(st && st.used === 5 && st.remaining === 0, '거절 뒤에도 횟수는 5', JSON.stringify(st));
     ok(!/Claim ad reward error|Get ad reward status error/.test(log), '서버 오류 로그가 없다');

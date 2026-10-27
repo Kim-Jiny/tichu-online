@@ -4050,11 +4050,14 @@ async function handleMessage(ws, data) {
       break;
     case 'ad_reward':
       if (ws.nickname) {
+        // Echo the id on every outcome so late responses cannot complete a newer ad.
+        const claimId = typeof data.claimId === 'string'
+          && /^[A-Za-z0-9_-]{1,64}$/.test(data.claimId) ? data.claimId : null;
         try {
-          const adResult = await claimAdReward(ws.nickname, data.claimId);
-          sendTo(ws, { type: 'ad_reward_result', ...adResult });
+          const adResult = await claimAdReward(ws.nickname, claimId);
+          sendTo(ws, { type: 'ad_reward_result', ...adResult, claimId });
         } catch (err) {
-          sendTo(ws, { type: 'ad_reward_result', success: false, message: t(ws.locale, 'reward_failed') });
+          sendTo(ws, { type: 'ad_reward_result', claimId, success: false, message: t(ws.locale, 'reward_failed') });
         }
       }
       break;

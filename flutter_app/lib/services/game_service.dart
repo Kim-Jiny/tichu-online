@@ -3214,39 +3214,40 @@ class GameService extends ChangeNotifier {
         break;
 
       case 'ad_reward_result':
+        // A delayed response (or a login replay) belongs only to its own ad.
+        // Never stop another claim's retry or overwrite its result with it.
+        final liveClaim = _adClaimId != null && data['claimId'] == _adClaimId;
+        if (!liveClaim) {
+          if (data['success'] == true) {
+            // The response may contain an old wallet snapshot. Fetch current values.
+            requestWallet();
+            requestAdRewardStatus();
+          }
+          break;
+        }
         _adClaimTimer?.cancel();
-        // 이 세션에서 보낸 요청이 없는데 온 응답은 로그인 때 재시도 큐에서 나간 것이다.
-        // 지급됐으면 알리고, 거절·오류는 사용자가 한 일이 아니니 조용히 둔다.
-        final liveClaim = _adClaimId != null;
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
           walletLoaded = true;
           adRewardRemaining = (data['remaining'] as num?)?.toInt() ?? 0;
           adRewardUsedToday = AdService.maxDailyRewards - adRewardRemaining;
-          // 서버가 '이미 지급한 요청'이라고 답한 것(repeat)은 사용자가 방금 한 일이 아니다 —
-          // 값만 맞추고 '보상을 받았어요'를 또 띄우지 않는다.
-          final replay = data['repeat'] == true && !liveClaim;
-          adRewardResult = replay ? null : 'ad_reward_success';
-          if (replay) adRewardSuccess = null;
+          adRewardResult = 'ad_reward_success';
           _dropAdClaim();
         } else if (data['messageKey'] == 'db_ad_reward_exhausted') {
           // 서버 기준으로 오늘 몫을 다 받았다 — 다시 보내 봐야 소용없다.
           adRewardUsedToday = AdService.maxDailyRewards;
-          adRewardResult = liveClaim ? 'ad_reward_exhausted' : null;
-          adRewardSuccess = liveClaim ? false : null;
+          adRewardResult = 'ad_reward_exhausted';
+          adRewardSuccess = false;
           _dropAdClaim();
-        } else if (liveClaim && _adClaimTries < _adClaimMaxTries) {
+        } else if (_adClaimTries < _adClaimMaxTries) {
           // 서버의 일시 오류일 수 있다. 같은 claimId 로 잠시 뒤 다시 보낸다(서버가 한 번만 지급).
           // 마지막 시도까지 실패했을 때만 사용자에게 알린다.
           _adClaimTimer = Timer(const Duration(seconds: 2), _sendAdClaim);
           return;
-        } else if (liveClaim) {
+        } else {
           _giveUpAdClaim();
           return;
-        } else {
-          adRewardResult = null;
-          adRewardSuccess = null;
         }
         notifyListeners();
         break;
@@ -5121,6 +5122,12 @@ class GameService extends ChangeNotifier {
   /// 큐에 쌓였다가 다음 로그인 때 나가고, 응답이 안 오거나 서버가 일시 오류를 내면
   /// 같은 id 로 다시 보낸다.
   void claimAdReward() {
+    // A second completed ad must not erase an earlier unacknowledged claim.
+    if (_adClaimId != null && _adClaimOwner == _accountKey) {
+      // ignore: discarded_futures
+      _network.queueForRetry({'type': 'ad_reward', 'claimId': _adClaimId});
+    }
+    _dropAdClaim();
     _adClaimId =
         '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 30)}';
     _adClaimOwner = _accountKey;

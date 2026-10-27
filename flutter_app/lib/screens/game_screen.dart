@@ -1855,7 +1855,10 @@ class _GameScreenState extends State<GameScreen> {
       children: [
         Opacity(
           opacity: alive ? 1.0 : 0.3,
-          child: Text(emoji, style: TextStyle(fontSize: iconFont + 2 * _s)),
+          child: Text(
+            emoji,
+            style: TextStyle(fontSize: iconFont + 2 * _s, color: Cartoon.ink),
+          ),
         ),
         Text(
           alive ? '\u25CF' : '\u2715',

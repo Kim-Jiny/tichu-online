@@ -385,32 +385,37 @@ class NetworkService extends ChangeNotifier {
 
   // Persists a single retryable message. Caps the queue so a stuck client
   // can't grow it unbounded.
-  Future<void> _queueRetryable(Map<String, dynamic> data) =>
-      _withQueueLock(() async {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final raw = prefs.getStringList(_kRetryQueueKey) ?? <String>[];
-          // 같은 광고 보상 요청(claimId)이 이미 쌓여 있으면 또 쌓지 않는다.
-          final claimId = data['claimId'];
-          if (claimId is String &&
-              raw.any((e) => e.contains('"claimId":${jsonEncode(claimId)}'))) {
-            return;
-          }
-          raw.add(
-            jsonEncode({
-              'ts': DateTime.now().millisecondsSinceEpoch,
-              'owner': retryOwner,
-              'msg': data,
-            }),
-          );
-          while (raw.length > _retryMaxEntries) {
-            raw.removeAt(0);
-          }
-          await prefs.setStringList(_kRetryQueueKey, raw);
-        } catch (e) {
-          debugPrint('[Network] Queue persist failed: $e');
+  Future<void> _queueRetryable(Map<String, dynamic> data) {
+    // Capture before waiting for the queue lock or preferences: the account
+    // may change while persistence is pending.
+    final owner = retryOwner;
+    final message = Map<String, dynamic>.from(data);
+    return _withQueueLock(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getStringList(_kRetryQueueKey) ?? <String>[];
+        // 같은 광고 보상 요청(claimId)이 이미 쌓여 있으면 또 쌓지 않는다.
+        final claimId = message['claimId'];
+        if (claimId is String &&
+            raw.any((e) => e.contains('"claimId":${jsonEncode(claimId)}'))) {
+          return;
         }
-      });
+        raw.add(
+          jsonEncode({
+            'ts': DateTime.now().millisecondsSinceEpoch,
+            'owner': owner,
+            'msg': message,
+          }),
+        );
+        while (raw.length > _retryMaxEntries) {
+          raw.removeAt(0);
+        }
+        await prefs.setStringList(_kRetryQueueKey, raw);
+      } catch (e) {
+        debugPrint('[Network] Queue persist failed: $e');
+      }
+    });
+  }
 
   // Replays survivors of the IAP/attendance retry queue. PUBLIC because the
   // safe place to call this is AFTER login_success (server requires
@@ -436,9 +441,13 @@ class NetworkService extends ChangeNotifier {
       return (action: RetryAction.malformed, msg: null);
     }
     final ts = (parsed['ts'] as num?)?.toInt() ?? 0;
-    if (nowMs - ts > _retryMaxAgeMs) return (action: RetryAction.expired, msg: null);
+    if (nowMs - ts > _retryMaxAgeMs) {
+      return (action: RetryAction.expired, msg: null);
+    }
     final msg = parsed['msg'];
-    if (msg is! Map<String, dynamic>) return (action: RetryAction.malformed, msg: null);
+    if (msg is! Map<String, dynamic>) {
+      return (action: RetryAction.malformed, msg: null);
+    }
     final entryOwner = parsed['owner'];
     if (entryOwner is String && entryOwner != owner) {
       return (action: RetryAction.keep, msg: msg);
@@ -447,7 +456,8 @@ class NetworkService extends ChangeNotifier {
   }
 
   /// 지금 못 보냈거나 응답을 못 받은 메시지를 큐에 보관한다(다음 로그인 때 같은 계정에서 다시 나간다).
-  Future<void> queueForRetry(Map<String, dynamic> data) => _queueRetryable(data);
+  Future<void> queueForRetry(Map<String, dynamic> data) =>
+      _queueRetryable(data);
 
   Future<void> _doFlushRetryQueue() async {
     try {

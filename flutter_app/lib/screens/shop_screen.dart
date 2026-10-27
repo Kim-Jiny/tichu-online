@@ -11,7 +11,7 @@ import '../services/game_service.dart';
 import '../theme/cartoon.dart';
 import '../utils/banner_ink.dart';
 import '../widgets/hint_bubble.dart';
-import '../widgets/game_chrome.dart' show gameButton;
+import '../widgets/ad_reward_dialog.dart';
 import '../services/ad_service.dart';
 import '../services/inventory_new_tracker.dart';
 import '../utils/gold_format.dart';
@@ -4986,94 +4986,18 @@ class _ShopScreenState extends State<ShopScreen> {
   /// 광고 칩을 누르면 먼저 무엇인지(50골드), 오늘 몇 번 남았는지를 보여 주고
   /// 거기서 시청한다. 아이콘만으로는 광고 보상인지도 얼마를 주는지도 알 수 없다.
   void _showAdRewardInfo(GameService game) {
-    final l10n = L10n.of(context);
-    // 열 때마다 서버의 오늘 횟수를 새로 받는다. 응답이 오기 전의 숫자(예전 값이거나 날짜가 바뀌기 전)로
-    // 시청 여부를 정하면, 이미 몫을 다 받았는데 광고를 보고 거절당하거나 새 날인데 버튼이 없다.
-    // 그래서 응답이 올 때까지는 버튼을 막고(3초가 지나도 안 오면 마지막으로 안 값으로 풀어 준다),
-    // 응답이 오면 열려 있는 창도 바뀐다.
-    final seqAtOpen = game.adRewardStatusSeq;
-    final grace = ValueNotifier<bool>(false);
-    var closed = false;
-    Future<void>.delayed(const Duration(seconds: 3), () {
-      if (!closed) grace.value = true;
-    });
-    game.requestAdRewardStatus();
     showDialog<void>(
       context: context,
-      builder: (ctx) => ListenableBuilder(
-        listenable: Listenable.merge([game, grace]),
-        builder: (ctx, _) {
-          final fresh = game.adRewardStatusSeq != seqAtOpen || grace.value;
-          final used = game.adRewardUsedToday ?? _todayAdCount;
-          final canWatch = used < AdService.maxDailyRewards;
-          return AlertDialog(
-            backgroundColor: Cartoon.paper,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-              side: BorderSide(color: Cartoon.ink, width: 2.5),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.play_circle_rounded,
-                  size: 30,
-                  color: Cartoon.onSurface(const Color(0xFF7E57C2)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
-                    style: Cartoon.text(size: 20),
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              canWatch
-                  ? l10n.shopAdWatchProgress(used, AdService.maxDailyRewards)
-                  : l10n.shopAdRewardDoneSubtitle,
-              style: Cartoon.userText(size: 15, weight: FontWeight.w600),
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
-                child: Text(l10n.commonClose, style: Cartoon.text(size: 17)),
-              ),
-              if (canWatch)
-                ValueListenableBuilder<bool>(
-                  valueListenable: _adReadyVN,
-                  builder: (_, ready, _) {
-                    final ok = ready && !_adLoading && fresh;
-                    return gameButton(
-                      ok
-                          ? l10n.shopAdWatchForGold(
-                              used,
-                              AdService.maxDailyRewards,
-                            )
-                          : l10n.shopAdPreparing,
-                      ok
-                          ? () {
-                              Navigator.pop(ctx);
-                              _watchRewardedAd(game);
-                            }
-                          : null,
-                      color: Cartoon.onSurface(const Color(0xFF7E57C2)),
-                      size: 16,
-                      hPad: 14,
-                    );
-                  },
-                ),
-            ],
-          );
+      builder: (_) => AdRewardDialog(
+        loadUsed: game.requestAdRewardStatus,
+        adReady: _adReadyVN,
+        isAdLoading: () => _adLoading,
+        maxRewards: AdService.maxDailyRewards,
+        onWatch: () {
+          if (mounted) _watchRewardedAd(game);
         },
       ),
-    ).whenComplete(() {
-      closed = true;
-      grace.dispose();
-    });
+    );
   }
 
   /// 광고 보상 시청(헤더의 광고 칩).
@@ -5129,8 +5053,8 @@ class _ShopScreenState extends State<ShopScreen> {
     final displayMsg = (msg == 'ad_reward_success')
         ? localizeAdRewardSuccess(game.adRewardRemaining, l10n)
         : (msg == 'ad_reward_exhausted')
-            ? l10n.shopAdRewardDone
-            : localizeServiceMessage(msg, l10n);
+        ? l10n.shopAdRewardDone
+        : localizeServiceMessage(msg, l10n);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(displayMsg),

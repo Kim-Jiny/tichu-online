@@ -3202,10 +3202,14 @@ class GameService extends ChangeNotifier {
 
       case 'ad_reward_status':
         // 오늘 몇 번 받았는지는 서버가 센 값이 정답이다.
-        if (data['success'] == true) {
-          adRewardUsedToday = (data['used'] as num?)?.toInt();
-        }
-        adRewardStatusSeq++; // 광고 창이 '응답이 왔다'를 알아차리는 용도
+        final used = (data['used'] as num?)?.toInt();
+        final valid =
+            data['success'] == true &&
+            used != null &&
+            used >= 0 &&
+            used <= AdService.maxDailyRewards;
+        if (valid) adRewardUsedToday = used;
+        _finishAdRewardStatus(valid ? used : null);
         notifyListeners();
         break;
 
@@ -3214,7 +3218,6 @@ class GameService extends ChangeNotifier {
         // 이 세션에서 보낸 요청이 없는데 온 응답은 로그인 때 재시도 큐에서 나간 것이다.
         // 지급됐으면 알리고, 거절·오류는 사용자가 한 일이 아니니 조용히 둔다.
         final liveClaim = _adClaimId != null;
-        adRewardStatusSeq++;
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
@@ -3700,6 +3703,7 @@ class GameService extends ChangeNotifier {
     if (playerName.isEmpty || playerName == nickname) return;
     // 이전 계정의 광고 보상 요청과 재시도 타이머는 새 계정에게 가면 안 된다.
     _dropAdClaim();
+    _finishAdRewardStatus(null);
     _profiles.clear();
     _chatPhotos.clear();
     _chatBubbleKeys.clear();
@@ -3756,6 +3760,7 @@ class GameService extends ChangeNotifier {
   }
 
   void reset() {
+    _finishAdRewardStatus(null);
     _dropAdClaim();
     _network.retryOwner = null;
     _dogClearTimer?.cancel();
@@ -5071,8 +5076,7 @@ class GameService extends ChangeNotifier {
   /// 오늘 받은 광고 보상 횟수 — 서버가 센 값. 아직 모르면 null.
   int? adRewardUsedToday;
 
-  /// 서버가 광고 보상 횟수를 알려 줄 때마다 올라간다. 광고 창이 '이번에 연 뒤로 응답이 왔나'를 본다.
-  int adRewardStatusSeq = 0;
+  Completer<int?>? _adRewardStatusCompleter;
 
   // 지급을 요청 중인 광고 한 편의 id. 같은 id 로 다시 보내도 서버는 한 번만 지급한다.
   String? _adClaimId;
@@ -5093,8 +5097,24 @@ class GameService extends ChangeNotifier {
     _adClaimTries = 0;
   }
 
-  void requestAdRewardStatus() {
+  /// A fresh successful response is required before showing a rewarded ad.
+  /// Failure or no response returns null; cached counts never authorize it.
+  Future<int?> requestAdRewardStatus() {
+    final existing = _adRewardStatusCompleter;
+    if (existing != null) return existing.future;
+    final c = Completer<int?>();
+    _adRewardStatusCompleter = c;
     _network.send({'type': 'get_ad_reward_status'});
+    Future<void>.delayed(const Duration(seconds: 8), () {
+      if (identical(_adRewardStatusCompleter, c)) _finishAdRewardStatus(null);
+    });
+    return c.future;
+  }
+
+  void _finishAdRewardStatus(int? used) {
+    final c = _adRewardStatusCompleter;
+    _adRewardStatusCompleter = null;
+    if (c != null && !c.isCompleted) c.complete(used);
   }
 
   /// 광고를 끝까지 봤다 — 보상을 요청한다. 연결이 끊겨 있으면 NetworkService 의 재시도
@@ -5786,6 +5806,8 @@ class GameService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true; // C2: Mark as disposed
+    _finishAdRewardStatus(null);
+    _dropAdClaim();
     _matchIncomingTimer?.cancel();
     if (_deleteAccountCompleter != null &&
         !_deleteAccountCompleter!.isCompleted) {

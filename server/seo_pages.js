@@ -7,6 +7,10 @@
  * written against the game engines) and is rendered here at request time into plain server HTML — no
  * JS needed to read it, which is the whole point.
  *
+ * Besides that subset, a line `![설명](이름)` becomes a captioned figure (image
+ * lives in content/img/<이름>.webp, served at /seo-img/) and `> 문장` becomes a
+ * highlighted tip box.
+ *
  * Each file ends with a "*메타 태그용*" block holding Title / Description; that
  * block feeds <title>/<meta> and is never rendered into the body. The FAQ
  * section ("**질문?** 답") also becomes FAQPage JSON-LD.
@@ -22,12 +26,18 @@ const path = require('path');
 const BASE_URL = process.env.SEO_BASE_URL || 'https://tichu.kr';
 const RULES_DIR = path.join(__dirname, 'content', 'rules');
 const GUIDE_DIR = path.join(__dirname, 'content', 'guide');
+const IMG_DIR = path.join(__dirname, 'content', 'img');
+const IMG_PATH = '/seo-img/';
+// Every figure is exported at this size; width/height reserve its space so the
+// page does not jump when the picture arrives.
+const FIG_W = 960;
+const FIG_H = 640;
 
 const GAMES = [
-  { slug: 'tichu', name: '티츄', blurb: '4인 2:2 팀전. 손패를 가장 먼저 비우는 경주' },
-  { slug: 'mighty', name: '마이티', blurb: '5인 트릭테이킹. 숨은 프렌드와 경매(비딩)' },
-  { slug: 'skullking', name: '스컬킹', blurb: '해적 테마 예측 트릭테이킹. 약속한 만큼만 따내기' },
-  { slug: 'loveletter', name: '러브레터', blurb: '카드 16장으로 하는 추리·블러핑 게임' },
+  { slug: 'tichu', thumb: 'tichu_thumb', name: '티츄', blurb: '4인 2:2 팀전. 손패를 가장 먼저 비우는 경주' },
+  { slug: 'mighty', thumb: 'mighty_thumb', name: '마이티', blurb: '5인 트릭테이킹. 숨은 프렌드와 경매(비딩)' },
+  { slug: 'skullking', thumb: 'sk_thumb', name: '스컬킹', blurb: '해적 테마 예측 트릭테이킹. 약속한 만큼만 따내기' },
+  { slug: 'loveletter', thumb: 'll_thumb', name: '러브레터', blurb: '카드 16장으로 하는 추리·블러핑 게임' },
 ];
 
 // Topic pages, one search intent each. `game` ties a guide to its rules page.
@@ -94,6 +104,16 @@ function parse(md) {
       continue;
     }
     flush();
+    const img = t.match(/^!\[(.+?)\]\(([a-z0-9_]+)\)$/);
+    if (img) {
+      out.push(`<figure><img src="${IMG_PATH}${img[2]}.webp" alt="${esc(img[1])}" width="${FIG_W}" height="${FIG_H}" loading="lazy" decoding="async">`
+        + `<figcaption>${esc(img[1])}</figcaption></figure>`);
+      continue;
+    }
+    if (t.startsWith('> ')) {
+      out.push(`<p class="tip">${inline(t.slice(2))}</p>`);
+      continue;
+    }
     if (inFaq) {
       const q = t.match(/^\*\*(.+?\?)\*\*\s*(.+)$/);
       if (q) faq.push({ q: q[1], a: q[2].replace(/<(https?:\/\/[^\s>]+)>/g, '$1').replace(/\*\*?/g, '') });
@@ -116,18 +136,31 @@ function load(dir, slug) {
   return page;
 }
 
-const CSS = `body{margin:0;background:#fdf8f3;color:#143a57;`
+const THEMES = { tichu: '#e8731a', mighty: '#2f6fd6', skullking: '#1f6b8f', loveletter: '#c9306d' };
+
+const CSS = `:root{--accent:#e8731a}`
+  + `body{margin:0;background:#fdf8f3;color:#143a57;`
   + `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR','Apple SD Gothic Neo',sans-serif;line-height:1.8}`
-  + `.wrap{max-width:720px;margin:0 auto;padding:32px 22px 80px}`
-  + `.nav{font-size:14px;margin:0 0 28px}.nav a{color:#f28c26;text-decoration:none;margin-right:14px;font-weight:700}`
-  + `h1{font-size:26px;line-height:1.4;margin:0 0 18px}h2{font-size:20px;margin:36px 0 8px;color:#143a57}h3{font-size:17px;margin:24px 0 6px}`
-  + `p{margin:0 0 14px}strong{color:#143a57}a{color:#d9731a}ul{padding-left:20px}`
-  + `.cta{display:inline-block;margin:28px 0 8px;padding:14px 26px;background:#f28c26;color:#fff;`
-  + `border-radius:12px;text-decoration:none;font-weight:700}`
-  + `.games{list-style:none;padding:0}.games li{margin:0 0 14px;padding:14px 16px;background:#fff;border:2px solid #143a57;border-radius:12px}`
+  + `.band{height:10px;background:var(--accent)}`
+  + `.wrap{max-width:720px;margin:0 auto;padding:24px 22px 80px}`
+  + `.nav{font-size:14px;margin:0 0 28px}.nav a{color:var(--accent);text-decoration:none;margin-right:14px;font-weight:700}`
+  + `h1{font-size:27px;line-height:1.4;margin:0 0 18px}`
+  + `h2{font-size:20px;margin:40px 0 10px;color:#143a57;padding-left:12px;border-left:6px solid var(--accent)}`
+  + `h3{font-size:17px;margin:24px 0 6px}`
+  + `p{margin:0 0 14px}strong{color:#143a57}a{color:var(--accent)}ul{padding-left:20px}`
+  + `figure{margin:22px 0}figure img{display:block;width:100%;height:auto;border:2.5px solid #143a57;border-radius:18px;`
+  + `box-shadow:0 4px 0 #143a57;background:#fff}`
+  + `figcaption{font-size:13px;opacity:.65;text-align:center;margin-top:10px}`
+  + `.tip{background:#fff;border:2px solid #143a57;border-left:8px solid var(--accent);border-radius:12px;padding:12px 16px;font-weight:600}`
+  + `.cta{display:inline-block;margin:28px 0 8px;padding:14px 26px;background:var(--accent);color:#fff;`
+  + `border-radius:14px;text-decoration:none;font-weight:700;border:2.5px solid #143a57;box-shadow:0 4px 0 #143a57}`
+  + `.games{list-style:none;padding:0}.games li{margin:0 0 14px;padding:12px;background:#fff;border:2px solid #143a57;`
+  + `border-radius:14px;box-shadow:0 3px 0 #143a57;display:flex;gap:14px;align-items:center}`
+  + `.games img{width:84px;height:84px;border-radius:12px;flex:none;border:2px solid #143a57}`
   + `.games a{font-weight:700;font-size:18px}.foot{margin-top:48px;font-size:13px;opacity:.7}`;
 
-function shell({ title, description, canonical, jsonld, inner }) {
+function shell({ title, description, canonical, jsonld, inner, theme }) {
+  const accent = THEMES[theme];
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width, initial-scale=1">`
     + `<title>${esc(title)}</title><meta name="description" content="${esc(description)}">`
@@ -141,7 +174,7 @@ function shell({ title, description, canonical, jsonld, inner }) {
     + `<meta name="twitter:description" content="${esc(description)}"><meta name="twitter:image" content="${BASE_URL}/share-banner.jpg">`
     + `<link rel="icon" type="image/png" href="/favicon.png">`
     + (jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld).replaceAll('<', '\\u003c')}</script>` : '')
-    + `<style>${CSS}</style></head><body><div class="wrap">`
+    + `<style>${CSS}${accent ? `:root{--accent:${accent}}` : ''}</style></head><body><div class="band"></div><div class="wrap">`
     + `<div class="nav"><a href="/">Tichu Online</a><a href="/rules">룰 가이드</a><a href="/guide">공략·계산</a></div>`
     + inner
     + `<p class="foot">© Tichu Online · <a href="/support?lang=ko">고객센터</a></p>`
@@ -187,9 +220,9 @@ function renderGame(slug) {
     ? `<h2>더 깊이 보기</h2><ul>${related.map((g) => `<li><a href="/guide/${g.slug}">${esc(g.name)}</a> — ${esc(g.blurb)}</li>`).join('')}</ul>`
     : '';
   const inner = `<h1>${esc(page.h1)}</h1>${page.body}${relatedHtml}`
-    + `<a class="cta" href="/">${esc(game.name)} 지금 플레이하기</a>`
+    + `<a class="cta" href="/">🎮 ${esc(game.name)} 지금 플레이하기</a>`
     + `<p>설치 없이 브라우저에서 바로 시작할 수 있어요. 다른 게임 룰: ${others}</p>`;
-  return shell({ title, description, canonical, jsonld, inner });
+  return shell({ title, description, canonical, jsonld, inner, theme: slug });
 }
 
 function renderGuide(slug) {
@@ -231,37 +264,58 @@ function renderGuide(slug) {
     : '';
   const inner = `<h1>${esc(page.h1)}</h1>${page.body}`
     + `<p>${esc(game.name)} 전체 규칙은 <a href="/rules/${game.slug}">${esc(game.name)} 룰 완전 정리</a>에 있어요.</p>${more}`
-    + `<a class="cta" href="/">${esc(game.name)} 지금 플레이하기</a>`
+    + `<a class="cta" href="/">🎮 ${esc(game.name)} 지금 플레이하기</a>`
     + `<p>설치 없이 브라우저에서 바로 시작할 수 있어요.</p>`;
-  return shell({ title, description, canonical, jsonld, inner });
+  return shell({ title, description, canonical, jsonld, inner, theme: guide.game });
 }
 
 function renderGuideIndex() {
-  const items = GUIDES.map((g) => `<li><a href="/guide/${g.slug}">${esc(g.name)}</a><br>${esc(g.blurb)}</li>`).join('');
+  const items = GUIDES.map((g) => {
+    const game = GAMES.find((x) => x.slug === g.game);
+    return `<li><img src="${IMG_PATH}${game.thumb}.webp" alt="${esc(game.name)}" width="84" height="84" loading="lazy">`
+      + `<div><a href="/guide/${g.slug}">${esc(g.name)}</a><br>${esc(g.blurb)}</div></li>`;
+  }).join('');
   const title = '카드게임 공략·점수 계산 가이드 — 마이티 · 스컬킹 · 러브레터 · 티츄 | Tichu Online';
   const description = '마이티 프렌드 지명, 조커콜, 점수 계산부터 스컬킹 점수, 러브레터 카드 정리, 티츄 폭탄까지 궁금한 부분만 골라 읽을 수 있는 가이드 모음이에요.';
   const inner = `<h1>공략·점수 계산 가이드</h1>`
     + `<p>규칙 전체를 읽기엔 부담스러울 때, 궁금한 부분만 골라 보세요. 전체 규칙은 <a href="/rules">룰 가이드</a>에 있어요.</p>`
-    + `<ul class="games">${items}</ul><a class="cta" href="/">지금 플레이하기</a>`;
+    + `<ul class="games">${items}</ul><a class="cta" href="/">🎮 지금 플레이하기</a>`;
   return shell({ title, description, canonical: `${BASE_URL}/guide`, inner });
 }
 
 function renderIndex() {
-  const items = GAMES.map((g) => `<li><a href="/rules/${g.slug}">${esc(g.name)} 룰 쉽게 배우기</a><br>${esc(g.blurb)}</li>`).join('');
+  const items = GAMES.map((g) => `<li><img src="${IMG_PATH}${g.thumb}.webp" alt="${esc(g.name)} 룰" width="84" height="84" loading="lazy">`
+    + `<div><a href="/rules/${g.slug}">${esc(g.name)} 룰 쉽게 배우기</a><br>${esc(g.blurb)}</div></li>`).join('');
   const title = '카드게임 룰 가이드 — 티츄 · 마이티 · 스컬킹 · 러브레터 | Tichu Online';
   const description = '티츄, 마이티, 스컬킹, 러브레터의 규칙을 이야기하듯 풀어 썼어요. 읽고 나서 바로 온라인으로 플레이해 보세요.';
   const inner = `<h1>카드게임 룰 가이드</h1>`
     + `<p>처음 보는 게임도 이야기처럼 읽다 보면 룰이 잡혀요. 네 가지 게임을 모두 Tichu Online에서 바로 해볼 수 있습니다.</p>`
+    + `<figure><img src="${IMG_PATH}intro_games.webp" alt="티츄, 마이티, 스컬킹, 러브레터 — 네 가지 게임" width="${FIG_W}" height="${FIG_H}" decoding="async"></figure>`
     + `<ul class="games">${items}</ul>`
     + `<p>점수 계산이나 카드 효과처럼 궁금한 부분만 보고 싶다면 <a href="/guide">공략·점수 계산 가이드</a>를 보세요.</p>`
-    + `<a class="cta" href="/">지금 플레이하기</a>`;
+    + `<a class="cta" href="/">🎮 지금 플레이하기</a>`;
   return shell({ title, description, canonical: `${BASE_URL}/rules`, inner });
+}
+
+function serveImage(req, res, name) {
+  const file = /^[a-z0-9_]+\.webp$/.test(name) ? path.join(IMG_DIR, name) : null;
+  let data = null;
+  try { if (file) data = fs.readFileSync(file); } catch (_) { /* → 404 */ }
+  if (!data) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Not found');
+    return true;
+  }
+  res.writeHead(200, { 'Content-Type': 'image/webp', 'Content-Length': data.length, 'Cache-Control': 'public, max-age=86400' });
+  res.end(req.method === 'HEAD' ? undefined : data);
+  return true;
 }
 
 /// Returns true if the request was answered.
 function serve(req, res, pathname) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   const p = pathname.replace(/\/+$/, '');
+  if (p.startsWith(IMG_PATH)) return serveImage(req, res, p.slice(IMG_PATH.length));
   let html = null;
   if (p === '/rules') html = renderIndex();
   else if (p.startsWith('/rules/')) {

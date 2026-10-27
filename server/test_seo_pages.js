@@ -27,4 +27,29 @@ for (const g of seo.GUIDES) {
   assert(seo.renderGuideIndex().includes(`/guide/${g.slug}`), `index links ${g.slug}`);
 }
 assert.strictEqual(seo.renderGuide('nope'), null);
+
+// Every picture a page points at must exist, and the image route must answer.
+const fs = require('fs');
+const path = require('path');
+const pages = [seo.renderIndex(), seo.renderGuideIndex(),
+  ...seo.GAMES.map((g) => seo.renderGame(g.slug)),
+  ...seo.GUIDES.map((g) => seo.renderGuide(g.slug))];
+let figures = 0;
+for (const html of pages) {
+  for (const m of html.matchAll(/src="\/seo-img\/([a-z0-9_]+\.webp)"/g)) {
+    figures++;
+    assert(fs.existsSync(path.join(__dirname, 'content', 'img', m[1])), `missing image ${m[1]}`);
+  }
+}
+assert(figures > 20, `expected many figures, got ${figures}`);
+assert(!pages.some((h) => /!\[/.test(h)), 'raw image markdown leaked');
+const fake = (url) => {
+  const res = { code: 0, writeHead(c) { this.code = c; }, end() {} };
+  seo.serve({ method: 'GET', url }, res, url);
+  return res.code;
+};
+assert.strictEqual(fake('/seo-img/mighty_steps.webp'), 200);
+assert.strictEqual(fake('/seo-img/nope.webp'), 404);
+assert.strictEqual(fake('/seo-img/..%2Fserver.js'), 404);
+assert.strictEqual(fake('/seo-img/../seo_pages.js'), 404);
 console.log('seo pages ok');

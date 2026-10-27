@@ -18,6 +18,7 @@ const { decideLLBotAction } = require('./game/love_letter/LoveLetterBot');
 const { decideMightyBotAction } = require('./game/mighty/MightyBot');
 const { BotWorkerPool } = require('./bots/BotWorkerPool');
 const webApp = require('./webApp');
+const seoPages = require('./seo_pages');
 const missions = require('./missions/missions');
 const missionDefs = require('./missions/defs');
 const {
@@ -2015,6 +2016,8 @@ const server = http.createServer(async (req, res) => {
       + `</div></body></html>`;
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
+  } else if (seoPages.serve(req, res, pathname)) {
+    // /rules, /rules/<game>: server-rendered rule pages for crawlers.
   } else if (pathname === '/debug-path') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end(`pathname=${req.url} | hasAdmin=${typeof handleAdminRoute}`);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   The app itself is one page: the client routes in the browser and never asks
-  the server for another URL. /rules/* and /guide/* are server-rendered rule guides (the
+  the server for another URL. /rules/*, /en/rules/* and /guide/* are server-rendered rule guides (the
   pages that carry the prose search engines can index). /support, /privacy and /terms are
   server-rendered pages that do exist as their own documents, so they are
   listed too — they are also the only pages on this domain with real prose in
@@ -97,6 +97,56 @@
     <loc>https://tichu.kr/guide/skullking-glossary</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/mighty-bidding</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/loveletter-odds</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/pick-by-players</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/game-compare</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/guide/how-to-play-online</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/en/rules</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/en/rules/tichu</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/en/rules/mighty</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/en/rules/skullking</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://tichu.kr/en/rules/loveletter</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://tichu.kr/support?lang=ko</loc>

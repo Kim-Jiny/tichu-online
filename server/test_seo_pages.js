@@ -22,8 +22,10 @@ for (const g of seo.GUIDES) {
   assert(html.includes('"@type":"BreadcrumbList"'), `${g.slug} has breadcrumbs`);
   assert(!html.includes('**'), `${g.slug} has no raw markdown`);
   assert(!/Title:|메타 태그용/.test(html), `${g.slug} hides meta block`);
-  assert(html.includes(`href="/rules/${g.game}"`), `${g.slug} links to its rules page`);
-  assert(seo.renderGame(g.game).includes(`/guide/${g.slug}`), `${g.game} rules link to ${g.slug}`);
+  assert(html.includes(`href="/rules${g.game === 'all' ? '"' : `/${g.game}"`}`), `${g.slug} links to rules`);
+  if (g.game !== 'all') {
+    assert(seo.renderGame(g.game).includes(`/guide/${g.slug}`), `${g.game} rules link to ${g.slug}`);
+  }
   assert(seo.renderGuideIndex().includes(`/guide/${g.slug}`), `index links ${g.slug}`);
 }
 assert.strictEqual(seo.renderGuide('nope'), null);
@@ -52,4 +54,22 @@ assert.strictEqual(fake('/seo-img/mighty_steps.webp'), 200);
 assert.strictEqual(fake('/seo-img/nope.webp'), 404);
 assert.strictEqual(fake('/seo-img/..%2Fserver.js'), 404);
 assert.strictEqual(fake('/seo-img/../seo_pages.js'), 404);
+
+// English rules: own canonical, hreflang pair, FAQ markup, nothing left untranslated.
+for (const g of seo.GAMES) {
+  const html = seo.renderGame(g.slug, 'en');
+  assert(html, `${g.slug} en renders`);
+  assert(html.includes('<html lang="en">'));
+  assert(html.includes(`<link rel="canonical" href="https://tichu.kr/en/rules/${g.slug}">`));
+  assert(html.includes(`hreflang="ko" href="https://tichu.kr/rules/${g.slug}"`));
+  assert(html.includes(`hreflang="en" href="https://tichu.kr/en/rules/${g.slug}"`));
+  assert(html.includes('"@type":"FAQPage"'), `${g.slug} en has FAQ`);
+  assert(!html.includes('**'), `${g.slug} en has no raw markdown`);
+  assert(!/Meta tags/.test(html), `${g.slug} en hides meta block`);
+  const hangul = html.replace('<a href="/rules">한국어</a>', '').match(/[가-힣]+/g);
+  assert(!hangul, `${g.slug} en has untranslated text: ${hangul && hangul.slice(0, 3)}`);
+  assert(seo.renderGame(g.slug).includes(`hreflang="en" href="https://tichu.kr/en/rules/${g.slug}"`), `${g.slug} ko points at en`);
+}
+assert(seo.renderIndex('en').includes('/en/rules/mighty'));
+assert.strictEqual(seo.renderGame('nope', 'en'), null);
 console.log('seo pages ok');

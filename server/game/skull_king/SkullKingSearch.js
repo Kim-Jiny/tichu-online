@@ -61,7 +61,10 @@ function inferVoids(game) {
       const lead = leadSuitOf(trick.slice(0, k));
       if (!lead) continue;
       const info = getCardInfo(trick[k].cardId);
-      if (info.type === CARD_TYPE.NUMBER && info.suit !== lead) voids[trick[k].playerId].add(lead);
+      // A play by someone no longer at the table (the id changed under us): nothing to learn from it.
+      if (info.type === CARD_TYPE.NUMBER && info.suit !== lead && voids[trick[k].playerId]) {
+        voids[trick[k].playerId].add(lead);
+      }
     }
   }
   return voids;

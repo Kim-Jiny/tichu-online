@@ -918,6 +918,10 @@ class SkullKingGame {
     for (const play of this.currentTrick) {
       if (play.playerId === oldPlayerId) play.playerId = newPlayerId;
     }
+    // ...and the round's plays so far (the bot's card counting reads them by player)
+    for (const play of this.roundPlays || []) {
+      if (play.playerId === oldPlayerId) play.playerId = newPlayerId;
+    }
 
     // Update current player / trick starter / last trick winner
     if (this.currentPlayer === oldPlayerId) this.currentPlayer = newPlayerId;

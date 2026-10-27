@@ -1098,6 +1098,8 @@ class GameService extends ChangeNotifier {
         // unchanging tc_users.id). Stamped onto every IAP; stable across
         // renames/sessions so cross-session reconciliation never mismatches.
         iapBindingToken = data['bindingToken'] as String?;
+        // 재시도 큐는 쌓은 계정에게만 되돌려 준다. flushRetryQueue() 보다 먼저 정해 둔다.
+        _network.retryOwner = _accountKey;
         // Start the app-lived IAP listener now that we're authenticated, so
         // any purchase pending from a previous session gets reconciled even
         // without the user opening the shop.
@@ -3202,33 +3204,46 @@ class GameService extends ChangeNotifier {
         // 오늘 몇 번 받았는지는 서버가 센 값이 정답이다.
         if (data['success'] == true) {
           adRewardUsedToday = (data['used'] as num?)?.toInt();
-          notifyListeners();
         }
+        adRewardStatusSeq++; // 광고 창이 '응답이 왔다'를 알아차리는 용도
+        notifyListeners();
         break;
 
       case 'ad_reward_result':
         _adClaimTimer?.cancel();
+        // 이 세션에서 보낸 요청이 없는데 온 응답은 로그인 때 재시도 큐에서 나간 것이다.
+        // 지급됐으면 알리고, 거절·오류는 사용자가 한 일이 아니니 조용히 둔다.
+        final liveClaim = _adClaimId != null;
+        adRewardStatusSeq++;
         adRewardSuccess = data['success'] == true;
         if (adRewardSuccess!) {
           gold = (data['gold'] as num?)?.toInt() ?? gold;
           walletLoaded = true;
           adRewardRemaining = (data['remaining'] as num?)?.toInt() ?? 0;
           adRewardUsedToday = AdService.maxDailyRewards - adRewardRemaining;
-          adRewardResult = 'ad_reward_success';
-          _adClaimId = null;
+          // 서버가 '이미 지급한 요청'이라고 답한 것(repeat)은 사용자가 방금 한 일이 아니다 —
+          // 값만 맞추고 '보상을 받았어요'를 또 띄우지 않는다.
+          final replay = data['repeat'] == true && !liveClaim;
+          adRewardResult = replay ? null : 'ad_reward_success';
+          if (replay) adRewardSuccess = null;
+          _dropAdClaim();
         } else if (data['messageKey'] == 'db_ad_reward_exhausted') {
           // 서버 기준으로 오늘 몫을 다 받았다 — 다시 보내 봐야 소용없다.
           adRewardUsedToday = AdService.maxDailyRewards;
-          adRewardResult = 'ad_reward_exhausted';
-          _adClaimId = null;
-        } else if (_adClaimId != null && _adClaimTries < _adClaimMaxTries) {
+          adRewardResult = liveClaim ? 'ad_reward_exhausted' : null;
+          adRewardSuccess = liveClaim ? false : null;
+          _dropAdClaim();
+        } else if (liveClaim && _adClaimTries < _adClaimMaxTries) {
           // 서버의 일시 오류일 수 있다. 같은 claimId 로 잠시 뒤 다시 보낸다(서버가 한 번만 지급).
           // 마지막 시도까지 실패했을 때만 사용자에게 알린다.
           _adClaimTimer = Timer(const Duration(seconds: 2), _sendAdClaim);
           return;
+        } else if (liveClaim) {
+          _giveUpAdClaim();
+          return;
         } else {
-          adRewardResult = 'reward_failed';
-          _adClaimId = null;
+          adRewardResult = null;
+          adRewardSuccess = null;
         }
         notifyListeners();
         break;
@@ -3683,6 +3698,8 @@ class GameService extends ChangeNotifier {
   /// coming back from a dropped connection does not blank the friends list.
   void _forgetPreviousAccount(String nickname) {
     if (playerName.isEmpty || playerName == nickname) return;
+    // 이전 계정의 광고 보상 요청과 재시도 타이머는 새 계정에게 가면 안 된다.
+    _dropAdClaim();
     _profiles.clear();
     _chatPhotos.clear();
     _chatBubbleKeys.clear();
@@ -3739,6 +3756,8 @@ class GameService extends ChangeNotifier {
   }
 
   void reset() {
+    _dropAdClaim();
+    _network.retryOwner = null;
     _dogClearTimer?.cancel();
     _dogClearTimer = null;
     _inquiryBannerTimer?.cancel();
@@ -5052,11 +5071,27 @@ class GameService extends ChangeNotifier {
   /// 오늘 받은 광고 보상 횟수 — 서버가 센 값. 아직 모르면 null.
   int? adRewardUsedToday;
 
+  /// 서버가 광고 보상 횟수를 알려 줄 때마다 올라간다. 광고 창이 '이번에 연 뒤로 응답이 왔나'를 본다.
+  int adRewardStatusSeq = 0;
+
   // 지급을 요청 중인 광고 한 편의 id. 같은 id 로 다시 보내도 서버는 한 번만 지급한다.
   String? _adClaimId;
+  String? _adClaimOwner; // 요청을 만든 계정 — 다른 계정으로 바뀌면 보내지 않는다
   int _adClaimTries = 0;
   Timer? _adClaimTimer;
   static const int _adClaimMaxTries = 3;
+
+  /// 지금 로그인한 계정을 가리키는 값. 닉네임은 바뀔 수 있어서 서버가 주는 바인딩 토큰을 먼저 쓴다.
+  String? get _accountKey =>
+      iapBindingToken ?? (playerName.isEmpty ? null : playerName);
+
+  void _dropAdClaim() {
+    _adClaimTimer?.cancel();
+    _adClaimTimer = null;
+    _adClaimId = null;
+    _adClaimOwner = null;
+    _adClaimTries = 0;
+  }
 
   void requestAdRewardStatus() {
     _network.send({'type': 'get_ad_reward_status'});
@@ -5068,6 +5103,7 @@ class GameService extends ChangeNotifier {
   void claimAdReward() {
     _adClaimId =
         '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 30)}';
+    _adClaimOwner = _accountKey;
     _adClaimTries = 0;
     _sendAdClaim();
   }
@@ -5075,13 +5111,41 @@ class GameService extends ChangeNotifier {
   void _sendAdClaim() {
     final id = _adClaimId;
     if (id == null) return;
+    if (_adClaimOwner != _accountKey) {
+      // 그사이 다른 계정으로 바뀌었다. 이 요청은 이전 계정의 것이다.
+      _dropAdClaim();
+      return;
+    }
     _adClaimTries++;
     _network.send({'type': 'ad_reward', 'claimId': id});
-    // 응답이 끝내 안 오면(연결이 끊긴 채로 보낸 경우 등) 다시 보낸다.
+    // 응답이 끝내 안 오면(연결이 끊긴 채로 보낸 경우 등) 다시 보내고, 세 번을 다 보냈는데도
+    // 소식이 없으면 포기하되 그냥 사라지지 않게 한다.
     _adClaimTimer?.cancel();
     _adClaimTimer = Timer(const Duration(seconds: 8), () {
-      if (_adClaimId == id && _adClaimTries < _adClaimMaxTries) _sendAdClaim();
+      if (_adClaimId != id) return;
+      if (_adClaimTries < _adClaimMaxTries) {
+        _sendAdClaim();
+      } else {
+        _giveUpAdClaim();
+      }
     });
+  }
+
+  /// 응답을 끝내 못 받았다(또는 서버가 계속 오류를 냈다). 서버가 지급했는지 알 수 없으니
+  /// 사용자에게 알리고, 요청은 재시도 큐에 보관해 다음 로그인 때 같은 id 로 다시 보낸다
+  /// (이미 지급됐으면 서버는 또 주지 않는다). 화면은 서버의 실제 값으로 새로 고친다.
+  void _giveUpAdClaim() {
+    final id = _adClaimId;
+    if (id != null) {
+      // ignore: discarded_futures
+      _network.queueForRetry({'type': 'ad_reward', 'claimId': id});
+    }
+    _dropAdClaim();
+    adRewardSuccess = false;
+    adRewardResult = 'reward_failed';
+    requestAdRewardStatus();
+    requestWallet();
+    notifyListeners();
   }
 
   void requestShopItems() {

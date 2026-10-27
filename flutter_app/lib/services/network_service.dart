@@ -5,6 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+/// 재시도 큐 항목의 처리: 보낸다 / 그 계정이 로그인할 때까지 둔다 / 오래돼서 버린다 / 깨져서 버린다.
+enum RetryAction { send, keep, expired, malformed }
+
 class NetworkService extends ChangeNotifier {
   static const _debugIp = String.fromEnvironment(
     'DEBUG_SERVER_IP',
@@ -45,6 +48,11 @@ class NetworkService extends ChangeNotifier {
     'ad_reward',
   };
   static const String _kRetryQueueKey = 'tc_ws_retry_queue_v1';
+
+  /// 지금 로그인한 계정. 재시도 큐에 쌓는 메시지에 이 계정을 적어 두고, 로그인 뒤에 되돌려
+  /// 보낼 때는 같은 계정의 것만 보낸다. 안 그러면 A 가 쌓아 둔 보상 요청이 다음에 로그인한
+  /// B 에게 지급된다. GameService 가 로그인·로그아웃 때 바꾼다.
+  String? retryOwner;
   // Drop entries older than this — Google voids unfinished purchases after a
   // few days anyway, so keeping ancient retries achieves nothing.
   static const int _retryMaxAgeMs = 24 * 60 * 60 * 1000; // 24h
@@ -382,9 +390,16 @@ class NetworkService extends ChangeNotifier {
         try {
           final prefs = await SharedPreferences.getInstance();
           final raw = prefs.getStringList(_kRetryQueueKey) ?? <String>[];
+          // 같은 광고 보상 요청(claimId)이 이미 쌓여 있으면 또 쌓지 않는다.
+          final claimId = data['claimId'];
+          if (claimId is String &&
+              raw.any((e) => e.contains('"claimId":${jsonEncode(claimId)}'))) {
+            return;
+          }
           raw.add(
             jsonEncode({
               'ts': DateTime.now().millisecondsSinceEpoch,
+              'owner': retryOwner,
               'msg': data,
             }),
           );
@@ -405,6 +420,35 @@ class NetworkService extends ChangeNotifier {
   // committed).
   Future<void> flushRetryQueue() => _withQueueLock(_doFlushRetryQueue);
 
+  /// 재시도 큐의 한 항목을 어떻게 할지. 계정이 맞는 것만 보내고, 다른 계정이 쌓은 것은 그 계정이
+  /// 로그인할 때까지(24시간) 남겨 둔다. owner 가 없는 항목은 이 필드가 생기기 전에 쌓인 것이라
+  /// 예전처럼 보낸다.
+  @visibleForTesting
+  static ({RetryAction action, Map<String, dynamic>? msg}) judgeRetryEntry(
+    String entry, {
+    required String? owner,
+    required int nowMs,
+  }) {
+    Map<String, dynamic> parsed;
+    try {
+      parsed = jsonDecode(entry) as Map<String, dynamic>;
+    } catch (_) {
+      return (action: RetryAction.malformed, msg: null);
+    }
+    final ts = (parsed['ts'] as num?)?.toInt() ?? 0;
+    if (nowMs - ts > _retryMaxAgeMs) return (action: RetryAction.expired, msg: null);
+    final msg = parsed['msg'];
+    if (msg is! Map<String, dynamic>) return (action: RetryAction.malformed, msg: null);
+    final entryOwner = parsed['owner'];
+    if (entryOwner is String && entryOwner != owner) {
+      return (action: RetryAction.keep, msg: msg);
+    }
+    return (action: RetryAction.send, msg: msg);
+  }
+
+  /// 지금 못 보냈거나 응답을 못 받은 메시지를 큐에 보관한다(다음 로그인 때 같은 계정에서 다시 나간다).
+  Future<void> queueForRetry(Map<String, dynamic> data) => _queueRetryable(data);
+
   Future<void> _doFlushRetryQueue() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -420,23 +464,20 @@ class NetworkService extends ChangeNotifier {
       var expired = 0;
       var malformed = 0;
       for (final entry in raw) {
-        Map<String, dynamic>? parsed;
-        try {
-          parsed = jsonDecode(entry) as Map<String, dynamic>;
-        } catch (_) {
+        final verdict = judgeRetryEntry(entry, owner: retryOwner, nowMs: now);
+        if (verdict.action == RetryAction.malformed) {
           malformed++;
           continue;
         }
-        final ts = (parsed['ts'] as num?)?.toInt() ?? 0;
-        if (now - ts > _retryMaxAgeMs) {
+        if (verdict.action == RetryAction.expired) {
           expired++;
           continue;
         }
-        final msg = parsed['msg'];
-        if (msg is! Map<String, dynamic>) {
-          malformed++;
+        if (verdict.action == RetryAction.keep) {
+          survivors.add(entry);
           continue;
         }
+        final msg = verdict.msg!;
         if (_isConnected && _channel != null) {
           try {
             _channel!.sink.add(jsonEncode(msg));

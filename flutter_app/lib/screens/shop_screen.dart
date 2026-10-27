@@ -4986,83 +4986,108 @@ class _ShopScreenState extends State<ShopScreen> {
   /// 광고 칩을 누르면 먼저 무엇인지(50골드), 오늘 몇 번 남았는지를 보여 주고
   /// 거기서 시청한다. 아이콘만으로는 광고 보상인지도 얼마를 주는지도 알 수 없다.
   void _showAdRewardInfo(GameService game) {
-    game.requestAdRewardStatus(); // 열 때마다 서버의 오늘 횟수를 다시 받는다
     final l10n = L10n.of(context);
-    final canWatch = _todayAdCount < AdService.maxDailyRewards;
+    // 열 때마다 서버의 오늘 횟수를 새로 받는다. 응답이 오기 전의 숫자(예전 값이거나 날짜가 바뀌기 전)로
+    // 시청 여부를 정하면, 이미 몫을 다 받았는데 광고를 보고 거절당하거나 새 날인데 버튼이 없다.
+    // 그래서 응답이 올 때까지는 버튼을 막고(3초가 지나도 안 오면 마지막으로 안 값으로 풀어 준다),
+    // 응답이 오면 열려 있는 창도 바뀐다.
+    final seqAtOpen = game.adRewardStatusSeq;
+    final grace = ValueNotifier<bool>(false);
+    var closed = false;
+    Future<void>.delayed(const Duration(seconds: 3), () {
+      if (!closed) grace.value = true;
+    });
+    game.requestAdRewardStatus();
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Cartoon.paper,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
-          side: BorderSide(color: Cartoon.ink, width: 2.5),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.play_circle_rounded,
-              size: 30,
-              color: Cartoon.onSurface(const Color(0xFF7E57C2)),
+      builder: (ctx) => ListenableBuilder(
+        listenable: Listenable.merge([game, grace]),
+        builder: (ctx, _) {
+          final fresh = game.adRewardStatusSeq != seqAtOpen || grace.value;
+          final used = game.adRewardUsedToday ?? _todayAdCount;
+          final canWatch = used < AdService.maxDailyRewards;
+          return AlertDialog(
+            backgroundColor: Cartoon.paper,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(26),
+              side: BorderSide(color: Cartoon.ink, width: 2.5),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
-                style: Cartoon.text(size: 20),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          canWatch
-              ? l10n.shopAdWatchProgress(
-                  _todayAdCount,
-                  AdService.maxDailyRewards,
-                )
-              : l10n.shopAdRewardDoneSubtitle,
-          style: Cartoon.userText(size: 15, weight: FontWeight.w600),
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
-            child: Text(l10n.commonClose, style: Cartoon.text(size: 17)),
-          ),
-          if (canWatch)
-            ValueListenableBuilder<bool>(
-              valueListenable: _adReadyVN,
-              builder: (_, ready, _) {
-                final ok = ready && !_adLoading;
-                return gameButton(
-                  ok
-                      ? l10n.shopAdWatchForGold(
-                          _todayAdCount,
-                          AdService.maxDailyRewards,
-                        )
-                      : l10n.shopAdPreparing,
-                  ok
-                      ? () {
-                          Navigator.pop(ctx);
-                          _watchRewardedAd(game);
-                        }
-                      : null,
+            title: Row(
+              children: [
+                Icon(
+                  Icons.play_circle_rounded,
+                  size: 30,
                   color: Cartoon.onSurface(const Color(0xFF7E57C2)),
-                  size: 16,
-                  hPad: 14,
-                );
-              },
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    canWatch ? l10n.shopAdWatchTitle : l10n.shopAdRewardDone,
+                    style: Cartoon.text(size: 20),
+                  ),
+                ),
+              ],
             ),
-        ],
+            content: Text(
+              canWatch
+                  ? l10n.shopAdWatchProgress(used, AdService.maxDailyRewards)
+                  : l10n.shopAdRewardDoneSubtitle,
+              style: Cartoon.userText(size: 15, weight: FontWeight.w600),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: TextButton.styleFrom(foregroundColor: Cartoon.ink),
+                child: Text(l10n.commonClose, style: Cartoon.text(size: 17)),
+              ),
+              if (canWatch)
+                ValueListenableBuilder<bool>(
+                  valueListenable: _adReadyVN,
+                  builder: (_, ready, _) {
+                    final ok = ready && !_adLoading && fresh;
+                    return gameButton(
+                      ok
+                          ? l10n.shopAdWatchForGold(
+                              used,
+                              AdService.maxDailyRewards,
+                            )
+                          : l10n.shopAdPreparing,
+                      ok
+                          ? () {
+                              Navigator.pop(ctx);
+                              _watchRewardedAd(game);
+                            }
+                          : null,
+                      color: Cartoon.onSurface(const Color(0xFF7E57C2)),
+                      size: 16,
+                      hPad: 14,
+                    );
+                  },
+                ),
+            ],
+          );
+        },
       ),
-    );
+    ).whenComplete(() {
+      closed = true;
+      grace.dispose();
+    });
   }
 
   /// 광고 보상 시청(헤더의 광고 칩).
   void _watchRewardedAd(GameService game) {
     final ad = _rewardedAd;
     if (ad == null) return;
+    // 서버가 오늘 몫을 다 받았다고 알고 있으면 광고를 보여 주지 않는다(보고 나서 거절당하지 않게).
+    final used = game.adRewardUsedToday;
+    if (used != null && used >= AdService.maxDailyRewards) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(L10n.of(context).shopAdRewardDone)),
+      );
+      return;
+    }
     setState(() {
       _adLoading = true;
       _rewardedAd = null;

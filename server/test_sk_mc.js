@@ -104,6 +104,36 @@ function playGame(ids, expansions, strat, maxRounds = 10) {
   assert.ok(!v.c.has('yellow') && !v.d.has('yellow') && !v.a.has('yellow'));
 }
 
+// ── a player's id changes mid-round (reconnect): the round's plays follow, and the search still works ──
+{
+  const game = newGame(ids4);
+  for (const p of ids4) game.handleAction(p, { type: 'submit_bid', bid: 0 });
+  // b is void in the lead suit: play it out so roundPlays holds a "did not follow" record for b
+  game.hands.a = ['sk_yellow_5', 'sk_yellow_6', 'sk_yellow_7'];
+  game.hands.b = ['sk_green_9', 'sk_green_2', 'sk_green_3'];
+  game.hands.c = ['sk_yellow_2', 'sk_yellow_3', 'sk_yellow_4'];
+  game.hands.d = ['sk_purple_1', 'sk_purple_2', 'sk_purple_3'];
+  game.currentPlayer = 'a'; game.trickStarter = 'a'; game.trickNumber = 1; game.state = 'playing';
+  game.roundPlays = []; game.currentTrick = [];
+  for (const [p, c] of [['a', 'sk_yellow_5'], ['b', 'sk_green_9'], ['c', 'sk_yellow_2'], ['d', 'sk_purple_1']]) {
+    assert.ok(game.handleAction(p, { type: 'play_card', cardId: c }).success, `${p} plays ${c}`);
+  }
+  assert.ok(inferVoids(game).b.has('yellow'));
+  game.advanceAfterTrickEnd(); // next trick, led by the winner
+  assert.strictEqual(game.state, 'playing');
+  game.updatePlayerId('b', 'b2');
+  assert.ok(game.roundPlays.every((p) => p.playerId !== 'b'), 'roundPlays still names the old id');
+  assert.ok(inferVoids(game).b2.has('yellow'), 'what b2 showed must follow the new id');
+  // even a stale id left in the records must not throw
+  game.roundPlays[1].playerId = 'ghost';
+  assert.doesNotThrow(() => inferVoids(game));
+  // and the search, which used to throw here and silently fall back, runs
+  game.roundPlays[1].playerId = 'b2';
+  const { searchPlay } = require('./game/skull_king/SkullKingSearch');
+  assert.ok(searchPlay(game, game.currentPlayer, null, { samples: 6, deadlineMs: 15 }),
+    'search returned nothing after the id change');
+}
+
 // ── sampleDeal: right sizes, no card twice, voids respected ────────────────
 {
   const pool = ['sk_yellow_1', 'sk_yellow_2', 'sk_yellow_3', 'sk_green_1', 'sk_green_2', 'sk_green_3', 'sk_purple_4', 'sk_black_5'];

@@ -15,7 +15,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE_URL = process.env.INVITE_BASE_URL || 'https://tichu.kr';
+// Deliberately NOT INVITE_BASE_URL: that one is a deploy knob that can still
+// point at the old host during a domain move (docs/DOMAIN_MIGRATION.md), and a
+// canonical/og:url that follows it would tell search engines the wrong site is
+// the original. The address to rank is tichu.kr.
+const BASE_URL = process.env.SEO_BASE_URL || 'https://tichu.kr';
 const DIR = path.join(__dirname, 'content', 'rules');
 
 const GAMES = [
@@ -143,7 +147,17 @@ function renderGame(slug) {
     {
       '@context': 'https://schema.org', '@type': 'Article',
       headline: page.h1, description, inLanguage: 'ko', mainEntityOfPage: canonical,
+      image: `${BASE_URL}/share-banner.jpg`,
+      author: { '@type': 'Organization', name: 'Tichu Online', url: `${BASE_URL}/` },
       publisher: { '@type': 'Organization', name: 'Tichu Online', url: `${BASE_URL}/` },
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Tichu Online', item: `${BASE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: '룰 가이드', item: `${BASE_URL}/rules` },
+        { '@type': 'ListItem', position: 3, name: `${game.name} 룰`, item: canonical },
+      ],
     },
   ];
   if (page.faq.length) {

@@ -133,7 +133,7 @@ async function pickBrotli(req, filePath) {
   }
 }
 
-async function sendFile(req, res, filePath, pathname) {
+async function sendFile(req, res, filePath, pathname, status = 200) {
   // Content-Type 은 언제나 원본 확장자로 정한다 — 내보내는 바이트가 brotli 라도
   // 그건 인코딩이지 타입이 아니다. .wasm 이 application/wasm 이 아니면
   // 브라우저가 스트리밍 컴파일을 포기한다.
@@ -155,7 +155,7 @@ async function sendFile(req, res, filePath, pathname) {
 
   const cacheControl = cacheControlFor(pathname || '', noStore);
 
-  if (!noStore && req.headers['if-none-match'] === etag) {
+  if (status === 200 && !noStore && req.headers['if-none-match'] === etag) {
     res.writeHead(304, {
       ETag: etag,
       'Cache-Control': cacheControl,
@@ -166,7 +166,7 @@ async function sendFile(req, res, filePath, pathname) {
   }
 
   const body = await fsp.readFile(bodyPath);
-  res.writeHead(200, {
+  res.writeHead(status, {
     'Content-Type': CONTENT_TYPES[ext] || 'application/octet-stream',
     'Content-Length': body.length,
     // The entry point and the bootstrap decide which build everything else
@@ -204,8 +204,14 @@ async function serve(req, res, pathname) {
   const isAsset = relative.length > 0 && path.extname(relative) !== '';
 
   if (!isAsset) {
-    // Client-side route (or the root): hand back the shell.
-    await sendFile(req, res, path.join(ROOT, 'index.html'), pathname);
+    // The client routes in the URL fragment (/#/…), so the server only ever
+    // sees '/' for a real page. Every other extension-less path reaching this
+    // point is one nothing answers — and answering it with the shell AND a 200
+    // makes every typo and stale link look like a real page to a crawler
+    // (a "soft 404"). Keep serving the shell so a person who lands there still
+    // gets the game, but say 404 so a search engine drops the URL.
+    const found = relative === '';
+    await sendFile(req, res, path.join(ROOT, 'index.html'), pathname, found ? 200 : 404);
     return true;
   }
 

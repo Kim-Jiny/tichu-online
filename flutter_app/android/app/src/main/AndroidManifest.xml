@@ -82,6 +82,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="tichuonline" />
             </intent-filter>
+            <!-- KakaoTalk share card button. The template's app-scheme link is
+                 <kakao scheme>://kakaolink?type=invite&t=<token> and its prefix
+                 cannot be changed in the Kakao console. Without this filter
+                 Android cannot resolve it and Kakao falls back to the Play
+                 Store even though the app is installed. Separate filter, no
+                 autoVerify, for the same reason as the one above. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kakaod9b4b3cfc86537fed9a80a659641ad30" android:host="kakaolink" />
+            </intent-filter>
         </activity>
         <!-- Kakao Login Redirect -->
         <activity

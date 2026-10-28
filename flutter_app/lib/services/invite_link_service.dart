@@ -97,25 +97,46 @@ class InviteLinkService {
   /// waiting on another store release.
   static const String inviteScheme = 'tichuonline';
 
-  bool _matchesInviteUri(Uri uri) {
+  /// KakaoTalk share card button on Android/iOS. The template's app-scheme link is
+  /// `<kakao scheme>://kakaolink?type=invite&t=<token>` and the prefix cannot be
+  /// changed in the Kakao console, so the app has to accept it as it is.
+  /// This is the app's native key scheme (same value as AndroidManifest.xml and
+  /// Info.plist) — not a secret.
+  static const String kakaoLinkScheme = 'kakaod9b4b3cfc86537fed9a80a659641ad30';
+
+  static bool _matchesInviteUri(Uri uri) {
+    final scheme = uri.scheme.toLowerCase();
     // In a scheme URL the authority carries what would be the path:
     // tichuonline://invite?t=… parses as host 'invite', path ''.
-    if (uri.scheme.toLowerCase() == inviteScheme) {
+    if (scheme == inviteScheme) {
       return uri.host.toLowerCase() == 'invite';
+    }
+    if (scheme == kakaoLinkScheme) {
+      // The same scheme is used by Kakao login (host 'oauth'); only the share
+      // card's invite button is an invite.
+      final type = uri.queryParameters['type'];
+      return uri.host.toLowerCase() == 'kakaolink' &&
+          (type == null || type == 'invite');
     }
     final host = uri.host.toLowerCase();
     if (!inviteHosts.contains(host)) return false;
     return uri.path == invitePath || uri.path.startsWith('$invitePath/');
   }
 
-  void _storeInvite(Uri? uri) {
-    if (uri == null || !_matchesInviteUri(uri)) return;
-
+  /// The invite token a link carries, or null if it is not an invite link.
+  @visibleForTesting
+  static String? inviteTokenFromUri(Uri? uri) {
+    if (uri == null || !_matchesInviteUri(uri)) return null;
     final token =
         uri.queryParameters['t'] ?? uri.queryParameters['token'] ?? '';
-    if (token.isEmpty) return;
+    return token.isEmpty ? null : token;
+  }
 
-    _pendingInvite = PendingInviteLink(token: token, uri: uri);
+  void _storeInvite(Uri? uri) {
+    final token = inviteTokenFromUri(uri);
+    if (token == null) return;
+
+    _pendingInvite = PendingInviteLink(token: token, uri: uri!);
     debugPrint('[InviteLinkService] Stored invite link: $uri');
   }
 

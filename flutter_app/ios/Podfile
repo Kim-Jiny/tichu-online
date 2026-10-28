@@ -63,6 +63,12 @@ post_install do |installer|
       # 기본 금지라 빌드가 "Include of non-modular header inside framework
       # module" 로 멎는다. 플러그인이 고쳐지기 전까지는 허용해줘야 한다.
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      # 최신 Xcode 는 지원 범위(15.0~) 밖의 Pod 배포 타겟(9.0~13.0)을 경고가 아니라
+      # 에러로 처리해 archive 가 멎는다. 앱 최소 버전(15.0)보다 낮은 Pod 만 끌어올린다.
+      current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+      if current.nil? || current.to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
       xcconfig_path = config.base_configuration_reference&.real_path
       if xcconfig_path
         xcconfig = File.read(xcconfig_path)

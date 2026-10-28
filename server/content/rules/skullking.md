@@ -204,5 +204,5 @@
 *메타 태그용*
 
 - Title: 스컬킹 룰 완전 정리 — 예측, 특수 카드, 점수 계산, 확장 | Tichu Online
-- Description: 스컬킹 카드게임의 룰을 예측 방법부터 해적·인어·스컬킹의 관계, 리드 무늬 규칙, 점수 계산 예시, 크라켄·흰고래·보물·해적 능력 확장까지 한 페이지에 정리했습니다.
+- Description: 스컬킹 룰 정리. 예측과 해적·인어·스컬킹 관계, 리드 무늬, 점수 계산, 크라켄·흰고래 확장까지.
 - English: A complete guide to Skull King for 2–6 players: bidding, the Pirate, Mermaid and Skull King cards, following suit, scoring examples and the Kraken, White Whale, Loot and pirate-ability expansions. Play online at Tichu Online.

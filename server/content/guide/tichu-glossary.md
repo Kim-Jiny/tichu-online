@@ -51,5 +51,5 @@
 *메타 태그용*
 
 - Title: 티츄 용어 사전 — 선·폭탄·소원·그랜드 티츄·원투 피니시 뜻 | Tichu Online
-- Description: 티츄를 처음 하는 분을 위한 용어 사전. 선, 트릭, 폭탄, 참새 소원, 티츄와 그랜드 티츄, 원투 피니시, 꼴찌 규칙의 뜻을 한 페이지에 풀어 썼습니다.
+- Description: 티츄 입문 용어 사전. 선·트릭·폭탄·참새 소원·그랜드 티츄·원투 피니시·꼴찌 규칙의 뜻.
 - English: A glossary of Tichu terms: lead, trick, bomb, Mah Jong wish, Tichu and Grand Tichu calls, one-two finish and last-place rules, explained in plain language.

@@ -50,5 +50,5 @@
 *메타 태그용*
 
 - Title: 스컬킹 용어 사전 — 예측·리드 무늬·도주·티그리스·크라켄 뜻 | Tichu Online
-- Description: 스컬킹을 처음 하는 분을 위한 용어 사전. 예측, 리드 무늬, 으뜸패, 도주, 해적, 인어, 티그리스, 크라켄, 흰고래, 보물의 뜻을 한 페이지에 풀어 썼습니다.
+- Description: 스컬킹 입문 용어 사전. 예측·리드 무늬·으뜸패·도주·해적·인어·티그리스·크라켄·흰고래 뜻.
 - English: A glossary of Skull King terms: bid, lead suit, trump, Escape, Pirate, Mermaid, Tigress, Kraken, White Whale and Loot, explained in plain language.

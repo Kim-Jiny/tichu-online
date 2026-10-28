@@ -62,5 +62,5 @@
 *메타 태그용*
 
 - Title: 마이티 용어 사전 — 주공·프렌드·기루다·조커콜·백런 뜻 | Tichu Online
-- Description: 마이티를 처음 하는 분을 위한 용어 사전. 주공, 프렌드, 야당, 기루다, 조커콜, 딜 미스, 런, 백런, 킬 마이티의 뜻을 한 페이지에 풀어 썼습니다.
+- Description: 마이티 입문 용어 사전. 주공·프렌드·야당·기루다·조커콜·딜 미스·런·백런·킬 마이티 뜻.
 - English: A glossary of Mighty card game terms: declarer, friend, defenders, trump, joker call, deal miss, run, back-run and Kill Mighty, explained in plain language.

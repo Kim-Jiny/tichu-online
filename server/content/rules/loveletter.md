@@ -162,5 +162,5 @@
 *메타 태그용*
 
 - Title: 러브레터 룰 완전 정리 — 카드 효과 8종, 라운드 진행, 승리 조건 | Tichu Online
-- Description: 카드 16장으로 즐기는 추리 블러핑 게임 러브레터의 룰을 가드·사제·남작·시녀·왕자·왕·백작부인·공주 카드 효과별로 자세히 정리했습니다. 라운드 종료와 토큰 승리 조건, 공략 팁까지.
+- Description: 러브레터 룰 정리. 카드 16장의 효과별 설명, 라운드 종료와 토큰 승리 조건, 공략 팁까지.
 - English: A complete guide to Love Letter for 2–4 players: the 16 cards and all eight card effects, how a round ends, tokens needed to win, and strategy tips. Play online at Tichu Online.

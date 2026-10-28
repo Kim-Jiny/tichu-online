@@ -309,7 +309,7 @@ function renderGuideIndex() {
       + `<div><a href="/guide/${g.slug}">${esc(g.name)}</a><br>${esc(g.blurb)}</div></li>`;
   }).join('');
   const title = '카드게임 공략·점수 계산 가이드 — 마이티 · 스컬킹 · 러브레터 · 티츄 | Tichu Online';
-  const description = '마이티 프렌드 지명, 조커콜, 점수 계산부터 스컬킹 점수, 러브레터 카드 정리, 티츄 폭탄까지 궁금한 부분만 골라 읽을 수 있는 가이드 모음이에요.';
+  const description = '마이티 프렌드·조커콜, 스컬킹·티츄 점수, 러브레터 카드까지 궁금한 부분만 골라 읽는 가이드.';
   const inner = `<h1>공략·점수 계산 가이드</h1>`
     + `<p>규칙 전체를 읽기엔 부담스러울 때, 궁금한 부분만 골라 보세요. 전체 규칙은 <a href="/rules">룰 가이드</a>에 있어요.</p>`
     + `<ul class="games">${items}</ul><a class="cta" href="/">🎮 지금 플레이하기</a>`;

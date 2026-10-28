@@ -72,5 +72,5 @@
 *메타 태그용*
 
 - Title: 스컬킹 확장 카드와 해적 능력 모드 — 크라켄·흰고래·보물·라스칼 | Tichu Online
-- Description: 스컬킹 확장 카드 크라켄, 흰고래, 보물의 효과와 해적 능력 모드(라스칼·로지·벤트·해리·후아니타)를 정리했습니다. 크라켄과 흰고래가 함께 나올 때의 규칙까지.
+- Description: 스컬킹 확장 크라켄·흰고래·보물 효과와 해적 능력 모드(라스칼·로지·벤트·해리·후아니타) 정리.
 - English: Skull King expansions explained: Kraken, White Whale and Loot, plus the pirate-ability mode with Rascal, Rosie, Bent, Harry and Juanita, including what happens when Kraken and White Whale meet.

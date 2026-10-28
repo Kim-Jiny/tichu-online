@@ -55,5 +55,5 @@
 *메타 태그용*
 
 - Title: 온라인으로 친구와 카드게임 하는 방법 — 방 만들기·봇·친구 초대 | Tichu Online
-- Description: 설치 없이 브라우저에서 티츄·마이티·스컬킹·러브레터를 친구와 하는 방법. 방 만들기, 비공개 방, 친구 초대, 봇으로 빈자리 채우기, 관전과 랭크전까지 정리했습니다.
+- Description: 설치 없이 브라우저로 친구와 카드게임 하는 법. 방 만들기, 비공개 방, 초대, 봇, 관전, 랭크전.
 - English: How to play card games online with friends in Tichu Online: create a room, make it private, invite friends, fill empty seats with bots, spectate and play ranked, all in your browser.

@@ -79,5 +79,5 @@
 *메타 태그용*
 
 - Title: 티츄 점수 계산 — 카드 점수·꼴찌 규칙·원투 피니시·티츄 선언 예시 | Tichu Online
-- Description: 티츄의 점수 카드(5·10·K·용·봉황), 꼴찌 규칙, 원투 피니시 200점, 티츄와 그랜드 티츄 선언 점수를 계산 예시 다섯 개로 정리했습니다.
+- Description: 티츄 점수 카드(5·10·K·용·봉황), 꼴찌 규칙, 원투 피니시, 티츄·그랜드 티츄 선언 점수를 예시로 정리.
 - English: Tichu scoring explained: card points (5, 10, King, Dragon, Phoenix), the last-place rule, the 200-point one-two finish, and Tichu and Grand Tichu call scores, with worked examples.

@@ -84,5 +84,5 @@
 *메타 태그용*
 
 - Title: 마이티 비딩 가이드 — 공약은 얼마가 좋을까, 딜 미스는 언제 | Tichu Online
-- Description: 마이티 비딩 규칙과 공약별 점수(13~19점), 실패했을 때의 손해, 과감하게 가도 좋은 패, 비딩 뒤 기루다 변경, 딜 미스 기준을 정리했습니다.
+- Description: 마이티 비딩 규칙과 공약별 점수(13~19점), 실패 시 손해, 과감히 가도 좋은 패, 딜 미스 기준.
 - English: Mighty bidding guide: bidding rules, the score at each pledge from 13 to 19, the cost of failing, hands worth bidding high on, changing trump after bidding, and the deal-miss rule.

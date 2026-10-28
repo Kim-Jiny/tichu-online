@@ -75,5 +75,5 @@
 *메타 태그용*
 
 - Title: 러브레터 확률 계산 — 가드로 무슨 카드를 불러야 맞을까 | Tichu Online
-- Description: 러브레터에서 카드 장수와 보이지 않는 카드 수로 상대 손패 확률을 계산하는 법. 가드로 어떤 카드를 불러야 적중률이 가장 높은지 계산 예시 세 개로 보여 줍니다.
+- Description: 러브레터 카드 장수로 상대 손패 확률을 계산하는 법. 가드로 무슨 카드를 부를지 예시 세 개.
 - English: Love Letter odds: how to work out what your opponent holds from card counts and unseen cards, and which card to name with the Guard, with three worked examples.

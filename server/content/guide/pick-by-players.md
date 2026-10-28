@@ -60,5 +60,5 @@ Tichu Online에서는 **봇이 빈자리를 채워 줍니다.** 4명이 필요�
 *메타 태그용*
 
 - Title: 인원수별 카드게임 고르기 — 2명·3명·4명·5명·6명 추천 | Tichu Online
-- Description: 2명부터 6명까지, 모인 인원에 맞는 카드게임을 정리했습니다. 티츄(4명), 마이티(5명), 스컬킹(2~6명), 러브레터(2~4명)와 사람이 모자랄 때 봇으로 채우는 방법까지.
+- Description: 2~6명, 인원에 맞는 카드게임 고르기. 티츄·마이티·스컬킹·러브레터와 봇으로 빈자리 채우기.
 - English: Which card game fits your group size? Tichu for 4, Mighty for 5, Skull King for 2 to 6 and Love Letter for 2 to 4, plus how bots fill empty seats online.

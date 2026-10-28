@@ -177,5 +177,5 @@
 *메타 태그용*
 
 - Title: 티츄 룰 완전 정리 — 족보, 특수 카드, 티츄 선언, 점수 계산 | Tichu Online
-- Description: 4인 팀전 카드게임 티츄의 규칙을 족보와 폭탄, 참새·개·봉황·용 특수 카드, 티츄와 그랜드 티츄 선언, 원투 피니시와 점수 계산까지 한 페이지에 정리했습니다.
+- Description: 4인 팀전 티츄 규칙. 족보·폭탄·특수 카드, 티츄 선언과 원투 피니시, 점수 계산까지 한 페이지에.
 - English: A complete guide to Tichu, the 4-player partnership card game: combinations and bombs, the Mah Jong, Dog, Phoenix and Dragon cards, Tichu and Grand Tichu calls, one-two finish and scoring. Play online at Tichu Online.

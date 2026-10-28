@@ -59,5 +59,5 @@ Tichu Online에는 네 가지 카드게임이 있습니다. 이름은 들어 봤
 *메타 태그용*
 
 - Title: 티츄 마이티 스컬킹 러브레터 뭐가 달라요? 카드게임 4종 한눈에 비교 | Tichu Online
-- Description: 티츄, 마이티, 스컬킹, 러브레터의 인원, 팀 구성, 목표, 핵심 재미를 한눈에 비교했습니다. 티츄 vs 마이티, 스컬킹 vs 러브레터의 차이까지.
+- Description: 티츄·마이티·스컬킹·러브레터의 인원, 팀 구성, 목표, 재미를 한눈에 비교. 티츄 vs 마이티 차이까지.
 - English: Tichu, Mighty, Skull King and Love Letter compared: player counts, teams, goals and what makes each fun, including Tichu vs Mighty and Skull King vs Love Letter.
